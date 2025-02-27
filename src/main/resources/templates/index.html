@@ -1,0 +1,307 @@
+<!-- src/main/resources/templates/index.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Penalty Form</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+  <!-- Vue.js -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+  <!-- Axios for API calls -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    .error-message {
+      color: red;
+      font-size: 0.85rem;
+    }
+
+    [v-cloak] {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+<div id="app" v-cloak>
+  <div class="container mt-4">
+    <div class="row">
+      <div class="col-md-8 offset-md-2">
+        <div class="card">
+          <div class="card-header bg-primary text-white">
+            <h2 class="text-center">Penalty Form</h2>
+          </div>
+          <div class="card-body">
+            <!-- Form -->
+            <form @submit.prevent="validateAndPreview" v-if="!showPreview">
+              <!-- Name and Surname -->
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="firstName" class="form-label">Name*</label>
+                  <input type="text" class="form-control" id="firstName" v-model="form.firstName"
+                         :class="{'is-invalid': errors.firstName}">
+                  <div class="error-message" v-if="errors.firstName">{{ errors.firstName }}</div>
+                </div>
+                <div class="col-md-6">
+                  <label for="lastName" class="form-label">Surname*</label>
+                  <input type="text" class="form-control" id="lastName" v-model="form.lastName"
+                         :class="{'is-invalid': errors.lastName}">
+                  <div class="error-message" v-if="errors.lastName">{{ errors.lastName }}</div>
+                </div>
+              </div>
+
+              <!-- Breach Selection -->
+              <div class="mb-3">
+                <label for="breach" class="form-label">Breach Type*</label>
+                <select class="form-select" id="breach" v-model="form.selectedBreach"
+                        :class="{'is-invalid': errors.selectedBreach}">
+                  <option value="">-- Select a Breach --</option>
+                  <option v-for="breach in breaches" :key="breach.id" :value="breach">
+                    {{ breach.code }} - {{ breach.description }}
+                  </option>
+                </select>
+                <div class="error-message" v-if="errors.selectedBreach">{{ errors.selectedBreach
+                  }}
+                </div>
+              </div>
+
+              <!-- Penalty Selection -->
+              <div class="mb-3">
+                <label for="penalty" class="form-label">Penalty*</label>
+                <select class="form-select" id="penalty" v-model="form.selectedPenalty"
+                        :class="{'is-invalid': errors.selectedPenalty}">
+                  <option value="">-- Select a Penalty --</option>
+                  <option v-for="penalty in penalties" :key="penalty.id" :value="penalty">
+                    {{ penalty.code }} - {{ penalty.description }} ({{ formatCurrency(
+                      penalty.amount) }})
+                  </option>
+                </select>
+                <div class="error-message" v-if="errors.selectedPenalty">{{ errors.selectedPenalty
+                  }}
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">Preview Form</button>
+              </div>
+            </form>
+
+            <!-- Preview Section -->
+            <div v-if="showPreview">
+              <h3 class="text-center mb-4">Penalty Form Preview</h3>
+
+              <!-- Preview Header -->
+              <div class="row mb-3">
+                <div class="col-md-12 text-end">
+                  <p><strong>Date:</strong> {{ currentDate }}</p>
+                </div>
+              </div>
+
+              <!-- Person Information -->
+              <div class="card mb-3">
+                <div class="card-header bg-light">
+                  <h5>Person Information</h5>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <p><strong>Name:</strong> {{ form.firstName }}</p>
+                    </div>
+                    <div class="col-md-6">
+                      <p><strong>Surname:</strong> {{ form.lastName }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Breach Information -->
+              <div class="card mb-3">
+                <div class="card-header bg-light">
+                  <h5>Breach Information</h5>
+                </div>
+                <div class="card-body">
+                  <table class="table table-bordered">
+                    <tbody>
+                    <tr>
+                      <th>Breach Code:</th>
+                      <td>{{ form.selectedBreach.code }}</td>
+                    </tr>
+                    <tr>
+                      <th>Description:</th>
+                      <td>{{ form.selectedBreach.description }}</td>
+                    </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Penalty Information -->
+              <div class="card mb-3">
+                <div class="card-header bg-light">
+                  <h5>Penalty Information</h5>
+                </div>
+                <div class="card-body">
+                  <table class="table table-bordered">
+                    <tbody>
+                    <tr>
+                      <th>Penalty Code:</th>
+                      <td>{{ form.selectedPenalty.code }}</td>
+                    </tr>
+                    <tr>
+                      <th>Description:</th>
+                      <td>{{ form.selectedPenalty.description }}</td>
+                    </tr>
+                    <tr>
+                      <th>Amount:</th>
+                      <td>{{ formatCurrency(form.selectedPenalty.amount) }}</td>
+                    </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Signature Section -->
+              <div class="row mt-5">
+                <div class="col-md-6">
+                  <p>Officer Signature: _______________________</p>
+                </div>
+                <div class="col-md-6">
+                  <p>Date: _______________________</p>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="d-flex justify-content-between mt-4">
+                <button class="btn btn-secondary" @click="showPreview = false">Back to Form</button>
+                <button class="btn btn-success" @click="generatePdf">Download PDF</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  new Vue({
+    el: '#app',
+    data: {
+      breaches: [],
+      penalties: [],
+      form: {
+        firstName: '',
+        lastName: '',
+        selectedBreach: '',
+        selectedPenalty: ''
+      },
+      errors: {
+        firstName: '',
+        lastName: '',
+        selectedBreach: '',
+        selectedPenalty: ''
+      },
+      showPreview: false
+    },
+    computed: {
+      currentDate() {
+        return new Date().toLocaleDateString();
+      }
+    },
+    mounted() {
+      this.fetchBreaches();
+      this.fetchPenalties();
+    },
+    methods: {
+      fetchBreaches() {
+        axios.get('/api/breaches')
+        .then(response => {
+          this.breaches = response.data;
+        })
+        .catch(error => {
+          console.error('Error fetching breaches:', error);
+        });
+      },
+      fetchPenalties() {
+        axios.get('/api/penalties')
+        .then(response => {
+          this.penalties = response.data;
+        })
+        .catch(error => {
+          console.error('Error fetching penalties:', error);
+        });
+      },
+      validateAndPreview() {
+        // Reset errors
+        this.errors = {
+          firstName: '',
+          lastName: '',
+          selectedBreach: '',
+          selectedPenalty: ''
+        };
+
+        // Validate
+        let isValid = true;
+
+        if (!this.form.firstName.trim()) {
+          this.errors.firstName = 'Name is required';
+          isValid = false;
+        }
+
+        if (!this.form.lastName.trim()) {
+          this.errors.lastName = 'Surname is required';
+          isValid = false;
+        }
+
+        if (!this.form.selectedBreach) {
+          this.errors.selectedBreach = 'Please select a breach';
+          isValid = false;
+        }
+
+        if (!this.form.selectedPenalty) {
+          this.errors.selectedPenalty = 'Please select a penalty';
+          isValid = false;
+        }
+
+        if (isValid) {
+          this.showPreview = true;
+        }
+      },
+      formatCurrency(amount) {
+        if (amount === 0) {
+          return 'No Fine';
+        }
+        return '$' + Number(amount).toFixed(2);
+      },
+      generatePdf() {
+        axios({
+          method: 'post',
+          url: '/generate-pdf',
+          data: this.form,
+          responseType: 'blob'
+        })
+        .then(response => {
+          // Create blob link to download
+          const url = window.URL.createObjectURL(new Blob([response.data]));
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', 'penalty_form.pdf');
+          document.body.appendChild(link);
+          link.click();
+
+          // Clean up
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(link);
+        })
+        .catch(error => {
+          console.error('Error downloading PDF:', error);
+          alert('Failed to generate PDF. Please try again.');
+        });
+      }
+    }
+  });
+</script>
+</body>
+</html>

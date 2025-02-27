@@ -1,0 +1,151 @@
+<!-- src/main/resources/templates/pdf-template.html -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>Penalty Form</title>
+  <style type="text/css">
+    @page {
+      size: A4;
+      margin: 1cm;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+    .date {
+      text-align: right;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+    .section {
+      margin-bottom: 20px;
+    }
+    .section h2 {
+      font-size: 18px;
+      margin-bottom: 10px;
+      background-color: #e6e6e6;
+      padding: 5px;
+    }
+    .signature {
+      margin-top: 50px;
+    }
+    .signature-line {
+      border-top: 1px solid #000;
+      width: 200px;
+      margin-top: 5px;
+    }
+    .signature-container {
+      width: 100%;
+      overflow: hidden;
+    }
+    .signature-left {
+      float: left;
+      width: 45%;
+    }
+    .signature-right {
+      float: right;
+      width: 45%;
+    }
+  </style>
+</head>
+<body>
+<div class="header">
+  <h1>OFFICIAL PENALTY NOTICE</h1>
+  <p>Reference: <span th:text="${'PN' + #dates.format(#dates.createNow(), 'yyyyMMdd')}">PN20221231</span></p>
+</div>
+
+<div class="date">
+  <p><strong>Date:</strong> <span th:text="${today}">01/01/2023</span></p>
+</div>
+
+<div class="section">
+  <h2>Person Information</h2>
+  <table>
+    <tr>
+      <th width="30%">Name</th>
+      <td th:text="${penaltyForm.firstName}">John</td>
+    </tr>
+    <tr>
+      <th>Surname</th>
+      <td th:text="${penaltyForm.lastName}">Doe</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Breach Information</h2>
+  <table>
+    <tr>
+      <th width="30%">Breach Code</th>
+      <td th:text="${penaltyForm.selectedBreach.code}">B001</td>
+    </tr>
+    <tr>
+      <th>Description</th>
+      <td th:text="${penaltyForm.selectedBreach.description}">Speeding (below 10 mph over limit)</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Penalty Information</h2>
+  <table>
+    <tr>
+      <th width="30%">Penalty Code</th>
+      <td th:text="${penaltyForm.selectedPenalty.code}">P001</td>
+    </tr>
+    <tr>
+      <th>Description</th>
+      <td th:text="${penaltyForm.selectedPenalty.description}">Warning - No Fine</td>
+    </tr>
+    <tr>
+      <th>Amount</th>
+      <td th:text="${penaltyForm.selectedPenalty.amount == 0 ? 'No Fine' : '$' + #numbers.formatDecimal(penaltyForm.selectedPenalty.amount, 1, 2)}">$0.00</td>
+    </tr>
+  </table>
+</div>
+
+<p>This penalty notice is issued in accordance with the traffic regulations. The recipient acknowledges the infraction and penalty as described above.</p>
+
+<div class="signature">
+  <div class="signature-container">
+    <div class="signature-left">
+      <p>Officer Signature:</p>
+      <div class="signature-line"></div>
+    </div>
+    <div class="signature-right">
+      <p>Date:</p>
+      <div class="signature-line"></div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 50px; font-size: 12px; text-align: center;">
+  This is an official document. Please retain for your records.
+</p>
+</body>
+</html>
