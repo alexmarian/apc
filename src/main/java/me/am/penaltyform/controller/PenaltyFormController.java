@@ -9,7 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 public class PenaltyFormController {
@@ -18,14 +23,15 @@ public class PenaltyFormController {
   private final ObjectMapper objectMapper;
 
   @Autowired
-  public PenaltyFormController(PdfGenerationService pdfGenerationService,
-      ObjectMapper objectMapper) {
+  public PenaltyFormController(PdfGenerationService pdfGenerationService, ObjectMapper objectMapper) {
     this.pdfGenerationService = pdfGenerationService;
     this.objectMapper = objectMapper;
   }
 
   @GetMapping("/")
-  public String showForm() {
+  public String showForm(Model model) {
+    // Create an empty form object to avoid null reference in the template
+    model.addAttribute("penaltyForm", new PenaltyForm());
     return "index";
   }
 
@@ -47,6 +53,25 @@ public class PenaltyFormController {
     } catch (Exception e) {
       e.printStackTrace();
       return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @GetMapping("/api/calculate")
+  @ResponseBody
+  public Double calculatePenalty(@RequestParam("baseAmount") Double baseAmount,
+      @RequestParam("occurrenceCount") Integer occurrenceCount) {
+    // Conform articolului 3.5 din Regulament
+    if (occurrenceCount == 1) {
+      return baseAmount;
+    } else if (occurrenceCount == 2) {
+      // Al doilea incident în 12 luni - doar avertisment, dar vom păstra amenda inițială
+      return baseAmount;
+    } else if (occurrenceCount == 3) {
+      // Al treilea incident în 12 luni - penalitatea inițială majorată cu 50%
+      return baseAmount * 1.5;
+    } else {
+      // Al patrulea incident și ulterioarele - penalitatea inițială dublată
+      return baseAmount * 2.0;
     }
   }
 }
