@@ -122,3 +122,12 @@ To add more fields to the form:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🤝 Contributing
+
+### Clone the repo
+
+```bash
+git clone https://github.com/alexmarian/apc@latest
+cd zipzod
+```
