@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 SELECT 'up SQL query';
-CREATE TABLE apc
+CREATE TABLE apcs
 (
     id               SERIAL PRIMARY KEY,
     cadastral_number TEXT UNIQUE,
@@ -15,5 +15,5 @@ CREATE TABLE apc
 -- +goose Down
 -- +goose StatementBegin
 SELECT 'down SQL query';
-DROP TABLE apc;
+DROP TABLE apcs;
 -- +goose StatementEnd
