@@ -1,12 +1,17 @@
 -- +goose Up
 -- +goose StatementBegin
 SELECT 'up SQL query';
-CREATE TABLE apcs
+CREATE TABLE units
 (
     id               SERIAL PRIMARY KEY,
     cadastral_number TEXT UNIQUE,
+    building_id      TEXT    NOT NULL REFERENCES buildings (id),
+    unit_number      TEXT,
     address          TEXT,
-    total_area       NUMERIC,
+    area             NUMERIC NOT NULL,
+    unit_type        TEXT, -- apartment, commercial, etc.
+    floor            INTEGER,
+    room_count       INTEGER,
     created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -15,5 +20,5 @@ CREATE TABLE apcs
 -- +goose Down
 -- +goose StatementBegin
 SELECT 'down SQL query';
-DROP TABLE apcs;
+DROP TABLE units;
 -- +goose StatementEnd
