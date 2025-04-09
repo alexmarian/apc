@@ -3,7 +3,7 @@
 SELECT 'up SQL query';
 CREATE TABLE owners
 (
-    id                    SERIAL PRIMARY KEY,
+    id                    INTEGER PRIMARY KEY,
     name                  TEXT NOT NULL,
     normalized_name       TEXT NOT NULL,
     identification_number TEXT, -- IDNP, fiscal code, etc.

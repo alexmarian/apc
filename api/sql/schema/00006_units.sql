@@ -3,12 +3,13 @@
 SELECT 'up SQL query';
 CREATE TABLE units
 (
-    id               SERIAL PRIMARY KEY,
+    id               INTEGER PRIMARY KEY,
     cadastral_number TEXT UNIQUE,
     building_id      TEXT    NOT NULL REFERENCES buildings (id),
     unit_number      TEXT,
     address          TEXT,
     area             NUMERIC NOT NULL,
+    part             NUMERIC NOT NULL,
     unit_type        TEXT, -- apartment, commercial, etc.
     floor            INTEGER,
     room_count       INTEGER,

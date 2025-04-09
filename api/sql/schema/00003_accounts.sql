@@ -3,7 +3,8 @@
 SELECT 'up SQL query';
 CREATE TABLE accounts
 (
-    id             SERIAL PRIMARY KEY,
+    id             INTEGER PRIMARY KEY,
+    number         TEXT,
     destination    TEXT,
     description    TEXT,
     association_id INTEGER REFERENCES associations (id),

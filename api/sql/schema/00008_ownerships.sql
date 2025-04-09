@@ -1,12 +1,11 @@
 -- +goose Up
 -- +goose StatementBegin
 SELECT 'up SQL query';
-CREATE TABLE ownership
+CREATE TABLE ownerships
 (
-    id                    SERIAL PRIMARY KEY,
+    id                    INTEGER PRIMARY KEY,
     unit_id               INTEGER NOT NULL REFERENCES units (id),
     owner_id              INTEGER NOT NULL REFERENCES owners (id),
-    part                  NUMERIC NOT NULL,
     start_date            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     end_date              TIMESTAMP NULL, -- NULL means current ownership
     is_active             BOOLEAN   DEFAULT TRUE,
@@ -21,5 +20,5 @@ CREATE TABLE ownership
 -- +goose Down
 -- +goose StatementBegin
 SELECT 'down SQL query';
-DROP TABLE ownership;
+DROP TABLE ownerships;
 -- +goose StatementEnd

@@ -3,7 +3,7 @@
 SELECT 'up SQL query';
 CREATE TABLE categories
 (
-    id             SERIAL PRIMARY KEY,
+    id             INTEGER PRIMARY KEY,
     type           TEXT,
     family         TEXT,
     name           TEXT,
