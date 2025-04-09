@@ -1,0 +1,152 @@
+package auth
+
+import (
+	"bytes"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/hex"
+	"errors"
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
+	"image/png"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/boombuler/barcode"
+	"github.com/boombuler/barcode/qr"
+	"github.com/pquerna/otp/totp"
+)
+
+func HashPassword(password string) (string, error) {
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(passwordHash), nil
+}
+func CheckPasswordHash(password, hash string) error {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func MakeJWT(userLogin, tokenSecret string, expiresIn time.Duration) (string, error) {
+	jwt := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Issuer:    "Chirpy",
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn)),
+		Subject:   userLogin,
+	})
+	signedString, err := jwt.SignedString([]byte(tokenSecret))
+	if err != nil {
+		return "", err
+	}
+	return signedString, nil
+}
+
+func ValidateJWT(tokenString, tokenSecret string) (string, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(tokenSecret), nil
+	})
+	if err != nil {
+		return "", err
+	}
+	if token.Valid != true {
+		return "", errors.New("Token is invalid")
+	}
+	userLogin, err := token.Claims.GetSubject()
+	if err != nil {
+		return "", err
+	}
+	return userLogin, nil
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	authorizationHeaderParts, s, err := getAuthorizationHeadersParts(headers)
+	if err != nil {
+		return s, err
+	}
+	if authorizationHeaderParts[0] != "Bearer" {
+		return "", errors.New("Authorization header is invalid")
+	}
+	return authorizationHeaderParts[1], nil
+}
+
+func getAuthorizationHeadersParts(headers http.Header) ([]string, string, error) {
+	authorizationHeader := headers.Get("Authorization")
+	if authorizationHeader == "" {
+		return nil, "", errors.New("Authorization header is missing")
+	}
+	authorizationHeaderParts := strings.Split(authorizationHeader, " ")
+	if len(authorizationHeaderParts) != 2 {
+		return nil, "", errors.New("Authorization header is invalid")
+	}
+	return authorizationHeaderParts, "", nil
+}
+
+func GetApiKey(headers http.Header) (string, error) {
+	authorizationHeaderParts, s, err := getAuthorizationHeadersParts(headers)
+	if err != nil {
+		return s, err
+	}
+	if authorizationHeaderParts[0] != "ApiKey" {
+		return "", errors.New("Authorization header is invalid")
+	}
+	return authorizationHeaderParts[1], nil
+}
+
+func MakeRefreshToken() (string, error) {
+	token := make([]byte, 32)
+	_, err := rand.Read(token)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(token), nil
+}
+
+func GenerateTOTPSecret() (string, error) {
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "ACP",
+		AccountName: "test-account",
+	})
+	if err != nil {
+		return "", err
+	}
+	return key.Secret(), nil
+}
+
+func GenerateQRCode(username, secret string) (string, error) {
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "YourCompany",
+		AccountName: username,
+		Secret:      []byte(secret),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	qrCode, err := qr.Encode(key.URL(), qr.M, qr.Auto)
+	if err != nil {
+		return "", err
+	}
+
+	qrCode, err = barcode.Scale(qrCode, 300, 300)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	err = png.Encode(&buf, qrCode)
+	if err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
+}
+
+// VerifyTOTPCode checks if the provided TOTP code is valid
+func VerifyTOTPCode(secret, code string) bool {
+	return totp.Validate(code, secret)
+}
