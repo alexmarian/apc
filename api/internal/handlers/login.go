@@ -45,7 +45,8 @@ func HandleLogin(cfg *ApiConfig) http.HandlerFunc {
 			RespondWithError(rw, http.StatusUnauthorized, "Incorrect email or password")
 			return
 		}
-		if !auth.VerifyTOTPCode(user.ToptSecret, request.TOTP) {
+		if success, err := auth.VerifyTOTPCode(user.ToptSecret, request.TOTP); err != nil || !success {
+			log.Printf("Invalid TOTP code")
 			RespondWithError(rw, http.StatusUnauthorized, "Invalid TOTP code")
 			return
 		}

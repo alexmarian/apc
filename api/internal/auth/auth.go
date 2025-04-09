@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/pquerna/otp"
 	"golang.org/x/crypto/bcrypt"
 	"image/png"
 	"net/http"
@@ -106,47 +107,44 @@ func MakeRefreshToken() (string, error) {
 	return hex.EncodeToString(token), nil
 }
 
-func GenerateTOTPSecret() (string, error) {
+func GenerateQRCode(username string) (string, string, error) {
 	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      "ACP",
-		AccountName: "test-account",
-	})
-	if err != nil {
-		return "", err
-	}
-	return key.Secret(), nil
-}
-
-func GenerateQRCode(username, secret string) (string, error) {
-	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      "YourCompany",
+		Issuer:      "APC",
 		AccountName: username,
-		Secret:      []byte(secret),
+		Period:      30,
+		Digits:      otp.DigitsSix,
+		Algorithm:   otp.AlgorithmSHA1,
 	})
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	qrCode, err := qr.Encode(key.URL(), qr.M, qr.Auto)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	qrCode, err = barcode.Scale(qrCode, 300, 300)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	var buf bytes.Buffer
 	err = png.Encode(&buf, qrCode)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
+	return key.Secret(), base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 
-// VerifyTOTPCode checks if the provided TOTP code is valid
-func VerifyTOTPCode(secret, code string) bool {
-	return totp.Validate(code, secret)
+func VerifyTOTPCode(secret, code string) (bool, error) {
+	success, err := totp.ValidateCustom(
+		code, secret, time.Now().UTC(), totp.ValidateOpts{
+			Period:    30,
+			Digits:    otp.DigitsSix,
+			Algorithm: otp.AlgorithmSHA1,
+		},
+	)
+	return success, err
 }

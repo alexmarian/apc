@@ -34,12 +34,7 @@ func HandleCreateUser(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}
-		secret, err := auth.GenerateTOTPSecret()
-		if err != nil {
-			log.Printf(err.Error())
-			RespondWithError(rw, http.StatusInternalServerError, err.Error())
-		}
-		qrCode, err := auth.GenerateQRCode(userData.Login, secret)
+		secret, qrCode, err := auth.GenerateQRCode(userData.Login)
 		if err != nil {
 			log.Printf(err.Error())
 			RespondWithError(rw, http.StatusInternalServerError, err.Error())
@@ -89,12 +84,7 @@ func HandleUpdateUser(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}
-		secret, err := auth.GenerateTOTPSecret()
-		if err != nil {
-			log.Printf(err.Error())
-			RespondWithError(rw, http.StatusInternalServerError, err.Error())
-		}
-		qrCode, err := auth.GenerateQRCode(request.Login, secret)
+		secret, qrCode, err := auth.GenerateQRCode(request.Login)
 		if err != nil {
 			log.Printf(err.Error())
 			RespondWithError(rw, http.StatusInternalServerError, err.Error())
