@@ -14,8 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/boombuler/barcode"
-	"github.com/boombuler/barcode/qr"
 	"github.com/pquerna/otp/totp"
 )
 
@@ -119,22 +117,15 @@ func GenerateQRCode(username string) (string, string, error) {
 		return "", "", err
 	}
 
-	qrCode, err := qr.Encode(key.URL(), qr.M, qr.Auto)
+	image, err := key.Image(300, 300)
 	if err != nil {
 		return "", "", err
 	}
-
-	qrCode, err = barcode.Scale(qrCode, 300, 300)
-	if err != nil {
-		return "", "", err
-	}
-
 	var buf bytes.Buffer
-	err = png.Encode(&buf, qrCode)
+	err = png.Encode(&buf, image)
 	if err != nil {
 		return "", "", err
 	}
-
 	return key.Secret(), base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 
