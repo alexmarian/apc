@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/alexmarian/apc/api/internal/database"
 	"github.com/alexmarian/apc/api/internal/handlers"
 	"github.com/joho/godotenv"
@@ -52,7 +53,7 @@ func main() {
 	mux.HandleFunc("POST /v1/api/login", handlers.HandleLogin(apiCfg))
 
 	mux.HandleFunc("GET /v1/api/associations", apiCfg.MiddlewareAuth(handlers.HandleGetUserAssociations(apiCfg)))
-
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}", handlers.AssociationIdPathValue), apiCfg.MiddlewareAuth(handlers.HandleGetUserAssociation(apiCfg)))
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: mux,
