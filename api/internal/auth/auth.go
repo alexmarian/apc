@@ -11,11 +11,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"image/png"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/pquerna/otp/totp"
 )
+
+type ApcClaims struct {
+	jwt.RegisteredClaims
+	Ass string `json:"ass"`
+}
 
 func HashPassword(password string) (string, error) {
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -31,13 +37,21 @@ func CheckPasswordHash(password, hash string) error {
 	}
 	return nil
 }
-func MakeJWT(userLogin, tokenSecret string, expiresIn time.Duration) (string, error) {
-	jwt := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
-		Issuer:    "Chirpy",
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn)),
-		Subject:   userLogin,
-	})
+func MakeJWT(userLogin, tokenSecret string, expiresIn time.Duration, associations []int64) (string, error) {
+	associations_str := make([]string, len(associations))
+	for i, association := range associations {
+		associations_str[i] = strconv.Itoa(int(association))
+	}
+	claims := ApcClaims{
+		jwt.RegisteredClaims{
+
+			Issuer:    "APC",
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn)),
+			Subject:   userLogin,
+		}, strings.Join(associations_str, ","),
+	}
+	jwt := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signedString, err := jwt.SignedString([]byte(tokenSecret))
 	if err != nil {
 		return "", err

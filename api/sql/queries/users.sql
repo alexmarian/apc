@@ -19,3 +19,9 @@ WHERE login = ? RETURNING *;
 SELECT *
 FROM users
 where login = ?;
+
+-- name: GetUserAssociationsByLogin :many
+SELECT users_associations.association_id
+FROM users,
+     users_associations
+WHERE users.id = users_associations.user_id and  users.login = ?;

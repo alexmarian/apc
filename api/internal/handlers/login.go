@@ -66,7 +66,12 @@ func HandleLogin(cfg *ApiConfig) http.HandlerFunc {
 		if err != nil {
 			RespondWithError(rw, http.StatusInternalServerError, "Error creating refresh token")
 		}
-		token, err := auth.MakeJWT(user.Login, cfg.Secret, time.Duration(seconds)*time.Second)
+		associations, err := cfg.Db.GetUserAssociationsByLogin(req.Context(), user.Login)
+		if err != nil {
+			RespondWithError(rw, http.StatusInternalServerError, "Error getting user associations")
+			return
+		}
+		token, err := auth.MakeJWT(user.Login, cfg.Secret, time.Duration(seconds)*time.Second, associations)
 		if err != nil {
 			RespondWithError(rw, http.StatusInternalServerError, "Error creating token")
 			return
@@ -95,7 +100,12 @@ func HandleRefresh(cfg *ApiConfig) http.HandlerFunc {
 			RespondWithError(rw, http.StatusUnauthorized, "Invalid token")
 			return
 		}
-		token, err := auth.MakeJWT(rt.Login, cfg.Secret, 3600*time.Second)
+		associations, err := cfg.Db.GetUserAssociationsByLogin(req.Context(), rt.Login)
+		if err != nil {
+			RespondWithError(rw, http.StatusInternalServerError, "Error getting user associations")
+			return
+		}
+		token, err := auth.MakeJWT(rt.Login, cfg.Secret, 3600*time.Second, associations)
 		if err != nil {
 			RespondWithError(rw, http.StatusInternalServerError, "Error creating token")
 			return

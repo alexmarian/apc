@@ -53,5 +53,18 @@ sqlite3 $1 < ownerships.sql
 
 echo "ok"
 
+echo "===============Loading users==============="
+
+sqlite3 $1 < users.sql
+
+echo "ok"
+
+echo "===============Loading users associations=="
+
+sqlite3 $1 < users_associations.sql
+
+echo "ok"
+
+
 
 

@@ -121,3 +121,11 @@ type User struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
+
+type UsersAssociation struct {
+	ID            int64
+	UserID        int64
+	AssociationID int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}

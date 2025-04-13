@@ -52,6 +52,36 @@ func (q *Queries) DeleteUsers(ctx context.Context) error {
 	return err
 }
 
+const getUserAssociationsByLogin = `-- name: GetUserAssociationsByLogin :many
+SELECT users_associations.association_id
+FROM users,
+     users_associations
+WHERE users.id = users_associations.user_id and  users.login = ?
+`
+
+func (q *Queries) GetUserAssociationsByLogin(ctx context.Context, login string) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, getUserAssociationsByLogin, login)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var association_id int64
+		if err := rows.Scan(&association_id); err != nil {
+			return nil, err
+		}
+		items = append(items, association_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserByLogin = `-- name: GetUserByLogin :one
 SELECT id, login, password_hash, topt_secret, is_admin, created_at, updated_at
 FROM users
