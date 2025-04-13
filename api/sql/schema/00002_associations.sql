@@ -4,9 +4,9 @@ SELECT 'up SQL query';
 CREATE TABLE associations
 (
     id            INTEGER PRIMARY KEY,
-    name          TEXT,
-    address       TEXT,
-    administrator TEXT,
+    name          TEXT NOT NULL ,
+    address       TEXT NOT NULL ,
+    administrator TEXT NOT NULL ,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

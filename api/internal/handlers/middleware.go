@@ -12,11 +12,11 @@ func (cfg *ApiConfig) MiddlewareAuth(next http.HandlerFunc) http.HandlerFunc {
 			RespondWithError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
-		userLogin, err := auth.ValidateJWT(token, cfg.Secret)
+		userLogin, associations, err := auth.ValidateJWT(token, cfg.Secret)
 		if err != nil {
 			RespondWithError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
-		next.ServeHTTP(w, AddUserIdToContext(r, userLogin))
+		next.ServeHTTP(w, AddUserIdToContext(AddAssotiationIdsToContext(r, associations), userLogin))
 	}
 }

@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"strings"
 )
 
 const getAssociations = `-- name: GetAssociations :one
@@ -26,4 +27,50 @@ func (q *Queries) GetAssociations(ctx context.Context, id int64) (Association, e
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getAssociationsFromList = `-- name: GetAssociationsFromList :many
+
+
+SELECT id, name, address, administrator, created_at, updated_at from associations where id in (/*SLICE:association_ids*/?)
+`
+
+func (q *Queries) GetAssociationsFromList(ctx context.Context, associationIds []int64) ([]Association, error) {
+	query := getAssociationsFromList
+	var queryParams []interface{}
+	if len(associationIds) > 0 {
+		for _, v := range associationIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:association_ids*/?", strings.Repeat(",?", len(associationIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:association_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Association
+	for rows.Next() {
+		var i Association
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Address,
+			&i.Administrator,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

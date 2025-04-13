@@ -9,6 +9,7 @@ import (
 )
 
 const userContextKey = "userID"
+const assoctiationsContextKey = "associations"
 
 type ApiConfig struct {
 	Db     *database.Queries
@@ -38,4 +39,12 @@ func AddUserIdToContext(req *http.Request, userID string) *http.Request {
 
 func GetUserIdFromContext(req *http.Request) string {
 	return req.Context().Value(userContextKey).(string)
+}
+
+func AddAssotiationIdsToContext(req *http.Request, associations []int64) *http.Request {
+	return req.WithContext(context.WithValue(req.Context(), assoctiationsContextKey, associations))
+}
+
+func GetAssotiationIdsToContext(req *http.Request) []int64 {
+	return req.Context().Value(assoctiationsContextKey).([]int64)
 }

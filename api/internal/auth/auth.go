@@ -59,21 +59,27 @@ func MakeJWT(userLogin, tokenSecret string, expiresIn time.Duration, association
 	return signedString, nil
 }
 
-func ValidateJWT(tokenString, tokenSecret string) (string, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
+func ValidateJWT(tokenString, tokenSecret string) (string, []int64, error) {
+	claims := &ApcClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(tokenSecret), nil
 	})
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	if token.Valid != true {
-		return "", errors.New("Token is invalid")
+		return "", nil, errors.New("Token is invalid")
 	}
 	userLogin, err := token.Claims.GetSubject()
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	return userLogin, nil
+	asssociationsStrs := strings.Split(claims.Ass, ",")
+	associations := make([]int64, len(asssociationsStrs))
+	for i, association := range asssociationsStrs {
+		associations[i], _ = strconv.ParseInt(association, 10, 64)
+	}
+	return userLogin, associations, nil
 }
 
 func GetBearerToken(headers http.Header) (string, error) {

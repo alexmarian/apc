@@ -51,6 +51,8 @@ func main() {
 	mux.HandleFunc("PUT /v1/api/users", apiCfg.MiddlewareAuth(handlers.HandleUpdateUser(apiCfg)))
 	mux.HandleFunc("POST /v1/api/login", handlers.HandleLogin(apiCfg))
 
+	mux.HandleFunc("GET /v1/api/associations", apiCfg.MiddlewareAuth(handlers.HandleGetUserAssociations(apiCfg)))
+
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: mux,

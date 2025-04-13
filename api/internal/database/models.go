@@ -21,9 +21,9 @@ type Account struct {
 
 type Association struct {
 	ID            int64
-	Name          sql.NullString
-	Address       sql.NullString
-	Administrator sql.NullString
+	Name          string
+	Address       string
+	Administrator string
 	CreatedAt     sql.NullTime
 	UpdatedAt     sql.NullTime
 }
