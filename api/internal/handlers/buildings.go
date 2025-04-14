@@ -57,7 +57,7 @@ func HandleGetAssociationBuilding(cfg *ApiConfig) func(http.ResponseWriter, *htt
 			ID:            int64(buildingId),
 		})
 		if err != nil {
-			var errors = fmt.Sprintf("Error getting associations: %s", err)
+			var errors = fmt.Sprintf("Error getting buildings: %s", err)
 			log.Printf(errors)
 			if err == sql.ErrNoRows {
 				RespondWithError(rw, http.StatusNotFound, "Building not found")
