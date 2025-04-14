@@ -8,6 +8,7 @@ CREATE TABLE units
     building_id      TEXT    NOT NULL REFERENCES buildings (id),
     unit_number      TEXT,
     address          TEXT,
+    entrance         INTEGER DEFAULT 1,
     area             NUMERIC NOT NULL,
     part             NUMERIC NOT NULL,
     unit_type        TEXT, -- apartment, commercial, etc.
