@@ -4,10 +4,10 @@ SELECT 'up SQL query';
 CREATE TABLE accounts
 (
     id             INTEGER PRIMARY KEY,
-    number         TEXT,
-    destination    TEXT,
-    description    TEXT,
-    association_id INTEGER REFERENCES associations (id),
+    number         TEXT    NOT NULL,
+    destination    TEXT    NOT NULL,
+    description    TEXT    NOT NULL,
+    association_id INTEGER NOT NULL REFERENCES associations (id),
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

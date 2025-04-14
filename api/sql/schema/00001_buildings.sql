@@ -4,11 +4,11 @@ SELECT 'up SQL query';
 CREATE TABLE buildings
 (
     id               INTEGER PRIMARY KEY,
-    name             TEXT,
-    address          TEXT,
-    cadastral_number TEXT,
-    total_area       NUMERIC,
-    association_id   INTEGER REFERENCES associations (id),
+    name             TEXT    NOT NULL,
+    address          TEXT    NOT NULL,
+    cadastral_number TEXT    NOT NULL,
+    total_area       NUMERIC NOT NULL,
+    association_id   INTEGER NOT NULL REFERENCES associations (id),
     created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

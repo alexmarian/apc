@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/alexmarian/apc/api/internal/auth"
 	"net/http"
+	"strconv"
 )
 
 func (cfg *ApiConfig) MiddlewareAuth(next http.HandlerFunc) http.HandlerFunc {
@@ -17,6 +18,27 @@ func (cfg *ApiConfig) MiddlewareAuth(next http.HandlerFunc) http.HandlerFunc {
 			RespondWithError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
-		next.ServeHTTP(w, AddUserIdToContext(AddAssotiationIdsToContext(r, associations), userLogin))
+		reqWithAssoction := AddAssotiationIdsToContext(r, associations)
+		reqWithUserId := AddUserIdToContext(reqWithAssoction, userLogin)
+		next.ServeHTTP(w, reqWithUserId)
 	}
+}
+
+func (cfg *ApiConfig) MiddlewareAssociationResource(next http.HandlerFunc) http.HandlerFunc {
+	return cfg.MiddlewareAuth(func(w http.ResponseWriter, r *http.Request) {
+		associationId, _ := strconv.Atoi(r.PathValue(AssociationIdPathValue))
+		userAssociationsIds := GetAssotiationIdsToContext(r)
+		found := false
+		for _, id := range userAssociationsIds {
+			if id == int64(associationId) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			RespondWithError(w, http.StatusForbidden, "You don't have access to this association")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }

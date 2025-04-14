@@ -9,8 +9,8 @@ CREATE TABLE ownerships
     start_date            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     end_date              TIMESTAMP NULL, -- NULL means current ownership
     is_active             BOOLEAN   DEFAULT TRUE,
-    registration_document TEXT,
-    registration_date     TIMESTAMP,
+    registration_document TEXT NOT NULL ,
+    registration_date     TIMESTAMP NOT NULL ,
     created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_active_ownership UNIQUE (unit_id, owner_id, is_active)

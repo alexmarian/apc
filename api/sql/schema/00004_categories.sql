@@ -4,10 +4,10 @@ SELECT 'up SQL query';
 CREATE TABLE categories
 (
     id             INTEGER PRIMARY KEY,
-    type           TEXT,
-    family         TEXT,
-    name           TEXT,
-    association_id INTEGER REFERENCES associations (id),
+    type           TEXT    NOT NULL,
+    family         TEXT    NOT NULL,
+    name           TEXT    NOT NULL,
+    association_id INTEGER NOT NULL REFERENCES associations (id),
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

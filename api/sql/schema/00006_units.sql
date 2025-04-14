@@ -4,18 +4,18 @@ SELECT 'up SQL query';
 CREATE TABLE units
 (
     id               INTEGER PRIMARY KEY,
-    cadastral_number TEXT UNIQUE,
+    cadastral_number TEXT    NOT NULL UNIQUE,
     building_id      TEXT    NOT NULL REFERENCES buildings (id),
-    unit_number      TEXT,
-    address          TEXT,
-    entrance         INTEGER DEFAULT 1,
+    unit_number      TEXT    NOT NULL,
+    address          TEXT    NOT NULL,
+    entrance         INTEGER NOT NULL DEFAULT 1,
     area             NUMERIC NOT NULL,
     part             NUMERIC NOT NULL,
-    unit_type        TEXT, -- apartment, commercial, etc.
-    floor            INTEGER,
-    room_count       INTEGER,
-    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    unit_type        TEXT    NOT NULL DEFAULT 'apartment', -- apartment, commercial, etc.
+    floor            INTEGER NOT NULL,
+    room_count       INTEGER NOT NULL DEFAULT -1,
+    created_at       TIMESTAMP        DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP        DEFAULT CURRENT_TIMESTAMP
 );
 -- +goose StatementEnd
 

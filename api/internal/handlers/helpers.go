@@ -16,10 +16,21 @@ type ApiConfig struct {
 	Secret string
 }
 
+type ErrorResponse struct {
+	Msg  string `json:"msg"`
+	Code int    `json:"code"`
+}
+
 func RespondWithError(w http.ResponseWriter, code int, msg string) {
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Add("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(code)
-	w.Write([]byte(msg))
+	data, err := json.Marshal(&ErrorResponse{msg, code})
+	if err != nil {
+		log.Printf("Error encoding response: %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Write(data)
 }
 func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Header().Add("Content-Type", "application/json; charset=utf-8")

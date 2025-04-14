@@ -46,19 +46,6 @@ func HandleGetUserAssociations(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 func HandleGetUserAssociation(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		userAssociationsIds := GetAssotiationIdsToContext(req)
-		found := false
-		for _, id := range userAssociationsIds {
-			if id == int64(associationId) {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			RespondWithError(rw, http.StatusForbidden, "You don't have access to this association")
-			return
-		}
 		association, err := cfg.Db.GetAssociations(req.Context(), int64(associationId))
 		if err != nil {
 			var errors = fmt.Sprintf("Error getting associations: %s", err)

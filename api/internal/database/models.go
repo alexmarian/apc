@@ -11,10 +11,10 @@ import (
 
 type Account struct {
 	ID            int64
-	Number        sql.NullString
-	Destination   sql.NullString
-	Description   sql.NullString
-	AssociationID sql.NullInt64
+	Number        string
+	Destination   string
+	Description   string
+	AssociationID int64
 	CreatedAt     sql.NullTime
 	UpdatedAt     sql.NullTime
 }
@@ -30,35 +30,35 @@ type Association struct {
 
 type Building struct {
 	ID              int64
-	Name            sql.NullString
-	Address         sql.NullString
-	CadastralNumber sql.NullString
-	TotalArea       sql.NullFloat64
-	AssociationID   sql.NullInt64
+	Name            string
+	Address         string
+	CadastralNumber string
+	TotalArea       float64
+	AssociationID   int64
 	CreatedAt       sql.NullTime
 	UpdatedAt       sql.NullTime
 }
 
 type Category struct {
 	ID            int64
-	Type          sql.NullString
-	Family        sql.NullString
-	Name          sql.NullString
-	AssociationID sql.NullInt64
+	Type          string
+	Family        string
+	Name          string
+	AssociationID int64
 	CreatedAt     sql.NullTime
 	UpdatedAt     sql.NullTime
 }
 
 type Expense struct {
 	ID          int64
-	Amount      sql.NullFloat64
-	Description sql.NullString
-	Destination sql.NullString
-	Date        sql.NullTime
-	Month       sql.NullInt64
-	Year        sql.NullInt64
-	CategoryID  sql.NullInt64
-	AccountID   sql.NullInt64
+	Amount      float64
+	Description string
+	Destination string
+	Date        time.Time
+	Month       int64
+	Year        int64
+	CategoryID  int64
+	AccountID   int64
 	CreatedAt   sql.NullTime
 	UpdatedAt   sql.NullTime
 }
@@ -67,9 +67,9 @@ type Owner struct {
 	ID                   int64
 	Name                 string
 	NormalizedName       string
-	IdentificationNumber sql.NullString
-	ContactPhone         sql.NullString
-	ContactEmail         sql.NullString
+	IdentificationNumber string
+	ContactPhone         string
+	ContactEmail         string
 	FirstDetectedAt      sql.NullTime
 	CreatedAt            sql.NullTime
 	UpdatedAt            sql.NullTime
@@ -82,8 +82,8 @@ type Ownership struct {
 	StartDate            sql.NullTime
 	EndDate              interface{}
 	IsActive             sql.NullBool
-	RegistrationDocument sql.NullString
-	RegistrationDate     sql.NullTime
+	RegistrationDocument string
+	RegistrationDate     time.Time
 	CreatedAt            sql.NullTime
 	UpdatedAt            sql.NullTime
 }
@@ -99,15 +99,16 @@ type RefreshToken struct {
 
 type Unit struct {
 	ID              int64
-	CadastralNumber sql.NullString
+	CadastralNumber string
 	BuildingID      string
-	UnitNumber      sql.NullString
-	Address         sql.NullString
+	UnitNumber      string
+	Address         string
+	Entrance        int64
 	Area            float64
 	Part            float64
-	UnitType        sql.NullString
-	Floor           sql.NullInt64
-	RoomCount       sql.NullInt64
+	UnitType        string
+	Floor           int64
+	RoomCount       int64
 	CreatedAt       sql.NullTime
 	UpdatedAt       sql.NullTime
 }
