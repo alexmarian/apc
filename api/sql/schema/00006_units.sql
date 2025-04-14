@@ -5,7 +5,7 @@ CREATE TABLE units
 (
     id               INTEGER PRIMARY KEY,
     cadastral_number TEXT    NOT NULL UNIQUE,
-    building_id      TEXT    NOT NULL REFERENCES buildings (id),
+    building_id      INTEGER    NOT NULL REFERENCES buildings (id),
     unit_number      TEXT    NOT NULL,
     address          TEXT    NOT NULL,
     entrance         INTEGER NOT NULL DEFAULT 1,

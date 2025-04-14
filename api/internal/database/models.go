@@ -100,7 +100,7 @@ type RefreshToken struct {
 type Unit struct {
 	ID              int64
 	CadastralNumber string
-	BuildingID      string
+	BuildingID      int64
 	UnitNumber      string
 	Address         string
 	Entrance        int64

@@ -108,7 +108,7 @@ UPDATE users
 set password_hash = ?,
     topt_secret   = ?,
     is_admin      = ?,
-    updated_at    = NOW()
+    updated_at    = datetime()
 WHERE login = ? RETURNING id, login, password_hash, topt_secret, is_admin, created_at, updated_at
 `
 

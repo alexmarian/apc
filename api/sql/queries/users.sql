@@ -12,7 +12,7 @@ UPDATE users
 set password_hash = ?,
     topt_secret   = ?,
     is_admin      = ?,
-    updated_at    = NOW()
+    updated_at    = datetime()
 WHERE login = ? RETURNING *;
 
 -- name: GetUserByLogin :one
