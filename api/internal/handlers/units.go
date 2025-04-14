@@ -83,6 +83,41 @@ func HandleGetBuildingUnit(cfg *ApiConfig) func(http.ResponseWriter, *http.Reque
 	}
 }
 
+func HandleGetBuildingUnitOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		//associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		//buildingId, _ := strconv.Atoi(req.PathValue(BuildingIdPathValue))
+		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
+
+		ownersFromDb, err := cfg.Db.GetUnitOwners(req.Context(), int64(unitId))
+		if err != nil {
+			var errors = fmt.Sprintf("Error getting buildings: %s", err)
+			log.Printf(errors)
+			if err == sql.ErrNoRows {
+				RespondWithError(rw, http.StatusNotFound, "Building not found")
+				return
+			}
+			RespondWithError(rw, http.StatusInternalServerError, errors)
+			return
+		}
+		owners := make([]Owner, len(ownersFromDb))
+		for i, owner := range ownersFromDb {
+			owners[i] = Owner{
+				ID:                   owner.ID,
+				Name:                 owner.Name,
+				NormalizedName:       owner.NormalizedName,
+				IdentificationNumber: owner.IdentificationNumber,
+				ContactPhone:         owner.ContactPhone,
+				ContactEmail:         owner.ContactEmail,
+				FirstDetectedAt:      owner.FirstDetectedAt.Time,
+				CreatedAt:            owner.CreatedAt.Time,
+				UpdatedAt:            owner.UpdatedAt.Time,
+			}
+		}
+		RespondWithJSON(rw, http.StatusCreated, owners)
+	}
+}
+
 func HandleUpdateBuildingUnit(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		//associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))

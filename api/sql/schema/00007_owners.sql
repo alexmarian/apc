@@ -12,7 +12,7 @@ CREATE TABLE owners
     first_detected_at     TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
     created_at            TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
     updated_at            TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (normalized_name)
+    UNIQUE (identification_number)
 );
 -- +goose StatementEnd
 
