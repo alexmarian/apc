@@ -11,33 +11,18 @@ import (
 
 const getAssociationOwner = `-- name: GetAssociationOwner :one
 
-SELECT owners.id,
-       owners.name,
-       owners.normalized_name,
-       owners.identification_number,
-       owners.contact_phone,
-       owners.contact_email,
-       owners.first_detected_at,
-       owners.created_at,
-       owners.updated_at
-FROM owners,
-     ownerships,
-     units,
-     buildings
-WHERE owners.id = ownerships.owner_id
-  AND ownerships.unit_id = units.id
-  AND units.building_id = buildings.id
-  AND buildings.association_id = ?
-  AND owners.id = ?
+SELECT id, name, normalized_name, identification_number, contact_phone, contact_email, first_detected_at, association_id, created_at, updated_at
+FROM owners
+WHERE owners.id = ? and owners.association_id=?
 `
 
 type GetAssociationOwnerParams struct {
-	AssociationID int64
 	ID            int64
+	AssociationID int64
 }
 
 func (q *Queries) GetAssociationOwner(ctx context.Context, arg GetAssociationOwnerParams) (Owner, error) {
-	row := q.db.QueryRowContext(ctx, getAssociationOwner, arg.AssociationID, arg.ID)
+	row := q.db.QueryRowContext(ctx, getAssociationOwner, arg.ID, arg.AssociationID)
 	var i Owner
 	err := row.Scan(
 		&i.ID,
@@ -47,6 +32,7 @@ func (q *Queries) GetAssociationOwner(ctx context.Context, arg GetAssociationOwn
 		&i.ContactPhone,
 		&i.ContactEmail,
 		&i.FirstDetectedAt,
+		&i.AssociationID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -55,23 +41,9 @@ func (q *Queries) GetAssociationOwner(ctx context.Context, arg GetAssociationOwn
 
 const getAssociationOwners = `-- name: GetAssociationOwners :many
 
-SELECT owners.id,
-       owners.name,
-       owners.normalized_name,
-       owners.identification_number,
-       owners.contact_phone,
-       owners.contact_email,
-       owners.first_detected_at,
-       owners.created_at,
-       owners.updated_at
-FROM owners,
-     ownerships,
-     units,
-     buildings
-WHERE owners.id = ownerships.owner_id
-  AND ownerships.unit_id = units.id
-  AND units.building_id = buildings.id
-  AND buildings.association_id = ?
+SELECT id, name, normalized_name, identification_number, contact_phone, contact_email, first_detected_at, association_id, created_at, updated_at
+FROM owners
+WHERE owners.association_id = ?
 `
 
 func (q *Queries) GetAssociationOwners(ctx context.Context, associationID int64) ([]Owner, error) {
@@ -91,6 +63,7 @@ func (q *Queries) GetAssociationOwners(ctx context.Context, associationID int64)
 			&i.ContactPhone,
 			&i.ContactEmail,
 			&i.FirstDetectedAt,
+			&i.AssociationID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -115,16 +88,22 @@ SELECT owners.id,
        owners.contact_phone,
        owners.contact_email,
        owners.first_detected_at,
+       owners.association_id,
        owners.created_at,
        owners.updated_at
 FROM owners,
      ownerships
 WHERE owners.id = ownerships.owner_id
-  AND ownerships.unit_id = ?
+  AND ownerships.unit_id = ? and ownerships.association_id = ?
 `
 
-func (q *Queries) GetUnitOwners(ctx context.Context, unitID int64) ([]Owner, error) {
-	rows, err := q.db.QueryContext(ctx, getUnitOwners, unitID)
+type GetUnitOwnersParams struct {
+	UnitID        int64
+	AssociationID int64
+}
+
+func (q *Queries) GetUnitOwners(ctx context.Context, arg GetUnitOwnersParams) ([]Owner, error) {
+	rows, err := q.db.QueryContext(ctx, getUnitOwners, arg.UnitID, arg.AssociationID)
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +119,7 @@ func (q *Queries) GetUnitOwners(ctx context.Context, unitID int64) ([]Owner, err
 			&i.ContactPhone,
 			&i.ContactEmail,
 			&i.FirstDetectedAt,
+			&i.AssociationID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -166,13 +146,7 @@ SET name                  = ?,
     contact_phone         = ?,
     contact_email         = ?,
     updated_at            = datetime()
-WHERE owners.id = ?
-  AND EXISTS (SELECT 1
-              FROM ownerships
-                       JOIN units ON ownerships.unit_id = units.id
-                       JOIN buildings ON units.building_id = buildings.id
-              WHERE ownerships.owner_id = owners.id
-                AND buildings.association_id = ?)
+WHERE id = ? AND association_id = ?
 `
 
 type UpdateAssociationOwnerParams struct {

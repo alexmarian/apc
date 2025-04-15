@@ -71,6 +71,7 @@ type Owner struct {
 	ContactPhone         string
 	ContactEmail         string
 	FirstDetectedAt      sql.NullTime
+	AssociationID        int64
 	CreatedAt            sql.NullTime
 	UpdatedAt            sql.NullTime
 }
@@ -79,8 +80,9 @@ type Ownership struct {
 	ID                   int64
 	UnitID               int64
 	OwnerID              int64
+	AssociationID        int64
 	StartDate            sql.NullTime
-	EndDate              interface{}
+	EndDate              sql.NullTime
 	IsActive             sql.NullBool
 	RegistrationDocument string
 	RegistrationDate     time.Time

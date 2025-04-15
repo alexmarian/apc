@@ -85,11 +85,14 @@ func HandleGetBuildingUnit(cfg *ApiConfig) func(http.ResponseWriter, *http.Reque
 
 func HandleGetBuildingUnitOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		//associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
 		//buildingId, _ := strconv.Atoi(req.PathValue(BuildingIdPathValue))
 		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
 
-		ownersFromDb, err := cfg.Db.GetUnitOwners(req.Context(), int64(unitId))
+		ownersFromDb, err := cfg.Db.GetUnitOwners(req.Context(), database.GetUnitOwnersParams{
+			AssociationID: int64(associationId),
+			UnitID:        int64(unitId),
+		})
 		if err != nil {
 			var errors = fmt.Sprintf("Error getting buildings: %s", err)
 			log.Printf(errors)
@@ -115,6 +118,46 @@ func HandleGetBuildingUnitOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.
 			}
 		}
 		RespondWithJSON(rw, http.StatusCreated, owners)
+	}
+}
+
+func HandleGetBuildingUnitOwnerships(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		//buildingId, _ := strconv.Atoi(req.PathValue(BuildingIdPathValue))
+		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
+
+		ownershipsFromDb, err := cfg.Db.GetUnitOwnerships(req.Context(), database.GetUnitOwnershipsParams{
+			AssociationID: int64(associationId),
+			UnitID:        int64(unitId),
+		})
+		if err != nil {
+			var errors = fmt.Sprintf("Error getting buildings: %s", err)
+			log.Printf(errors)
+			if err == sql.ErrNoRows {
+				RespondWithError(rw, http.StatusNotFound, "Building not found")
+				return
+			}
+			RespondWithError(rw, http.StatusInternalServerError, errors)
+			return
+		}
+		ownerships := make([]Ownership, len(ownershipsFromDb))
+		for i, owner := range ownershipsFromDb {
+			ownerships[i] = Ownership{
+				ID:                   owner.ID,
+				UnitId:               owner.UnitID,
+				OwnerId:              owner.OwnerID,
+				AssociationId:        owner.AssociationID,
+				StartDate:            owner.StartDate.Time,
+				EndDate:              owner.EndDate.Time,
+				IsActive:             owner.IsActive.Bool,
+				RegistrationDocument: owner.RegistrationDocument,
+				RegistrationDate:     owner.RegistrationDate,
+				CreatedAt:            owner.CreatedAt.Time,
+				UpdatedAt:            owner.UpdatedAt.Time,
+			}
+		}
+		RespondWithJSON(rw, http.StatusOK, ownerships)
 	}
 }
 
