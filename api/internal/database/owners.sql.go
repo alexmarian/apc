@@ -7,7 +7,159 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"time"
 )
+
+const createOwner = `-- name: CreateOwner :one
+
+INSERT INTO owners (
+    name, normalized_name, identification_number,
+    contact_phone, contact_email, association_id
+) VALUES (?, ?, ?, ?, ?, ?)
+    RETURNING id, name, normalized_name, identification_number, contact_phone, contact_email, first_detected_at, association_id, created_at, updated_at
+`
+
+type CreateOwnerParams struct {
+	Name                 string
+	NormalizedName       string
+	IdentificationNumber string
+	ContactPhone         string
+	ContactEmail         string
+	AssociationID        int64
+}
+
+func (q *Queries) CreateOwner(ctx context.Context, arg CreateOwnerParams) (Owner, error) {
+	row := q.db.QueryRowContext(ctx, createOwner,
+		arg.Name,
+		arg.NormalizedName,
+		arg.IdentificationNumber,
+		arg.ContactPhone,
+		arg.ContactEmail,
+		arg.AssociationID,
+	)
+	var i Owner
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NormalizedName,
+		&i.IdentificationNumber,
+		&i.ContactPhone,
+		&i.ContactEmail,
+		&i.FirstDetectedAt,
+		&i.AssociationID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createOwnership = `-- name: CreateOwnership :one
+
+INSERT INTO ownerships (
+    unit_id, owner_id, association_id,
+    start_date, end_date, is_active,
+    registration_document, registration_date
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    RETURNING id, unit_id, owner_id, association_id, start_date, end_date, is_active, registration_document, registration_date, created_at, updated_at
+`
+
+type CreateOwnershipParams struct {
+	UnitID               int64
+	OwnerID              int64
+	AssociationID        int64
+	StartDate            sql.NullTime
+	EndDate              sql.NullTime
+	IsActive             bool
+	RegistrationDocument string
+	RegistrationDate     time.Time
+}
+
+func (q *Queries) CreateOwnership(ctx context.Context, arg CreateOwnershipParams) (Ownership, error) {
+	row := q.db.QueryRowContext(ctx, createOwnership,
+		arg.UnitID,
+		arg.OwnerID,
+		arg.AssociationID,
+		arg.StartDate,
+		arg.EndDate,
+		arg.IsActive,
+		arg.RegistrationDocument,
+		arg.RegistrationDate,
+	)
+	var i Ownership
+	err := row.Scan(
+		&i.ID,
+		&i.UnitID,
+		&i.OwnerID,
+		&i.AssociationID,
+		&i.StartDate,
+		&i.EndDate,
+		&i.IsActive,
+		&i.RegistrationDocument,
+		&i.RegistrationDate,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deactivateOwnership = `-- name: DeactivateOwnership :exec
+
+UPDATE ownerships
+SET is_active = false, end_date = ?, updated_at = CURRENT_TIMESTAMP
+WHERE id = ?
+`
+
+type DeactivateOwnershipParams struct {
+	EndDate sql.NullTime
+	ID      int64
+}
+
+func (q *Queries) DeactivateOwnership(ctx context.Context, arg DeactivateOwnershipParams) error {
+	_, err := q.db.ExecContext(ctx, deactivateOwnership, arg.EndDate, arg.ID)
+	return err
+}
+
+const getActiveUnitOwnerships = `-- name: GetActiveUnitOwnerships :many
+
+SELECT id, unit_id, owner_id, association_id, start_date, end_date, is_active, registration_document, registration_date, created_at, updated_at FROM ownerships
+WHERE unit_id = ? AND is_active = true
+`
+
+func (q *Queries) GetActiveUnitOwnerships(ctx context.Context, unitID int64) ([]Ownership, error) {
+	rows, err := q.db.QueryContext(ctx, getActiveUnitOwnerships, unitID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Ownership
+	for rows.Next() {
+		var i Ownership
+		if err := rows.Scan(
+			&i.ID,
+			&i.UnitID,
+			&i.OwnerID,
+			&i.AssociationID,
+			&i.StartDate,
+			&i.EndDate,
+			&i.IsActive,
+			&i.RegistrationDocument,
+			&i.RegistrationDate,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
 
 const getAssociationOwner = `-- name: GetAssociationOwner :one
 
@@ -66,6 +218,112 @@ func (q *Queries) GetAssociationOwners(ctx context.Context, associationID int64)
 			&i.AssociationID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOwnerById = `-- name: GetOwnerById :one
+    
+SELECT id, name, normalized_name, identification_number, contact_phone, contact_email, first_detected_at, association_id, created_at, updated_at FROM owners
+WHERE id = ? LIMIT 1
+`
+
+func (q *Queries) GetOwnerById(ctx context.Context, id int64) (Owner, error) {
+	row := q.db.QueryRowContext(ctx, getOwnerById, id)
+	var i Owner
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NormalizedName,
+		&i.IdentificationNumber,
+		&i.ContactPhone,
+		&i.ContactEmail,
+		&i.FirstDetectedAt,
+		&i.AssociationID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getOwnerUnitsWithDetails = `-- name: GetOwnerUnitsWithDetails :many
+
+SELECT
+    u.id as unit_id,
+    u.unit_number,
+    u.area,
+    u.part,
+    u.unit_type,
+    b.name as building_name,
+    b.address as building_address,
+    o2.id as co_owner_id,
+    o2.name as co_owner_name,
+    o2.normalized_name as co_owner_normalized_name,
+    o2.identification_number as co_owner_identification_number,
+    o2.contact_phone as co_owner_contact_phone,
+    o2.contact_email as co_owner_contact_email
+FROM ownerships o
+         JOIN units u ON o.unit_id = u.id
+         JOIN buildings b ON u.building_id = b.id
+         LEFT JOIN ownerships o_co ON o.unit_id = o_co.unit_id AND o_co.is_active = true AND o_co.owner_id != o.owner_id
+LEFT JOIN owners o2 ON o_co.owner_id = o2.id
+WHERE o.owner_id = ? AND o.association_id = ? AND o.is_active = true
+`
+
+type GetOwnerUnitsWithDetailsParams struct {
+	OwnerID       int64
+	AssociationID int64
+}
+
+type GetOwnerUnitsWithDetailsRow struct {
+	UnitID                      int64
+	UnitNumber                  string
+	Area                        float64
+	Part                        float64
+	UnitType                    string
+	BuildingName                string
+	BuildingAddress             string
+	CoOwnerID                   sql.NullInt64
+	CoOwnerName                 sql.NullString
+	CoOwnerNormalizedName       sql.NullString
+	CoOwnerIdentificationNumber sql.NullString
+	CoOwnerContactPhone         sql.NullString
+	CoOwnerContactEmail         sql.NullString
+}
+
+func (q *Queries) GetOwnerUnitsWithDetails(ctx context.Context, arg GetOwnerUnitsWithDetailsParams) ([]GetOwnerUnitsWithDetailsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getOwnerUnitsWithDetails, arg.OwnerID, arg.AssociationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOwnerUnitsWithDetailsRow
+	for rows.Next() {
+		var i GetOwnerUnitsWithDetailsRow
+		if err := rows.Scan(
+			&i.UnitID,
+			&i.UnitNumber,
+			&i.Area,
+			&i.Part,
+			&i.UnitType,
+			&i.BuildingName,
+			&i.BuildingAddress,
+			&i.CoOwnerID,
+			&i.CoOwnerName,
+			&i.CoOwnerNormalizedName,
+			&i.CoOwnerIdentificationNumber,
+			&i.CoOwnerContactPhone,
+			&i.CoOwnerContactEmail,
 		); err != nil {
 			return nil, err
 		}

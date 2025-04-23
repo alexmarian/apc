@@ -9,7 +9,7 @@ CREATE TABLE ownerships
     association_id        INTEGER   NOT NULL REFERENCES associations (id) DEFAULT 1,
     start_date            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     end_date              TIMESTAMP DEFAULT NULL, -- NULL means current ownership
-    is_active             BOOLEAN   DEFAULT TRUE,
+    is_active             BOOLEAN   DEFAULT TRUE NOT NULL ,
     registration_document TEXT      NOT NULL,
     registration_date     TIMESTAMP NOT NULL,
     created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

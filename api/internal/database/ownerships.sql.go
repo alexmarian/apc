@@ -9,6 +9,31 @@ import (
 	"context"
 )
 
+const getOwnership = `-- name: GetOwnership :one
+
+SELECT id, unit_id, owner_id, association_id, start_date, end_date, is_active, registration_document, registration_date, created_at, updated_at FROM ownerships
+WHERE id = ? LIMIT 1
+`
+
+func (q *Queries) GetOwnership(ctx context.Context, id int64) (Ownership, error) {
+	row := q.db.QueryRowContext(ctx, getOwnership, id)
+	var i Ownership
+	err := row.Scan(
+		&i.ID,
+		&i.UnitID,
+		&i.OwnerID,
+		&i.AssociationID,
+		&i.StartDate,
+		&i.EndDate,
+		&i.IsActive,
+		&i.RegistrationDocument,
+		&i.RegistrationDate,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUnitOwnerships = `-- name: GetUnitOwnerships :many
 SELECT id, unit_id, owner_id, association_id, start_date, end_date, is_active, registration_document, registration_date, created_at, updated_at
 FROM  ownerships

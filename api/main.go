@@ -65,7 +65,15 @@ func main() {
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/buildings/{%s}/units/{%s}/owners", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue, handlers.UnitIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetBuildingUnitOwner(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/buildings/{%s}/units/{%s}/ownerships", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue, handlers.UnitIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetBuildingUnitOwnerships(apiCfg)))
 
-	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/owners", handlers.AssociationIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetAssoctiationOwners(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/owners", handlers.AssociationIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleCreateOwner(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/buildings/{%s}/units/{%s}/ownerships", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue, handlers.UnitIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleCreateUnitOwnership(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/owners/report", handlers.AssociationIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetOwnerReport(apiCfg)))
+
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/ownerships/{ownershipId}/disable",
+		handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleDisableOwnership(apiCfg)))
+
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/owners", handlers.AssociationIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetAssociationOwners(apiCfg)))
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: mux,

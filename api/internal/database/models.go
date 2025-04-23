@@ -83,7 +83,7 @@ type Ownership struct {
 	AssociationID        int64
 	StartDate            sql.NullTime
 	EndDate              sql.NullTime
-	IsActive             sql.NullBool
+	IsActive             bool
 	RegistrationDocument string
 	RegistrationDate     time.Time
 	CreatedAt            sql.NullTime

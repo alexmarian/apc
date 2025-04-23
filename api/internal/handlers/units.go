@@ -30,6 +30,17 @@ type Unit struct {
 	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
+type UnitUpdateRequest struct {
+	UnitNumber *string  `json:"unit_number,omitempty"`
+	Address    *string  `json:"address,omitempty"`
+	Entrance   *int64   `json:"entrance,omitempty"`
+	Area       *float64 `json:"area,omitempty"`
+	Part       *float64 `json:"part,omitempty"`
+	UnitType   *string  `json:"unit_type,omitempty"`
+	Floor      *int64   `json:"floor,omitempty"`
+	RoomCount  *int64   `json:"room_count,omitempty"`
+}
+
 func HandleGetBuildingUnits(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		//associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
@@ -150,7 +161,7 @@ func HandleGetBuildingUnitOwnerships(cfg *ApiConfig) func(http.ResponseWriter, *
 				AssociationId:        owner.AssociationID,
 				StartDate:            owner.StartDate.Time,
 				EndDate:              owner.EndDate.Time,
-				IsActive:             owner.IsActive.Bool,
+				IsActive:             owner.IsActive,
 				RegistrationDocument: owner.RegistrationDocument,
 				RegistrationDate:     owner.RegistrationDate,
 				CreatedAt:            owner.CreatedAt.Time,
@@ -163,91 +174,82 @@ func HandleGetBuildingUnitOwnerships(cfg *ApiConfig) func(http.ResponseWriter, *
 
 func HandleUpdateBuildingUnit(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		//associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		decoder := json.NewDecoder(req.Body)
-		defer req.Body.Close()
-		unit := Unit{}
-		err := decoder.Decode(&unit)
-		if err != nil {
-			var errors = fmt.Sprintf("Error decoding update user request: %s", err)
-			log.Printf(errors)
-			RespondWithError(rw, http.StatusBadRequest, errors)
-			return
-		}
 		buildingId, _ := strconv.Atoi(req.PathValue(BuildingIdPathValue))
 		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
+
+		existingUnit, err := getUnitPayloadFromDb(req.Context(), cfg, buildingId, unitId)
+		if err != nil {
+			return
+		}
+
+		decoder := json.NewDecoder(req.Body)
+		var updateRequest UnitUpdateRequest
+		if err := decoder.Decode(&updateRequest); err != nil {
+			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
+			return
+		}
 
 		params := database.UpdateBuildingUnitByIdParams{
 			ID:         int64(unitId),
 			BuildingID: int64(buildingId),
 		}
 
-		unitPayload, err := getUnitPayloadFromDb(req.Context(), cfg, buildingId, unitId)
-		applyPartialUpdates(unit, unitPayload, &params)
+		applyPartialUpdates(&updateRequest, existingUnit, &params)
 
-		err = cfg.Db.UpdateBuildingUnitById(req.Context(), params)
-		if err != nil {
-			var errors = fmt.Sprintf("Error getting buildings: %s", err)
-			log.Printf(errors)
-			if err == sql.ErrNoRows {
-				RespondWithError(rw, http.StatusNotFound, "Building not found")
-				return
-			}
-			RespondWithError(rw, http.StatusInternalServerError, errors)
+		if err := cfg.Db.UpdateBuildingUnitById(req.Context(), params); err != nil {
 			return
 		}
-		if err != nil {
-			var errors = fmt.Sprintf("Error getting buildings: %s", err)
-			log.Printf(errors)
-			if err == sql.ErrNoRows {
-				RespondWithError(rw, http.StatusNotFound, "Building not found")
-				return
-			}
-			RespondWithError(rw, http.StatusInternalServerError, errors)
-			return
-		}
-		RespondWithJSON(rw, http.StatusCreated, unitPayload)
+
+		existingUnit.UpdatedAt = time.Now()
+
+		RespondWithJSON(rw, http.StatusOK, existingUnit)
 	}
 }
 
-func applyPartialUpdates(unit Unit, existing *Unit, params *database.UpdateBuildingUnitByIdParams) {
-	if unit.UnitNumber != "" {
-		params.UnitNumber = unit.UnitNumber
-		existing.UnitNumber = unit.UnitNumber
+func applyPartialUpdates(update *UnitUpdateRequest, existing *Unit, params *database.UpdateBuildingUnitByIdParams) {
+	// Use pointers to distinguish between "field not provided" and "field set to zero value"
+	if update.UnitNumber != nil {
+		params.UnitNumber = *update.UnitNumber
+		existing.UnitNumber = *update.UnitNumber
 	} else {
 		params.UnitNumber = existing.UnitNumber
 	}
-	if unit.Address != "" {
-		params.Address = unit.Address
-		existing.Address = unit.Address
+
+	if update.Address != nil {
+		params.Address = *update.Address
+		existing.Address = *update.Address
 	} else {
 		params.Address = existing.Address
 	}
-	if unit.Entrance != 0 {
-		params.Entrance = unit.Entrance
-		existing.Entrance = unit.Entrance
+
+	if update.Entrance != nil {
+		params.Entrance = *update.Entrance
+		existing.Entrance = *update.Entrance
 	} else {
 		params.Entrance = existing.Entrance
 	}
-	if unit.UnitType != "" {
-		params.UnitType = unit.UnitType
-		existing.UnitType = unit.UnitType
+
+	if update.UnitType != nil {
+		params.UnitType = *update.UnitType
+		existing.UnitType = *update.UnitType
 	} else {
 		params.UnitType = existing.UnitType
 	}
-	if unit.Floor != 0 {
-		params.Floor = unit.Floor
-		existing.Floor = unit.Floor
+
+	if update.Floor != nil {
+		params.Floor = *update.Floor
+		existing.Floor = *update.Floor
 	} else {
 		params.Floor = existing.Floor
 	}
-	if unit.RoomCount != 0 {
-		params.RoomCount = unit.RoomCount
-		existing.RoomCount = unit.RoomCount
+
+	if update.RoomCount != nil {
+		params.RoomCount = *update.RoomCount
+		existing.RoomCount = *update.RoomCount
 	} else {
 		params.RoomCount = existing.RoomCount
 	}
-	existing.UpdatedAt = time.Now()
+
 }
 
 func getUnitPayloadFromDb(context context.Context, cfg *ApiConfig, buildingId int, unitId int) (*Unit, error) {
