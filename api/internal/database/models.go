@@ -44,6 +44,7 @@ type Category struct {
 	Type          string
 	Family        string
 	Name          string
+	IsDeleted     bool
 	AssociationID int64
 	CreatedAt     sql.NullTime
 	UpdatedAt     sql.NullTime

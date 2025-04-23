@@ -78,6 +78,27 @@ func main() {
 		Addr:    ":" + port,
 		Handler: mux,
 	}
+
+	// Categories
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/categories", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleCreateCategory(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/categories/{categoryId}/deactivate", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleDeactivateCategory(apiCfg)))
+
+	// Expenses
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/expenses", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetExpenses(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/expenses", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleCreateExpense(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/expenses/{expenseId}", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleUpdateExpense(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("DELETE /v1/api/associations/{%s}/expenses/{expenseId}", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleDeleteExpense(apiCfg)))
+
+	// Expense Reports
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/expenses/report", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetExpenseReport(apiCfg)))
+
 	log.Println("APC api listening on port " + port)
 	log.Fatal(srv.ListenAndServe())
 }

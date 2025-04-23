@@ -3,13 +3,17 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/alexmarian/apc/api/internal/database"
 	"log"
 	"net/http"
+	"time"
 )
 
 const userContextKey = "userID"
 const assoctiationsContextKey = "associations"
+const startDateQueryKey = "start_date"
+const endDateQueryKey = "end_date"
 
 type ApiConfig struct {
 	Db     *database.Queries
@@ -58,4 +62,30 @@ func AddAssotiationIdsToContext(req *http.Request, associations []int64) *http.R
 
 func GetAssotiationIdsToContext(req *http.Request) []int64 {
 	return req.Context().Value(assoctiationsContextKey).([]int64)
+}
+
+func GetRequestDateRange(req *http.Request, rw *http.ResponseWriter) (startDate, endDate time.Time, err error) {
+	startDateStr := req.URL.Query().Get(startDateQueryKey)
+	endDateStr := req.URL.Query().Get(endDateQueryKey)
+
+	if startDateStr == "" {
+		startDate = time.Now().AddDate(0, -1, 0)
+	} else {
+		startDate, err = time.Parse("2006-01-02", startDateStr)
+		if err != nil {
+			err = fmt.Errorf("invalid start_date format: %w", err)
+			return
+		}
+	}
+	if endDateStr == "" {
+		endDate = time.Now()
+	} else {
+		endDate, err = time.Parse("2006-01-02", endDateStr)
+		if err != nil {
+			err = fmt.Errorf("invalid end_date format: %w", err)
+			return
+		}
+		endDate = time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 23, 59, 59, 999999999, endDate.Location())
+	}
+	return
 }

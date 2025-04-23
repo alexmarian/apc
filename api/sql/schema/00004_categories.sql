@@ -7,6 +7,7 @@ CREATE TABLE categories
     type           TEXT    NOT NULL,
     family         TEXT    NOT NULL,
     name           TEXT    NOT NULL,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     association_id INTEGER NOT NULL REFERENCES associations (id),
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
