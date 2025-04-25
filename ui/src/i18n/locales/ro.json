@@ -23,7 +23,9 @@
     "username": "Nume utilizator",
     "password": "Parolă",
     "totp": "Cod TOTP",
-    "loginFailed": "Autentificare eșuată. Verificați datele de conectare."
+    "loginFailed": "Autentificare eșuată. Verificați datele de conectare.",
+    "anonymous": "Anonim",
+    "userProfile": "Profil Utilizator"
   },
   "accounts": {
     "title": "Administrare Conturi",

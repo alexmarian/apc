@@ -23,7 +23,9 @@
     "username": "Username",
     "password": "Password",
     "totp": "TOTP Code",
-    "loginFailed": "Login failed. Please check your credentials."
+    "loginFailed": "Login failed. Please check your credentials.",
+    "anonymous": "Anonymous",
+    "userProfile": "User Profile"
   },
   "accounts": {
     "title": "Account Management",

@@ -5,6 +5,7 @@ import { NSpace, NLayout, NLayoutHeader, NLayoutContent, NMenu, NButton, NDropdo
 import { h, inject } from 'vue'
 import ThemeProvider from '@/providers/ThemeProvider.vue'
 import LanguageSelector from '@/components/LanguageSelector.vue'
+import UserProfileButton from '@/components/UserProfileButton.vue'
 import { ThemeKey, defaultThemeProvider } from '@/utils/theme'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
@@ -77,6 +78,7 @@ const handleThemeChange = (key: string) => {
                 Theme: {{ theme.isDark ? 'Dark' : 'Light' }}
               </n-button>
             </n-dropdown>
+            <UserProfileButton />
           </n-space>
         </div>
       </n-layout-header>
