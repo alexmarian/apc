@@ -33,7 +33,7 @@ const sharedFilters = inject('expenseFilters', null)
 
 // Data
 const expenses = ref<Expense[]>([])
-const loading = ref<boolean>(true)
+const loading = ref<boolean>(false)
 const error = ref<string | null>(null)
 const message = useMessage()
 
@@ -170,6 +170,7 @@ const fetchExpenses = async () => {
   } finally {
     loading.value = false
   }
+
 }
 
 // Delete expense
@@ -219,7 +220,6 @@ const resetFilters = () => {
   }
 }
 
-// Load data on component mount
 onMounted(() => {
   fetchExpenses()
 })

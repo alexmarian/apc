@@ -15,17 +15,18 @@ const totalExpenses = computed(() => {
 })
 
 const expenseCount = computed(() => {
-  return props.expenses.value.length
+  return props.expenses.length
 })
 
 const averageExpense = computed(() => {
-  if (expenses.value.length === 0) return 0
-  return totalExpenses.value / props.expenses.value.length
+  if (props.expenses.length === 0) return 0
+  return totalExpenses.value / props.expenses.length
 })
 
 // Group expenses by category
 const expensesByCategory = computed(() => {
-  const grouped = props.expenses.value.reduce((acc, expense) => {
+  if (!props.expenses || props.expenses.length === 0) return []
+  const grouped = props.expenses.reduce((acc, expense) => {
     const categoryKey = expense.category_id
     if (!acc[categoryKey]) {
       acc[categoryKey] = {
@@ -48,6 +49,7 @@ const expensesByCategory = computed(() => {
 
 const topCategories = computed(() => {
   return expensesByCategory.value.slice(0, 3)
+
 })
 </script>
 
@@ -81,6 +83,12 @@ const topCategories = computed(() => {
 </template>
 
 <style scoped>
+:root {
+  --background-color: #f9f9f9;
+  --border-color: #ddd;
+  --text-color: #555;
+}
+
 .expense-summary {
   margin-bottom: 20px;
 }
