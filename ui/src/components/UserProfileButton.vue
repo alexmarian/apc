@@ -35,7 +35,7 @@ const handleLogout = () => {
 <template>
   <div class="user-profile-button">
     <NDropdown
-      v-if="useAuthStore.isAuthenticated"
+      v-if="authStore.isAuthenticated"
       trigger="click"
       :options="userMenuOptions"
       placement="bottom-end"

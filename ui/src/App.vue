@@ -25,6 +25,10 @@ const menuOptions = [
   {
     label: () => h(RouterLink, { to: '/expenses' }, { default: () => t('expenses.title', 'Expenses') }),
     key: 'expenses'
+  },
+  {
+    label: () => h(RouterLink, { to: '/reports' }, { default: () => t('reports.title', 'Reports') }),
+    key: 'expenses'
   }
 ]
 
