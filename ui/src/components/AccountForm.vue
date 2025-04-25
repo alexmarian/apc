@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { NForm, NFormItem, NInput, NButton, NSpace, NSpin, NAlert, FormRules } from 'naive-ui'
 import { accountApi } from '@/services/api'
-import { AccountCreateRequest, AccountUpdateRequest } from '@/types/api'
+import type { AccountCreateRequest, AccountUpdateRequest } from '@/types/api'
 
 // Props
 const props = defineProps<{
@@ -81,8 +81,13 @@ const submitForm = async (e: MouseEvent) => {
     // Send request
     if (isCreating) {
       await accountApi.createAccount(props.associationId, formData)
-    } else {
-      await accountApi.updateAccount(props.associationId, props.accountId!, formData)
+    } else if (props.accountId) {
+      const updateData: AccountUpdateRequest = {
+        number: formData.number,
+        destination: formData.destination,
+        description: formData.description
+      }
+      await accountApi.updateAccount(props.associationId, props.accountId, updateData)
     }
 
     // Notify parent component
@@ -90,8 +95,14 @@ const submitForm = async (e: MouseEvent) => {
   } catch (err) {
     if (err instanceof Error) {
       error.value = err.message
-      console.error('Error submitting form:', err)
+    } else if (typeof err === 'object' && err !== null && 'response' in err) {
+      // Axios error
+      const axiosError = err as any
+      error.value = axiosError.response?.data?.msg || 'An error occurred while submitting the form'
+    } else {
+      error.value = 'An unknown error occurred'
     }
+    console.error('Error submitting form:', err)
   } finally {
     submitting.value = false
   }

@@ -2,18 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import axios from 'axios'
 import config from '@/config'
-
-interface LoginCredentials {
-  login: string
-  password: string
-  totp: string
-}
-
-interface AuthPayload {
-  login: string
-  token: string
-  refresh_token: string
-}
+import type { LoginRequest, LoginResponse } from '@/types/api'
+import { authApi } from '@/services/api'
 
 // Create the auth store
 export const useAuthStore = defineStore('auth', () => {
@@ -28,17 +18,18 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!token.value)
 
   // Actions
-  async function login(credentials: LoginCredentials) {
+  async function login(credentials: LoginRequest) {
     loading.value = true
     error.value = null
 
     try {
-      const response = await axios.post<AuthPayload>(`${config.apiBaseUrl}/login`, credentials)
+      const response = await authApi.login(credentials)
+      const authData = response.data
 
       // Set auth data
-      token.value = response.data.token
-      refreshToken.value = response.data.refresh_token
-      user.value = response.data.login
+      token.value = authData.token
+      refreshToken.value = authData.refresh_token
+      user.value = authData.login
 
       // Save to localStorage
       localStorage.setItem(config.authTokenKey, token.value)
@@ -64,11 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     try {
-      const response = await axios.post<{ token: string }>(`${config.apiBaseUrl}/refresh`, null, {
-        headers: {
-          Authorization: `Bearer ${refreshToken.value}`
-        }
-      })
+      const response = await authApi.refreshToken(refreshToken.value)
 
       // Update token
       token.value = response.data.token

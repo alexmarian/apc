@@ -3,7 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { NSelect, NSpin } from 'naive-ui'
 import axios from 'axios'
 import config from '@/config'
-import { Association } from '@/types/api'
+import type { Association } from '@/types/api'
 
 // Props
 const props = defineProps<{

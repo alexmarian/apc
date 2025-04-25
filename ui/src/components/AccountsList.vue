@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, h } from 'vue'
-import { NDataTable, NButton, NSpace, NTag, NEmpty, NSpin, NAlert } from 'naive-ui'
+import { NDataTable, NButton, NSpace, NTag, NEmpty, NSpin, NAlert, useMessage } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { accountApi } from '@/services/api'
-import { Account } from '@/types/api'
+import type { Account } from '@/types/api'
 
 // Props
 const props = defineProps<{
@@ -19,6 +19,7 @@ const emit = defineEmits<{
 const accounts = ref<Account[]>([])
 const loading = ref<boolean>(true)
 const error = ref<string | null>(null)
+const message = useMessage()
 
 // Table columns definition
 const columns = ref<DataTableColumns<Account>>([
@@ -110,12 +111,10 @@ const fetchAccounts = async () => {
 
 // Disable account
 const disableAccount = async (accountId: number) => {
-  // Use Naive UI dialog for confirmation - could be implemented with DialogProvider
-  if (!window.confirm('Are you sure you want to disable this account?')) {
-    return
-  }
-
   try {
+    const confirmDisable = window.confirm('Are you sure you want to disable this account?')
+    if (!confirmDisable) return
+
     await accountApi.disableAccount(props.associationId, accountId)
 
     // Update the local state
@@ -124,12 +123,12 @@ const disableAccount = async (accountId: number) => {
       accounts.value[index].is_active = false
     }
 
-    // Would use NMessage instead of alert in a complete implementation
-    window.alert('Account disabled successfully')
+    message.success('Account disabled successfully')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Unknown error occurred'
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
+    error.value = errorMessage
     console.error('Error disabling account:', err)
-    window.alert('Failed to disable account')
+    message.error('Failed to disable account: ' + errorMessage)
   }
 }
 
