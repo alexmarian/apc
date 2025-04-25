@@ -1,12 +1,11 @@
 @import './base.css';
 
 #app {
-  max-width: 1280px;
+  max-width: 100%; /* Change from fixed 1280px to 100% */
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem 2rem;
   font-weight: normal;
 }
-
 a,
 .green {
   text-decoration: none;
@@ -29,7 +28,8 @@ a,
 
   #app {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
+    grid-template-columns: 1fr; /* Change from 1fr 1fr to single column */
+    padding: 0 1rem;
+    width: 100%;
   }
 }

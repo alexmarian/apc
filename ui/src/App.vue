@@ -105,8 +105,8 @@ const handleThemeChange = (key: string) => {
 }
 
 .content-container {
-  max-width: 1200px;
+  max-width: 100%; /* Change from 1200px to 100% */
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem;
 }
 </style>

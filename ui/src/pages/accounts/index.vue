@@ -103,7 +103,7 @@ const handleFormCancelled = () => {
 
 <style scoped>
 .accounts-view {
-  max-width: 1200px;
+  max-width: 100%; /* Change from 1200px to 100% */
   margin: 0 auto;
 }
 </style>
