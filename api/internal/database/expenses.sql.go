@@ -66,27 +66,6 @@ func (q *Queries) DeleteExpense(ctx context.Context, id int64) error {
 	return err
 }
 
-const getAccount = `-- name: GetAccount :one
-SELECT id, number, destination, description, association_id, created_at, updated_at
-FROM accounts
-WHERE id = ? LIMIT 1
-`
-
-func (q *Queries) GetAccount(ctx context.Context, id int64) (Account, error) {
-	row := q.db.QueryRowContext(ctx, getAccount, id)
-	var i Account
-	err := row.Scan(
-		&i.ID,
-		&i.Number,
-		&i.Destination,
-		&i.Description,
-		&i.AssociationID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const getExpenseWithAssociation = `-- name: GetExpenseWithAssociation :one
 SELECT e.id, e.amount, e.description, e.destination, e.date, e.month, e.year, e.category_id, e.account_id, e.created_at, e.updated_at
 FROM expenses e

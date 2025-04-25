@@ -105,6 +105,18 @@ func main() {
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/expenses/report", handlers.AssociationIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleGetExpenseReport(apiCfg)))
 
+	// Accounts
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/accounts", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetAssociationAccounts(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/accounts/{%s}", handlers.AssociationIdPathValue, handlers.AccountIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetAccount(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/accounts", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleCreateAccount(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/accounts/{%s}", handlers.AssociationIdPathValue, handlers.AccountIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleUpdateAccount(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/accounts/{%s}/disable", handlers.AssociationIdPathValue, handlers.AccountIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleDisableAccount(apiCfg)))
+
 	log.Println("APC api listening on port " + port)
 	log.Fatal(srv.ListenAndServe())
 }

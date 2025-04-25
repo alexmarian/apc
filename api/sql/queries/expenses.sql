@@ -1,8 +1,3 @@
--- name: GetAccount :one
-SELECT *
-FROM accounts
-WHERE id = ? LIMIT 1;
-
 -- name: CreateExpense :one
 INSERT INTO expenses (amount, description, destination, date,
                       month, year, category_id, account_id)

@@ -14,6 +14,7 @@ type Account struct {
 	Number        string
 	Destination   string
 	Description   string
+	IsActive      bool
 	AssociationID int64
 	CreatedAt     sql.NullTime
 	UpdatedAt     sql.NullTime
