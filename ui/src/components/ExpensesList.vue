@@ -1,14 +1,6 @@
-// Format date range for display
-const formattedDateRange = computed(() => {
-if (!dateRange.value) return 'All dates'
-
-const start = new Date(dateRange.value[0]).toLocaleDateString()
-const end = new Date(dateRange.value[1]).toLocaleDateString()
-
-return `${start} - ${end}`
-})<script setup lang="ts">
-import { ref, onMounted, h, computed, watch } from 'vue'
-import { NDataTable, NButton, NSpace, NEmpty, NSpin, NAlert, useMessage, NDatePicker } from 'naive-ui'
+<script setup lang="ts">
+import { ref, onMounted, h, computed, watch, inject } from 'vue'
+import { NDataTable, NButton, NSpace, NEmpty, NSpin, NAlert, useMessage, NDatePicker, NSelect } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { expenseApi } from '@/services/api'
 import type { Expense } from '@/types/api'
@@ -25,15 +17,18 @@ const emit = defineEmits<{
   (e: 'edit', expenseId: number): void
 }>()
 
+// Get shared filters from parent if available
+const sharedFilters = inject('expenseFilters', null)
+
 // Data
 const expenses = ref<Expense[]>([])
 const loading = ref<boolean>(true)
 const error = ref<string | null>(null)
 const message = useMessage()
 
-// Filters
-const dateRange = ref<[number, number] | null>(null)
-const selectedCategory = ref<number | null>(null)
+// Filters - use shared filters if available, otherwise use local state
+const dateRange = sharedFilters?.dateRange || ref<[number, number] | null>(null)
+const selectedCategory = sharedFilters?.selectedCategory || ref<number | null>(null)
 
 // Table columns definition
 const columns = ref<DataTableColumns<Expense>>([
@@ -116,6 +111,16 @@ const columns = ref<DataTableColumns<Expense>>([
   }
 ])
 
+// Format date range for display
+const formattedDateRange = computed(() => {
+  if (!dateRange.value) return 'All dates'
+
+  const start = new Date(dateRange.value[0]).toLocaleDateString()
+  const end = new Date(dateRange.value[1]).toLocaleDateString()
+
+  return `${start} - ${end}`
+})
+
 // Fetch expenses
 const fetchExpenses = async () => {
   if (!props.associationId) return
@@ -184,8 +189,12 @@ watch([dateRange, selectedCategory], () => {
 
 // Reset filters
 const resetFilters = () => {
-  dateRange.value = null
-  selectedCategory.value = null
+  if (typeof dateRange.value === 'object' && dateRange.value !== null) {
+    dateRange.value = null
+  }
+  if (typeof selectedCategory.value === 'object' && selectedCategory.value !== null) {
+    selectedCategory.value = null
+  }
   fetchExpenses()
 }
 
@@ -263,14 +272,15 @@ onMounted(() => {
 
 <style scoped>
 .expenses-list {
-  margin: 2rem 0;
+  margin: 1rem 0;
 }
 
 .filters {
   margin-bottom: 1.5rem;
   padding: 1rem;
-  background-color: #f9f9f9;
   border-radius: 4px;
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
 }
 
 .summary {
@@ -281,10 +291,13 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background-color: var(--background-color);
+  border-radius: 4px;
 }
 
 .date-range-label {
   font-size: 0.9rem;
-  color: #666;
+  color: var(--text-color);
+  opacity: 0.8;
 }
 </style>

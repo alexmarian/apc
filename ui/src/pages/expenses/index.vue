@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { NCard, NButton, NPageHeader, NSpace, useMessage, NGrid, NGridItem } from 'naive-ui'
+import { ref, computed, provide } from 'vue'
+import { NCard, NButton, NPageHeader, NSpace, useMessage } from 'naive-ui'
 import ExpensesList from '@/components/ExpensesList.vue'
 import ExpenseForm from '@/components/ExpenseForm.vue'
 import ExpensesSummary from '@/components/ExpensesSummary.vue'
@@ -15,6 +15,17 @@ const associationId = ref<number | null>(null)
 // UI state
 const showForm = ref(false)
 const editingExpenseId = ref<number | undefined>(undefined)
+const showSummary = ref(true)
+
+// Date filter state that will be shared between components
+const dateRange = ref<[number, number] | null>(null)
+const selectedCategory = ref<number | null>(null)
+
+// Provide shared filter state to child components
+provide('expenseFilters', {
+  dateRange,
+  selectedCategory
+})
 
 // Computed properties
 const formTitle = computed(() => {
@@ -50,6 +61,10 @@ const handleFormSaved = () => {
 const handleFormCancelled = () => {
   showForm.value = false
 }
+
+const toggleSummary = () => {
+  showSummary.value = !showSummary.value
+}
 </script>
 
 <template>
@@ -66,14 +81,23 @@ const handleFormCancelled = () => {
       </template>
 
       <template #extra>
-        <NButton
-          v-if="!showForm"
-          type="primary"
-          @click="handleCreateExpense"
-          :disabled="!associationId"
-        >
-          Create New Expense
-        </NButton>
+        <NSpace>
+          <NButton
+            v-if="!showForm && associationId"
+            secondary
+            @click="toggleSummary"
+          >
+            {{ showSummary ? 'Hide Summary' : 'Show Summary' }}
+          </NButton>
+          <NButton
+            v-if="!showForm"
+            type="primary"
+            @click="handleCreateExpense"
+            :disabled="!associationId"
+          >
+            Create New Expense
+          </NButton>
+        </NSpace>
       </template>
     </NPageHeader>
 
@@ -85,33 +109,30 @@ const handleFormCancelled = () => {
       </NCard>
     </div>
 
+    <div v-else-if="showForm">
+      <NCard style="margin-top: 16px;">
+        <ExpenseForm
+          :association-id="associationId"
+          :expense-id="editingExpenseId"
+          @saved="handleFormSaved"
+          @cancelled="handleFormCancelled"
+        />
+      </NCard>
+    </div>
     <div v-else>
-      <div v-if="showForm">
-        <NCard style="margin-top: 16px;">
-          <ExpenseForm
-            :association-id="associationId"
-            :expense-id="editingExpenseId"
-            @saved="handleFormSaved"
-            @cancelled="handleFormCancelled"
-          />
-        </NCard>
-      </div>
-      <div v-else>
-        <NCard style="margin-top: 16px;">
-          <NGrid :cols="1" :x-gap="16" :y-gap="16">
-            <NGridItem>
-              <ExpensesSummary
-                :association-id="associationId"
-              />
-            </NGridItem>
-            <NGridItem>
-              <ExpensesList
-                :association-id="associationId"
-                @edit="handleEditExpense"
-              />
-            </NGridItem>
-          </NGrid>
-        </NCard>
+      <!-- List comes first in vertical layout -->
+      <NCard style="margin-top: 16px;">
+        <ExpensesList
+          :association-id="associationId"
+          @edit="handleEditExpense"
+        />
+      </NCard>
+
+      <!-- Summary is below the list and can be toggled -->
+      <div v-if="showSummary" style="margin-top: 16px;">
+        <ExpensesSummary
+          :association-id="associationId"
+        />
       </div>
     </div>
   </div>
@@ -121,11 +142,5 @@ const handleFormCancelled = () => {
 .expenses-view {
   width: 100%;
   margin: 0 auto;
-}
-
-@media (min-width: 1200px) {
-  :deep(.n-grid) {
-    grid-template-columns: 1fr 2fr !important;
-  }
 }
 </style>

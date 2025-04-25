@@ -1,66 +1,104 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { NForm, NFormItem, NInput, NButton, NSpace, NSpin, NAlert, FormRules, NDatePicker, NInputNumber } from 'naive-ui'
+import { ref, reactive, onMounted, nextTick } from 'vue'
+import {
+  NForm,
+  NFormItem,
+  NInput,
+  NButton,
+  NSpace,
+  NSpin,
+  NAlert,
+  FormRules,
+  NDatePicker,
+  NInputNumber
+} from 'naive-ui'
 import { expenseApi } from '@/services/api'
-import type { ExpenseCreateRequest } from '@/types/api'
+import type { ExpenseCreateRequest, Expense } from '@/types/api'
 import CategorySelector from '@/components/CategorySelector.vue'
 import AccountSelector from '@/components/AccountSelector.vue'
 
-// Props
 const props = defineProps<{
   associationId: number
-  expenseId?: number // If provided, we're editing an existing expense
+  expenseId?: number
 }>()
 
-// Emits
 const emit = defineEmits<{
   (e: 'saved'): void
   (e: 'cancelled'): void
 }>()
 
-// Form data
 const formData = reactive<ExpenseCreateRequest>({
-  amount: 0,
+  amount: 0.01,
   description: '',
   destination: '',
-  date: new Date().toISOString().split('T')[0], // Today's date in ISO format
+  date: new Date().toISOString().split('T')[0],
   category_id: 0,
   account_id: 0
 })
 
-// Form validation rules
 const rules: FormRules = {
   amount: [
     { required: true, message: 'Amount is required', trigger: 'blur' },
-    { type: 'number', min: 0.01, message: 'Amount must be greater than 0', trigger: 'blur' }
+    {
+      validator: (rule, value) => {
+        return Number(value) > 0
+      },
+      message: 'Amount must be greater than 0',
+      trigger: 'blur'
+    }
   ],
   description: [
     { required: true, message: 'Description is required', trigger: 'blur' },
-    { type: 'string', max: 255, message: 'Description cannot exceed 255 characters', trigger: 'blur' }
+    {
+      type: 'string',
+      max: 255,
+      message: 'Description cannot exceed 255 characters',
+      trigger: 'blur'
+    }
   ],
   date: [
     { required: true, message: 'Date is required', trigger: 'blur' }
   ],
   category_id: [
-    { required: true, type: 'number', min: 1, message: 'Category is required', trigger: 'blur' }
+    {
+      validator: (rule, value) => {
+        return value > 0
+      },
+      message: 'Category is required',
+      trigger: 'blur'
+    }
   ],
   account_id: [
-    { required: true, type: 'number', min: 1, message: 'Account is required', trigger: 'blur' }
+    {
+      validator: (rule, value) => {
+        return value > 0
+      },
+      message: 'Account is required',
+      trigger: 'blur'
+    }
   ]
 }
 
-// State
 const loading = ref<boolean>(false)
 const submitting = ref<boolean>(false)
 const error = ref<string | null>(null)
 const formRef = ref(null)
+const dataLoaded = ref(false)
 
-// Format timestamp to date string (YYYY-MM-DD)
-const formatDateForInput = (timestamp: number) => {
+const formatDateForInput = (timestamp: number | string) => {
   return new Date(timestamp).toISOString().split('T')[0]
 }
 
-// Fetch expense details if editing
+const resetValidation = async () => {
+  if (formRef.value) {
+    try {
+      await formRef.value.resetValidation()
+    } catch (err) {
+      console.log('Error resetting validation:', err)
+    }
+  }
+}
+
 const fetchExpenseDetails = async () => {
   if (!props.expenseId) return
 
@@ -71,13 +109,16 @@ const fetchExpenseDetails = async () => {
     const response = await expenseApi.getExpense(props.associationId, props.expenseId)
     const expenseData = response.data
 
-    // Update form data
-    formData.amount = expenseData.amount
-    formData.description = expenseData.description
-    formData.destination = expenseData.destination
-    formData.date = expenseData.date
-    formData.category_id = expenseData.category_id
-    formData.account_id = expenseData.account_id
+    formData.amount = Number(expenseData.amount) || 0.01
+    formData.description = expenseData.description || ''
+    formData.destination = expenseData.destination || ''
+    formData.date = expenseData.date ? formatDateForInput(expenseData.date) : new Date().toISOString().split('T')[0]
+    formData.category_id = Number(expenseData.category_id) || 0
+    formData.account_id = Number(expenseData.account_id) || 0
+
+    dataLoaded.value = true
+    await nextTick()
+    resetValidation()
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Unknown error occurred'
     console.error('Error fetching expense details:', err)
@@ -86,60 +127,93 @@ const fetchExpenseDetails = async () => {
   }
 }
 
-// Handle date change
 const handleDateChange = (timestamp: number) => {
   if (timestamp) {
-    formData.date = formatDateForInput(timestamp)
+    formData.date = new Date(timestamp).toISOString().split('T')[0]
   }
 }
 
-// Submit form
+const validateFormManually = () => {
+  if (Number(formData.amount) <= 0) {
+    error.value = 'Amount must be greater than 0'
+    return false
+  }
+
+  if (!formData.description.trim()) {
+    error.value = 'Description is required'
+    return false
+  }
+
+  if (!formData.date) {
+    error.value = 'Date is required'
+    return false
+  }
+
+  if (formData.category_id <= 0) {
+    error.value = 'Category is required'
+    return false
+  }
+
+  if (formData.account_id <= 0) {
+    error.value = 'Account is required'
+    return false
+  }
+
+  return true
+}
+
 const submitForm = async (e: MouseEvent) => {
   e.preventDefault()
+  error.value = null
 
-  if (!formRef.value) return
+  let isValid = true
+  if (formRef.value) {
+    try {
+      await formRef.value.validate()
+    } catch (err) {
+      console.log('Form validation failed, using manual validation')
+      isValid = false
+    }
+  }
+
+  if (!isValid) {
+    isValid = validateFormManually()
+    if (!isValid) return
+  }
 
   try {
-    // @ts-ignore - Naive UI types issue with form ref
-    await formRef.value.validate()
-
     submitting.value = true
-    error.value = null
 
-    // Determine if creating or updating
+    const formDataToSubmit = {
+      amount: Number(formData.amount),
+      description: formData.description,
+      destination: formData.destination,
+      date: formData.date + 'T00:00:00Z',
+      category_id: Number(formData.category_id),
+      account_id: Number(formData.account_id)
+    }
+
     const isCreating = !props.expenseId
 
-    // Send request
     if (isCreating) {
-      await expenseApi.createExpense(props.associationId, formData)
-    } else if (props.expenseId) {
-      await expenseApi.updateExpense(props.associationId, props.expenseId, formData)
+      await expenseApi.createExpense(props.associationId, formDataToSubmit)
+    } else {
+      await expenseApi.updateExpense(props.associationId, props.expenseId, formDataToSubmit)
     }
 
-    // Notify parent component
     emit('saved')
   } catch (err) {
-    if (err instanceof Error) {
-      error.value = err.message
-    } else if (typeof err === 'object' && err !== null && 'response' in err) {
-      // Axios error
-      const axiosError = err as any
-      error.value = axiosError.response?.data?.msg || 'An error occurred while submitting the form'
-    } else {
-      error.value = 'An unknown error occurred'
-    }
+    error.value = err instanceof Error ? err.message : 'An error occurred while submitting the form'
     console.error('Error submitting form:', err)
   } finally {
     submitting.value = false
   }
 }
 
-// Cancel form
 const cancelForm = () => {
   emit('cancelled')
 }
 
-// On component mount
 onMounted(() => {
   if (props.expenseId) {
     fetchExpenseDetails()
@@ -167,7 +241,7 @@ onMounted(() => {
         <NFormItem label="Amount" path="amount">
           <NInputNumber
             v-model:value="formData.amount"
-            :min="0"
+            :min="0.01"
             :precision="2"
             style="width: 100%"
           />

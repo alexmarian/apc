@@ -95,27 +95,63 @@ provide(ThemeKey, {
 </template>
 
 <style>
+/* CSS adjustments for ThemeProvider.vue */
+
 /* Global theme variables */
 :root {
   --primary-color: #3366ff;
   --background-color: #ffffff;
+  --background-alt-color: #f8f8f8;
   --text-color: #333333;
+  --text-secondary-color: #666666;
   --border-color: #e5e5e5;
+  --card-background: #ffffff;
+  --filter-background: #f8f8f8;
 }
 
 body.dark-theme {
   --background-color: #121212;
+  --background-alt-color: #1e1e1e;
   --text-color: #e0e0e0;
+  --text-secondary-color: #aaaaaa;
   --border-color: #333333;
+  --card-background: #1e1e1e;
+  --filter-background: #242424;
   background-color: var(--background-color);
   color: var(--text-color);
 }
 
 body.light-theme {
   --background-color: #ffffff;
+  --background-alt-color: #f8f8f8;
   --text-color: #333333;
+  --text-secondary-color: #666666;
   --border-color: #e5e5e5;
+  --card-background: #ffffff;
+  --filter-background: #f8f8f8;
   background-color: var(--background-color);
   color: var(--text-color);
+}
+
+/* Card customization */
+.n-card {
+  background-color: var(--card-background) !important;
+}
+
+/* Filter sections customization */
+.filters {
+  background-color: var(--filter-background) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+/* Date range labels */
+.date-range-label {
+  color: var(--text-secondary-color) !important;
+}
+
+/* Category items */
+.category-item {
+  background-color: var(--background-alt-color) !important;
+  border: 1px solid var(--border-color) !important;
 }
 </style>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
-import { NCard, NSpin, NStatistic, NGradientText, NSpace, NDivider, NSelect } from 'naive-ui'
+import { ref, onMounted, computed, watch, inject } from 'vue'
+import { NCard, NSpin, NStatistic, NGradientText, NSpace, NDivider, NSelect, NEmpty } from 'naive-ui'
 import { expenseApi } from '@/services/api'
 import type { Expense } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
@@ -11,24 +11,38 @@ const props = defineProps<{
   associationId: number
 }>()
 
-// Emits
-const emit = defineEmits<{
-  (e: 'update:dateRange', range: [string, string]): void
-}>()
+// Get shared filters from parent if available
+const sharedFilters = inject('expenseFilters', null)
 
 // Date range options
 const dateRangeOptions = [
   { label: 'Current Month', value: 'current-month' },
   { label: 'Previous Month', value: 'previous-month' },
   { label: 'Current Year', value: 'current-year' },
+  { label: 'Custom Range', value: 'custom' },
   { label: 'All Time', value: 'all-time' }
 ]
 
-// Selected date range
-const selectedDateRange = ref('current-month')
+// Selected date range - determine initial state based on shared filters
+const hasCustomDateRange = computed(() => {
+  return sharedFilters?.dateRange.value !== null && sharedFilters?.dateRange.value !== undefined
+})
 
-// Actual date range
+// Selected date range option
+const selectedDateRange = ref(hasCustomDateRange.value ? 'custom' : 'current-month')
+
+// Actual date range calculation
 const dateRange = computed<[string, string] | undefined>(() => {
+  // If using shared filters and there's a date range set, use that
+  if (sharedFilters?.dateRange.value) {
+    const [start, end] = sharedFilters.dateRange.value
+    return [
+      new Date(start).toISOString().split('T')[0],
+      new Date(end).toISOString().split('T')[0]
+    ]
+  }
+
+  // Otherwise use the local selection
   switch (selectedDateRange.value) {
     case 'current-month':
       return getCurrentMonthRange()
@@ -41,6 +55,11 @@ const dateRange = computed<[string, string] | undefined>(() => {
     default:
       return getCurrentMonthRange()
   }
+})
+
+// Category filter from shared state
+const selectedCategory = computed(() => {
+  return sharedFilters?.selectedCategory.value
 })
 
 // Data
@@ -56,7 +75,7 @@ const fetchExpenses = async () => {
     loading.value = true
     error.value = null
 
-    // Get date range based on selection
+    // Get date range
     const [startDate, endDate] = dateRange.value || [undefined, undefined]
 
     const response = await expenseApi.getExpenses(
@@ -65,7 +84,12 @@ const fetchExpenses = async () => {
       endDate
     )
 
-    expenses.value = response.data
+    // Apply category filter if set
+    if (selectedCategory.value) {
+      expenses.value = response.data.filter(expense => expense.category_id === selectedCategory.value)
+    } else {
+      expenses.value = response.data
+    }
   } catch (err) {
     console.error('Error fetching expenses for summary:', err)
     error.value = 'Failed to load expense data'
@@ -77,6 +101,11 @@ const fetchExpenses = async () => {
 // Handle date range change
 const handleDateRangeChange = (value: string) => {
   selectedDateRange.value = value
+
+  // If we have shared filters and changing to custom, don't clear them
+  if (value !== 'custom' && sharedFilters?.dateRange) {
+    sharedFilters.dateRange.value = null
+  }
 }
 
 // Computed statistics
@@ -121,14 +150,28 @@ const topCategories = computed(() => {
   return expensesByCategory.value.slice(0, 3)
 })
 
-// Watch for prop or selection changes to refresh data
+// Watch for changes that should trigger a data refresh
 watch(
-  [() => props.associationId, dateRange],
+  [() => props.associationId, dateRange, selectedCategory],
   () => {
     fetchExpenses()
   },
   { immediate: true }
 )
+
+// Watch for shared filter changes
+if (sharedFilters) {
+  watch(
+    [() => sharedFilters.dateRange.value, () => sharedFilters.selectedCategory.value],
+    () => {
+      // Update the UI state if filters changed externally
+      if (sharedFilters.dateRange.value) {
+        selectedDateRange.value = 'custom'
+      }
+      fetchExpenses()
+    }
+  )
+}
 </script>
 
 <template>
@@ -144,6 +187,10 @@ watch(
 
     <NSpin :show="loading">
       <div v-if="error" class="error">{{ error }}</div>
+
+      <template v-else-if="expenses.length === 0">
+        <NEmpty description="No expenses found for the selected filters" />
+      </template>
 
       <template v-else>
         <NSpace justify="space-around" align="center">
@@ -191,7 +238,8 @@ watch(
   justify-content: space-between;
   align-items: center;
   padding: 8px 16px;
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
 }
 
@@ -209,6 +257,7 @@ watch(
 .no-data {
   text-align: center;
   padding: 1rem;
-  color: #999;
+  color: var(--text-color);
+  opacity: 0.7;
 }
 </style>
