@@ -3,6 +3,11 @@ SELECT *
 FROM categories
 WHERE id = ? LIMIT 1;
 
+-- name: GetAssociationCategory :one
+SELECT *
+FROM categories
+WHERE id = ? and association_id = ? LIMIT 1;
+
 -- name: DeactivateCategory :exec
 UPDATE categories
 SET is_deleted = TRUE,

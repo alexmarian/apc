@@ -80,19 +80,25 @@ func main() {
 	}
 
 	// Categories
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/categories", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetActiveCategories(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/categories/{%s}", handlers.AssociationIdPathValue, handlers.CategoryIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetCategory(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/categories", handlers.AssociationIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleCreateCategory(apiCfg)))
-	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/categories/{categoryId}/deactivate", handlers.AssociationIdPathValue),
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/categories/{%s}/deactivate", handlers.AssociationIdPathValue, handlers.CategoryIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleDeactivateCategory(apiCfg)))
 
 	// Expenses
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/expenses", handlers.AssociationIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleGetExpenses(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/expenses/{%s}", handlers.AssociationIdPathValue, handlers.ExpensesIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetExpense(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/expenses", handlers.AssociationIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleCreateExpense(apiCfg)))
-	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/expenses/{expenseId}", handlers.AssociationIdPathValue),
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/expenses/{%s}", handlers.AssociationIdPathValue, handlers.ExpensesIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleUpdateExpense(apiCfg)))
-	mux.HandleFunc(fmt.Sprintf("DELETE /v1/api/associations/{%s}/expenses/{expenseId}", handlers.AssociationIdPathValue),
+	mux.HandleFunc(fmt.Sprintf("DELETE /v1/api/associations/{%s}/expenses/{%s}", handlers.AssociationIdPathValue, handlers.ExpensesIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleDeleteExpense(apiCfg)))
 
 	// Expense Reports

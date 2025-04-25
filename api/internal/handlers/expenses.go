@@ -11,19 +11,25 @@ import (
 )
 
 type ExpenseItem struct {
-	ID             int64     `json:"id"`
-	Amount         float64   `json:"amount"`
-	Description    string    `json:"description"`
-	Destination    string    `json:"destination"`
-	Date           time.Time `json:"date"`
-	CategoryID     int64     `json:"category_id"`
-	CategoryType   string    `json:"category_type"`
-	CategoryFamily string    `json:"category_family"`
-	CategoryName   string    `json:"category_name"`
-	AccountID      int64     `json:"account_id"`
-	AccountNumber  string    `json:"account_number"`
-	AccountName    string    `json:"account_name"`
+	ID             int64     `json:"id,omitempty"`
+	Amount         float64   `json:"amount,omitempty"`
+	Description    string    `json:"description,omitempty"`
+	Destination    string    `json:"destination,omitempty"`
+	Date           time.Time `json:"date,omitempty"`
+	Month          int64     `json:"month,omitempty"`
+	Year           int64     `json:"year,omitempty"`
+	CategoryID     int64     `json:"category_id,omitempty"`
+	CategoryType   string    `json:"category_type,omitempty"`
+	CategoryFamily string    `json:"category_family,omitempty"`
+	CategoryName   string    `json:"category_name,omitempty"`
+	AccountID      int64     `json:"account_id,omitempty"`
+	AccountNumber  string    `json:"account_number,omitempty"`
+	AccountName    string    `json:"account_name,omitempty"`
+	CreatedAt      time.Time `json:"created_at,omitempty"`
+	UpdatedAt      time.Time `json:"updated_at,omitempty"`
 }
+
+const ExpensesIdPathValue = "expenseId"
 
 func HandleCreateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
@@ -41,6 +47,7 @@ func HandleCreateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 
 		decoder := json.NewDecoder(req.Body)
 		if err := decoder.Decode(&expense); err != nil {
+			log.Printf("exception decoding expense {}", err)
 			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
 			return
 		}
@@ -92,18 +99,18 @@ func HandleCreateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		}
 
 		// Return created expense
-		RespondWithJSON(rw, http.StatusCreated, map[string]interface{}{
-			"id":          newExpense.ID,
-			"amount":      newExpense.Amount,
-			"description": newExpense.Description,
-			"destination": newExpense.Destination,
-			"date":        newExpense.Date,
-			"month":       newExpense.Month,
-			"year":        newExpense.Year,
-			"category_id": newExpense.CategoryID,
-			"account_id":  newExpense.AccountID,
-			"created_at":  newExpense.CreatedAt,
-			"updated_at":  newExpense.UpdatedAt,
+		RespondWithJSON(rw, http.StatusCreated, ExpenseItem{
+			ID:          newExpense.ID,
+			Amount:      newExpense.Amount,
+			Description: newExpense.Description,
+			Destination: newExpense.Destination,
+			Date:        newExpense.Date,
+			Month:       newExpense.Month,
+			Year:        newExpense.Year,
+			CategoryID:  newExpense.CategoryID,
+			AccountID:   newExpense.AccountID,
+			CreatedAt:   newExpense.CreatedAt.Time,
+			UpdatedAt:   newExpense.CreatedAt.Time,
 		})
 	}
 }
@@ -112,7 +119,7 @@ func HandleCreateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 func HandleUpdateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		expenseId, _ := strconv.Atoi(req.PathValue("expenseId"))
+		expenseId, _ := strconv.Atoi(req.PathValue(ExpensesIdPathValue))
 
 		// Get existing expense to verify it exists and belongs to this association
 		existingExpense, err := cfg.Db.GetExpenseWithAssociation(req.Context(), database.GetExpenseWithAssociationParams{
@@ -216,27 +223,26 @@ func HandleUpdateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		}
 
 		// Return updated expense
-		RespondWithJSON(rw, http.StatusOK, map[string]interface{}{
-			"id":          updatedExpense.ID,
-			"amount":      updatedExpense.Amount,
-			"description": updatedExpense.Description,
-			"destination": updatedExpense.Destination,
-			"date":        updatedExpense.Date,
-			"month":       updatedExpense.Month,
-			"year":        updatedExpense.Year,
-			"category_id": updatedExpense.CategoryID,
-			"account_id":  updatedExpense.AccountID,
-			"created_at":  updatedExpense.CreatedAt,
-			"updated_at":  updatedExpense.UpdatedAt,
+		RespondWithJSON(rw, http.StatusOK, ExpenseItem{
+			ID:          updatedExpense.ID,
+			Amount:      updatedExpense.Amount,
+			Description: updatedExpense.Description,
+			Destination: updatedExpense.Destination,
+			Date:        updatedExpense.Date,
+			Month:       updatedExpense.Month,
+			Year:        updatedExpense.Year,
+			CategoryID:  updatedExpense.CategoryID,
+			AccountID:   updatedExpense.AccountID,
+			CreatedAt:   updatedExpense.CreatedAt.Time,
+			UpdatedAt:   updatedExpense.CreatedAt.Time,
 		})
 	}
 }
 
-// Delete an expense
 func HandleDeleteExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		expenseId, _ := strconv.Atoi(req.PathValue("expenseId"))
+		expenseId, _ := strconv.Atoi(req.PathValue(ExpensesIdPathValue))
 
 		// Verify expense exists and belongs to association
 		_, err := cfg.Db.GetExpenseWithAssociation(req.Context(), database.GetExpenseWithAssociationParams{
@@ -264,6 +270,42 @@ func HandleDeleteExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 
 		RespondWithJSON(rw, http.StatusOK, map[string]string{
 			"message": "Expense deleted successfully",
+		})
+	}
+}
+func HandleGetExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		expenseId, _ := strconv.Atoi(req.PathValue(ExpensesIdPathValue))
+
+		// Verify expense exists and belongs to association
+		dbExpense, err := cfg.Db.GetExpenseWithAssociation(req.Context(), database.GetExpenseWithAssociationParams{
+			ID:            int64(expenseId),
+			AssociationID: int64(associationId),
+		})
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				RespondWithError(rw, http.StatusNotFound, "Expense not found or doesn't belong to this association")
+			} else {
+				log.Printf("Error retrieving expense: %s", err)
+				RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve expense")
+			}
+			return
+		}
+
+		RespondWithJSON(rw, http.StatusOK, ExpenseItem{
+			ID:          dbExpense.ID,
+			Amount:      dbExpense.Amount,
+			Description: dbExpense.Description,
+			Destination: dbExpense.Destination,
+			Date:        dbExpense.Date,
+			Month:       dbExpense.Month,
+			Year:        dbExpense.Year,
+			CategoryID:  dbExpense.CategoryID,
+			AccountID:   dbExpense.AccountID,
+			CreatedAt:   dbExpense.CreatedAt.Time,
+			UpdatedAt:   dbExpense.CreatedAt.Time,
 		})
 	}
 }

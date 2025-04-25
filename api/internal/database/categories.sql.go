@@ -95,6 +95,33 @@ func (q *Queries) GetActiveCategories(ctx context.Context, associationID int64) 
 	return items, nil
 }
 
+const getAssociationCategory = `-- name: GetAssociationCategory :one
+SELECT id, type, family, name, is_deleted, association_id, created_at, updated_at
+FROM categories
+WHERE id = ? and association_id = ? LIMIT 1
+`
+
+type GetAssociationCategoryParams struct {
+	ID            int64
+	AssociationID int64
+}
+
+func (q *Queries) GetAssociationCategory(ctx context.Context, arg GetAssociationCategoryParams) (Category, error) {
+	row := q.db.QueryRowContext(ctx, getAssociationCategory, arg.ID, arg.AssociationID)
+	var i Category
+	err := row.Scan(
+		&i.ID,
+		&i.Type,
+		&i.Family,
+		&i.Name,
+		&i.IsDeleted,
+		&i.AssociationID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getCategoriesForDropdown = `-- name: GetCategoriesForDropdown :many
 SELECT id, name
 FROM categories

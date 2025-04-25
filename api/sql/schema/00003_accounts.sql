@@ -7,9 +7,10 @@ CREATE TABLE accounts
     number         TEXT    NOT NULL,
     destination    TEXT    NOT NULL,
     description    TEXT    NOT NULL,
+    is_active      BOOL    NOT NULL default true,
     association_id INTEGER NOT NULL REFERENCES associations (id),
-    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at     TIMESTAMP        DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP        DEFAULT CURRENT_TIMESTAMP
 );
 -- +goose StatementEnd
 
