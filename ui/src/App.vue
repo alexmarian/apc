@@ -1,85 +1,112 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import { NSpace, NLayout, NLayoutHeader, NLayoutContent, NMenu, NButton, NDropdown } from 'naive-ui'
+import { h, ref, inject } from 'vue'
+import ThemeProvider from './providers/ThemeProvider.vue'
+
+// Theme injection (TypeScript needs this defined)
+const theme = inject('theme', {
+  switchTheme: (theme: string) => {
+  },
+  isDark: ref(false),
+  themeOptions: ['light', 'dark', 'auto']
+})
+
+// Menu options
+const menuOptions = [
+  {
+    label: () => h(RouterLink, { to: '/' }, { default: () => 'Home' }),
+    key: 'home'
+  },
+  {
+    label: () => h(RouterLink, { to: '/about' }, { default: () => 'About' }),
+    key: 'about'
+  },
+  {
+    label: () => h(RouterLink, { to: '/accounts' }, { default: () => 'Accounts' }),
+    key: 'accounts'
+  }
+]
+
+// Theme options for dropdown
+const themeMenuOptions = [
+  {
+    label: 'Light Theme',
+    key: 'light'
+  },
+  {
+    label: 'Dark Theme',
+    key: 'dark'
+  },
+  {
+    label: 'Auto (System)',
+    key: 'auto'
+  }
+]
+
+// Handle theme change
+const handleThemeChange = (key: string) => {
+  theme.switchTheme(key)
+}
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
+  <ThemeProvider>
+    <n-layout>
+      <n-layout-header bordered>
+        <div class="header-content">
+          <div class="logo">
+            <img alt="App logo" class="logo-img" src="@/assets/logo.svg" width="32" height="32" />
+            <h1 class="app-title">APC Management</h1>
+          </div>
+          <n-space>
+            <n-menu mode="horizontal" :options="menuOptions" />
+            <n-dropdown
+              trigger="click"
+              :options="themeMenuOptions"
+              @select="handleThemeChange"
+            >
+              <n-button>
+                Theme
+              </n-button>
+            </n-dropdown>
+          </n-space>
+        </div>
+      </n-layout-header>
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
-    </div>
-  </header>
-
-  <RouterView />
+      <n-layout-content>
+        <div class="content-container">
+          <RouterView />
+        </div>
+      </n-layout-content>
+    </n-layout>
+  </ThemeProvider>
 </template>
 
 <style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+  height: 64px;
 }
 
 .logo {
-  display: block;
-  margin: 0 auto 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
+.app-title {
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin: 0;
 }
 
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
+.content-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
 }
 </style>
