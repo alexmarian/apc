@@ -26,6 +26,10 @@ func main() {
 	if secret == "" {
 		log.Fatal("SECRET environment variable is not set")
 	}
+	uiOrigin := os.Getenv("UI_ORIGIN")
+	if uiOrigin == "" {
+		log.Fatal("UI_ORIGIN environment variable is not set")
+	}
 
 	apiCfg := &handlers.ApiConfig{
 		Secret: secret,
@@ -74,10 +78,6 @@ func main() {
 		apiCfg.MiddlewareAssociationResource(handlers.HandleDisableOwnership(apiCfg)))
 
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/owners", handlers.AssociationIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetAssociationOwners(apiCfg)))
-	srv := &http.Server{
-		Addr:    ":" + port,
-		Handler: mux,
-	}
 
 	// Categories
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/categories", handlers.AssociationIdPathValue),
@@ -116,6 +116,24 @@ func main() {
 		apiCfg.MiddlewareAssociationResource(handlers.HandleUpdateAccount(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/accounts/{%s}/disable", handlers.AssociationIdPathValue, handlers.AccountIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleDisableAccount(apiCfg)))
+	corsMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Access-Control-Allow-Origin", uiOrigin)
+			w.Header().Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: corsMiddleware(mux),
+	}
 
 	log.Println("APC api listening on port " + port)
 	log.Fatal(srv.ListenAndServe())
