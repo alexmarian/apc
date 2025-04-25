@@ -1,0 +1,66 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "create": "Create",
+    "update": "Update",
+    "disable": "Disable",
+    "yes": "Yes",
+    "no": "No",
+    "confirm": "Confirm",
+    "search": "Search",
+    "filter": "Filter",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "retry": "Retry"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "username": "Username",
+    "password": "Password",
+    "totp": "TOTP Code",
+    "loginFailed": "Login failed. Please check your credentials."
+  },
+  "accounts": {
+    "title": "Account Management",
+    "list": "Accounts",
+    "createNew": "Create New Account",
+    "editAccount": "Edit Account",
+    "accountNumber": "Account Number",
+    "description": "Description",
+    "destination": "Destination",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "actions": "Actions",
+    "confirmDisable": "Are you sure you want to disable this account?",
+    "accountDisabled": "Account disabled successfully",
+    "accountCreated": "Account created successfully",
+    "accountUpdated": "Account updated successfully",
+    "noAccounts": "No accounts found",
+    "createToStart": "Create a new account to get started.",
+    "selectAssociation": "Please select an association to manage accounts"
+  },
+  "associations": {
+    "title": "Associations",
+    "select": "Select an association",
+    "noAssociations": "No associations found"
+  },
+  "validation": {
+    "required": "{field} is required",
+    "minLength": "{field} must be at least {min} characters",
+    "maxLength": "{field} must be less than {max} characters",
+    "numeric": "{field} must contain only numbers",
+    "email": "Please enter a valid email address"
+  },
+  "theme": {
+    "light": "Light Theme",
+    "dark": "Dark Theme",
+    "auto": "Auto (System)",
+    "current": "Current theme: {theme}"
+  }
+}

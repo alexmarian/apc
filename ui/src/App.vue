@@ -1,34 +1,29 @@
+<!-- src/App.vue -->
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import { NSpace, NLayout, NLayoutHeader, NLayoutContent, NMenu, NButton, NDropdown } from 'naive-ui'
-import { h, ref, inject } from 'vue'
-import ThemeProvider from './providers/ThemeProvider.vue'
-
-// Theme injection (TypeScript needs this defined)
-const theme = inject('theme', {
-  switchTheme: (theme: string) => {
-  },
-  isDark: ref(false),
-  themeOptions: ['light', 'dark', 'auto']
-})
+import { h, inject } from 'vue'
+import ThemeProvider from '@/providers/ThemeProvider.vue'
+import LanguageSelector from '@/components/LanguageSelector.vue'
+import { ThemeKey, defaultThemeProvider } from '@/utils/theme'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
+// Theme injection using the Symbol key for more reliable injection
+const theme = inject(ThemeKey, defaultThemeProvider)
 
 // Menu options
 const menuOptions = [
   {
-    label: () => h(RouterLink, { to: '/' }, { default: () => 'Home' }),
+    label: () => h(RouterLink, { to: '/' }, { default: () => t('common.home', 'Home') }),
     key: 'home'
   },
   {
-    label: () => h(RouterLink, { to: '/about' }, { default: () => 'About' }),
-    key: 'about'
-  },
-  {
-    label: () => h(RouterLink, { to: '/accounts' }, { default: () => 'Accounts' }),
+    label: () => h(RouterLink, { to: '/accounts' }, { default: () => t('accounts.title', 'Accounts') }),
     key: 'accounts'
   }
 ]
 
-// Theme options for dropdown
+// Theme options for dropdown with explicit typing
 const themeMenuOptions = [
   {
     label: 'Light Theme',
@@ -46,14 +41,20 @@ const themeMenuOptions = [
 
 // Handle theme change
 const handleThemeChange = (key: string) => {
-  theme.switchTheme(key)
+  console.log('Theme change triggered', key)
+  // Check if key is valid before switching
+  if (['light', 'dark', 'auto'].includes(key)) {
+    theme.switchTheme(key as any)
+  } else {
+    console.error('Invalid theme key:', key)
+  }
 }
 </script>
 
 <template>
   <ThemeProvider>
-    <n-layout>
-      <n-layout-header bordered>
+    <n-layout class="main-layout">
+      <n-layout-header bordered class="header">
         <div class="header-content">
           <div class="logo">
             <img alt="App logo" class="logo-img" src="@/assets/logo.svg" width="32" height="32" />
@@ -61,13 +62,15 @@ const handleThemeChange = (key: string) => {
           </div>
           <n-space>
             <n-menu mode="horizontal" :options="menuOptions" />
+            <!-- Temporarily comment out until fully set up -->
+            <LanguageSelector />
             <n-dropdown
               trigger="click"
               :options="themeMenuOptions"
               @select="handleThemeChange"
             >
               <n-button>
-                Theme
+                Theme: {{ theme.isDark ? 'Dark' : 'Light' }}
               </n-button>
             </n-dropdown>
           </n-space>
@@ -84,6 +87,16 @@ const handleThemeChange = (key: string) => {
 </template>
 
 <style scoped>
+.main-layout {
+  min-height: 100vh;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+}
+
 .header-content {
   display: flex;
   justify-content: space-between;
@@ -105,8 +118,8 @@ const handleThemeChange = (key: string) => {
 }
 
 .content-container {
-  max-width: 100%; /* Change from 1200px to 100% */
+  width: 100%;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 2rem;
 }
 </style>

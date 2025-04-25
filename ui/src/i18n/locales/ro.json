@@ -1,0 +1,66 @@
+{
+  "common": {
+    "save": "Salvează",
+    "cancel": "Anulează",
+    "edit": "Editează",
+    "delete": "Șterge",
+    "create": "Creează",
+    "update": "Actualizează",
+    "disable": "Dezactivează",
+    "yes": "Da",
+    "no": "Nu",
+    "confirm": "Confirmă",
+    "search": "Caută",
+    "filter": "Filtrează",
+    "loading": "Se încarcă...",
+    "error": "Eroare",
+    "success": "Succes",
+    "retry": "Încearcă din nou"
+  },
+  "auth": {
+    "login": "Autentificare",
+    "logout": "Deconectare",
+    "username": "Nume utilizator",
+    "password": "Parolă",
+    "totp": "Cod TOTP",
+    "loginFailed": "Autentificare eșuată. Verificați datele de conectare."
+  },
+  "accounts": {
+    "title": "Administrare Conturi",
+    "list": "Conturi",
+    "createNew": "Creează Cont Nou",
+    "editAccount": "Editează Cont",
+    "accountNumber": "Număr Cont",
+    "description": "Descriere",
+    "destination": "Destinație",
+    "status": "Status",
+    "active": "Activ",
+    "inactive": "Inactiv",
+    "actions": "Acțiuni",
+    "confirmDisable": "Sunteți sigur că doriți să dezactivați acest cont?",
+    "accountDisabled": "Contul a fost dezactivat cu succes",
+    "accountCreated": "Contul a fost creat cu succes",
+    "accountUpdated": "Contul a fost actualizat cu succes",
+    "noAccounts": "Nu s-au găsit conturi",
+    "createToStart": "Creați un cont nou pentru a începe.",
+    "selectAssociation": "Vă rugăm selectați o asociație pentru a administra conturile"
+  },
+  "associations": {
+    "title": "Asociații",
+    "select": "Selectați o asociație",
+    "noAssociations": "Nu s-au găsit asociații"
+  },
+  "validation": {
+    "required": "{field} este obligatoriu",
+    "minLength": "{field} trebuie să aibă cel puțin {min} caractere",
+    "maxLength": "{field} trebuie să aibă mai puțin de {max} caractere",
+    "numeric": "{field} trebuie să conțină doar cifre",
+    "email": "Vă rugăm introduceți o adresă de email validă"
+  },
+  "theme": {
+    "light": "Temă Luminoasă",
+    "dark": "Temă Întunecată",
+    "auto": "Auto (Sistem)",
+    "current": "Tema curentă: {theme}"
+  }
+}
