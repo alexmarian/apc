@@ -28,7 +28,7 @@ const menuOptions = [
   },
   {
     label: () => h(RouterLink, { to: '/reports' }, { default: () => t('reports.title', 'Reports') }),
-    key: 'expenses'
+    key: 'reports'
   }
 ]
 

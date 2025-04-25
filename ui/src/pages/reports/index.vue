@@ -14,7 +14,8 @@ import {
   NGrid,
   NGridItem,
   NStatistic,
-  NTooltip
+  NTooltip,
+  useMessage
 } from 'naive-ui'
 import { expenseApi } from '@/services/api'
 import type { Expense } from '@/types/api'
@@ -23,6 +24,10 @@ import { exportFullReportToPdf } from '@/utils/pdfExport'
 import AssociationSelector from '@/components/AssociationSelector.vue'
 import CategorySelector from '@/components/CategorySelector.vue'
 import ExpenseCharts from '@/components/ExpenseCharts.vue'
+import PdfPreviewModal from '@/components/PdfPreviewModal.vue'
+
+// Notification system
+const message = useMessage()
 
 // Association selector
 const associationId = ref<number | null>(null)
@@ -36,6 +41,11 @@ const error = ref<string | null>(null)
 const dateRange = ref<[number, number] | null>(null)
 const selectedCategory = ref<number | null>(null)
 const reportType = ref<string>('overview')
+
+// PDF preview state
+const showPdfPreview = ref(false)
+const pdfTitle = ref('Expense Analysis Report')
+const reportContainerRef = ref<HTMLElement | null>(null)
 
 // Reports data
 const yearlyTotal = computed(() => {
@@ -159,10 +169,32 @@ const formattedDateRange = computed(() => {
 // Reference to charts to export
 const chartsRef = ref<any>(null)
 
+// Show PDF preview
+const showReportPreview = () => {
+  if (expenses.value.length === 0) {
+    message.warning('No data to export')
+    return
+  }
+
+  // Set report container ref
+  reportContainerRef.value = document.querySelector('.reports-content') as HTMLElement
+
+  // Update PDF title with date range
+  pdfTitle.value = `Expense Analysis Report (${formattedDateRange.value})`
+
+  // Show preview modal
+  showPdfPreview.value = true
+}
+
 // Export comprehensive report with all data
 const exportReport = () => {
+  if (expenses.value.length === 0) {
+    message.warning('No data to export')
+    return
+  }
+
   // Get currently active chart SVG from the ExpenseCharts component if available
-  const chartSvg = chartsRef.value?.$el.querySelector('svg')
+  const chartElement = chartsRef.value?.$el.querySelector('.chart-container') as HTMLElement
 
   // Prepare summary data
   const summaryData = [
@@ -186,14 +218,22 @@ const exportReport = () => {
     months: expensesByMonth.value
   }
 
+  // Show loading message
+  message.loading('Generating PDF export...')
+
   // Export the full report
   exportFullReportToPdf(
     'Expense Analysis Report',
     summaryData,
-    chartSvg,
+    chartElement,
     breakdownData,
     formattedDateRange.value
-  )
+  ).then(() => {
+    message.success('PDF export completed')
+  }).catch(err => {
+    console.error('PDF export failed:', err)
+    message.error('Failed to export PDF')
+  })
 }
 
 // Initialize data
@@ -221,13 +261,34 @@ onMounted(() => {
       </template>
 
       <template #extra>
-        <NButton
-          v-if="expenses.length > 0"
-          type="primary"
-          @click="exportReport"
-        >
-          Export Report
-        </NButton>
+        <NSpace>
+          <NTooltip trigger="hover">
+            <template #trigger>
+              <NButton
+                v-if="expenses.length > 0"
+                secondary
+                type="primary"
+                @click="showReportPreview"
+              >
+                Preview Report
+              </NButton>
+            </template>
+            Preview the report before downloading
+          </NTooltip>
+
+          <NTooltip trigger="hover">
+            <template #trigger>
+              <NButton
+                v-if="expenses.length > 0"
+                type="primary"
+                @click="exportReport"
+              >
+                Export PDF
+              </NButton>
+            </template>
+            Download the report as PDF
+          </NTooltip>
+        </NSpace>
       </template>
     </NPageHeader>
 
@@ -239,7 +300,7 @@ onMounted(() => {
       </NCard>
     </div>
 
-    <div v-else>
+    <div v-else class="reports-content">
       <!-- Filters -->
       <NCard style="margin-top: 16px;" title="Report Filters">
         <NSpace align="center" justify="start">
@@ -304,8 +365,9 @@ onMounted(() => {
             <NDivider />
 
             <NTabs type="line" animated>
-              name="charts" tab="Visual Reports">
-              <ExpenseCharts :expenses="expenses" />
+              <NTabPane name="charts" tab="Visual Reports">
+                <ExpenseCharts ref="chartsRef" :expenses="expenses" />
+              </NTabPane>
 
               <NTabPane name="breakdown" tab="Breakdown">
                 <div class="breakdown-section">
@@ -357,6 +419,14 @@ onMounted(() => {
         </template>
       </NSpin>
     </div>
+
+    <!-- PDF Preview Modal -->
+    <PdfPreviewModal
+      v-model:show="showPdfPreview"
+      :title="pdfTitle"
+      :content-element="reportContainerRef"
+      :on-generate="exportReport"
+    />
   </div>
 </template>
 
@@ -402,5 +472,21 @@ onMounted(() => {
 .breakdown-table th {
   font-weight: 600;
   background-color: var(--background-alt-color);
+}
+
+@media print {
+  .reports-view {
+    max-width: none;
+  }
+
+  .breakdown-table {
+    overflow-x: visible;
+  }
+
+  .breakdown-table th {
+    background-color: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 </style>

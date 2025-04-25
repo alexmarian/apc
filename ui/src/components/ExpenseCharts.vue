@@ -1,3 +1,4 @@
+
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { NCard, NTabs, NTabPane, NDivider, NSelect, NEmpty, NRadioGroup, NRadio, NButton, NTooltip, NSpace } from 'naive-ui'
@@ -166,7 +167,7 @@ const monthlyChartRef = ref<SVGElement | null>(null)
 
 // Export the current chart to PDF
 const exportCurrentChart = () => {
-  let svgElement: SVGElement | null = null
+  let chartElement: HTMLElement | null = null
   let chartData: any[] = []
   let chartTitle = ''
 
@@ -176,22 +177,22 @@ const exportCurrentChart = () => {
     chartData = expensesByType.value
 
     if (chartMode.value === 'pie') {
-      svgElement = typesPieChartRef.value
+      chartElement = typesPieChartRef.value?.$el || typesPieChartRef.value
     } else {
-      svgElement = typesBarChartRef.value
+      chartElement = typesBarChartRef.value?.$el || typesBarChartRef.value
     }
   } else if (activeTab.value === 'byCategory' && selectedType.value) {
     chartTitle = `Categories for ${selectedType.value}`
     chartData = expensesByCategoryForType.value
 
     if (chartMode.value === 'pie') {
-      svgElement = categoriesPieChartRef.value
+      chartElement = categoriesPieChartRef.value?.$el || categoriesPieChartRef.value
     } else {
-      svgElement = categoriesBarChartRef.value
+      chartElement = categoriesBarChartRef.value?.$el || categoriesBarChartRef.value
     }
   } else if (activeTab.value === 'byMonth') {
     chartTitle = 'Monthly Expenses'
-    svgElement = monthlyChartRef.value
+    chartElement = monthlyChartRef.value?.$el || monthlyChartRef.value
     // For monthly chart, we need to format data differently
     chartData = expensesByMonth.value.map(month => ({
       name: month.month,
@@ -199,25 +200,49 @@ const exportCurrentChart = () => {
     }))
   }
 
+  // If we couldn't find the chart element by ref, try to get it by selection
+  if (!chartElement) {
+    // First, try to find container
+    const container = document.querySelector('.chart-container') as HTMLElement
+    if (container) {
+      // Then look for SVG within the container
+      const svg = container.querySelector('svg')
+      if (svg) {
+        chartElement = svg.parentElement || container
+      } else {
+        chartElement = container
+      }
+    }
+  }
+
   // Export the chart to PDF
   exportChartToPdf(
     chartTitle,
-    svgElement,
+    chartElement,
     chartData
   )
 }
 
 // Export a full report with all charts and data
 const exportFullReport = () => {
-  // Determine which chart to use based on active tab
-  let chartSvg: SVGElement | null = null
+  // Get chart element based on active tab
+  let chartElement: HTMLElement | null = null
 
   if (activeTab.value === 'byType') {
-    chartSvg = chartMode.value === 'pie' ? typesPieChartRef.value : typesBarChartRef.value
+    chartElement = chartMode.value === 'pie'
+      ? (typesPieChartRef.value?.$el || typesPieChartRef.value || document.querySelector('.pie-chart'))
+      : (typesBarChartRef.value?.$el || typesBarChartRef.value || document.querySelector('.bar-chart'))
   } else if (activeTab.value === 'byCategory' && selectedType.value) {
-    chartSvg = chartMode.value === 'pie' ? categoriesPieChartRef.value : categoriesBarChartRef.value
+    chartElement = chartMode.value === 'pie'
+      ? (categoriesPieChartRef.value?.$el || categoriesPieChartRef.value || document.querySelector('.pie-chart'))
+      : (categoriesBarChartRef.value?.$el || categoriesBarChartRef.value || document.querySelector('.bar-chart'))
   } else if (activeTab.value === 'byMonth') {
-    chartSvg = monthlyChartRef.value
+    chartElement = monthlyChartRef.value?.$el || monthlyChartRef.value || document.querySelector('.stacked-bar-chart')
+  }
+
+  // If we couldn't find the chart element by ref, try to get the whole chart container
+  if (!chartElement) {
+    chartElement = document.querySelector('.chart-container') as HTMLElement
   }
 
   // Prepare summary data
@@ -250,7 +275,7 @@ const exportFullReport = () => {
   exportFullReportToPdf(
     'Expense Analysis Report',
     summaryData,
-    chartSvg,
+    chartElement,
     breakdownData,
     'All time'
   )
@@ -412,6 +437,7 @@ const monthlyBarChartData = computed(() => {
   })
 })
 </script>
+
 
 <template>
   <div class="expense-charts">
