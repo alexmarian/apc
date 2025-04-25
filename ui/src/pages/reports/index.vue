@@ -14,8 +14,7 @@ import {
   NGrid,
   NGridItem,
   NStatistic,
-  NTooltip,
-  useMessage
+  NTooltip
 } from 'naive-ui'
 import { expenseApi } from '@/services/api'
 import type { Expense } from '@/types/api'
@@ -24,10 +23,6 @@ import { exportFullReportToPdf } from '@/utils/pdfExport'
 import AssociationSelector from '@/components/AssociationSelector.vue'
 import CategorySelector from '@/components/CategorySelector.vue'
 import ExpenseCharts from '@/components/ExpenseCharts.vue'
-import PdfPreviewModal from '@/components/PdfPreviewModal.vue'
-
-// Notification system
-const message = useMessage()
 
 // Association selector
 const associationId = ref<number | null>(null)
@@ -42,10 +37,8 @@ const dateRange = ref<[number, number] | null>(null)
 const selectedCategory = ref<number | null>(null)
 const reportType = ref<string>('overview')
 
-// PDF preview state
-const showPdfPreview = ref(false)
-const pdfTitle = ref('Expense Analysis Report')
-const reportContainerRef = ref<HTMLElement | null>(null)
+// Reference to the ExpenseCharts component
+const expenseChartsRef = ref<any>(null)
 
 // Reports data
 const yearlyTotal = computed(() => {
@@ -166,74 +159,61 @@ const formattedDateRange = computed(() => {
   return `${start} - ${end}`
 })
 
-// Reference to charts to export
-const chartsRef = ref<any>(null)
-
-// Show PDF preview
-const showReportPreview = () => {
-  if (expenses.value.length === 0) {
-    message.warning('No data to export')
-    return
-  }
-
-  // Set report container ref
-  reportContainerRef.value = document.querySelector('.reports-content') as HTMLElement
-
-  // Update PDF title with date range
-  pdfTitle.value = `Expense Analysis Report (${formattedDateRange.value})`
-
-  // Show preview modal
-  showPdfPreview.value = true
-}
-
 // Export comprehensive report with all data
 const exportReport = () => {
-  if (expenses.value.length === 0) {
-    message.warning('No data to export')
-    return
-  }
+  try {
+    // Try to find an SVG element in the ExpenseCharts component
+    let chartSvg: SVGElement | null = null
 
-  // Get currently active chart SVG from the ExpenseCharts component if available
-  const chartElement = chartsRef.value?.$el.querySelector('.chart-container') as HTMLElement
-
-  // Prepare summary data
-  const summaryData = [
-    {
-      label: 'Total Expenses',
-      value: formatCurrency(yearlyTotal.value)
-    },
-    {
-      label: 'Monthly Average',
-      value: formatCurrency(monthlyAverage.value)
-    },
-    {
-      label: 'Number of Expenses',
-      value: expenses.value.length.toString()
+    // Check if the ExpenseCharts component is accessible
+    if (expenseChartsRef.value) {
+      // Look for SVG elements in the component
+      const svgElements = expenseChartsRef.value.$el.querySelectorAll('svg')
+      if (svgElements && svgElements.length > 0) {
+        // Get the first visible SVG
+        for (const svg of svgElements) {
+          if (svg.getBoundingClientRect().height > 0) {
+            chartSvg = svg
+            break
+          }
+        }
+      }
     }
-  ]
 
-  // Prepare breakdown data
-  const breakdownData = {
-    types: expensesByType.value,
-    months: expensesByMonth.value
+    // Prepare summary data
+    const summaryData = [
+      {
+        label: 'Total Expenses',
+        value: formatCurrency(yearlyTotal.value)
+      },
+      {
+        label: 'Monthly Average',
+        value: formatCurrency(monthlyAverage.value)
+      },
+      {
+        label: 'Number of Expenses',
+        value: expenses.value.length.toString()
+      }
+    ]
+
+    // Prepare breakdown data
+    const breakdownData = {
+      types: expensesByType.value,
+      months: expensesByMonth.value
+    }
+
+    // Export the full report
+    exportFullReportToPdf(
+      'Expense Analysis Report',
+      summaryData,
+      chartSvg,
+      breakdownData,
+      formattedDateRange.value
+    )
+  } catch (error) {
+    console.error('Error exporting report:', error)
+    alert('There was an error generating the report. Please try again.')
   }
-
-  // Show loading message
-  message.loading('Generating PDF export...')
-
-  // Export the full report
-  exportFullReportToPdf(
-    'Expense Analysis Report',
-    summaryData,
-    chartElement,
-    breakdownData,
-    formattedDateRange.value
-  ).then(() => {
-    message.success('PDF export completed')
-  }).catch(err => {
-    console.error('PDF export failed:', err)
-    message.error('Failed to export PDF')
-  })
 }
 
 // Initialize data
@@ -261,34 +241,13 @@ onMounted(() => {
       </template>
 
       <template #extra>
-        <NSpace>
-          <NTooltip trigger="hover">
-            <template #trigger>
-              <NButton
-                v-if="expenses.length > 0"
-                secondary
-                type="primary"
-                @click="showReportPreview"
-              >
-                Preview Report
-              </NButton>
-            </template>
-            Preview the report before downloading
-          </NTooltip>
-
-          <NTooltip trigger="hover">
-            <template #trigger>
-              <NButton
-                v-if="expenses.length > 0"
-                type="primary"
-                @click="exportReport"
-              >
-                Export PDF
-              </NButton>
-            </template>
-            Download the report as PDF
-          </NTooltip>
-        </NSpace>
+        <NButton
+          v-if="expenses.length > 0"
+          type="primary"
+          @click="exportReport"
+        >
+          Export Report
+        </NButton>
       </template>
     </NPageHeader>
 
@@ -300,7 +259,7 @@ onMounted(() => {
       </NCard>
     </div>
 
-    <div v-else class="reports-content">
+    <div v-else>
       <!-- Filters -->
       <NCard style="margin-top: 16px;" title="Report Filters">
         <NSpace align="center" justify="start">
@@ -366,7 +325,10 @@ onMounted(() => {
 
             <NTabs type="line" animated>
               <NTabPane name="charts" tab="Visual Reports">
-                <ExpenseCharts ref="chartsRef" :expenses="expenses" />
+                <ExpenseCharts
+                  ref="expenseChartsRef"
+                  :expenses="expenses"
+                />
               </NTabPane>
 
               <NTabPane name="breakdown" tab="Breakdown">
@@ -419,14 +381,6 @@ onMounted(() => {
         </template>
       </NSpin>
     </div>
-
-    <!-- PDF Preview Modal -->
-    <PdfPreviewModal
-      v-model:show="showPdfPreview"
-      :title="pdfTitle"
-      :content-element="reportContainerRef"
-      :on-generate="exportReport"
-    />
   </div>
 </template>
 
@@ -472,21 +426,5 @@ onMounted(() => {
 .breakdown-table th {
   font-weight: 600;
   background-color: var(--background-alt-color);
-}
-
-@media print {
-  .reports-view {
-    max-width: none;
-  }
-
-  .breakdown-table {
-    overflow-x: visible;
-  }
-
-  .breakdown-table th {
-    background-color: #f0f0f0 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
 }
 </style>

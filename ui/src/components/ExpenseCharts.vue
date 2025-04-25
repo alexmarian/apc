@@ -1,4 +1,3 @@
-
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { NCard, NTabs, NTabPane, NDivider, NSelect, NEmpty, NRadioGroup, NRadio, NButton, NTooltip, NSpace } from 'naive-ui'
@@ -25,6 +24,13 @@ const COLORS = [
   '#3366FF', '#FF6633', '#33CC99', '#FFCC33', '#FF33CC',
   '#33CCFF', '#CC99FF', '#99CC33', '#FF9966', '#6699FF'
 ]
+
+// Refs for SVG elements to export
+const typesPieChartRef = ref<SVGElement | null>(null)
+const categoriesPieChartRef = ref<SVGElement | null>(null)
+const typesBarChartRef = ref<SVGElement | null>(null)
+const categoriesBarChartRef = ref<SVGElement | null>(null)
+const monthlyChartRef = ref<SVGElement | null>(null)
 
 // Computed data for the charts
 const expensesByType = computed(() => {
@@ -158,16 +164,9 @@ const handleTypeChange = (value: string) => {
   selectedType.value = value
 }
 
-// Refs for SVG elements to export
-const typesPieChartRef = ref<SVGElement | null>(null)
-const categoriesPieChartRef = ref<SVGElement | null>(null)
-const typesBarChartRef = ref<SVGElement | null>(null)
-const categoriesBarChartRef = ref<SVGElement | null>(null)
-const monthlyChartRef = ref<SVGElement | null>(null)
-
 // Export the current chart to PDF
 const exportCurrentChart = () => {
-  let chartElement: HTMLElement | null = null
+  let svgElement: SVGElement | null = null
   let chartData: any[] = []
   let chartTitle = ''
 
@@ -177,22 +176,22 @@ const exportCurrentChart = () => {
     chartData = expensesByType.value
 
     if (chartMode.value === 'pie') {
-      chartElement = typesPieChartRef.value?.$el || typesPieChartRef.value
+      svgElement = typesPieChartRef.value
     } else {
-      chartElement = typesBarChartRef.value?.$el || typesBarChartRef.value
+      svgElement = typesBarChartRef.value
     }
   } else if (activeTab.value === 'byCategory' && selectedType.value) {
     chartTitle = `Categories for ${selectedType.value}`
     chartData = expensesByCategoryForType.value
 
     if (chartMode.value === 'pie') {
-      chartElement = categoriesPieChartRef.value?.$el || categoriesPieChartRef.value
+      svgElement = categoriesPieChartRef.value
     } else {
-      chartElement = categoriesBarChartRef.value?.$el || categoriesBarChartRef.value
+      svgElement = categoriesBarChartRef.value
     }
   } else if (activeTab.value === 'byMonth') {
     chartTitle = 'Monthly Expenses'
-    chartElement = monthlyChartRef.value?.$el || monthlyChartRef.value
+    svgElement = monthlyChartRef.value
     // For monthly chart, we need to format data differently
     chartData = expensesByMonth.value.map(month => ({
       name: month.month,
@@ -200,49 +199,29 @@ const exportCurrentChart = () => {
     }))
   }
 
-  // If we couldn't find the chart element by ref, try to get it by selection
-  if (!chartElement) {
-    // First, try to find container
-    const container = document.querySelector('.chart-container') as HTMLElement
-    if (container) {
-      // Then look for SVG within the container
-      const svg = container.querySelector('svg')
-      if (svg) {
-        chartElement = svg.parentElement || container
-      } else {
-        chartElement = container
-      }
-    }
-  }
-
   // Export the chart to PDF
-  exportChartToPdf(
-    chartTitle,
-    chartElement,
-    chartData
-  )
+  if (svgElement) {
+    exportChartToPdf(
+      chartTitle,
+      svgElement,
+      chartData
+    )
+  } else {
+    console.error('No SVG element found for the current chart')
+  }
 }
 
 // Export a full report with all charts and data
 const exportFullReport = () => {
-  // Get chart element based on active tab
-  let chartElement: HTMLElement | null = null
+  // Determine which chart to use based on active tab
+  let chartSvg: SVGElement | null = null
 
   if (activeTab.value === 'byType') {
-    chartElement = chartMode.value === 'pie'
-      ? (typesPieChartRef.value?.$el || typesPieChartRef.value || document.querySelector('.pie-chart'))
-      : (typesBarChartRef.value?.$el || typesBarChartRef.value || document.querySelector('.bar-chart'))
+    chartSvg = chartMode.value === 'pie' ? typesPieChartRef.value : typesBarChartRef.value
   } else if (activeTab.value === 'byCategory' && selectedType.value) {
-    chartElement = chartMode.value === 'pie'
-      ? (categoriesPieChartRef.value?.$el || categoriesPieChartRef.value || document.querySelector('.pie-chart'))
-      : (categoriesBarChartRef.value?.$el || categoriesBarChartRef.value || document.querySelector('.bar-chart'))
+    chartSvg = chartMode.value === 'pie' ? categoriesPieChartRef.value : categoriesBarChartRef.value
   } else if (activeTab.value === 'byMonth') {
-    chartElement = monthlyChartRef.value?.$el || monthlyChartRef.value || document.querySelector('.stacked-bar-chart')
-  }
-
-  // If we couldn't find the chart element by ref, try to get the whole chart container
-  if (!chartElement) {
-    chartElement = document.querySelector('.chart-container') as HTMLElement
+    chartSvg = monthlyChartRef.value
   }
 
   // Prepare summary data
@@ -258,7 +237,7 @@ const exportFullReport = () => {
     },
     {
       label: 'Average Expense',
-      value: formatCurrency(totalAmount / props.expenses.length)
+      value: formatCurrency(totalAmount / (props.expenses.length || 1))
     }
   ]
 
@@ -275,7 +254,7 @@ const exportFullReport = () => {
   exportFullReportToPdf(
     'Expense Analysis Report',
     summaryData,
-    chartElement,
+    chartSvg,
     breakdownData,
     'All time'
   )
@@ -438,7 +417,6 @@ const monthlyBarChartData = computed(() => {
 })
 </script>
 
-
 <template>
   <div class="expense-charts">
     <template v-if="props.expenses.length === 0">
@@ -553,7 +531,6 @@ const monthlyBarChartData = computed(() => {
                       fill="var(--text-color)"
                       font-size="3"
                       text-anchor="middle"
-                      transform="rotate(45, 0, 0)"
                     >
                       {{ bar.name }}
                     </text>
@@ -676,7 +653,6 @@ const monthlyBarChartData = computed(() => {
                         fill="var(--text-color)"
                         font-size="3"
                         text-anchor="middle"
-                        transform="rotate(45, 0, 0)"
                       >
                         {{ bar.name }}
                       </text>
