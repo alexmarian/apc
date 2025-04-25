@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, provide } from 'vue'
-import { NCard, NButton, NPageHeader, NSpace, useMessage } from 'naive-ui'
+import { computed, ref } from 'vue'
+import { NButton, NCard, NPageHeader, NSpace, useMessage } from 'naive-ui'
 import ExpensesList from '@/components/ExpensesList.vue'
 import ExpenseForm from '@/components/ExpenseForm.vue'
 import ExpensesSummary from '@/components/ExpensesSummary.vue'
 import AssociationSelector from '@/components/AssociationSelector.vue'
+import type { Expense } from '@/types/api.ts'
 
 // Setup Naive UI message system
 const message = useMessage()
@@ -17,15 +18,11 @@ const showForm = ref(false)
 const editingExpenseId = ref<number | undefined>(undefined)
 const showSummary = ref(true)
 
-// Date filter state that will be shared between components
-const dateRange = ref<[number, number] | null>(null)
-const selectedCategory = ref<number | null>(null)
+const displayedExpenses = ref<Expense[] | null>(null)
 
-// Provide shared filter state to child components
-provide('expenseFilters', {
-  dateRange,
-  selectedCategory
-})
+const setDisplayedExpenses = (expenses: Expense[]) => {
+  displayedExpenses.value = expenses
+}
 
 // Computed properties
 const formTitle = computed(() => {
@@ -52,10 +49,7 @@ const handleFormSaved = () => {
   showForm.value = false
   // Show success message
   message.success(`Expense ${editingExpenseId.value ? 'updated' : 'created'} successfully`)
-  // Reload the expenses list
-  setTimeout(() => {
-    location.reload()
-  }, 1000)
+  // check on how to trigger reload
 }
 
 const handleFormCancelled = () => {
@@ -125,13 +119,14 @@ const toggleSummary = () => {
         <ExpensesList
           :association-id="associationId"
           @edit="handleEditExpense"
+          @expenses-rendered="setDisplayedExpenses"
         />
       </NCard>
 
       <!-- Summary is below the list and can be toggled -->
       <div v-if="showSummary" style="margin-top: 16px;">
-        <ExpensesSummary
-          :association-id="associationId"
+        <ExpensesSummary v-if="displayedExpenses"
+          :expenses="displayedExpenses"
         />
       </div>
     </div>

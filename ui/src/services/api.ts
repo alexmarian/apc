@@ -33,6 +33,11 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (reqConfig: AxiosRequestConfig) => {
+    if (reqConfig.url &&
+      (reqConfig.url.includes('/login') ||
+        reqConfig.url.includes('/refresh'))) {
+      return reqConfig
+    }
     const token = localStorage.getItem(config.authTokenKey)
     if (token && reqConfig.headers) {
       reqConfig.headers.Authorization = `Bearer ${token}`

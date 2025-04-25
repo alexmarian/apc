@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { NSelect, NSpin } from 'naive-ui'
-import axios from 'axios'
 import config from '@/config'
 import type { Association } from '@/types/api'
+import { associationApi } from '@/services/api.ts'
 
 // Props
 const props = defineProps<{
@@ -28,11 +28,7 @@ const fetchAssociations = async () => {
 
     const token = localStorage.getItem(config.authTokenKey)
 
-    const response = await axios.get<Association[]>(`${config.apiBaseUrl}/associations`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
+    const response = await associationApi.getAssociations();
 
     associations.value = response.data
 

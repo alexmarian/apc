@@ -61,11 +61,6 @@ export const useAuthStore = defineStore('auth', () => {
       token.value = response.data.token
       localStorage.setItem(config.authTokenKey, token.value)
 
-      // If the response also provides a new refresh token, update that too
-      if (response.data.refresh_token) {
-        refreshToken.value = response.data.refresh_token
-        localStorage.setItem(config.refreshTokenKey, refreshToken.value)
-      }
 
       return true
     } catch (err) {

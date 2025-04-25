@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted, h, computed, watch, inject } from 'vue'
-import { NDataTable, NButton, NSpace, NEmpty, NSpin, NAlert, useMessage, NDatePicker, NSelect } from 'naive-ui'
+import {
+  NDataTable,
+  NButton,
+  NSpace,
+  NEmpty,
+  NSpin,
+  NAlert,
+  useMessage,
+  NDatePicker,
+  NSelect
+} from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { expenseApi } from '@/services/api'
 import type { Expense } from '@/types/api'
@@ -15,6 +25,7 @@ const props = defineProps<{
 // Emits
 const emit = defineEmits<{
   (e: 'edit', expenseId: number): void
+  (e: 'expenses-rendered', expenses: Expense[]): void
 }>()
 
 // Get shared filters from parent if available
@@ -29,6 +40,14 @@ const message = useMessage()
 // Filters - use shared filters if available, otherwise use local state
 const dateRange = sharedFilters?.dateRange || ref<[number, number] | null>(null)
 const selectedCategory = sharedFilters?.selectedCategory || ref<number | null>(null)
+
+const filteredExpenses = computed(() => {
+  if (selectedCategory.value) {
+    return expenses.value.filter(expense => expense.category_id === selectedCategory.value)
+  } else {
+    return expenses.value
+  }
+})
 
 // Table columns definition
 const columns = ref<DataTableColumns<Expense>>([
@@ -57,11 +76,16 @@ const columns = ref<DataTableColumns<Expense>>([
     key: 'destination'
   },
   {
+    title: 'Type',
+    key: 'category_type'
+  },
+  {
+    title: 'Family',
+    key: 'category_family'
+  },
+  {
     title: 'Category',
-    key: 'category_name',
-    render(row) {
-      return `${row.category_type} - ${row.category_family} - ${row.category_name}`
-    }
+    key: 'category_name'
   },
   {
     title: 'Account',
@@ -139,13 +163,7 @@ const fetchExpenses = async () => {
     }
 
     const response = await expenseApi.getExpenses(props.associationId, startDate, endDate)
-
-    // Filter by category if selected
-    if (selectedCategory.value) {
-      expenses.value = response.data.filter(expense => expense.category_id === selectedCategory.value)
-    } else {
-      expenses.value = response.data
-    }
+    expenses.value = response.data
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Unknown error occurred'
     console.error('Error fetching expenses:', err)
@@ -179,13 +197,17 @@ const deleteExpense = async (expenseId: number) => {
 
 // Calculate total amount for the filtered expenses
 const totalAmount = computed(() => {
-  return expenses.value.reduce((sum, expense) => sum + expense.amount, 0)
+  return filteredExpenses.value.reduce((sum, expense) => sum + expense.amount, 0)
 })
 
 // Watch for changes in filters and refresh data
-watch([dateRange, selectedCategory], () => {
+watch([dateRange], () => {
   fetchExpenses()
 })
+watch([filteredExpenses], () => {
+  emit('expenses-rendered', filteredExpenses.value)
+})
+
 
 // Reset filters
 const resetFilters = () => {
@@ -195,7 +217,6 @@ const resetFilters = () => {
   if (typeof selectedCategory.value === 'object' && selectedCategory.value !== null) {
     selectedCategory.value = null
   }
-  fetchExpenses()
 }
 
 // Load data on component mount
@@ -227,7 +248,7 @@ onMounted(() => {
             :association-id="props.associationId"
             placeholder="Select Category"
             :include-all-option="true"
-            style="width: 240px"
+            style="width: 360px"
           />
         </div>
         <NButton @click="resetFilters">Reset Filters</NButton>
@@ -251,7 +272,7 @@ onMounted(() => {
 
       <NDataTable
         :columns="columns"
-        :data="expenses"
+        :data="filteredExpenses"
         :bordered="false"
         :single-line="false"
         :pagination="{

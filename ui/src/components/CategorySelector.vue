@@ -81,6 +81,7 @@ onMounted(() => {
   <div class="category-selector">
     <NSpin :show="loading">
       <NSelect
+        filterable
         :value="props.modelValue"
         :options="options"
         :placeholder="placeholder || 'Select a category'"

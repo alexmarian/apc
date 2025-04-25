@@ -4,7 +4,7 @@
  * @param currency Currency code (default: RON)
  * @returns Formatted currency string
  */
-export const formatCurrency = (value: number, currency: string = 'RON'): string => {
+export const formatCurrency = (value: number, currency: string = 'MDL'): string => {
   return new Intl.NumberFormat('ro-RO', {
     style: 'currency',
     currency,
