@@ -2,17 +2,18 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import { NSpace, NLayout, NLayoutHeader, NLayoutContent, NMenu, NButton, NDropdown } from 'naive-ui'
-import { h, inject } from 'vue'
+import { h, ref, computed } from 'vue'
 import ThemeProvider from '@/providers/ThemeProvider.vue'
 import LanguageSelector from '@/components/LanguageSelector.vue'
 import UserProfileButton from '@/components/UserProfileButton.vue'
-import { ThemeKey, defaultThemeProvider } from '@/utils/theme'
 import { useI18n } from 'vue-i18n'
-const { t } = useI18n()
-// Theme injection using the Symbol key for more reliable injection
-const theme = inject(ThemeKey, defaultThemeProvider)
 
-// Menu options
+const { t } = useI18n()
+
+const isDark = ref(true)
+const currentTheme = computed(() => {
+  return isDark.value ? 'darkTheme' : 'lightTheme'
+})
 const menuOptions = [
   {
     label: () => h(RouterLink, { to: '/' }, { default: () => t('common.home', 'Home') }),
@@ -48,88 +49,61 @@ const themeMenuOptions = [
   }
 ]
 
-// Handle theme change
-const handleThemeChange = (key: string) => {
-  console.log('Theme change triggered', key)
-  // Check if key is valid before switching
-  if (['light', 'dark', 'auto'].includes(key)) {
-    theme.switchTheme(key as any)
-  } else {
-    console.error('Invalid theme key:', key)
-  }
-}
 </script>
 
 <template>
-  <ThemeProvider>
-    <n-layout class="main-layout">
-      <n-layout-header bordered class="header">
-        <div class="header-content">
-          <div class="logo">
-            <img alt="App logo" class="logo-img" src="@/assets/logo.svg" width="32" height="32" />
-            <h1 class="app-title">APC Management</h1>
-          </div>
-          <n-space>
-            <n-menu mode="horizontal" :options="menuOptions" />
-            <!-- Temporarily comment out until fully set up -->
-            <LanguageSelector />
-            <n-dropdown
-              trigger="click"
-              :options="themeMenuOptions"
-              @select="handleThemeChange"
-            >
-              <n-button>
-                Theme: {{ theme.isDark ? 'Dark' : 'Light' }}
-              </n-button>
-            </n-dropdown>
-            <UserProfileButton />
-          </n-space>
+  <ThemeProvider :theme="currentTheme">
+    <NLayout class="main-layout">
+      <NLayoutHeader bordered class="header">
+        <div class="logo">
+          <img alt="App logo" class="logo-img" src="@/assets/logo.svg" width="32" height="32" />
+          <h1 class="app-title">APC Management</h1>
         </div>
-      </n-layout-header>
-
-      <n-layout-content>
-        <div class="content-container">
-          <RouterView />
+        <NMenu mode="horizontal" :options="menuOptions" />
+        <div class="header-right">
+          <LanguageSelector />
+          <NSwitch v-model:value="isDark" />
+          <UserProfileButton />
         </div>
-      </n-layout-content>
-    </n-layout>
+      </NLayoutHeader>
+      <NLayoutContent>
+        <RouterView />
+      </NLayoutContent>
+    </NLayout>
   </ThemeProvider>
 </template>
 
 <style scoped>
 .main-layout {
   min-height: 100vh;
+  width: 100%;
 }
 
 .header {
-  position: sticky;
-  top: 0;
-  z-index: 999;
-}
-
-.header-content {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0 2rem;
-  height: 64px;
+  justify-content: space-between;
+  padding: 0 16px;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 1rem;
+}
+
+.logo-img {
+  margin-right: 8px;
 }
 
 .app-title {
-  font-size: 1.5rem;
-  font-weight: 500;
+  font-size: 1.25rem;
+  font-weight: bold;
   margin: 0;
 }
 
-.content-container {
-  width: 100%;
-  margin: 0 auto;
-  padding: 2rem;
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 </style>
