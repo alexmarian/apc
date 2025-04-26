@@ -7,10 +7,12 @@ import ThemeProvider from '@/providers/ThemeProvider.vue'
 import LanguageSelector from '@/components/LanguageSelector.vue'
 import UserProfileButton from '@/components/UserProfileButton.vue'
 import { useI18n } from 'vue-i18n'
+import { usePreferences } from '@/stores/preferences.ts'
 
+const preferences = usePreferences()
 const { t } = useI18n()
 
-const isDark = ref(true)
+const isDark = ref(preferences.theme ? preferences.theme === 'darkTheme' : true)
 const currentTheme = computed(() => {
   return isDark.value ? 'darkTheme' : 'lightTheme'
 })

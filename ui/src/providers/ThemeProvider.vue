@@ -3,16 +3,19 @@
 import { ref, provide, computed, watchEffect, watch } from 'vue'
 import {
   darkTheme,
-  lightTheme,
+  lightTheme
 } from 'naive-ui'
+import { usePreferences } from '@/stores/preferences.ts'
 
-
+const preferences = usePreferences()
 const props = defineProps({
   theme: {
-    type: String,
-    default: 'darkTheme'
+    type: String
   }
 })
+if (!props.theme) {
+  props.theme = preferences.getTheme()
+}
 const themes = {
   'darkTheme': darkTheme,
   'lightTheme': lightTheme
@@ -23,22 +26,28 @@ const currentTheme = computed(() => {
   }
   return darkTheme
 })
+watch(currentTheme, () => {
+  console.log(props.theme)
+  if (themes[props.theme]) {
+    preferences.setTheme(props.theme)
+  }
+})
 </script>
 
 <template>
-  <n-config-provider
+  <NConfigProvider
     :theme="currentTheme"
   >
-    <n-loading-bar-provider>
-      <n-dialog-provider>
-        <n-notification-provider>
-          <n-message-provider>
+    <NLoadingBarProvider>
+      <NDialogProvider>
+        <NNotificationProvider>
+          <NMessageProvider>
             <slot></slot>
-          </n-message-provider>
-        </n-notification-provider>
-      </n-dialog-provider>
-    </n-loading-bar-provider>
-  </n-config-provider>
+          </NMessageProvider>
+        </NNotificationProvider>
+      </NDialogProvider>
+    </NLoadingBarProvider>
+  </NConfigProvider>
 </template>
 
 <style>

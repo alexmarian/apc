@@ -15,7 +15,8 @@
     "loading": "Se încarcă...",
     "error": "Eroare",
     "success": "Succes",
-    "retry": "Încearcă din nou"
+    "retry": "Încearcă din nou",
+    "home": "Acasă"
   },
   "auth": {
     "login": "Autentificare",
@@ -88,5 +89,8 @@
     "dark": "Temă Întunecată",
     "auto": "Auto (Sistem)",
     "current": "Tema curentă: {theme}"
+  },
+  "reports": {
+    "title": "Rapoarte"
   }
 }

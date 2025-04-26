@@ -15,7 +15,8 @@
     "loading": "Loading...",
     "error": "Error",
     "success": "Success",
-    "retry": "Retry"
+    "retry": "Retry",
+    "home": "Home"
   },
   "auth": {
     "login": "Login",
@@ -88,5 +89,8 @@
     "dark": "Dark Theme",
     "auto": "Auto (System)",
     "current": "Current theme: {theme}"
+  },
+  "reports": {
+    "title": "Reports"
   }
 }
