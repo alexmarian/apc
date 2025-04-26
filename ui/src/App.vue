@@ -59,7 +59,7 @@ const themeMenuOptions = [
       <NLayoutHeader bordered class="header">
         <div class="logo">
           <img alt="App logo" class="logo-img" src="@/assets/logo.svg" width="32" height="32" />
-          <h1 class="app-title">APC Management</h1>
+          <h1 class="app-title">APC</h1>
         </div>
         <NMenu mode="horizontal" :options="menuOptions" />
         <div class="header-right">
@@ -68,7 +68,7 @@ const themeMenuOptions = [
           <UserProfileButton />
         </div>
       </NLayoutHeader>
-      <NLayoutContent>
+      <NLayoutContent class="content-margin">
         <RouterView />
       </NLayoutContent>
     </NLayout>
@@ -107,5 +107,8 @@ const themeMenuOptions = [
   display: flex;
   align-items: center;
   gap: 16px;
+}
+.content-margin {
+  margin: 10px; /* Adjust the margin value as needed */
 }
 </style>

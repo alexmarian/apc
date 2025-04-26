@@ -302,11 +302,20 @@ onMounted(() => {
   border-radius: 4px;
   background-color: var(--background-color);
   border: 1px solid var(--border-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+.filters > div {
+  flex: 1;
+  min-width: 200px;
 }
 
 .summary {
   margin: 1rem 0;
-  padding: 0.5rem;
+  padding: 0.5rem 1rem;
   font-size: 1.1rem;
   text-align: right;
   display: flex;
@@ -314,6 +323,7 @@ onMounted(() => {
   align-items: center;
   background-color: var(--background-color);
   border-radius: 4px;
+  border: 1px solid var(--border-color);
 }
 
 .date-range-label {
