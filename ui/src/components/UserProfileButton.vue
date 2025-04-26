@@ -42,7 +42,7 @@ const handleLogout = () => {
     >
       <NButton text>
         <div class="user-button-content">
-          <NAvatar round size="small" color="#3366ff">
+          <NAvatar round size="small">
             {{ username.charAt(0).toUpperCase() }}
           </NAvatar>
           <span class="username">{{ username }}</span>
