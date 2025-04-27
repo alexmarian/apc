@@ -29,7 +29,7 @@
     "userProfile": "User Profile"
   },
   "accounts": {
-    "title": "Account Management",
+    "title": "Accounts",
     "list": "Accounts",
     "createNew": "Create New Account",
     "editAccount": "Edit Account",

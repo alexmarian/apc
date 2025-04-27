@@ -29,7 +29,7 @@
     "userProfile": "Profil Utilizator"
   },
   "accounts": {
-    "title": "Administrare Conturi",
+    "title": "Conturi",
     "list": "Conturi",
     "createNew": "Creează Cont Nou",
     "editAccount": "Editează Cont",

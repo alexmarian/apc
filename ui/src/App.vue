@@ -1,13 +1,14 @@
 <!-- src/App.vue -->
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
-import { NSpace, NLayout, NLayoutHeader, NLayoutContent, NMenu, NButton, NDropdown } from 'naive-ui'
+import { NIcon, NLayout, NLayoutHeader, NLayoutContent, NMenu, NButton, NDropdown } from 'naive-ui'
 import { h, ref, computed } from 'vue'
 import ThemeProvider from '@/providers/ThemeProvider.vue'
 import LanguageSelector from '@/components/LanguageSelector.vue'
 import UserProfileButton from '@/components/UserProfileButton.vue'
 import { useI18n } from 'vue-i18n'
 import { usePreferences } from '@/stores/preferences.ts'
+import { AttachMoneyRound,AccountBalanceRound,HomeRound } from '@vicons/material'
 
 const preferences = usePreferences()
 const { t } = useI18n()
@@ -16,22 +17,36 @@ const isDark = ref(preferences.theme ? preferences.theme === 'darkTheme' : true)
 const currentTheme = computed(() => {
   return isDark.value ? 'darkTheme' : 'lightTheme'
 })
+
+function renderIcon(icon: Component) {
+  return () => h(NIcon, null, { default: () => h(icon) })
+}
+
 const menuOptions = [
   {
     label: () => h(RouterLink, { to: '/' }, { default: () => t('common.home', 'Home') }),
-    key: 'home'
+    key: 'home',
+    icon: renderIcon(HomeRound)
   },
   {
     label: () => h(RouterLink, { to: '/accounts' }, { default: () => t('accounts.title', 'Accounts') }),
-    key: 'accounts'
+    key: 'accounts',
+    icon: renderIcon(AccountBalanceRound)
   },
   {
-    label: () => h(RouterLink, { to: '/expenses' }, { default: () => t('expenses.title', 'Expenses') }),
-    key: 'expenses'
-  },
-  {
-    label: () => h(RouterLink, { to: '/reports' }, { default: () => t('reports.title', 'Reports') }),
-    key: 'reports'
+    label: 'Expenses',
+    key: 'expenses-group',
+    icon: renderIcon(AttachMoneyRound),
+    children: [
+      {
+        label: () => h(RouterLink, { to: '/expenses' }, { default: () => t('expenses.title', 'Management') }),
+        key: 'expenses-management'
+      },
+      {
+        label: () => h(RouterLink, { to: '/reports' }, { default: () => t('reports.title', 'Reports') }),
+        key: 'expenses-reports'
+      }
+    ]
   }
 ]
 
@@ -108,6 +123,7 @@ const themeMenuOptions = [
   align-items: center;
   gap: 16px;
 }
+
 .content-margin {
   margin: 10px; /* Adjust the margin value as needed */
 }
