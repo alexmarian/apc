@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/alexmarian/apc/api/internal/auth"
@@ -10,13 +11,15 @@ import (
 	"time"
 )
 
-func HandleCreateUser(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+func HandleCreateUserWithToken(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
+		// Parse request
 		type request struct {
 			Login    string `json:"login"`
 			Password string `json:"password"`
-			IsAdmin  bool   `json:"isAdmin"`
+			Token    string `json:"token"` // Registration token
 		}
+
 		decoder := json.NewDecoder(req.Body)
 		defer req.Body.Close()
 		userData := request{}
@@ -27,34 +30,68 @@ func HandleCreateUser(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 			RespondWithError(rw, http.StatusBadRequest, errors)
 			return
 		}
-		password, err := auth.HashPassword(userData.Password)
+
+		// Validate the token
+		dbToken, err := cfg.Db.GetValidRegistrationToken(req.Context(), userData.Token)
+		if err != nil {
+			log.Printf("Error validating token: %s", err)
+			RespondWithError(rw, http.StatusUnauthorized, "Invalid or expired registration token")
+			return
+		}
+
+		// Hash the password
+		hashedPassword, err := auth.HashPassword(userData.Password)
 		if err != nil {
 			var errors = fmt.Sprintf("Error hashing password: %s", err)
 			log.Printf(errors)
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}
+
+		// Generate TOTP secret
 		secret, qrCode, err := auth.GenerateQRCode(userData.Login)
 		if err != nil {
 			log.Printf(err.Error())
 			RespondWithError(rw, http.StatusInternalServerError, err.Error())
+			return
 		}
-		user, err := cfg.Db.CreateUser(req.Context(), database.CreateUserParams{userData.Login, password, secret, userData.IsAdmin})
+
+		// Create the user
+		user, err := cfg.Db.CreateUser(req.Context(), database.CreateUserParams{
+			Login:        userData.Login,
+			PasswordHash: hashedPassword,
+			ToptSecret:   secret,
+			IsAdmin:      dbToken.IsAdmin, // Use isAdmin from token
+		})
 		if err != nil {
 			var errors = fmt.Sprintf("Error creating user: %s", err)
 			log.Printf(errors)
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}
+
+		// Mark token as used
+		err = cfg.Db.UseRegistrationToken(req.Context(), database.UseRegistrationTokenParams{
+			UsedBy: sql.NullString{String: userData.Login, Valid: true},
+			Token:  userData.Token,
+		})
+		if err != nil {
+			log.Printf("Error marking token as used: %s", err)
+			// Don't fail the request if this happens
+		}
+
+		// Return response
 		type response struct {
 			Login     string    `json:"login"`
 			QrCode    string    `json:"qrCode"`
 			CreatedAt time.Time `json:"createdAt"`
+			IsAdmin   bool      `json:"isAdmin"`
 		}
 		responseData := response{
 			Login:     user.Login,
 			QrCode:    qrCode,
 			CreatedAt: user.CreatedAt,
+			IsAdmin:   user.IsAdmin,
 		}
 		RespondWithJSON(rw, http.StatusCreated, responseData)
 	}

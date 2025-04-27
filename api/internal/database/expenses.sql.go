@@ -181,6 +181,110 @@ func (q *Queries) GetExpensesByDateRange(ctx context.Context, arg GetExpensesByD
 	return items, nil
 }
 
+const getExpensesByDateRangeWithFilters = `-- name: GetExpensesByDateRangeWithFilters :many
+SELECT e.id,
+       e.amount,
+       e.description,
+       e.destination,
+       e.date,
+       e.month,
+       e.year,
+       e.category_id,
+       e.account_id,
+       c.type        as category_type,
+       c.family      as category_family,
+       c.name        as category_name,
+       a.number      as account_number,
+       a.description as account_name
+FROM expenses e
+         JOIN categories c ON e.category_id = c.id
+         JOIN accounts a ON e.account_id = a.id
+WHERE c.association_id = ?
+  AND e.date > ?
+  AND e.date < ?
+  AND (? = 0 OR e.category_id = ?) -- Filter by category_id if provided (non-zero)
+  AND (? = '' OR c.type = ?) -- Filter by category_type if provided (non-empty)
+  AND (? = '' OR c.family = ?) -- Filter by category_family if provided (non-empty)
+ORDER BY e.date DESC
+`
+
+type GetExpensesByDateRangeWithFiltersParams struct {
+	AssociationID int64
+	Date          time.Time
+	Date_2        time.Time
+	Column4       interface{}
+	CategoryID    int64
+	Column6       interface{}
+	Type          string
+	Column8       interface{}
+	Family        string
+}
+
+type GetExpensesByDateRangeWithFiltersRow struct {
+	ID             int64
+	Amount         float64
+	Description    string
+	Destination    string
+	Date           time.Time
+	Month          int64
+	Year           int64
+	CategoryID     int64
+	AccountID      int64
+	CategoryType   string
+	CategoryFamily string
+	CategoryName   string
+	AccountNumber  string
+	AccountName    string
+}
+
+func (q *Queries) GetExpensesByDateRangeWithFilters(ctx context.Context, arg GetExpensesByDateRangeWithFiltersParams) ([]GetExpensesByDateRangeWithFiltersRow, error) {
+	rows, err := q.db.QueryContext(ctx, getExpensesByDateRangeWithFilters,
+		arg.AssociationID,
+		arg.Date,
+		arg.Date_2,
+		arg.Column4,
+		arg.CategoryID,
+		arg.Column6,
+		arg.Type,
+		arg.Column8,
+		arg.Family,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetExpensesByDateRangeWithFiltersRow
+	for rows.Next() {
+		var i GetExpensesByDateRangeWithFiltersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Amount,
+			&i.Description,
+			&i.Destination,
+			&i.Date,
+			&i.Month,
+			&i.Year,
+			&i.CategoryID,
+			&i.AccountID,
+			&i.CategoryType,
+			&i.CategoryFamily,
+			&i.CategoryName,
+			&i.AccountNumber,
+			&i.AccountName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateExpense = `-- name: UpdateExpense :one
 UPDATE expenses
 SET amount      = ?,

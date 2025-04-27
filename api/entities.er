@@ -1,0 +1,155 @@
+erDiagram
+    User ||--o{ RefreshToken : "has"
+    User ||--o{ UsersAssociation : "belongs to"
+    User ||--o{ RegistrationToken : "creates"
+    User ||--o{ RegistrationToken : "uses"
+    User ||--o{ RegistrationToken : "revokes"
+    Association ||--o{ UsersAssociation : "has"
+    Association ||--o{ Building : "has"
+    Association ||--o{ Owner : "has"
+    Association ||--o{ Category : "has"
+    Association ||--o{ Account : "has"
+    Building ||--o{ Unit : "contains"
+    Unit ||--o{ Ownership : "has"
+    Owner ||--o{ Ownership : "has"
+    Category ||--o{ Expense : "classifies"
+    Account ||--o{ Expense : "finances"
+
+    User {
+        int id PK
+        string login
+        string password_hash
+        string topt_secret
+        boolean is_admin
+        datetime created_at
+        datetime updated_at
+    }
+
+    RegistrationToken {
+        string token PK
+        string created_by FK
+        datetime created_at
+        datetime expires_at
+        datetime used_at
+        string used_by FK
+        datetime revoked_at
+        string revoked_by FK
+        string description
+        boolean is_admin
+    }
+
+    RefreshToken {
+        string token PK
+        datetime created_at
+        datetime updated_at
+        string login FK
+        datetime expires_at
+        datetime revoked_at
+    }
+
+    UsersAssociation {
+        int id PK
+        int user_id FK
+        int association_id FK
+        datetime created_at
+        datetime updated_at
+    }
+
+    Association {
+        int id PK
+        string name
+        string address
+        string administrator
+        datetime created_at
+        datetime updated_at
+    }
+
+    Building {
+        int id PK
+        string name
+        string address
+        string cadastral_number
+        float total_area
+        int association_id FK
+        datetime created_at
+        datetime updated_at
+    }
+
+    Unit {
+        int id PK
+        string cadastral_number
+        int building_id FK
+        string unit_number
+        string address
+        int entrance
+        float area
+        float part
+        string unit_type
+        int floor
+        int room_count
+        datetime created_at
+        datetime updated_at
+    }
+
+    Owner {
+        int id PK
+        string name
+        string normalized_name
+        string identification_number
+        string contact_phone
+        string contact_email
+        datetime first_detected_at
+        int association_id FK
+        datetime created_at
+        datetime updated_at
+    }
+
+    Ownership {
+        int id PK
+        int unit_id FK
+        int owner_id FK
+        int association_id FK
+        datetime start_date
+        datetime end_date
+        boolean is_active
+        string registration_document
+        datetime registration_date
+        datetime created_at
+        datetime updated_at
+    }
+
+    Category {
+        int id PK
+        string type
+        string family
+        string name
+        boolean is_deleted
+        int association_id FK
+        datetime created_at
+        datetime updated_at
+    }
+
+    Account {
+        int id PK
+        string number
+        string destination
+        string description
+        boolean is_active
+        int association_id FK
+        datetime created_at
+        datetime updated_at
+    }
+
+    Expense {
+        int id PK
+        float amount
+        string description
+        string destination
+        datetime date
+        int month
+        int year
+        int category_id FK
+        int account_id FK
+        datetime created_at
+        datetime updated_at
+    }

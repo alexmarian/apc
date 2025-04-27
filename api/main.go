@@ -52,7 +52,17 @@ func main() {
 
 	mux.Handle("POST /v1/api/admin/user", http.FileServer(http.Dir("static")))
 
-	mux.HandleFunc("POST /v1/api/users", handlers.HandleCreateUser(apiCfg))
+	// *** UPDATED USER REGISTRATION ***
+	// Old endpoint remains for backward compatibility but is deprecated
+	mux.HandleFunc("POST /v1/api/users", handlers.HandleCreateUserWithToken(apiCfg))
+	// New token-based user endpoints
+	mux.HandleFunc("POST /v1/api/admin/tokens", apiCfg.MiddlewareAuth(handlers.HandleCreateRegistrationToken(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/admin/tokens/{%s}/revoke", handlers.RegistrationTokenPathValue),
+		apiCfg.MiddlewareAuth(handlers.HandleRevokeRegistrationToken(apiCfg)))
+	mux.HandleFunc("GET /v1/api/admin/tokens",
+		apiCfg.MiddlewareAuth(handlers.HandleGetAllRegistrationTokens(apiCfg)))
+
+	// Existing user endpoints
 	mux.HandleFunc("PUT /v1/api/users", apiCfg.MiddlewareAuth(handlers.HandleUpdateUser(apiCfg)))
 	mux.HandleFunc("POST /v1/api/login", handlers.HandleLogin(apiCfg))
 	mux.HandleFunc("POST /v1/api/refresh", handlers.HandleRefresh(apiCfg))
@@ -68,6 +78,10 @@ func main() {
 	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/buildings/{%s}/units/{%s}", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue, handlers.UnitIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleUpdateBuildingUnit(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/buildings/{%s}/units/{%s}/owners", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue, handlers.UnitIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetBuildingUnitOwner(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/buildings/{%s}/units/{%s}/ownerships", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue, handlers.UnitIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetBuildingUnitOwnerships(apiCfg)))
+
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/buildings/{%s}/units/{%s}/report",
+		handlers.AssociationIdPathValue, handlers.BuildingIdPathValue, handlers.UnitIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetUnitReport(apiCfg)))
 
 	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/owners", handlers.AssociationIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleCreateOwner(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/buildings/{%s}/units/{%s}/ownerships", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue, handlers.UnitIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleCreateUnitOwnership(apiCfg)))
@@ -104,6 +118,8 @@ func main() {
 	// Expense Reports
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/expenses/report", handlers.AssociationIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleGetExpenseReport(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/expenses/distribution", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleExpenseDistributionReport(apiCfg)))
 
 	// Accounts
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/accounts", handlers.AssociationIdPathValue),
@@ -116,6 +132,7 @@ func main() {
 		apiCfg.MiddlewareAssociationResource(handlers.HandleUpdateAccount(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/accounts/{%s}/disable", handlers.AssociationIdPathValue, handlers.AccountIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleDisableAccount(apiCfg)))
+
 	corsMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Access-Control-Allow-Origin", uiOrigin)

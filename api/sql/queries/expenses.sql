@@ -48,3 +48,29 @@ FROM expenses e
          JOIN accounts a ON e.account_id = a.id
 WHERE c.association_id = ? AND e.date > ? AND e.date < ?
 ORDER BY e.date DESC;
+
+-- name: GetExpensesByDateRangeWithFilters :many
+SELECT e.id,
+       e.amount,
+       e.description,
+       e.destination,
+       e.date,
+       e.month,
+       e.year,
+       e.category_id,
+       e.account_id,
+       c.type        as category_type,
+       c.family      as category_family,
+       c.name        as category_name,
+       a.number      as account_number,
+       a.description as account_name
+FROM expenses e
+         JOIN categories c ON e.category_id = c.id
+         JOIN accounts a ON e.account_id = a.id
+WHERE c.association_id = ?
+  AND e.date > ?
+  AND e.date < ?
+  AND (? = 0 OR e.category_id = ?) -- Filter by category_id if provided (non-zero)
+  AND (? = '' OR c.type = ?) -- Filter by category_type if provided (non-empty)
+  AND (? = '' OR c.family = ?) -- Filter by category_family if provided (non-empty)
+ORDER BY e.date DESC;

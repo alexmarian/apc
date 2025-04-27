@@ -101,6 +101,19 @@ type RefreshToken struct {
 	RevokedAt sql.NullTime
 }
 
+type RegistrationToken struct {
+	Token       string
+	CreatedBy   string
+	CreatedAt   time.Time
+	ExpiresAt   time.Time
+	UsedAt      sql.NullTime
+	UsedBy      sql.NullString
+	RevokedAt   sql.NullTime
+	RevokedBy   sql.NullString
+	Description string
+	IsAdmin     bool
+}
+
 type Unit struct {
 	ID              int64
 	CadastralNumber string

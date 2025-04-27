@@ -220,6 +220,18 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
 
+		// Parse query parameters for specific owner ID (optional)
+		var specificOwnerId int64 = 0
+
+		if ownerIdStr := req.URL.Query().Get("owner_id"); ownerIdStr != "" {
+			ownerId, err := strconv.ParseInt(ownerIdStr, 10, 64)
+			if err != nil {
+				RespondWithError(rw, http.StatusBadRequest, "Invalid owner_id parameter")
+				return
+			}
+			specificOwnerId = ownerId
+		}
+
 		// Parse query parameters for data inclusion options
 		includeUnits := false
 		includeCoOwners := false
@@ -262,127 +274,137 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			Statistics OwnerStats  `json:"statistics"`
 		}
 
-		// Get all owners for the association
-		ownersFromDb, err := cfg.Db.GetAssociationOwners(req.Context(), int64(associationId))
+		// Use the optimized query that filters at the database level
+		reportData, err := cfg.Db.GetOwnerUnitsWithDetailsForReport(req.Context(), database.GetOwnerUnitsWithDetailsForReportParams{
+			AssociationID: int64(associationId),
+			ID:            specificOwnerId,
+		})
+
 		if err != nil {
-			log.Printf("Error getting owners: %s", err)
-			RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve owners")
+			log.Printf("Error retrieving owner report data: %s", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve owner report data")
 			return
 		}
 
+		// Process the data
 		ownerReports := []OwnerReportItem{}
+		ownerMap := make(map[int64]*OwnerReportItem)
 		processedOwnerIDs := make(map[int64]bool)
 
-		for _, ownerDb := range ownersFromDb {
-			// Skip already processed owners
-			if processedOwnerIDs[ownerDb.ID] {
-				continue
-			}
-			processedOwnerIDs[ownerDb.ID] = true
-
-			owner := Owner{
-				ID:                   ownerDb.ID,
-				Name:                 ownerDb.Name,
-				NormalizedName:       ownerDb.NormalizedName,
-				IdentificationNumber: ownerDb.IdentificationNumber,
-				ContactPhone:         ownerDb.ContactPhone,
-				ContactEmail:         ownerDb.ContactEmail,
-				FirstDetectedAt:      ownerDb.FirstDetectedAt.Time,
-				CreatedAt:            ownerDb.CreatedAt.Time,
-				UpdatedAt:            ownerDb.UpdatedAt.Time,
-			}
-
-			// Get owner's units with details
-			unitsWithDetails, err := cfg.Db.GetOwnerUnitsWithDetails(req.Context(), database.GetOwnerUnitsWithDetailsParams{
-				OwnerID:       ownerDb.ID,
-				AssociationID: int64(associationId),
-			})
-
-			if err != nil {
-				log.Printf("Error getting units for owner %d: %s", ownerDb.ID, err)
+		// First pass: Create owner entries and collect units
+		for _, row := range reportData {
+			// Skip owners that have already been processed as co-owners
+			if processedOwnerIDs[row.OwnerID] {
 				continue
 			}
 
-			// Process units
-			ownerUnits := []OwnerUnit{}
-			stats := OwnerStats{}
+			// If this owner isn't in our map yet, create a new entry
+			if _, exists := ownerMap[row.OwnerID]; !exists {
+				ownerMap[row.OwnerID] = &OwnerReportItem{
+					Owner: Owner{
+						ID:                   row.OwnerID,
+						Name:                 row.OwnerName,
+						NormalizedName:       row.OwnerNormalizedName,
+						IdentificationNumber: row.OwnerIdentificationNumber,
+						ContactPhone:         row.OwnerContactPhone,
+						ContactEmail:         row.OwnerContactEmail,
+						FirstDetectedAt:      row.OwnerFirstDetectedAt.Time,
+						CreatedAt:            row.OwnerCreatedAt.Time,
+						UpdatedAt:            row.OwnerUpdatedAt.Time,
+					},
+					Statistics: OwnerStats{},
+					Units:      []OwnerUnit{},
+					CoOwners:   []CoOwner{},
+				}
+			}
 
+			// Track unique units for statistics
 			uniqueUnitIDs := make(map[int64]bool)
+			ownerEntry := ownerMap[row.OwnerID]
 
-			// Map to track co-owners and their shared units
-			coOwnerMap := make(map[int64]*CoOwner)
+			// If this unit isn't already counted
+			if !uniqueUnitIDs[row.UnitID] {
+				uniqueUnitIDs[row.UnitID] = true
 
-			for _, unit := range unitsWithDetails {
-				// Only process each unit once for statistics
-				if !uniqueUnitIDs[unit.UnitID] {
-					uniqueUnitIDs[unit.UnitID] = true
-					stats.TotalUnits++
-					stats.TotalArea += unit.Area
-					stats.TotalCondoPart += unit.Part
+				// Update statistics
+				ownerEntry.Statistics.TotalUnits++
+				ownerEntry.Statistics.TotalArea += row.Area
+				ownerEntry.Statistics.TotalCondoPart += row.Part
 
-					// Only collect unit details if requested
-					if includeUnits {
-						ownerUnits = append(ownerUnits, OwnerUnit{
-							UnitID:          unit.UnitID,
-							UnitNumber:      unit.UnitNumber,
-							BuildingName:    unit.BuildingName,
-							BuildingAddress: unit.BuildingAddress,
-							Area:            unit.Area,
-							Part:            unit.Part,
-							UnitType:        unit.UnitType,
-						})
-					}
+				// Include unit details if requested
+				if includeUnits {
+					ownerEntry.Units = append(ownerEntry.Units, OwnerUnit{
+						UnitID:          row.UnitID,
+						UnitNumber:      row.UnitNumber,
+						BuildingName:    row.BuildingName,
+						BuildingAddress: row.BuildingAddress,
+						Area:            row.Area,
+						Part:            row.Part,
+						UnitType:        row.UnitType,
+					})
 				}
+			}
 
-				// Collect co-owners with their shared unit IDs
-				if includeCoOwners && unit.CoOwnerID.Valid && unit.CoOwnerID.Int64 != ownerDb.ID {
-					coOwnerID := unit.CoOwnerID.Int64
+			// Process co-owners if requested and available
+			if includeCoOwners && row.CoOwnerID.Valid && row.CoOwnerID.Int64 != row.OwnerID {
+				coOwnerID := row.CoOwnerID.Int64
 
-					// If this is the first time we're seeing this co-owner
-					if _, exists := coOwnerMap[coOwnerID]; !exists {
-						coOwnerMap[coOwnerID] = &CoOwner{
-							Owner: Owner{
-								ID:                   coOwnerID,
-								Name:                 unit.CoOwnerName.String,
-								NormalizedName:       unit.CoOwnerNormalizedName.String,
-								IdentificationNumber: unit.CoOwnerIdentificationNumber.String,
-								ContactPhone:         unit.CoOwnerContactPhone.String,
-								ContactEmail:         unit.CoOwnerContactEmail.String,
-							},
-							SharedUnitIDs: []int64{},
+				// Check if this co-owner already exists in the list
+				coOwnerExists := false
+				for i, coOwner := range ownerEntry.CoOwners {
+					if coOwner.ID == coOwnerID {
+						coOwnerExists = true
+
+						// Add unit to existing co-owner if not already present
+						unitExists := false
+						for _, unitID := range ownerEntry.CoOwners[i].SharedUnitIDs {
+							if unitID == row.UnitID {
+								unitExists = true
+								break
+							}
 						}
+
+						if !unitExists {
+							ownerEntry.CoOwners[i].SharedUnitIDs = append(
+								ownerEntry.CoOwners[i].SharedUnitIDs,
+								row.UnitID,
+							)
+						}
+						break
 					}
-
-					// Add this unit ID to the co-owner's shared units
-					coOwnerMap[coOwnerID].SharedUnitIDs = append(coOwnerMap[coOwnerID].SharedUnitIDs, unit.UnitID)
-					processedOwnerIDs[coOwnerID] = true
-				}
-			}
-
-			// Prepare report item
-			reportItem := OwnerReportItem{
-				Owner:      owner,
-				Statistics: stats,
-			}
-
-			// Only add units if requested
-			if includeUnits {
-				reportItem.Units = ownerUnits
-			}
-
-			// Only add co-owners if requested
-			if includeCoOwners {
-				// Convert map to slice
-				coOwners := []CoOwner{}
-				for _, coOwner := range coOwnerMap {
-					coOwners = append(coOwners, *coOwner)
 				}
 
-				reportItem.CoOwners = coOwners
+				// Add new co-owner if not already in the list
+				if !coOwnerExists {
+					ownerEntry.CoOwners = append(ownerEntry.CoOwners, CoOwner{
+						Owner: Owner{
+							ID:                   coOwnerID,
+							Name:                 row.CoOwnerName.String,
+							NormalizedName:       row.CoOwnerNormalizedName.String,
+							IdentificationNumber: row.CoOwnerIdentificationNumber.String,
+							ContactPhone:         row.CoOwnerContactPhone.String,
+							ContactEmail:         row.CoOwnerContactEmail.String,
+						},
+						SharedUnitIDs: []int64{row.UnitID},
+					})
+				}
+
+				// Mark this co-owner as processed
+				processedOwnerIDs[coOwnerID] = true
+			}
+		}
+
+		// Convert map to slice
+		for _, ownerEntry := range ownerMap {
+			// Check if we should include these optional fields
+			if !includeUnits {
+				ownerEntry.Units = nil
+			}
+			if !includeCoOwners {
+				ownerEntry.CoOwners = nil
 			}
 
-			// Add to report
-			ownerReports = append(ownerReports, reportItem)
+			ownerReports = append(ownerReports, *ownerEntry)
 		}
 
 		// Sort the ownerReports slice by total_condo_part in descending order
