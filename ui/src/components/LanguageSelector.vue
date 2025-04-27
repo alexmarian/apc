@@ -1,11 +1,12 @@
 <!-- src/components/LanguageSelector.vue -->
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { NDropdown, NButton } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
-
+import { usePreferences } from '@/stores/preferences.ts'
 // Get the i18n composable
 const i18n = useI18n()
+const preferences = usePreferences()
 
 // Available languages
 const languages = [
@@ -13,21 +14,25 @@ const languages = [
   { label: 'Română', key: 'ro' }
 ]
 
-// Current language
-const currentLanguage = ref(languages.find(lang => lang.key === i18n.locale.value) || languages[0])
-
+const selectedLocale = ref(preferences.locale || 'en')
+i18n.locale.value = selectedLocale.value
+const currentLanguage = computed(() => {
+  return languages.find(language => language.key === selectedLocale.value) || languages[0]
+})
 // Handle language change
 const handleLanguageChange = (key: string) => {
   // Change the locale
   i18n.locale.value = key
-  // Update the current language
-  currentLanguage.value = languages.find(lang => lang.key === key) || languages[0]
+  // Save the selected language in preferences
+  preferences.setLocale(key)
+  selectedLocale.value= key
 }
 </script>
 
 <template>
   <div class="language-selector">
     <n-dropdown
+      v-model:value="selectedLocale"
       trigger="click"
       :options="languages"
       @select="handleLanguageChange"
