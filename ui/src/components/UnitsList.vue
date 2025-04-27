@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, h, computed, watch } from 'vue'
+import { refDebounced } from '@vueuse/core'
 import {
   NDataTable,
   NButton,
@@ -41,7 +42,7 @@ const message = useMessage()
 // Filters - use shared filters if available, otherwise use local state
 const unitTypeFilter = ref<string | null>(props.unitTypeFilter || null)
 const searchQuery = ref<string | null>(props.searchQuery || null)
-
+const debouncedSearchQuery = refDebounced(searchQuery, 1000)
 // Available unit types for filter (will be populated from units)
 const availableUnitTypes = computed(() => {
   const types = new Set<string>()
@@ -65,8 +66,8 @@ const filteredUnits = computed(() => {
   }
 
   // Filter by search query if provided
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
+  if (debouncedSearchQuery.value) {
+    const query = debouncedSearchQuery.value.toLowerCase()
     result = result.filter(unit =>
       unit.unit_number.toLowerCase().includes(query) ||
       unit.address.toLowerCase().includes(query) ||
@@ -211,19 +212,16 @@ onMounted(() => {
     <h2>Units</h2>
 
     <div class="filters">
-      <NSpace align="center" justify="start">
-        <div>
-          <label>Search:</label>
+      <NFlex align="center">
+          <NText>Search:</NText>
           <NInput
             :value="searchQuery"
             @update:value="searchQueryChanged"
             placeholder="Search by unit number, address..."
             clearable
-            style="width: 240px"
+            style="width: 300px"
           />
-        </div>
-        <div>
-          <label>Unit Type:</label>
+          <NText>Unit Type:</NText>
           <NSelect
             :value="unitTypeFilter"
             @update:value="unitTypeChanged"
@@ -232,9 +230,8 @@ onMounted(() => {
             clearable
             style="width: 200px"
           />
-        </div>
         <NButton @click="resetFilters">Reset Filters</NButton>
-      </NSpace>
+      </NFlex>
     </div>
 
     <NSpin :show="loading">
