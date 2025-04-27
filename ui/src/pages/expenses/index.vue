@@ -13,10 +13,15 @@ const message = useMessage()
 // Association selector
 const associationId = ref<number | null>(null)
 
+
 // UI state
 const showForm = ref(false)
 const editingExpenseId = ref<number | undefined>(undefined)
 const showSummary = ref(true)
+
+// Filters persistence
+const dateRange = ref<[number, number] | null>(null)
+const selectedCategory = ref<number | null>(null)
 
 const displayedExpenses = ref<Expense[] | null>(null)
 
@@ -118,15 +123,19 @@ const toggleSummary = () => {
       <NCard style="margin-top: 16px;">
         <ExpensesList
           :association-id="associationId"
+          :date-range="dateRange"
+          :selected-category="selectedCategory"
           @edit="handleEditExpense"
           @expenses-rendered="setDisplayedExpenses"
+          @category-changed="newCategory => selectedCategory=newCategory"
+          @date-range-changed="newDateRange => dateRange=newDateRange"
         />
       </NCard>
 
       <!-- Summary is below the list and can be toggled -->
       <div v-if="showSummary" style="margin-top: 16px;">
         <ExpensesSummary v-if="displayedExpenses"
-          :expenses="displayedExpenses"
+                         :expenses="displayedExpenses"
         />
       </div>
     </div>

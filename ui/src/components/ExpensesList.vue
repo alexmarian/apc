@@ -19,17 +19,19 @@ import CategorySelector from '@/components/CategorySelector.vue'
 
 // Props
 const props = defineProps<{
-  associationId: number
+  associationId: number,
+  dateRange?: [number, number] | null,
+  selectedCategory?: number | null
 }>()
 
 // Emits
 const emit = defineEmits<{
   (e: 'edit', expenseId: number): void
   (e: 'expenses-rendered', expenses: Expense[]): void
+  (e: 'date-range-changed', newDateRange: [number, number] | null): void
+  (e: 'category-changed', newCategory: number | null): void
 }>()
 
-// Get shared filters from parent if available
-const sharedFilters = inject('expenseFilters', null)
 
 // Data
 const expenses = ref<Expense[]>([])
@@ -38,8 +40,8 @@ const error = ref<string | null>(null)
 const message = useMessage()
 
 // Filters - use shared filters if available, otherwise use local state
-const dateRange = sharedFilters?.dateRange || ref<[number, number] | null>(null)
-const selectedCategory = sharedFilters?.selectedCategory || ref<number | null>(null)
+const dateRange = ref<[number, number] | null>(props.dateRange)
+const selectedCategory = ref<number | null>(props.selectedCategory)
 
 const filteredExpenses = computed(() => {
   if (selectedCategory.value) {
@@ -202,10 +204,15 @@ const totalAmount = computed(() => {
 })
 
 // Watch for changes in filters and refresh data
-watch([dateRange], () => {
+watch(dateRange, (newDateRange) => {
   fetchExpenses()
+  emit('date-range-changed', newDateRange)
 })
-watch([filteredExpenses], () => {
+
+watch(selectedCategory, (newCategory) => {
+  emit('category-changed', newCategory)
+})
+watch(filteredExpenses, () => {
   emit('expenses-rendered', filteredExpenses.value)
 })
 
