@@ -142,7 +142,19 @@ export const unitApi = {
     api.get<Unit[]>(`/associations/${associationId}/buildings/${buildingId}/units`),
 
   getUnit: (associationId: number, buildingId: number, unitId: number) =>
-    api.get<Unit>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}`)
+    api.get<Unit>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}`),
+
+  updateUnit: (associationId: number, buildingId: number, unitId: number, unitData: Partial<Unit>) =>
+    api.put<Unit>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}`, unitData),
+
+  getUnitReport: (associationId: number, buildingId: number, unitId: number) =>
+    api.get<any>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}/report`),
+
+  getUnitOwners: (associationId: number, buildingId: number, unitId: number) =>
+    api.get<Owner[]>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}/owners`),
+
+  getUnitOwnerships: (associationId: number, buildingId: number, unitId: number) =>
+    api.get<any[]>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}/ownerships`)
 }
 
 // Account APIs

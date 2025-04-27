@@ -75,7 +75,7 @@ const toggleSummary = () => {
 
       <template #header>
         <div style="margin-bottom: 12px;">
-          <AssociationSelector v-model:modelValue="associationId" />
+          <AssociationSelector v-model:associationId="associationId" />
         </div>
       </template>
 

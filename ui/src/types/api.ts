@@ -67,6 +67,57 @@ export interface Unit {
   updatedAt: string;
 }
 
+export interface UnitUpdateRequest {
+  unit_number?: string;
+  address?: string;
+  entrance?: number;
+  unit_type?: string;
+  floor?: number;
+  room_count?: number;
+}
+
+export interface UnitReportDetails {
+  unit_details: {
+    id: number;
+    cadastral_number: string;
+    unit_number: string;
+    address: string;
+    entrance: number;
+    area: number;
+    part: number;
+    unit_type: string;
+    floor: number;
+    room_count: number;
+    created_at: string;
+    updated_at: string;
+  };
+  building_details: {
+    id: number;
+    name: string;
+    address: string;
+    cadastral_number: string;
+    total_area: number;
+  };
+  current_owners: Array<{
+    id: number;
+    name: string;
+    identification_number: string;
+    contact_phone: string;
+    contact_email: string;
+    is_active: boolean;
+  }>;
+  ownership_history: Array<{
+    id: number;
+    owner_id: number;
+    owner_name: string;
+    start_date: string;
+    end_date: string | null;
+    is_active: boolean;
+    registration_document: string;
+    registration_date: string;
+  }>;
+}
+
 // Owner Related Types
 export interface Owner {
   id: number;

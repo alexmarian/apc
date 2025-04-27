@@ -7,12 +7,12 @@ import { associationApi } from '@/services/api.ts'
 
 // Props
 const props = defineProps<{
-  modelValue: number | null
+  associationId: number | null
 }>()
 
 // Emits
 const emit = defineEmits<{
-  (e: 'update:modelValue', id: number): void
+  (e: 'update:associationId', id: number): void
 }>()
 
 // State
@@ -33,8 +33,8 @@ const fetchAssociations = async () => {
     associations.value = response.data
 
     // If we have associations but no selection, select the first one
-    if (associations.value.length > 0 && !props.modelValue) {
-      emit('update:modelValue', associations.value[0].id)
+    if (associations.value.length > 0 && !props.associationId) {
+      emit('update:associationId', associations.value[0].id)
     }
   } catch (err) {
     console.error('Error fetching associations:', err)
@@ -54,7 +54,7 @@ const options = computed(() => {
 
 // Handle selection change
 const handleChange = (value: number) => {
-  emit('update:modelValue', value)
+  emit('update:associationId', value)
 }
 
 // Load associations on mount
@@ -67,7 +67,7 @@ onMounted(() => {
   <div class="association-selector">
     <NSpin :show="loading">
       <NSelect
-        :value="props.modelValue"
+        :value="props.associationId"
         :options="options"
         placeholder="Select an association"
         @update:value="handleChange"

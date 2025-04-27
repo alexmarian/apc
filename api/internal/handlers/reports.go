@@ -81,7 +81,7 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 		}
 
 		// Filter expenses by category criteria if provided
-		filteredExpenses := []database.GetExpensesByDateRangeWithFiltersRow{}
+		var filteredExpenses []database.GetExpensesByDateRangeWithFiltersRow
 		for _, expense := range expenses {
 			// Apply category filters
 			if categoryId > 0 && expense.CategoryID != categoryId {
