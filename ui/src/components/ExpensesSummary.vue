@@ -70,7 +70,7 @@ const topCategories = computed(() => {
 
       <div v-if="topCategories.length > 0" class="top-categories">
         <div v-for="category in topCategories" :key="category.id" class="category-item">
-          <NGradientText :size="16">{{ category.name }}</NGradientText>
+          <NText :size="16" type="success">{{ category.name }}</NText>
           <div class="category-stats">
             <span>{{ formatCurrency(category.total) }}</span>
             <span class="category-count">({{ category.count }} expenses)</span>
