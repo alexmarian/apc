@@ -191,3 +191,42 @@ export interface LoginResponse {
   token: string;
   refresh_token: string;
 }
+
+// Ownership Related Types
+export interface Ownership {
+  id: number;
+  unit_id: number;
+  owner_id: number;
+  owner_name: string;
+  owner_normalized_name: string;
+  owner_identification_number: string;
+  association_id: number;
+  start_date: string;
+  end_date: string | null;
+  is_active: boolean;
+  registration_document: string;
+  registration_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OwnershipCreateRequest {
+  owner_id: number;
+  start_date: string;
+  end_date?: string | null;
+  registration_document: string;
+  registration_date: string;
+  is_exclusive?: boolean; // Whether this ownership deactivates all others
+}
+
+export interface OwnerCreateRequest {
+  name: string;
+  identification_number: string;
+  contact_phone: string;
+  contact_email: string;
+}
+
+export interface OwnershipDisableRequest {
+  end_date?: string;
+  disable_reason?: string;
+}

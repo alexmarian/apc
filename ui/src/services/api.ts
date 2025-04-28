@@ -191,7 +191,37 @@ export const ownerApi = {
         units: includeUnits ? 'true' : 'false',
         co_owners: includeCoOwners ? 'true' : 'false'
       }
-    })
+    }),
+  createOwner: (associationId: number, ownerData: {
+    name: string;
+    identification_number: string;
+    contact_phone: string;
+    contact_email: string;
+  }) =>
+    api.post<Owner>(`/associations/${associationId}/owners`, ownerData)
+}
+// Ownership APIs
+export const ownershipApi = {
+  // Disable an existing ownership
+  disableOwnership: (associationId: number, ownershipId: number, endDate?: Date) => {
+    const payload = endDate ? { end_date: endDate.toISOString() } : {};
+    return api.put(`/associations/${associationId}/ownerships/${ownershipId}/disable`, payload);
+  },
+
+  // Get ownership details by ID
+  getOwnership: (associationId: number, ownershipId: number) =>
+    api.get(`/associations/${associationId}/ownerships/${ownershipId}`),
+
+  // Create a new ownership for a unit
+  createUnitOwnership: (associationId: number, buildingId: number, unitId: number, ownershipData: {
+    owner_id: number;
+    start_date: string;
+    end_date?: string | null;
+    registration_document: string;
+    registration_date: string;
+    is_exclusive?: boolean;
+  }) =>
+    api.post(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}/ownerships`, ownershipData)
 }
 
 // Category APIs

@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { NCard, NButton, NSpace, NPageHeader, NDivider, useMessage } from 'naive-ui'
 import UnitsList from '@/components/UnitsList.vue'
 import UnitForm from '@/components/UnitForm.vue'
-import UnitReport from '@/components/UnitReport.vue'
+import UnitDetails from '@/components/UnitDetails.vue'
 import AssociationSelector from '@/components/AssociationSelector.vue'
 import BuildingSelector from '@/components/BuildingSelector.vue'
 import type { Unit } from '@/types/api'
@@ -71,13 +71,13 @@ const handleBackFromReport = () => {
   showFullReport.value = false
   selectedUnitId.value = null
 }
+
 const handleBuildingIdUpdate = (newBuildingId: number) => {
   buildingId.value = newBuildingId
 }
 
 const handleEditOwner = (ownerId: number) => {
   // This is a placeholder for navigating to the owner edit page
-  // You would implement this based on your application's routing
   message.info(`Navigate to edit owner with ID: ${ownerId}`)
 }
 
@@ -144,33 +144,34 @@ watch(associationId, () => {
 
     <div v-else-if="showFullReport && selectedUnitId">
       <NCard style="margin-top: 16px;">
-        <UnitReport
+        <UnitDetails
           :association-id="associationId"
           :building-id="buildingId"
           :unit-id="selectedUnitId"
           @edit-owner="handleEditOwner"
+          @edit-unit="handleEditUnit(selectedUnitId)"
         />
       </NCard>
     </div>
 
     <div v-else-if="canShowUnits">
       <!-- Units list -->
-        <UnitsList
-          :association-id="associationId"
-          :building-id="buildingId"
-          :unit-type-filter="unitTypeFilter"
-          :search-query="searchQuery"
-          @edit="handleEditUnit"
-          @view-report="handleViewReport"
-          @units-rendered="setDisplayedUnits"
-          @unit-type-changed="newUnitType => unitTypeFilter = newUnitType"
-          @search-query-changed="newQuery => searchQuery = newQuery"
-        />
+      <UnitsList
+        :association-id="associationId"
+        :building-id="buildingId"
+        :unit-type-filter="unitTypeFilter"
+        :search-query="searchQuery"
+        @edit="handleEditUnit"
+        @view-report="handleViewReport"
+        @units-rendered="setDisplayedUnits"
+        @unit-type-changed="newUnitType => unitTypeFilter = newUnitType"
+        @search-query-changed="newQuery => searchQuery = newQuery"
+      />
 
       <!-- Unit Report Preview (shows when a unit is selected) -->
       <div v-if="selectedUnitId" style="margin-top: 16px;">
         <NCard title="Unit Summary">
-          <UnitReport
+          <UnitDetails
             :association-id="associationId"
             :building-id="buildingId"
             :unit-id="selectedUnitId"
@@ -183,7 +184,7 @@ watch(associationId, () => {
                 type="primary"
                 @click="showFullReport = true"
               >
-                View Full Report
+                View Full Details
               </NButton>
             </NSpace>
           </template>
