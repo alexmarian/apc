@@ -22,7 +22,6 @@ const selectedBuildingId = ref<number | null>(props.buildingId || null)
 
 // Fetch buildings for the selected association
 const fetchBuildings = async () => {
-  console.log('Fetching buildings for association ID:', props.associationId)
   if (!props.associationId) {
     buildings.value = []
     selectedBuildingId.value = null

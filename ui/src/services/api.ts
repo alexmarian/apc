@@ -204,8 +204,8 @@ export const ownerApi = {
 export const ownershipApi = {
   // Disable an existing ownership
   disableOwnership: (associationId: number, ownershipId: number, endDate?: Date) => {
-    const payload = endDate ? { end_date: endDate.toISOString() } : {};
-    return api.put(`/associations/${associationId}/ownerships/${ownershipId}/disable`, payload);
+    const payload = endDate ? { end_date: endDate.toISOString() } : {}
+    return api.put(`/associations/${associationId}/ownerships/${ownershipId}/disable`, payload)
   },
 
   // Get ownership details by ID
@@ -259,7 +259,30 @@ export const expenseApi = {
     api.put<Expense>(`/associations/${associationId}/expenses/${expenseId}`, expenseData),
 
   deleteExpense: (associationId: number, expenseId: number) =>
-    api.delete(`/associations/${associationId}/expenses/${expenseId}`)
+    api.delete(`/associations/${associationId}/expenses/${expenseId}`),
+
+  getExpenseDistribution: (associationId: number, params: {
+    start_date?: string;
+    end_date?: string;
+    category_id?: number | null;
+    category_type?: string | null;
+    category_family?: string | null;
+    distribution_method?: 'area' | 'count' | 'equal';
+    unit_type?: string | null;
+    include_details?: boolean;
+  }) =>
+    api.get<ExpenseDistributionResponse>(`/associations/${associationId}/expenses/distribution`, {
+      params: {
+        start_date: params.start_date,
+        end_date: params.end_date,
+        category_id: params.category_id || undefined,
+        category_type: params.category_type || undefined,
+        category_family: params.category_family || undefined,
+        distribution_method: params.distribution_method || 'area',
+        unit_type: params.unit_type || undefined,
+        include_details: params.include_details ? 'true' : undefined
+      }
+    })
 }
 
 // Export the api instance to allow direct access if needed

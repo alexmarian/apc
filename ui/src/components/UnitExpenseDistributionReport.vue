@@ -11,7 +11,6 @@ import {
   NRadioGroup,
   NRadio,
   NDataTable,
-  NInputNumber,
   NDivider,
   NEmpty,
   useMessage
@@ -22,6 +21,7 @@ import AssociationSelector from '@/components/AssociationSelector.vue'
 import BuildingSelector from '@/components/BuildingSelector.vue'
 import CategorySelector from '@/components/CategorySelector.vue'
 import { formatCurrency } from '@/utils/formatters'
+import type { ExpenseDistributionResponse } from '@/types/api.ts'
 
 // Message provider
 const message = useMessage()
@@ -40,6 +40,7 @@ const emit = defineEmits<{
 
 // State
 const loading = ref(false)
+const metadataLoading = ref(false)
 const error = ref<string | null>(null)
 const dateRange = ref<[number, number] | null>([
   new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getTime(),
@@ -50,10 +51,21 @@ const selectedCategoryType = ref<string | null>(null)
 const selectedCategoryFamily = ref<string | null>(null)
 const distributionMethod = ref<'area' | 'count' | 'equal'>('area')
 const unitType = ref<string | null>(null)
-const distributionData = ref<any | null>(null)
-const unitTypeOptions = ref<{ label: string, value: string }[]>([])
+const distributionData = ref<ExpenseDistributionResponse | null>(null)
+const categories = ref<Category[] | null>(null)
+const categoryOptions = ref<{ label: string, value: string }[]>([])
 const categoryTypeOptions = ref<{ label: string, value: string }[]>([])
 const categoryFamilyOptions = ref<{ label: string, value: string }[]>([])
+const initialLoadComplete = ref(false)
+
+// Static unit type options as requested
+const unitTypeOptions = [
+  { label: 'Apartment', value: 'apartment' },
+  { label: 'Commercial', value: 'commercial' },
+  { label: 'Office', value: 'office' },
+  { label: 'Parking', value: 'parking' },
+  { label: 'Storage', value: 'storage' }
+]
 
 // Set local association and building IDs if provided as props
 const associationId = computed({
@@ -96,17 +108,17 @@ const distributionColumns = computed(() => {
     {
       title: 'Unit',
       key: 'unit_info',
-      render: (row) => `${row.unit_info.unit_number} (${row.unit_info.building_name})`
+      render: (row) => row.unit_number
     },
     {
       title: 'Type',
       key: 'unit_type',
-      render: (row) => row.unit_info.unit_type
+      render: (row) => row.unit_type
     },
     {
       title: 'Area',
       key: 'area',
-      render: (row) => `${row.unit_info.area} m²`
+      render: (row) => `${row.area} m²`
     },
     {
       title: 'Factor',
@@ -138,6 +150,7 @@ const distributionColumns = computed(() => {
 })
 
 // Methods
+// Fetch data from the expense distribution API
 const fetchDistributionReport = async () => {
   if (!associationId.value) {
     error.value = 'Please select an association'
@@ -167,9 +180,8 @@ const fetchDistributionReport = async () => {
     )
 
     distributionData.value = response.data
-
-    // Extract available unit types and category filters from data
-    extractFiltersFromData()
+    console.log('Distribution data:', distributionData.value)
+    message.success('Report generated successfully')
   } catch (err) {
     console.error('Error fetching expense distribution:', err)
     error.value = err instanceof Error ? err.message : 'An error occurred while fetching data'
@@ -178,42 +190,82 @@ const fetchDistributionReport = async () => {
   }
 }
 
-// Extract available filter options from the data
-const extractFiltersFromData = () => {
-  if (!distributionData.value) return
+// Fetch category types and families from API
+const fetchCategoryMetadata = async () => {
+  if (!associationId.value) return
 
-  // Extract unit types
-  const unitTypesSet = new Set<string>()
-  distributionData.value.unit_distributions.forEach(unit => {
-    if (unit.unit_info.unit_type) {
-      unitTypesSet.add(unit.unit_info.unit_type)
-    }
-  })
-  unitTypeOptions.value = Array.from(unitTypesSet).map(type => ({
-    label: type,
-    value: type
-  }))
+  try {
+    metadataLoading.value = true
 
-  // Extract category types
-  const categoryTypesSet = new Set<string>()
-  const categoryFamiliesSet = new Set<string>()
+    // Fetch all categories from the existing endpoint
+    const response = await categoryApi.getCategories(associationId.value)
+    categories.value = response.data
 
-  if (distributionData.value.category_totals) {
-    Object.values(distributionData.value.category_totals).forEach((category: any) => {
-      if (category.type) categoryTypesSet.add(category.type)
-      if (category.family) categoryFamiliesSet.add(category.family)
+    // Extract unique types and families
+    const types = new Set<string>()
+    const families = new Set<string>()
+
+    categories.value.forEach(category => {
+      if (category.type) types.add(category.type)
+      if (category.family) families.add(category.family)
     })
+
+    categoryOptions.value = Array.from(categories).map(cat => ({
+      label: cat.name,
+      value: cat.id
+    }))
+    // Update options
+    categoryTypeOptions.value = Array.from(types).map(type => ({
+      label: type,
+      value: type
+    }))
+
+    categoryFamilyOptions.value = Array.from(families).map(family => ({
+      label: family,
+      value: family
+    }))
+
+  } catch (err) {
+    console.error('Error fetching category metadata:', err)
+  } finally {
+    metadataLoading.value = false
   }
+}
 
-  categoryTypeOptions.value = Array.from(categoryTypesSet).map(type => ({
-    label: type,
-    value: type
-  }))
+// Update family options when category type changes
+const updateCategoryFamilies = () => {
+  if (!associationId.value) return
 
-  categoryFamilyOptions.value = Array.from(categoryFamiliesSet).map(family => ({
-    label: family,
-    value: family
-  }))
+  try {
+    metadataLoading.value = true
+
+    // Use the categories API to get all categories and filter them
+    categoryApi.getCategories(associationId.value).then(response => {
+      const categories = response.data
+      const families = new Set<string>()
+
+      categories.forEach(category => {
+        // Only include families that match the selected type
+        if (selectedCategoryType.value && category.type !== selectedCategoryType.value) {
+          return
+        }
+
+        if (category.family) {
+          families.add(category.family)
+        }
+      })
+
+      categoryFamilyOptions.value = Array.from(families).map(family => ({
+        label: family,
+        value: family
+      }))
+
+      metadataLoading.value = false
+    })
+  } catch (err) {
+    console.error('Error updating category families:', err)
+    metadataLoading.value = false
+  }
 }
 
 // Reset all filters
@@ -250,10 +302,10 @@ const exportToCSV = () => {
     // Create CSV rows
     const rows = distributionData.value.unit_distributions.map(unit => {
       const row = [
-        unit.unit_info.unit_number,
-        unit.unit_info.building_name,
-        unit.unit_info.unit_type,
-        unit.unit_info.area,
+        unit.unit_number,
+        unit.building_name,
+        unit.unit_type,
+        unit.area,
         (unit.distribution_factor * 100).toFixed(2) + '%',
         unit.total_share.toFixed(2)
       ]
@@ -306,17 +358,32 @@ const exportToCSV = () => {
   }
 }
 
-// Watch for property changes to reload data
-watch([associationId, buildingId], () => {
+// Watch for property changes to reload metadata
+watch([associationId], () => {
   if (associationId.value) {
-    fetchDistributionReport()
+    fetchCategoryMetadata()
+    initialLoadComplete.value = true
   }
 })
 
-// Load data on component mount
+// When category type changes, update family options
+watch([selectedCategoryType], () => {
+  if (associationId.value) {
+    // If we select a category type, reset the family selection
+    if (selectedCategoryType.value !== null) {
+      selectedCategoryFamily.value = null
+    }
+
+    // Update family options based on the selected type
+    updateCategoryFamilies()
+  }
+})
+
+// Load category metadata on component mount
 onMounted(() => {
   if (associationId.value) {
-    fetchDistributionReport()
+    fetchCategoryMetadata()
+    initialLoadComplete.value = true
   }
 })
 </script>
@@ -371,6 +438,7 @@ onMounted(() => {
               :options="categoryTypeOptions"
               placeholder="All Types"
               clearable
+              :loading="metadataLoading"
               style="width: 100%"
             />
           </div>
@@ -382,6 +450,7 @@ onMounted(() => {
               :options="categoryFamilyOptions"
               placeholder="All Families"
               clearable
+              :loading="metadataLoading"
               style="width: 100%"
             />
           </div>
@@ -392,6 +461,7 @@ onMounted(() => {
               v-model:modelValue="selectedCategoryId"
               :association-id="associationId || 0"
               placeholder="All Categories"
+              :options="categoryOptions"
               include-all-option
               :disabled="!associationId"
             />
@@ -412,8 +482,11 @@ onMounted(() => {
         <div class="actions">
           <NSpace>
             <NButton @click="resetFilters">Reset Filters</NButton>
-            <NButton type="primary" @click="fetchDistributionReport">Apply Filters</NButton>
-            <NButton type="info" @click="exportToCSV" :disabled="!distributionData">Export to CSV
+            <NButton type="primary" @click="fetchDistributionReport" :loading="loading">
+              Generate Report
+            </NButton>
+            <NButton type="info" @click="exportToCSV" :disabled="!distributionData">
+              Export to CSV
             </NButton>
           </NSpace>
         </div>
@@ -465,7 +538,6 @@ onMounted(() => {
           </div>
 
           <NDivider />
-
           <div class="distribution-table">
             <NDataTable
               :columns="distributionColumns"
@@ -484,9 +556,12 @@ onMounted(() => {
         </div>
 
         <div v-else-if="!loading && !error" class="no-data">
-          <NEmpty description="No data available. Apply filters to generate a report.">
+          <NEmpty
+            description="No report data available yet. Click 'Generate Report' to run the calculation.">
             <template #extra>
-              <NButton type="primary" @click="fetchDistributionReport">Generate Report</NButton>
+              <NButton type="primary" @click="fetchDistributionReport" :loading="loading">
+                Generate Report
+              </NButton>
             </template>
           </NEmpty>
         </div>
@@ -546,7 +621,6 @@ onMounted(() => {
   gap: 16px;
   margin-bottom: 20px;
   padding: 16px;
-  background-color: #f8f8f8;
   border-radius: 8px;
 }
 
@@ -580,7 +654,6 @@ onMounted(() => {
 }
 
 .category-total-item {
-  background-color: #f0f0f0;
   padding: 8px 12px;
   border-radius: 4px;
 }

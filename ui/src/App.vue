@@ -8,7 +8,12 @@ import LanguageSelector from '@/components/LanguageSelector.vue'
 import UserProfileButton from '@/components/UserProfileButton.vue'
 import { useI18n } from 'vue-i18n'
 import { usePreferences } from '@/stores/preferences.ts'
-import { AttachMoneyRound,AccountBalanceRound,HomeRound,BedroomParentRound } from '@vicons/material'
+import {
+  AttachMoneyRound,
+  AccountBalanceRound,
+  HomeRound,
+  BedroomParentRound
+} from '@vicons/material'
 
 const preferences = usePreferences()
 const { t } = useI18n()
@@ -45,6 +50,11 @@ const menuOptions = [
       {
         label: () => h(RouterLink, { to: '/reports' }, { default: () => t('reports.title', 'Reports') }),
         key: 'expenses-reports'
+      },
+      {
+        label: () => h(RouterLink, { to: '/expenses/distribution' }, { default: () => t('distribution.title', 'Distribution') }),
+        key: 'expense-distribution'
+
       }
     ]
   },

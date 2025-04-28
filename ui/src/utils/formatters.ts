@@ -1,38 +1,67 @@
 /**
- * Format number as currency
- * @param value Number to format as currency
- * @param currency Currency code (default: RON)
+ * Format a number as currency
+ * @param value The number to format
+ * @param locale The locale to use (defaults to 'en-US')
+ * @param currency The currency code (defaults to 'USD')
  * @returns Formatted currency string
  */
-export const formatCurrency = (value: number, currency: string = 'MDL'): string => {
-  return new Intl.NumberFormat('ro-RO', {
+export const formatCurrency = (
+  value: number,
+  locale: string = 'en-US',
+  currency: string = 'MDL'
+): string => {
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency,
-    minimumFractionDigits: 2
-  }).format(value)
-}
+    currency: currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
 
 /**
- * Format date to locale string
- * @param dateStr Date string in ISO format
- * @param format Format option: 'short', 'medium', 'long'
+ * Format a number as a percentage
+ * @param value The number to format (e.g., 0.25 for 25%)
+ * @param decimals Number of decimal places (defaults to 2)
+ * @returns Formatted percentage string
+ */
+export const formatPercentage = (
+  value: number,
+  decimals: number = 2
+): string => {
+  return `${(value * 100).toFixed(decimals)}%`;
+};
+
+/**
+ * Format a date to a localized string
+ * @param date The date to format
+ * @param format The format to use (defaults to 'short')
+ * @param locale The locale to use (defaults to undefined, which uses the browser's locale)
  * @returns Formatted date string
  */
-export const formatDate = (dateStr: string, format: 'short' | 'medium' | 'long' = 'medium'): string => {
-  const date = new Date(dateStr)
-  let options: Intl.DateTimeFormatOptions
+export const formatDate = (
+  date: Date | string | number,
+  format: 'short' | 'medium' | 'long' | 'full' = 'short',
+  locale?: string
+): string => {
+  const dateObj = date instanceof Date ? date : new Date(date);
+  return dateObj.toLocaleDateString(locale, { dateStyle: format });
+};
 
-  switch (format) {
-    case 'short':
-      options = { day: '2-digit', month: '2-digit', year: 'numeric' }
-      break
-    case 'long':
-      options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }
-      break
-    case 'medium':
-    default:
-      options = { day: 'numeric', month: 'long', year: 'numeric' }
-  }
+/**
+ * Format a file size in bytes to a human-readable string
+ * @param bytes Number of bytes
+ * @param decimals Number of decimal places (defaults to 2)
+ * @returns Formatted file size string
+ */
+export const formatFileSize = (
+  bytes: number,
+  decimals: number = 2
+): string => {
+  if (bytes === 0) return '0 Bytes';
 
-  return date.toLocaleDateString('ro-RO', options)
-}
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + ' ' + sizes[i];
+};

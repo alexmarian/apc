@@ -230,3 +230,55 @@ export interface OwnershipDisableRequest {
   end_date?: string;
   disable_reason?: string;
 }
+
+// Expense Distribution Types
+export interface ExpenseDistributionResponse {
+  start_date: string;
+  end_date: string;
+  unit_type: string | null;
+  category_type: string | null;
+  category_family: string | null;
+  category_id: number | null;
+  distribution_method: 'area' | 'count' | 'equal';
+  total_units: number;
+  total_area: number;
+  category_totals: Record<string, CategoryTotal>;
+  total_expenses: number;
+  unit_distributions: UnitDistribution[];
+}
+
+export interface CategoryTotal {
+  amount: number;
+  id: number;
+  type: string;
+  family: string;
+}
+
+export interface UnitDistribution {
+  unit_info: {
+    id: number;
+    building_id: number;
+    unit_number: string;
+    building_name: string;
+    building_address: string;
+    unit_type: string;
+    area: number;
+    part: number;
+  };
+  distribution_factor: number;
+  expenses_share: Record<string, number>;
+  total_share: number;
+  detailed_expenses?: Record<number, ExpenseShare>;
+}
+
+export interface ExpenseShare {
+  expense_id: number;
+  description: string;
+  date: string;
+  category_name: string;
+  category_type: string;
+  category_family: string;
+  category_id: number;
+  total_amount: number;
+  unit_share: number;
+}

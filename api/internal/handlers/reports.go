@@ -115,14 +115,14 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 
 		// Step 3: Get all units for each building
 		type UnitInfo struct {
-			ID              int64
-			BuildingID      int64
-			UnitNumber      string
-			BuildingName    string
-			BuildingAddress string
-			UnitType        string
-			Area            float64
-			Part            float64
+			ID              int64   `json:"id"`
+			BuildingID      int64   `json:"building_id"`
+			UnitNumber      string  `json:"unit_number"`
+			BuildingName    string  `json:"building_name"`
+			BuildingAddress string  `json:"building_address"`
+			UnitType        string  `json:"unit_type"`
+			Area            float64 `json:"area"`
+			Part            float64 `json:"part"`
 		}
 
 		units := []UnitInfo{}
