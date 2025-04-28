@@ -120,7 +120,6 @@ const toggleSummary = () => {
     </div>
     <div v-else>
       <!-- List comes first in vertical layout -->
-      <NCard style="margin-top: 16px;">
         <ExpensesList
           :association-id="associationId"
           :date-range="dateRange"
@@ -130,8 +129,6 @@ const toggleSummary = () => {
           @category-changed="newCategory => selectedCategory=newCategory"
           @date-range-changed="newDateRange => dateRange=newDateRange"
         />
-      </NCard>
-
       <!-- Summary is below the list and can be toggled -->
       <div v-if="showSummary" style="margin-top: 16px;">
         <ExpensesSummary v-if="displayedExpenses"

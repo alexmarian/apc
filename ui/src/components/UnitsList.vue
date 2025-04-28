@@ -209,63 +209,63 @@ onMounted(() => {
 
 <template>
   <div class="units-list">
-    <h2>Units</h2>
-
-    <div class="filters">
+    <NCard style="margin-top: 16px;">
       <NFlex align="center">
-          <NText>Search:</NText>
-          <NInput
-            :value="searchQuery"
-            @update:value="searchQueryChanged"
-            placeholder="Search by unit number, address..."
-            clearable
-            style="width: 300px"
-          />
-          <NText>Unit Type:</NText>
-          <NSelect
-            :value="unitTypeFilter"
-            @update:value="unitTypeChanged"
-            :options="availableUnitTypes"
-            placeholder="All Types"
-            clearable
-            style="width: 200px"
-          />
+        <NText>Search:</NText>
+        <NInput
+          :value="searchQuery"
+          @update:value="searchQueryChanged"
+          placeholder="Search by unit number, address..."
+          clearable
+          style="width: 300px"
+        />
+        <NText>Unit Type:</NText>
+        <NSelect
+          :value="unitTypeFilter"
+          @update:value="unitTypeChanged"
+          :options="availableUnitTypes"
+          placeholder="All Types"
+          clearable
+          style="width: 200px"
+        />
         <NButton @click="resetFilters">Reset Filters</NButton>
       </NFlex>
-    </div>
+    </NCard>
+    <NCard style="margin-top: 16px;">
 
-    <NSpin :show="loading">
-      <NAlert v-if="error" type="error" title="Error" closable>
-        {{ error }}
-        <template #action>
-          <NButton @click="fetchUnits">Retry</NButton>
-        </template>
-      </NAlert>
+      <NSpin :show="loading">
+        <NAlert v-if="error" type="error" title="Error" closable>
+          {{ error }}
+          <template #action>
+            <NButton @click="fetchUnits">Retry</NButton>
+          </template>
+        </NAlert>
 
-      <div v-if="filteredUnits.length > 0" class="summary">
-        <div>
-          <span class="unit-count">{{ filteredUnits.length }} units found</span>
+        <div v-if="filteredUnits.length > 0" class="summary">
+          <div>
+            <span class="unit-count">{{ filteredUnits.length }} units found</span>
+          </div>
         </div>
-      </div>
 
-      <NDataTable
-        :columns="columns"
-        :data="filteredUnits"
-        :bordered="false"
-        :single-line="false"
-        :pagination="{
+        <NDataTable
+          :columns="columns"
+          :data="filteredUnits"
+          :bordered="false"
+          :single-line="false"
+          :pagination="{
           pageSize: 10
         }"
-      >
-        <template #empty>
-          <NEmpty description="No units found">
-            <template #extra>
-              <p>Try changing your search filters.</p>
-            </template>
-          </NEmpty>
-        </template>
-      </NDataTable>
-    </NSpin>
+        >
+          <template #empty>
+            <NEmpty description="No units found">
+              <template #extra>
+                <p>Try changing your search filters.</p>
+              </template>
+            </NEmpty>
+          </template>
+        </NDataTable>
+      </NSpin>
+    </NCard>
   </div>
 </template>
 

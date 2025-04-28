@@ -261,29 +261,25 @@ onMounted(() => {
 
     <div v-else>
       <!-- Filters -->
-      <NCard style="margin-top: 16px;" title="Report Filters">
-        <NSpace align="center" justify="start">
-          <div>
-            <label>Date Range:</label>
-            <NDatePicker
-              v-model:value="dateRange"
-              type="daterange"
-              clearable
-              style="width: 240px"
-            />
-          </div>
-          <div>
-            <label>Category (Optional):</label>
-            <CategorySelector
-              v-model:modelValue="selectedCategory"
-              :association-id="associationId"
-              placeholder="All Categories"
-              :include-all-option="true"
-              style="width: 360px"
-            />
-          </div>
+      <NCard style="margin-top: 16px;">
+        <NFlex align="center" justify="start">
+          <NText>Date Range:</NText>
+          <NDatePicker
+            v-model:value="dateRange"
+            type="daterange"
+            clearable
+            style="width: 240px"
+          />
+          <NText>Category:</NText>
+          <CategorySelector
+            v-model:modelValue="selectedCategory"
+            :association-id="associationId"
+            placeholder="All Categories"
+            :include-all-option="true"
+            style="width: 360px"
+          />
           <NButton @click="resetFilters">Reset Filters</NButton>
-        </NSpace>
+        </NFlex>
       </NCard>
 
       <NSpin :show="loading">

@@ -234,68 +234,64 @@ onMounted(() => {
 
 <template>
   <div class="expenses-list">
-    <h2>Expenses</h2>
-
-    <!-- Filters -->
-    <div class="filters">
-      <NSpace align="center" justify="start">
-        <div>
-          <label>Date Range:</label>
-          <NDatePicker
-            v-model:value="dateRange"
-            type="daterange"
-            clearable
-            style="width: 240px"
-          />
-        </div>
-        <div>
-          <label>Category:</label>
-          <CategorySelector
-            v-model:modelValue="selectedCategory"
-            :association-id="props.associationId"
-            placeholder="Select Category"
-            :include-all-option="true"
-            style="width: 360px"
-          />
-        </div>
+    <NCard style="margin-top: 16px;">
+      <NFlex align="center" justify="start">
+        <NText>Date Range:</NText>
+        <NDatePicker
+          v-model:value="dateRange"
+          type="daterange"
+          clearable
+          style="width: 240px"
+        />
+        <NText>Category:</NText>
+        <CategorySelector
+          v-model:modelValue="selectedCategory"
+          :association-id="props.associationId"
+          placeholder="Select Category"
+          :include-all-option="true"
+          style="width: 360px"
+        />
         <NButton @click="resetFilters">Reset Filters</NButton>
-      </NSpace>
-    </div>
+      </NFlex>
+    </NCard>
+    <NCard style="margin-top: 16px;">
+      <NSpin :show="loading">
+        <NAlert v-if="error" type="error" title="Error" closable>
+          {{ error }}
+          <template #action>
+            <NButton @click="fetchExpenses">Retry</NButton>
+          </template>
+        </NAlert>
 
-    <NSpin :show="loading">
-      <NAlert v-if="error" type="error" title="Error" closable>
-        {{ error }}
-        <template #action>
-          <NButton @click="fetchExpenses">Retry</NButton>
-        </template>
-      </NAlert>
-
-      <div v-if="expenses.length > 0" class="summary">
-        <div>
-          <span class="date-range-label">Period: {{ formattedDateRange }}</span>
+        <div v-if="expenses.length > 0" class="summary">
+          <div>
+            <span class="date-range-label">Period: {{ formattedDateRange }}</span>
+          </div>
+          <strong>Total Amount: {{ formatCurrency(totalAmount) }}</strong>
         </div>
-        <strong>Total Amount: {{ formatCurrency(totalAmount) }}</strong>
-      </div>
 
-      <NDataTable
-        :columns="columns"
-        :data="filteredExpenses"
-        :bordered="false"
-        :single-line="false"
-        :pagination="{
+        <NDataTable
+          :columns="columns"
+          :data="filteredExpenses"
+          :bordered="false"
+          :single-line="false"
+          :pagination="{
           pageSize: 10
         }"
-      >
-        <template #empty>
-          <NEmpty description="No expenses found">
-            <template #extra>
-              <p>Create a new expense to get started.</p>
-            </template>
-          </NEmpty>
-        </template>
-      </NDataTable>
-    </NSpin>
+        >
+          <template #empty>
+            <NEmpty description="No expenses found">
+              <template #extra>
+                <p>Create a new expense to get started.</p>
+              </template>
+            </NEmpty>
+          </template>
+        </NDataTable>
+      </NSpin>
+    </NCard>
+
   </div>
+
 </template>
 
 <style scoped>

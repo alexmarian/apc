@@ -155,7 +155,6 @@ watch(associationId, () => {
 
     <div v-else-if="canShowUnits">
       <!-- Units list -->
-      <NCard style="margin-top: 16px;">
         <UnitsList
           :association-id="associationId"
           :building-id="buildingId"
@@ -167,7 +166,6 @@ watch(associationId, () => {
           @unit-type-changed="newUnitType => unitTypeFilter = newUnitType"
           @search-query-changed="newQuery => searchQuery = newQuery"
         />
-      </NCard>
 
       <!-- Unit Report Preview (shows when a unit is selected) -->
       <div v-if="selectedUnitId" style="margin-top: 16px;">
