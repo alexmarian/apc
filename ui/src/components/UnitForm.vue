@@ -289,6 +289,7 @@ onMounted(() => {
             :min="0.01"
             :precision="2"
             style="width: 100%"
+            disabled
           />
         </NFormItem>
 
@@ -297,8 +298,9 @@ onMounted(() => {
             v-model:value="formData.part"
             :min="0"
             :max="1"
-            :precision="4"
+            :precision="3"
             style="width: 100%"
+            disabled
           />
         </NFormItem>
 
