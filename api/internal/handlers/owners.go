@@ -28,17 +28,20 @@ type Owner struct {
 }
 
 type Ownership struct {
-	ID                   int64     `json:"id"`
-	UnitId               int64     `json:"unit_id"`
-	OwnerId              int64     `json:"owner_id"`
-	AssociationId        int64     `json:"association_id"`
-	StartDate            time.Time `json:"start_date"`
-	EndDate              time.Time `json:"end_date"`
-	IsActive             bool      `json:"is_active"`
-	RegistrationDocument string    `json:"registration_document"`
-	RegistrationDate     time.Time `json:"registration_date"`
-	CreatedAt            time.Time `json:"created_at"`
-	UpdatedAt            time.Time `json:"updated_at"`
+	ID                        int64     `json:"id"`
+	UnitId                    int64     `json:"unit_id"`
+	OwnerId                   int64     `json:"owner_id"`
+	OwnerName                 string    `json:"owner_name"`
+	OwnerNormalizedName       string    `json:"owner_normalized_name"`
+	OwnerIdentificationNumber string    `json:"owner_identification_number"`
+	AssociationId             int64     `json:"association_id"`
+	StartDate                 time.Time `json:"start_date"`
+	EndDate                   time.Time `json:"end_date"`
+	IsActive                  bool      `json:"is_active"`
+	RegistrationDocument      string    `json:"registration_document"`
+	RegistrationDate          time.Time `json:"registration_date"`
+	CreatedAt                 time.Time `json:"created_at"`
+	UpdatedAt                 time.Time `json:"updated_at"`
 }
 
 func HandleGetAssociationOwners(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {

@@ -155,17 +155,20 @@ func HandleGetBuildingUnitOwnerships(cfg *ApiConfig) func(http.ResponseWriter, *
 		ownerships := make([]Ownership, len(ownershipsFromDb))
 		for i, owner := range ownershipsFromDb {
 			ownerships[i] = Ownership{
-				ID:                   owner.ID,
-				UnitId:               owner.UnitID,
-				OwnerId:              owner.OwnerID,
-				AssociationId:        owner.AssociationID,
-				StartDate:            owner.StartDate.Time,
-				EndDate:              owner.EndDate.Time,
-				IsActive:             owner.IsActive,
-				RegistrationDocument: owner.RegistrationDocument,
-				RegistrationDate:     owner.RegistrationDate,
-				CreatedAt:            owner.CreatedAt.Time,
-				UpdatedAt:            owner.UpdatedAt.Time,
+				ID:                        owner.ID,
+				UnitId:                    owner.UnitID,
+				OwnerId:                   owner.OwnerID,
+				OwnerName:                 owner.OwnerName,
+				OwnerNormalizedName:       owner.OwnerNormalizedName,
+				OwnerIdentificationNumber: owner.IdentificationNumber,
+				AssociationId:             owner.AssociationID,
+				StartDate:                 owner.StartDate.Time,
+				EndDate:                   owner.EndDate.Time,
+				IsActive:                  owner.IsActive,
+				RegistrationDocument:      owner.RegistrationDocument,
+				RegistrationDate:          owner.RegistrationDate,
+				CreatedAt:                 owner.CreatedAt.Time,
+				UpdatedAt:                 owner.UpdatedAt.Time,
 			}
 		}
 		RespondWithJSON(rw, http.StatusOK, ownerships)

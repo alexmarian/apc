@@ -7,11 +7,14 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"time"
 )
 
 const getOwnership = `-- name: GetOwnership :one
 
-SELECT id, unit_id, owner_id, association_id, start_date, end_date, is_active, registration_document, registration_date, created_at, updated_at FROM ownerships
+SELECT id, unit_id, owner_id, association_id, start_date, end_date, is_active, registration_document, registration_date, created_at, updated_at
+FROM ownerships
 WHERE id = ? LIMIT 1
 `
 
@@ -35,9 +38,15 @@ func (q *Queries) GetOwnership(ctx context.Context, id int64) (Ownership, error)
 }
 
 const getUnitOwnerships = `-- name: GetUnitOwnerships :many
-SELECT id, unit_id, owner_id, association_id, start_date, end_date, is_active, registration_document, registration_date, created_at, updated_at
-FROM  ownerships
-WHERE ownerships.unit_id = ? and ownerships.association_id = ?
+SELECT o.id, o.unit_id, o.owner_id, o.association_id, o.start_date, o.end_date, o.is_active, o.registration_document, o.registration_date, o.created_at, o.updated_at,
+       ow.name            as owner_name,
+       ow.normalized_name as owner_normalized_name,
+       ow.identification_number
+FROM ownerships o,
+     owners ow
+WHERE o.owner_id = ow.id
+  AND o.unit_id = ?
+  and o.association_id = ?
 `
 
 type GetUnitOwnershipsParams struct {
@@ -45,15 +54,32 @@ type GetUnitOwnershipsParams struct {
 	AssociationID int64
 }
 
-func (q *Queries) GetUnitOwnerships(ctx context.Context, arg GetUnitOwnershipsParams) ([]Ownership, error) {
+type GetUnitOwnershipsRow struct {
+	ID                   int64
+	UnitID               int64
+	OwnerID              int64
+	AssociationID        int64
+	StartDate            sql.NullTime
+	EndDate              sql.NullTime
+	IsActive             bool
+	RegistrationDocument string
+	RegistrationDate     time.Time
+	CreatedAt            sql.NullTime
+	UpdatedAt            sql.NullTime
+	OwnerName            string
+	OwnerNormalizedName  string
+	IdentificationNumber string
+}
+
+func (q *Queries) GetUnitOwnerships(ctx context.Context, arg GetUnitOwnershipsParams) ([]GetUnitOwnershipsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getUnitOwnerships, arg.UnitID, arg.AssociationID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Ownership
+	var items []GetUnitOwnershipsRow
 	for rows.Next() {
-		var i Ownership
+		var i GetUnitOwnershipsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UnitID,
@@ -66,6 +92,9 @@ func (q *Queries) GetUnitOwnerships(ctx context.Context, arg GetUnitOwnershipsPa
 			&i.RegistrationDate,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OwnerName,
+			&i.OwnerNormalizedName,
+			&i.IdentificationNumber,
 		); err != nil {
 			return nil, err
 		}
