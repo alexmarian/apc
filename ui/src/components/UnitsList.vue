@@ -82,7 +82,7 @@ const filteredUnits = computed(() => {
 const columns = ref<DataTableColumns<Unit>>([
   {
     title: 'Unit Number',
-    key: 'unit_number',
+    key: 'cadastral_number',
     sorter: 'default'
   },
   {
