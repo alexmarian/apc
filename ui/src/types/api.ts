@@ -282,3 +282,36 @@ export interface ExpenseShare {
   total_amount: number;
   unit_share: number;
 }
+
+// Owner Report Types
+export interface OwnerReportItem {
+  owner: Owner;
+  co_owners?: OwnerCoOwner[];
+  units?: OwnerUnit[];
+  statistics: OwnerStats;
+}
+
+export interface OwnerCoOwner {
+  id: number;
+  name: string;
+  identification_number: string;
+  contact_phone: string;
+  contact_email: string;
+  shared_unit_ids: number[];
+}
+
+export interface OwnerUnit {
+  unit_id: number;
+  unit_number: string;
+  building_name: string;
+  building_address: string;
+  area: number;
+  part: number;
+  unit_type: string;
+}
+
+export interface OwnerStats {
+  total_units: number;
+  total_area: number;
+  total_condo_part: number;
+}

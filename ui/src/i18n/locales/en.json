@@ -16,7 +16,9 @@
     "error": "Error",
     "success": "Success",
     "retry": "Retry",
-    "home": "Home"
+    "home": "Home",
+    "ascending": "Ascending",
+    "descending": "Descending"
   },
   "auth": {
     "login": "Login",
@@ -92,5 +94,29 @@
   },
   "reports": {
     "title": "Reports"
+  },
+  "owners": {
+    "title": "Owners",
+    "report": "Owners Report",
+    "list": "Owners List",
+    "cumulative": "Cumulative Ownership",
+    "includeUnits": "Include Units",
+    "includeCoOwners": "Include Co-Owners",
+    "totalArea": "Total Area",
+    "totalPart": "Total Condo Part",
+    "exportToCsv": "Export to CSV",
+    "name": "Name",
+    "identification": "Identification",
+    "contactPhone": "Contact Phone",
+    "contactEmail": "Contact Email",
+    "sharedUnits": "Shared Units",
+    "viewingDetails": "Viewing details for selected owner",
+    "unitsDetails": "Owner's Units",
+    "coOwners": "Co-Owners",
+    "noOwnersFound": "No owners found",
+    "tryChangingFilters": "Try changing your search filters or selecting a different association.",
+    "sortByPart": "Sort by Ownership Part",
+    "sortByName": "Sort by Name",
+    "selectAssociation": "Please select an association to view the owners report"
   }
 }

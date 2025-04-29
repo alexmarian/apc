@@ -34,7 +34,6 @@ const fetchBuildings = async () => {
     const response = await buildingApi.getBuildings(props.associationId)
     buildings.value = response.data
     if (buildings.value.length > 0 && selectedBuildingId.value === null) {
-      console.log(buildings.value)
       selectedBuildingId.value = buildings.value[0].id
       emit('update:buildingId', selectedBuildingId.value)
     }
@@ -55,7 +54,7 @@ const options = computed(() => {
 })
 
 // Handle value changes
-const handleUpdateValue = (value: number ) => {
+const handleUpdateValue = (value: number) => {
   console.log(value)
   emit('update:buildingId', value)
 }

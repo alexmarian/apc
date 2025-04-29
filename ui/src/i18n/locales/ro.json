@@ -16,7 +16,9 @@
     "error": "Eroare",
     "success": "Succes",
     "retry": "Încearcă din nou",
-    "home": "Acasă"
+    "home": "Acasă",
+    "ascending": "Ascendent",
+    "descending": "Descendent"
   },
   "auth": {
     "login": "Autentificare",
@@ -92,5 +94,29 @@
   },
   "reports": {
     "title": "Rapoarte"
+  },
+  "owners": {
+    "title": "Proprietari",
+    "report": "Raport Proprietari",
+    "list": "Lista Proprietari",
+    "cumulative": "Proprietate Cumulativă",
+    "includeUnits": "Include Unitățile",
+    "includeCoOwners": "Include Co-Proprietari",
+    "totalArea": "Suprafață Totală",
+    "totalPart": "Cotă Parte Totală",
+    "exportToCsv": "Exportă în CSV",
+    "name": "Nume",
+    "identification": "Identificare",
+    "contactPhone": "Telefon Contact",
+    "contactEmail": "Email Contact",
+    "sharedUnits": "Unități Partajate",
+    "viewingDetails": "Vizualizare detalii pentru proprietarul selectat",
+    "unitsDetails": "Unitățile Proprietarului",
+    "coOwners": "Co-Proprietari",
+    "noOwnersFound": "Nu s-au găsit proprietari",
+    "tryChangingFilters": "Încercați să schimbați filtrele de căutare sau să selectați o altă asociație.",
+    "sortByPart": "Sortează după Cotă Parte",
+    "sortByName": "Sortează după Nume",
+    "selectAssociation": "Vă rugăm selectați o asociație pentru a vizualiza raportul proprietarilor"
   }
 }

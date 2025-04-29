@@ -66,6 +66,10 @@ const menuOptions = [
       {
         label: () => h(RouterLink, { to: '/units' }, { default: () => t('units.title', 'Management') }),
         key: 'units-management'
+      },
+      {
+        label: () => h(RouterLink, { to: '/owners/report' }, { default: () => t('owners.report', 'Owners Report') }),
+        key: 'owners-report'
       }
     ]
   }
