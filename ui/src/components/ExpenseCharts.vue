@@ -1,6 +1,18 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { NCard, NTabs, NTabPane, NDivider, NSelect, NEmpty, NRadioGroup, NRadio, NButton, NTooltip, NSpace } from 'naive-ui'
+import {
+  NCard,
+  NDivider,
+  NSelect,
+  NEmpty,
+  NRadioGroup,
+  NRadio,
+  NButton,
+  NTooltip,
+  NSpace,
+  NCollapse,
+  NCollapseItem
+} from 'naive-ui'
 import type { Expense } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
 import { exportChartToPdf, exportFullReportToPdf } from '@/utils/pdfExport'
@@ -10,14 +22,13 @@ const props = defineProps<{
   expenses: Expense[]
 }>()
 
-// Tab state
-const activeTab = ref('byType')
+// Chart display mode for each section
+const typeChartMode = ref('pie')
+const categoryChartMode = ref('pie')
+const monthlyChartMode = ref('bar')
 
 // Selected type for category breakdown
 const selectedType = ref<string | null>(null)
-
-// Chart display mode
-const chartMode = ref('pie')
 
 // Generate a color palette for the charts
 const COLORS = [
@@ -27,10 +38,9 @@ const COLORS = [
 
 // Refs for SVG elements to export
 const typesPieChartRef = ref<SVGElement | null>(null)
-const categoriesPieChartRef = ref<SVGElement | null>(null)
 const typesBarChartRef = ref<SVGElement | null>(null)
-const categoriesBarChartRef = ref<SVGElement | null>(null)
 const monthlyChartRef = ref<SVGElement | null>(null)
+const categoryChartRefs = ref<Record<string, SVGElement | null>>({})
 
 // Computed data for the charts
 const expensesByType = computed(() => {
@@ -60,18 +70,74 @@ const expensesByType = computed(() => {
   }))
 })
 
-const availableTypes = computed(() => {
-  return expensesByType.value.map(type => ({
-    label: `${type.name} (${formatCurrency(type.value)})`,
-    value: type.name
-  }))
+// Family categorization - group expenses within each type by family
+const expensesByTypeAndFamily = computed(() => {
+  if (!props.expenses || props.expenses.length === 0) return {}
+
+  const typeAndFamily: Record<string, Record<string, {
+    name: string,
+    value: number,
+    count: number,
+    color?: string,
+    percentage?: number
+  }>> = {}
+
+  // First pass - group by type and family
+  props.expenses.forEach(expense => {
+    const type = expense.category_type || 'Uncategorized'
+    const family = expense.category_family || 'General'
+
+    if (!typeAndFamily[type]) {
+      typeAndFamily[type] = {}
+    }
+
+    if (!typeAndFamily[type][family]) {
+      typeAndFamily[type][family] = {
+        name: family,
+        value: 0,
+        count: 0
+      }
+    }
+
+    typeAndFamily[type][family].value += expense.amount
+    typeAndFamily[type][family].count += 1
+  })
+
+  // Second pass - calculate percentages and add colors
+  Object.keys(typeAndFamily).forEach(type => {
+    const totalForType = Object.values(typeAndFamily[type])
+    .reduce((sum, family) => sum + family.value, 0)
+
+    Object.keys(typeAndFamily[type]).forEach((family, index) => {
+      typeAndFamily[type][family].color = COLORS[index % COLORS.length]
+      typeAndFamily[type][family].percentage =
+        (typeAndFamily[type][family].value / totalForType) * 100
+    })
+  })
+
+  return typeAndFamily
 })
 
-const expensesByCategoryForType = computed(() => {
-  if (!props.expenses || props.expenses.length === 0 || !selectedType.value) return []
+// Get families for a given type as array
+const getFamiliesForType = (type: string) => {
+  if (!expensesByTypeAndFamily.value[type]) return []
+
+  return Object.values(expensesByTypeAndFamily.value[type])
+  .sort((a, b) => b.value - a.value)
+  .map((family, index) => ({
+    ...family,
+    color: COLORS[index % COLORS.length]
+  }))
+}
+
+// Get categories for a specific type and family
+const getCategoriesForTypeAndFamily = (type: string, family: string) => {
+  if (!props.expenses || props.expenses.length === 0) return []
 
   const filteredExpenses = props.expenses.filter(
-    expense => expense.category_type === selectedType.value
+    expense => expense.category_type === type &&
+      (expense.category_family === family ||
+        (!expense.category_family && family === 'General'))
   )
 
   const grouped = filteredExpenses.reduce((acc, expense) => {
@@ -91,14 +157,16 @@ const expensesByCategoryForType = computed(() => {
     return acc
   }, {} as Record<string, { name: string, value: number, count: number }>)
 
-  const totalForType = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0)
+  const totalForFamily = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0)
 
-  return Object.values(grouped).map((item, index) => ({
+  return Object.values(grouped)
+  .map((item, index) => ({
     ...item,
     color: COLORS[index % COLORS.length],
-    percentage: (item.value / totalForType) * 100
+    percentage: (item.value / totalForFamily) * 100
   }))
-})
+  .sort((a, b) => b.value - a.value)
+}
 
 // Monthly expenses data
 const expensesByMonth = computed(() => {
@@ -159,69 +227,84 @@ watch(() => props.expenses, () => {
   }
 }, { immediate: true })
 
-// Handle type selection change
-const handleTypeChange = (value: string) => {
-  selectedType.value = value
-}
-
 // Export the current chart to PDF
 const exportCurrentChart = () => {
-  let svgElement: SVGElement | null = null
-  let chartData: any[] = []
-  let chartTitle = ''
+  // Collect all visible charts
+  const charts = []
 
-  // Determine which chart to export based on active tab and chart mode
-  if (activeTab.value === 'byType') {
-    chartTitle = 'Expenses by Type'
-    chartData = expensesByType.value
-
-    if (chartMode.value === 'pie') {
-      svgElement = typesPieChartRef.value
-    } else {
-      svgElement = typesBarChartRef.value
-    }
-  } else if (activeTab.value === 'byCategory' && selectedType.value) {
-    chartTitle = `Categories for ${selectedType.value}`
-    chartData = expensesByCategoryForType.value
-
-    if (chartMode.value === 'pie') {
-      svgElement = categoriesPieChartRef.value
-    } else {
-      svgElement = categoriesBarChartRef.value
-    }
-  } else if (activeTab.value === 'byMonth') {
-    chartTitle = 'Monthly Expenses'
-    svgElement = monthlyChartRef.value
-    // For monthly chart, we need to format data differently
-    chartData = expensesByMonth.value.map(month => ({
-      name: month.month,
-      value: month.total,
-    }))
-  }
-
-  // Export the chart to PDF
-  if (svgElement) {
-    exportChartToPdf(
-      chartTitle,
-      svgElement,
-      chartData
-    )
+  // Main type chart
+  if (typeChartMode.value === 'pie') {
+    charts.push({
+      title: 'Expenses by Type',
+      element: typesPieChartRef.value,
+      data: expensesByType.value
+    })
   } else {
-    console.error('No SVG element found for the current chart')
+    charts.push({
+      title: 'Expenses by Type',
+      element: typesBarChartRef.value,
+      data: expensesByType.value
+    })
   }
+
+  // Monthly chart
+  charts.push({
+    title: 'Monthly Expenses',
+    element: monthlyChartRef.value,
+    data: expensesByMonth.value.map(month => ({
+      name: month.month,
+      value: month.total
+    }))
+  })
+
+  // Find all expanded type and family charts
+  // This is a simplified approach - for a production app, you would track expanded state
+  const expandedTypes = expensesByType.value.slice(0, 3) // Assume first 3 types are expanded for demo
+
+  expandedTypes.forEach(type => {
+    const typeId = getSvgRefId(type.name)
+    if (categoryChartRefs.value[typeId]) {
+      charts.push({
+        title: `Families in ${type.name}`,
+        element: categoryChartRefs.value[typeId],
+        data: getFamiliesForType(type.name)
+      })
+
+      // Add some expanded families for this type (for demo)
+      const families = getFamiliesForType(type.name).slice(0, 2)
+      families.forEach(family => {
+        const familyId = getSvgRefId(type.name, family.name)
+        if (categoryChartRefs.value[familyId]) {
+          charts.push({
+            title: `Categories in ${family.name}`,
+            element: categoryChartRefs.value[familyId],
+            data: getCategoriesForTypeAndFamily(type.name, family.name)
+          })
+        }
+      })
+    }
+  })
+
+  // Export each chart
+  charts.forEach((chart, index) => {
+    if (chart.element) {
+      // Small delay between exports to prevent browser issues
+      setTimeout(() => {
+        exportChartToPdf(chart.title, chart.element, chart.data)
+      }, index * 500)
+    }
+  })
 }
 
 // Export a full report with all charts and data
 const exportFullReport = () => {
-  // Determine which chart to use based on active tab
+  // Use the first available chart
   let chartSvg: SVGElement | null = null
 
-  if (activeTab.value === 'byType') {
-    chartSvg = chartMode.value === 'pie' ? typesPieChartRef.value : typesBarChartRef.value
-  } else if (activeTab.value === 'byCategory' && selectedType.value) {
-    chartSvg = chartMode.value === 'pie' ? categoriesPieChartRef.value : categoriesBarChartRef.value
-  } else if (activeTab.value === 'byMonth') {
-    chartSvg = monthlyChartRef.value
+  if (typeChartMode.value === 'pie') {
+    chartSvg = typesPieChartRef.value
+  } else {
+    chartSvg = typesBarChartRef.value
   }
 
   // Prepare summary data
@@ -261,7 +344,12 @@ const exportFullReport = () => {
 }
 
 // Generate data for SVG pie chart
-const generatePieChartSVG = (data: { name: string; value: number; color: string; percentage: number }[]) => {
+const generatePieChartSVG = (data: {
+  name: string;
+  value: number;
+  color: string;
+  percentage: number
+}[]) => {
   const totalValue = data.reduce((sum, item) => sum + item.value, 0)
   let startAngle = 0
 
@@ -302,7 +390,16 @@ const generatePieChartSVG = (data: { name: string; value: number; color: string;
 }
 
 const typesPieChartData = computed(() => generatePieChartSVG(expensesByType.value))
-const categoriesPieChartData = computed(() => generatePieChartSVG(expensesByCategoryForType.value))
+
+// Function to generate pie chart data for a specific type and family
+const generateFamilyPieChartData = (type: string) => {
+  return generatePieChartSVG(getFamiliesForType(type))
+}
+
+// Function to generate pie chart data for categories
+const generateCategoryPieChartData = (type: string, family: string) => {
+  return generatePieChartSVG(getCategoriesForTypeAndFamily(type, family))
+}
 
 // Function to generate bar chart data
 const generateBarChartData = (data: any[], valueKey: string = 'value', nameKey: string = 'name') => {
@@ -345,7 +442,16 @@ const generateBarChartData = (data: any[], valueKey: string = 'value', nameKey: 
 }
 
 const typesBarChartData = computed(() => generateBarChartData(expensesByType.value))
-const categoriesBarChartData = computed(() => generateBarChartData(expensesByCategoryForType.value))
+
+// Generate family bar chart data for a specific type
+const generateFamilyBarChartData = (type: string) => {
+  return generateBarChartData(getFamiliesForType(type))
+}
+
+// Generate category bar chart data for a specific type and family
+const generateCategoryBarChartData = (type: string, family: string) => {
+  return generateBarChartData(getCategoriesForTypeAndFamily(type, family))
+}
 
 // Generate monthly bar chart data
 const monthlyBarChartData = computed(() => {
@@ -415,6 +521,14 @@ const monthlyBarChartData = computed(() => {
     }
   })
 })
+
+// SVG IDs for storing refs
+const getSvgRefId = (type: string, family?: string) => {
+  if (family) {
+    return `${type.replace(/\s+/g, '-')}-${family.replace(/\s+/g, '-')}`
+  }
+  return `${type.replace(/\s+/g, '-')}`
+}
 </script>
 
 <template>
@@ -429,10 +543,10 @@ const monthlyBarChartData = computed(() => {
           <NTooltip>
             <template #trigger>
               <NButton type="primary" ghost size="small" @click="exportCurrentChart">
-                Export Current Chart
+                Export Visible Charts
               </NButton>
             </template>
-            Export the current chart as PDF
+            Export all currently visible charts as PDF
           </NTooltip>
 
           <NTooltip>
@@ -441,67 +555,158 @@ const monthlyBarChartData = computed(() => {
                 Export Full Report
               </NButton>
             </template>
-            Export a comprehensive report with all data and charts
+            Export a comprehensive report with summary data and all charts
           </NTooltip>
         </NSpace>
       </div>
 
-      <NTabs v-model:value="activeTab" type="line" animated>
-        <!-- Expense by Type Tab -->
-        <NTabPane name="byType" tab="By Expense Type">
-          <NRadioGroup v-model:value="chartMode" class="mode-selector">
-            <NRadio value="pie">Pie Chart</NRadio>
-            <NRadio value="bar">Bar Chart</NRadio>
-          </NRadioGroup>
+      <!-- Section 1: Expenses by Type -->
+      <NCard title="Expenses by Type" style="margin-bottom: 24px;">
+        <NRadioGroup v-model:value="typeChartMode" class="mode-selector">
+          <NRadio value="pie">Pie Chart</NRadio>
+          <NRadio value="bar">Bar Chart</NRadio>
+        </NRadioGroup>
 
-          <div class="chart-container">
-            <!-- Pie Chart View -->
-            <template v-if="chartMode === 'pie' && typesPieChartData.length > 0">
-              <div class="pie-chart">
-                <svg ref="typesPieChartRef" viewBox="0 0 200 200" width="100%" height="100%">
-                  <!-- Render pie slices -->
-                  <g v-for="(slice, index) in typesPieChartData" :key="'type-pie-' + index">
-                    <path :d="slice.pathData" :fill="slice.color" stroke="#fff" stroke-width="1" />
-                    <!-- Add percentage labels in center of each slice -->
-                    <text
-                      v-if="slice.percentage > 5"
-                      :x="slice.labelX"
-                      :y="slice.labelY"
-                      fill="#fff"
-                      font-size="8"
-                      text-anchor="middle"
-                      alignment-baseline="middle"
-                    >
-                      {{ Math.round(slice.percentage) }}%
-                    </text>
-                  </g>
-                  <!-- Inner circle for donut chart -->
-                  <circle cx="100" cy="100" r="40" fill="var(--background-color)" />
-                </svg>
+        <div class="chart-container">
+          <!-- Pie Chart View -->
+          <template v-if="typeChartMode === 'pie' && typesPieChartData.length > 0">
+            <div class="pie-chart">
+              <svg ref="typesPieChartRef" viewBox="0 0 200 200" width="100%" height="100%">
+                <!-- Render pie slices -->
+                <g v-for="(slice, index) in typesPieChartData" :key="'type-pie-' + index">
+                  <path :d="slice.pathData" :fill="slice.color" stroke="#fff" stroke-width="1" />
+                  <!-- Add percentage labels in center of each slice -->
+                  <text
+                    v-if="slice.percentage > 5"
+                    :x="slice.labelX"
+                    :y="slice.labelY"
+                    fill="#fff"
+                    font-size="8"
+                    text-anchor="middle"
+                    alignment-baseline="middle"
+                  >
+                    {{ Math.round(slice.percentage) }}%
+                  </text>
+                </g>
+                <!-- Inner circle for donut chart -->
+                <circle cx="100" cy="100" r="40" fill="var(--background-color)" />
+              </svg>
 
-                <!-- Chart legend -->
-                <div class="chart-legend">
-                  <div v-for="(item, index) in expensesByType" :key="'type-legend-' + index" class="legend-item">
-                    <div class="legend-color" :style="{ backgroundColor: item.color }"></div>
-                    <div class="legend-text">
-                      <div class="legend-name">{{ item.name }}</div>
-                      <div class="legend-value">{{ formatCurrency(item.value) }} ({{ Math.round(item.percentage) }}%)</div>
+              <!-- Chart legend -->
+              <div class="chart-legend">
+                <div v-for="(item, index) in expensesByType" :key="'type-legend-' + index"
+                     class="legend-item">
+                  <div class="legend-color" :style="{ backgroundColor: item.color }"></div>
+                  <div class="legend-text">
+                    <div class="legend-name">{{ item.name }}</div>
+                    <div class="legend-value">{{ formatCurrency(item.value) }}
+                      ({{ Math.round(item.percentage) }}%)
                     </div>
                   </div>
                 </div>
               </div>
-            </template>
+            </div>
+          </template>
 
-            <!-- Bar Chart View -->
-            <template v-else-if="chartMode === 'bar' && typesBarChartData.length > 0">
-              <div class="bar-chart">
-                <svg ref="typesBarChartRef" viewBox="0 0 100 100" width="100%" height="100%">
-                  <!-- Y-axis and grid lines -->
-                  <line x1="10" y1="10" x2="10" y2="90" stroke="var(--border-color)" stroke-width="0.5" />
-                  <line x1="10" y1="90" x2="90" y2="90" stroke="var(--border-color)" stroke-width="0.5" />
+          <!-- Bar Chart View -->
+          <template v-else-if="typeChartMode === 'bar' && typesBarChartData.length > 0">
+            <div class="bar-chart">
+              <svg ref="typesBarChartRef" viewBox="0 0 100 100" width="100%" height="100%">
+                <!-- Y-axis and grid lines -->
+                <line x1="10" y1="10" x2="10" y2="90" stroke="var(--border-color)"
+                      stroke-width="0.5" />
+                <line x1="10" y1="90" x2="90" y2="90" stroke="var(--border-color)"
+                      stroke-width="0.5" />
 
-                  <!-- Render bars -->
-                  <g v-for="(bar, index) in typesBarChartData" :key="'type-bar-' + index">
+                <!-- Render bars -->
+                <g v-for="(bar, index) in typesBarChartData" :key="'type-bar-' + index">
+                  <rect
+                    :x="bar.x"
+                    :y="bar.y"
+                    :width="bar.width"
+                    :height="bar.height"
+                    :fill="bar.color"
+                    stroke="#fff"
+                    stroke-width="0.3"
+                  />
+                  <!-- Bar labels -->
+                  <text
+                    v-if="bar.height > 10"
+                    :x="bar.x + bar.width/2"
+                    :y="bar.y + bar.height/2"
+                    fill="#fff"
+                    font-size="3"
+                    text-anchor="middle"
+                    alignment-baseline="middle"
+                  >
+                    {{ Math.round(bar.percentage) }}%
+                  </text>
+
+                  <!-- X-axis labels (rotated for readability) -->
+                  <text
+                    :x="bar.x + bar.width/2"
+                    :y="93"
+                    fill="var(--text-color)"
+                    font-size="3"
+                    text-anchor="middle"
+                  >
+                    {{ bar.name }}
+                  </text>
+                </g>
+              </svg>
+
+              <!-- Chart legend -->
+              <div class="chart-legend">
+                <div v-for="(item, index) in expensesByType" :key="'type-bar-legend-' + index"
+                     class="legend-item">
+                  <div class="legend-color" :style="{ backgroundColor: item.color }"></div>
+                  <div class="legend-text">
+                    <div class="legend-name">{{ item.name }}</div>
+                    <div class="legend-value">{{ formatCurrency(item.value) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <template v-else>
+            <NEmpty description="Not enough data to display chart" />
+          </template>
+        </div>
+      </NCard>
+
+      <!-- Section 2: Monthly Trends -->
+      <NCard title="Monthly Expense Trends" style="margin-bottom: 24px;">
+        <NRadioGroup v-model:value="monthlyChartMode" class="mode-selector">
+          <NRadio value="bar">Stacked Bar Chart</NRadio>
+        </NRadioGroup>
+
+        <div class="chart-container">
+          <template v-if="monthlyBarChartData.length > 0">
+            <div class="stacked-bar-chart">
+              <svg ref="monthlyChartRef" viewBox="0 0 100 100" width="100%" height="100%">
+                <!-- Y-axis and grid lines -->
+                <line x1="10" y1="10" x2="10" y2="90" stroke="var(--border-color)"
+                      stroke-width="0.5" />
+                <line x1="10" y1="90" x2="90" y2="90" stroke="var(--border-color)"
+                      stroke-width="0.5" />
+
+                <!-- Render month groups and bars -->
+                <g v-for="(month, monthIndex) in monthlyBarChartData" :key="'month-' + monthIndex">
+                  <!-- Month label -->
+                  <text
+                    :x="month.x + month.width/2"
+                    :y="94"
+                    fill="var(--text-color)"
+                    font-size="3"
+                    text-anchor="middle"
+                  >
+                    {{ month.month }}
+                  </text>
+
+                  <!-- Bars for each expense type in this month -->
+                  <g v-for="(bar, barIndex) in month.bars"
+                     :key="'month-bar-' + monthIndex + '-' + barIndex">
                     <rect
                       :x="bar.x"
                       :y="bar.y"
@@ -511,254 +716,308 @@ const monthlyBarChartData = computed(() => {
                       stroke="#fff"
                       stroke-width="0.3"
                     />
-                    <!-- Bar labels -->
+
+                    <!-- Bar labels (only if bar is tall enough) -->
                     <text
                       v-if="bar.height > 10"
                       :x="bar.x + bar.width/2"
                       :y="bar.y + bar.height/2"
                       fill="#fff"
-                      font-size="3"
+                      font-size="2.5"
                       text-anchor="middle"
                       alignment-baseline="middle"
-                    >
-                      {{ Math.round(bar.percentage) }}%
-                    </text>
-
-                    <!-- X-axis labels (rotated for readability) -->
-                    <text
-                      :x="bar.x + bar.width/2"
-                      :y="93"
-                      fill="var(--text-color)"
-                      font-size="3"
-                      text-anchor="middle"
                     >
                       {{ bar.name }}
                     </text>
                   </g>
-                </svg>
 
-                <!-- Chart legend -->
-                <div class="chart-legend">
-                  <div v-for="(item, index) in expensesByType" :key="'type-bar-legend-' + index" class="legend-item">
-                    <div class="legend-color" :style="{ backgroundColor: item.color }"></div>
-                    <div class="legend-text">
-                      <div class="legend-name">{{ item.name }}</div>
-                      <div class="legend-value">{{ formatCurrency(item.value) }}</div>
-                    </div>
+                  <!-- Total amount label above stack -->
+                  <text
+                    :x="month.x + month.width/2"
+                    :y="8"
+                    fill="var(--text-color)"
+                    font-size="3"
+                    text-anchor="middle"
+                  >
+                    {{ formatCurrency(month.total) }}
+                  </text>
+                </g>
+              </svg>
+
+              <!-- Chart legend -->
+              <div class="chart-legend">
+                <div v-for="(type, index) in expenseTypes" :key="'month-legend-' + index"
+                     class="legend-item">
+                  <div class="legend-color"
+                       :style="{ backgroundColor: COLORS[index % COLORS.length] }"></div>
+                  <div class="legend-text">
+                    <div class="legend-name">{{ type }}</div>
                   </div>
                 </div>
               </div>
-            </template>
+            </div>
+          </template>
 
-            <template v-else>
-              <NEmpty description="Not enough data to display chart" />
-            </template>
-          </div>
-        </NTabPane>
+          <template v-else>
+            <NEmpty description="No monthly data available" />
+          </template>
+        </div>
+      </NCard>
 
-        <!-- Expense by Category Tab -->
-        <NTabPane name="byCategory" tab="By Category">
-          <div class="select-container">
-            <NSelect
-              v-model:value="selectedType"
-              :options="availableTypes"
-              placeholder="Select expense type"
-              @update:value="handleTypeChange"
-              :disabled="availableTypes.length === 0"
-            />
-          </div>
+      <!-- Section 3: Expense Type Breakdown -->
+      <NCard title="Expense Type Breakdown" style="margin-bottom: 24px;">
+        <NRadioGroup v-model:value="categoryChartMode" class="mode-selector">
+          <NRadio value="pie">Pie Chart</NRadio>
+          <NRadio value="bar">Bar Chart</NRadio>
+        </NRadioGroup>
 
-          <div v-if="selectedType" class="chart-container">
-            <NDivider>Categories for {{ selectedType }}</NDivider>
+        <NCollapse>
+          <NCollapseItem
+            v-for="type in expensesByType"
+            :key="type.name"
+            :title="type.name + ' - ' + formatCurrency(type.value)"
+          >
+            <!-- Families within this type section -->
+            <div class="chart-container">
+              <NCard title="Family Breakdown" size="small" style="margin-bottom: 16px;">
+                <template v-if="getFamiliesForType(type.name).length > 0">
+                  <!-- Pie Chart for Families -->
+                  <div v-if="categoryChartMode === 'pie'" class="pie-chart">
+                    <svg :ref="el => categoryChartRefs[getSvgRefId(type.name)] = el"
+                         viewBox="0 0 200 200" width="100%" height="100%">
+                      <!-- Render pie slices -->
+                      <g v-for="(slice, index) in generateFamilyPieChartData(type.name)"
+                         :key="'family-pie-' + index">
+                        <path :d="slice.pathData" :fill="slice.color" stroke="#fff"
+                              stroke-width="1" />
+                        <!-- Add percentage labels in center of each slice -->
+                        <text
+                          v-if="slice.percentage > 5"
+                          :x="slice.labelX"
+                          :y="slice.labelY"
+                          fill="#fff"
+                          font-size="8"
+                          text-anchor="middle"
+                          alignment-baseline="middle"
+                        >
+                          {{ Math.round(slice.percentage) }}%
+                        </text>
+                      </g>
+                      <!-- Inner circle for donut chart -->
+                      <circle cx="100" cy="100" r="40" fill="var(--background-color)" />
+                    </svg>
 
-            <NRadioGroup v-model:value="chartMode" class="mode-selector">
-              <NRadio value="pie">Pie Chart</NRadio>
-              <NRadio value="bar">Bar Chart</NRadio>
-            </NRadioGroup>
-
-            <template v-if="expensesByCategoryForType.length > 0">
-              <!-- Pie Chart View -->
-              <template v-if="chartMode === 'pie' && categoriesPieChartData.length > 0">
-                <div class="pie-chart">
-                  <svg ref="categoriesPieChartRef" viewBox="0 0 200 200" width="100%" height="100%">
-                    <!-- Render pie slices -->
-                    <g v-for="(slice, index) in categoriesPieChartData" :key="'cat-pie-' + index">
-                      <path :d="slice.pathData" :fill="slice.color" stroke="#fff" stroke-width="1" />
-                      <!-- Add percentage labels in center of each slice -->
-                      <text
-                        v-if="slice.percentage > 5"
-                        :x="slice.labelX"
-                        :y="slice.labelY"
-                        fill="#fff"
-                        font-size="8"
-                        text-anchor="middle"
-                        alignment-baseline="middle"
-                      >
-                        {{ Math.round(slice.percentage) }}%
-                      </text>
-                    </g>
-                    <!-- Inner circle for donut chart -->
-                    <circle cx="100" cy="100" r="40" fill="var(--background-color)" />
-                  </svg>
-
-                  <!-- Chart legend -->
-                  <div class="chart-legend">
-                    <div v-for="(item, index) in expensesByCategoryForType" :key="'cat-legend-' + index" class="legend-item">
-                      <div class="legend-color" :style="{ backgroundColor: item.color }"></div>
-                      <div class="legend-text">
-                        <div class="legend-name">{{ item.name }}</div>
-                        <div class="legend-value">{{ formatCurrency(item.value) }} ({{ Math.round(item.percentage) }}%)</div>
+                    <!-- Chart legend -->
+                    <div class="chart-legend">
+                      <div v-for="(item, index) in getFamiliesForType(type.name)"
+                           :key="'family-legend-' + index" class="legend-item">
+                        <div class="legend-color" :style="{ backgroundColor: item.color }"></div>
+                        <div class="legend-text">
+                          <div class="legend-name">{{ item.name }}</div>
+                          <div class="legend-value">{{ formatCurrency(item.value) }}
+                            ({{ Math.round(item.percentage as number) }}%)
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </template>
 
-              <!-- Bar Chart View -->
-              <template v-else-if="chartMode === 'bar' && categoriesBarChartData.length > 0">
-                <div class="bar-chart">
-                  <svg ref="categoriesBarChartRef" viewBox="0 0 100 100" width="100%" height="100%">
-                    <!-- Y-axis and grid lines -->
-                    <line x1="10" y1="10" x2="10" y2="90" stroke="var(--border-color)" stroke-width="0.5" />
-                    <line x1="10" y1="90" x2="90" y2="90" stroke="var(--border-color)" stroke-width="0.5" />
+                  <!-- Bar Chart for Families -->
+                  <div v-else class="bar-chart">
+                    <svg :ref="el => categoryChartRefs[getSvgRefId(type.name)] = el"
+                         viewBox="0 0 100 100" width="100%" height="100%">
+                      <!-- Y-axis and grid lines -->
+                      <line x1="10" y1="10" x2="10" y2="90" stroke="var(--border-color)"
+                            stroke-width="0.5" />
+                      <line x1="10" y1="90" x2="90" y2="90" stroke="var(--border-color)"
+                            stroke-width="0.5" />
 
-                    <!-- Render bars -->
-                    <g v-for="(bar, index) in categoriesBarChartData" :key="'cat-bar-' + index">
-                      <rect
-                        :x="bar.x"
-                        :y="bar.y"
-                        :width="bar.width"
-                        :height="bar.height"
-                        :fill="bar.color"
-                        stroke="#fff"
-                        stroke-width="0.3"
-                      />
-                      <!-- Bar labels -->
-                      <text
-                        v-if="bar.height > 10"
-                        :x="bar.x + bar.width/2"
-                        :y="bar.y + bar.height/2"
-                        fill="#fff"
-                        font-size="3"
-                        text-anchor="middle"
-                        alignment-baseline="middle"
-                      >
-                        {{ Math.round(bar.percentage) }}%
-                      </text>
+                      <!-- Render bars -->
+                      <g v-for="(bar, index) in generateFamilyBarChartData(type.name)"
+                         :key="'family-bar-' + index">
+                        <rect
+                          :x="bar.x"
+                          :y="bar.y"
+                          :width="bar.width"
+                          :height="bar.height"
+                          :fill="bar.color"
+                          stroke="#fff"
+                          stroke-width="0.3"
+                        />
+                        <!-- Bar labels -->
+                        <text
+                          v-if="bar.height > 10"
+                          :x="bar.x + bar.width/2"
+                          :y="bar.y + bar.height/2"
+                          fill="#fff"
+                          font-size="3"
+                          text-anchor="middle"
+                          alignment-baseline="middle"
+                        >
+                          {{ Math.round(bar.percentage as number) }}%
+                        </text>
 
-                      <!-- X-axis labels (rotated for readability) -->
-                      <text
-                        :x="bar.x + bar.width/2"
-                        :y="93"
-                        fill="var(--text-color)"
-                        font-size="3"
-                        text-anchor="middle"
-                      >
-                        {{ bar.name }}
-                      </text>
-                    </g>
-                  </svg>
+                        <!-- X-axis labels (rotated for readability) -->
+                        <text
+                          :x="bar.x + bar.width/2"
+                          :y="93"
+                          fill="var(--text-color)"
+                          font-size="3"
+                          text-anchor="middle"
+                        >
+                          {{ bar.name }}
+                        </text>
+                      </g>
+                    </svg>
 
-                  <!-- Chart legend -->
-                  <div class="chart-legend">
-                    <div v-for="(item, index) in expensesByCategoryForType" :key="'cat-bar-legend-' + index" class="legend-item">
-                      <div class="legend-color" :style="{ backgroundColor: item.color }"></div>
-                      <div class="legend-text">
-                        <div class="legend-name">{{ item.name }}</div>
-                        <div class="legend-value">{{ formatCurrency(item.value) }}</div>
+                    <!-- Chart legend -->
+                    <div class="chart-legend">
+                      <div v-for="(item, index) in getFamiliesForType(type.name)"
+                           :key="'family-bar-legend-' + index" class="legend-item">
+                        <div class="legend-color" :style="{ backgroundColor: item.color }"></div>
+                        <div class="legend-text">
+                          <div class="legend-name">{{ item.name }}</div>
+                          <div class="legend-value">{{ formatCurrency(item.value) }}</div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </template>
-            </template>
+                </template>
+                <template v-else>
+                  <NEmpty description="No families found for this type" />
+                </template>
+              </NCard>
 
-            <template v-else>
-              <NEmpty description="No categories found for the selected type" />
-            </template>
-          </div>
-        </NTabPane>
+              <!-- Categories within each family collapsible sections -->
+              <NCollapse>
+                <NCollapseItem
+                  v-for="family in getFamiliesForType(type.name)"
+                  :key="family.name"
+                  :title="family.name + ' - ' + formatCurrency(family.value)"
+                >
+                  <div class="chart-container">
+                    <template
+                      v-if="getCategoriesForTypeAndFamily(type.name, family.name).length > 0">
+                      <!-- Pie Chart for Categories -->
+                      <div v-if="categoryChartMode === 'pie'" class="pie-chart">
+                        <svg
+                          :ref="el => categoryChartRefs[getSvgRefId(type.name, family.name)] = el"
+                          viewBox="0 0 200 200" width="100%" height="100%">
+                          <!-- Render pie slices -->
+                          <g
+                            v-for="(slice, index) in generateCategoryPieChartData(type.name, family.name)"
+                            :key="'category-pie-' + index">
+                            <path :d="slice.pathData" :fill="slice.color" stroke="#fff"
+                                  stroke-width="1" />
+                            <!-- Add percentage labels in center of each slice -->
+                            <text
+                              v-if="slice.percentage > 5"
+                              :x="slice.labelX"
+                              :y="slice.labelY"
+                              fill="#fff"
+                              font-size="8"
+                              text-anchor="middle"
+                              alignment-baseline="middle"
+                            >
+                              {{ Math.round(slice.percentage) }}%
+                            </text>
+                          </g>
+                          <!-- Inner circle for donut chart -->
+                          <circle cx="100" cy="100" r="40" fill="var(--background-color)" />
+                        </svg>
 
-        <!-- Monthly Trend Tab -->
-        <NTabPane name="byMonth" tab="Monthly Trends">
-          <div class="chart-container">
-            <template v-if="monthlyBarChartData.length > 0">
-              <div class="stacked-bar-chart">
-                <svg ref="monthlyChartRef" viewBox="0 0 100 100" width="100%" height="100%">
-                  <!-- Y-axis and grid lines -->
-                  <line x1="10" y1="10" x2="10" y2="90" stroke="var(--border-color)" stroke-width="0.5" />
-                  <line x1="10" y1="90" x2="90" y2="90" stroke="var(--border-color)" stroke-width="0.5" />
+                        <!-- Chart legend -->
+                        <div class="chart-legend">
+                          <div
+                            v-for="(item, index) in getCategoriesForTypeAndFamily(type.name, family.name)"
+                            :key="'category-legend-' + index" class="legend-item">
+                            <div class="legend-color"
+                                 :style="{ backgroundColor: item.color }"></div>
+                            <div class="legend-text">
+                              <div class="legend-name">{{ item.name }}</div>
+                              <div class="legend-value">{{ formatCurrency(item.value) }}
+                                ({{ Math.round(item.percentage) }}%)
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
 
-                  <!-- Render month groups and bars -->
-                  <g v-for="(month, monthIndex) in monthlyBarChartData" :key="'month-' + monthIndex">
-                    <!-- Month label -->
-                    <text
-                      :x="month.x + month.width/2"
-                      :y="94"
-                      fill="var(--text-color)"
-                      font-size="3"
-                      text-anchor="middle"
-                    >
-                      {{ month.month }}
-                    </text>
+                      <!-- Bar Chart for Categories -->
+                      <div v-else class="bar-chart">
+                        <svg
+                          :ref="el => categoryChartRefs[getSvgRefId(type.name, family.name)] = el"
+                          viewBox="0 0 100 100" width="100%" height="100%">
+                          <!-- Y-axis and grid lines -->
+                          <line x1="10" y1="10" x2="10" y2="90" stroke="var(--border-color)"
+                                stroke-width="0.5" />
+                          <line x1="10" y1="90" x2="90" y2="90" stroke="var(--border-color)"
+                                stroke-width="0.5" />
 
-                    <!-- Bars for each expense type in this month -->
-                    <g v-for="(bar, barIndex) in month.bars" :key="'month-bar-' + monthIndex + '-' + barIndex">
-                      <rect
-                        :x="bar.x"
-                        :y="bar.y"
-                        :width="bar.width"
-                        :height="bar.height"
-                        :fill="bar.color"
-                        stroke="#fff"
-                        stroke-width="0.3"
-                      />
+                          <!-- Render bars -->
+                          <g
+                            v-for="(bar, index) in generateCategoryBarChartData(type.name, family.name)"
+                            :key="'category-bar-' + index">
+                            <rect
+                              :x="bar.x"
+                              :y="bar.y"
+                              :width="bar.width"
+                              :height="bar.height"
+                              :fill="bar.color"
+                              stroke="#fff"
+                              stroke-width="0.3"
+                            />
+                            <!-- Bar labels -->
+                            <text
+                              v-if="bar.height > 10"
+                              :x="bar.x + bar.width/2"
+                              :y="bar.y + bar.height/2"
+                              fill="#fff"
+                              font-size="3"
+                              text-anchor="middle"
+                              alignment-baseline="middle"
+                            >
+                              {{ Math.round(bar.percentage) }}%
+                            </text>
 
-                      <!-- Bar labels (only if bar is tall enough) -->
-                      <text
-                        v-if="bar.height > 10"
-                        :x="bar.x + bar.width/2"
-                        :y="bar.y + bar.height/2"
-                        fill="#fff"
-                        font-size="2.5"
-                        text-anchor="middle"
-                        alignment-baseline="middle"
-                      >
-                        {{ bar.name }}
-                      </text>
-                    </g>
+                            <!-- X-axis labels (rotated for readability) -->
+                            <text
+                              :x="bar.x + bar.width/2"
+                              :y="93"
+                              fill="var(--text-color)"
+                              font-size="3"
+                              text-anchor="middle"
+                            >
+                              {{ bar.name }}
+                            </text>
+                          </g>
+                        </svg>
 
-                    <!-- Total amount label above stack -->
-                    <text
-                      :x="month.x + month.width/2"
-                      :y="8"
-                      fill="var(--text-color)"
-                      font-size="3"
-                      text-anchor="middle"
-                    >
-                      {{ formatCurrency(month.total) }}
-                    </text>
-                  </g>
-                </svg>
-
-                <!-- Chart legend -->
-                <div class="chart-legend">
-                  <div v-for="(type, index) in expenseTypes" :key="'month-legend-' + index" class="legend-item">
-                    <div class="legend-color" :style="{ backgroundColor: COLORS[index % COLORS.length] }"></div>
-                    <div class="legend-text">
-                      <div class="legend-name">{{ type }}</div>
-                    </div>
+                        <!-- Chart legend -->
+                        <div class="chart-legend">
+                          <div
+                            v-for="(item, index) in getCategoriesForTypeAndFamily(type.name, family.name)"
+                            :key="'category-bar-legend-' + index" class="legend-item">
+                            <div class="legend-color"
+                                 :style="{ backgroundColor: item.color }"></div>
+                            <div class="legend-text">
+                              <div class="legend-name">{{ item.name }}</div>
+                              <div class="legend-value">{{ formatCurrency(item.value) }}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+                    <template v-else>
+                      <NEmpty description="No categories found for this family" />
+                    </template>
                   </div>
-                </div>
-              </div>
-            </template>
-
-            <template v-else>
-              <NEmpty description="No monthly data available" />
-            </template>
-          </div>
-        </NTabPane>
-      </NTabs>
+                </NCollapseItem>
+              </NCollapse>
+            </div>
+          </NCollapseItem>
+        </NCollapse>
+      </NCard>
     </template>
   </div>
 </template>
@@ -775,16 +1034,11 @@ const monthlyBarChartData = computed(() => {
 }
 
 .chart-container {
-  min-height: 400px;
+  min-height: 300px;
   margin: 10px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-.select-container {
-  margin: 20px 0;
-  max-width: 400px;
 }
 
 .mode-selector {
