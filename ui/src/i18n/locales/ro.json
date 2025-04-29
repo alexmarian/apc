@@ -18,7 +18,11 @@
     "retry": "Încearcă din nou",
     "home": "Acasă",
     "ascending": "Ascendent",
-    "descending": "Descendent"
+    "descending": "Descendent",
+    "total": "Total",
+    "actions": "Actions",
+    "details": "Details",
+    "clear": "Șterge"
   },
   "auth": {
     "login": "Autentificare",
@@ -118,5 +122,13 @@
     "sortByPart": "Sortează după Cotă Parte",
     "sortByName": "Sortează după Nume",
     "selectAssociation": "Vă rugăm selectați o asociație pentru a vizualiza raportul proprietarilor"
+  },
+  "units": {
+    "title": "Unități",
+    "building": "Clădire",
+    "area": "Suprafață",
+    "part": "Cotă Parte",
+    "type": "Tip",
+    "unit": "Unit"
   }
 }

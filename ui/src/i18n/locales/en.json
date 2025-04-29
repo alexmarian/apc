@@ -18,7 +18,11 @@
     "retry": "Retry",
     "home": "Home",
     "ascending": "Ascending",
-    "descending": "Descending"
+    "descending": "Descending",
+    "total": "Total",
+    "actions": "Actions",
+    "details": "Details",
+    "clear": "Clear"
   },
   "auth": {
     "login": "Login",
@@ -118,5 +122,13 @@
     "sortByPart": "Sort by Ownership Part",
     "sortByName": "Sort by Name",
     "selectAssociation": "Please select an association to view the owners report"
+  },
+  "units": {
+    "title": "Units",
+    "building": "Building",
+    "area": "Area",
+    "part": "Condo Part",
+    "type": "Type",
+    "unit": "Unit"
   }
 }
