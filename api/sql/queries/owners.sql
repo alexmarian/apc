@@ -102,7 +102,6 @@ WHERE o.owner_id = ? AND o.association_id = ? AND o.is_active = true;
 --
 
 -- name: GetOwnerUnitsWithDetailsForReport :many
--- This query is optimized for the owner report, allowing efficient filtering by owner_id
 SELECT
     o.id as owner_id,
     o.name as owner_name,

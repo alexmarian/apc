@@ -281,6 +281,7 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 		reportData, err := cfg.Db.GetOwnerUnitsWithDetailsForReport(req.Context(), database.GetOwnerUnitsWithDetailsForReportParams{
 			AssociationID: int64(associationId),
 			ID:            specificOwnerId,
+			Column2:       specificOwnerId,
 		})
 
 		if err != nil {
