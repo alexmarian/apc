@@ -225,7 +225,6 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 
 		// Parse query parameters for specific owner ID (optional)
 		var specificOwnerId int64 = 0
-
 		if ownerIdStr := req.URL.Query().Get("owner_id"); ownerIdStr != "" {
 			ownerId, err := strconv.ParseInt(ownerIdStr, 10, 64)
 			if err != nil {
@@ -236,18 +235,9 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 		}
 
 		// Parse query parameters for data inclusion options
-		includeUnits := false
-		includeCoOwners := false
+		includeUnits := req.URL.Query().Get("units") == "true"
+		includeCoOwners := req.URL.Query().Get("co_owners") == "true"
 
-		if req.URL.Query().Get("units") == "true" {
-			includeUnits = true
-		}
-
-		if req.URL.Query().Get("co_owners") == "true" {
-			includeCoOwners = true
-		}
-
-		// Define response types
 		type OwnerUnit struct {
 			UnitID          int64   `json:"unit_id"`
 			UnitNumber      string  `json:"unit_number"`
@@ -264,10 +254,10 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			TotalCondoPart float64 `json:"total_condo_part"`
 		}
 
-		// Enhanced co-owner type with shared units
 		type CoOwner struct {
 			Owner
-			SharedUnitIDs []int64 `json:"shared_unit_ids"` // The unit IDs they co-own
+			SharedUnitIDs  []int64  `json:"shared_unit_ids"`
+			SharedUnitNums []string `json:"shared_unit_nums"`
 		}
 
 		type OwnerReportItem struct {
@@ -277,31 +267,21 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			Statistics OwnerStats  `json:"statistics"`
 		}
 
-		// Use the optimized query that filters at the database level
 		reportData, err := cfg.Db.GetOwnerUnitsWithDetailsForReport(req.Context(), database.GetOwnerUnitsWithDetailsForReportParams{
 			AssociationID: int64(associationId),
 			ID:            specificOwnerId,
 			Column2:       specificOwnerId,
 		})
-
 		if err != nil {
 			log.Printf("Error retrieving owner report data: %s", err)
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve owner report data")
 			return
 		}
 
-		// Process the data
 		ownerReports := []OwnerReportItem{}
 		ownerMap := make(map[int64]*OwnerReportItem)
-		processedOwnerIDs := make(map[int64]bool)
 
-		// First pass: Create owner entries and collect units
 		for _, row := range reportData {
-			// Skip owners that have already been processed as co-owners
-			if processedOwnerIDs[row.OwnerID] {
-				continue
-			}
-
 			// If this owner isn't in our map yet, create a new entry
 			if _, exists := ownerMap[row.OwnerID]; !exists {
 				ownerMap[row.OwnerID] = &OwnerReportItem{
@@ -322,11 +302,10 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 				}
 			}
 
-			// Track unique units for statistics
-			uniqueUnitIDs := make(map[int64]bool)
 			ownerEntry := ownerMap[row.OwnerID]
 
-			// If this unit isn't already counted
+			// Track unique units for statistics
+			uniqueUnitIDs := make(map[int64]bool)
 			if !uniqueUnitIDs[row.UnitID] {
 				uniqueUnitIDs[row.UnitID] = true
 
@@ -373,6 +352,10 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 								ownerEntry.CoOwners[i].SharedUnitIDs,
 								row.UnitID,
 							)
+							ownerEntry.CoOwners[i].SharedUnitNums = append(
+								ownerEntry.CoOwners[i].SharedUnitNums,
+								row.UnitNumber,
+							)
 						}
 						break
 					}
@@ -389,25 +372,21 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 							ContactPhone:         row.CoOwnerContactPhone.String,
 							ContactEmail:         row.CoOwnerContactEmail.String,
 						},
-						SharedUnitIDs: []int64{row.UnitID},
+						SharedUnitIDs:  []int64{row.UnitID},
+						SharedUnitNums: []string{row.UnitNumber},
 					})
 				}
-
-				// Mark this co-owner as processed
-				processedOwnerIDs[coOwnerID] = true
 			}
 		}
 
 		// Convert map to slice
 		for _, ownerEntry := range ownerMap {
-			// Check if we should include these optional fields
 			if !includeUnits {
 				ownerEntry.Units = nil
 			}
 			if !includeCoOwners {
 				ownerEntry.CoOwners = nil
 			}
-
 			ownerReports = append(ownerReports, *ownerEntry)
 		}
 
