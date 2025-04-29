@@ -42,7 +42,9 @@ const searchQuery = ref('')
 const sortBy = ref<'name' | 'part'>('part')
 const sortOrder = ref<'asc' | 'desc'>('desc')
 const ownerFilter = ref<number | null>(null)
-
+const selectedOwnerData = computed(()=>{
+  return filteredSortedData.value?.find(item => item.owner.id === ownerFilter.value)
+})
 // Column definitions for the data table
 const columns = computed(() => {
   const cols: DataTableColumns<OwnerReportItem> = [
@@ -381,18 +383,6 @@ onMounted(() => {
               <div class="stat-label">{{ t('common.total', 'Total Owners') }}:</div>
               <div class="stat-value">{{ filteredSortedData.length }}</div>
             </div>
-            <div class="stat-item">
-              <div class="stat-label">{{ t('owners.totalArea', 'Total Area') }}:</div>
-              <div class="stat-value">
-                {{ filteredSortedData.reduce((sum, item) => sum + item.statistics.total_area, 0).toFixed(2) }} m²
-              </div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">{{ t('owners.totalPart', 'Total Part') }}:</div>
-              <div class="stat-value">
-                {{ formatPercentage(filteredSortedData.reduce((sum, item) => sum + item.statistics.total_condo_part, 0), 4) }}
-              </div>
-            </div>
           </div>
 
           <NDataTable
@@ -406,7 +396,7 @@ onMounted(() => {
           />
 
           <!-- Units Details (visible when owner is filtered and includeUnits is true) -->
-          <div v-if="ownerFilter !== null && includeUnits && filteredSortedData.length > 0 && filteredSortedData[0].units">
+          <div v-if="ownerFilter !== null && includeUnits && filteredSortedData.length > 0 && selectedOwnerData.units">
             <div class="details-section">
               <h3>{{ t('owners.unitsDetails', "Owner's Units") }}</h3>
               <NDataTable
@@ -417,7 +407,7 @@ onMounted(() => {
                   { title: t('units.part', 'Part'), key: 'part', render: (row) => formatPercentage(row.part, 4) },
                   { title: t('units.type', 'Type'), key: 'unit_type' }
                 ]"
-                :data="filteredSortedData[0].units"
+                :data="selectedOwnerData.units"
                 :pagination="{
                   pageSize: 5
                 }"
@@ -427,7 +417,7 @@ onMounted(() => {
           </div>
 
           <!-- Co-Owners Details (visible when owner is filtered and includeCoOwners is true) -->
-          <div v-if="ownerFilter !== null && includeCoOwners && filteredSortedData.length > 0 && filteredSortedData[0].co_owners && filteredSortedData[0].co_owners.length > 0">
+          <div v-if="ownerFilter !== null && includeCoOwners && filteredSortedData.length > 0 && selectedOwnerData.co_owners && selectedOwnerData.co_owners.length > 0">
             <div class="details-section">
               <h3>{{ t('owners.coOwners', 'Co-Owners') }}</h3>
               <NDataTable
@@ -436,9 +426,9 @@ onMounted(() => {
                   { title: t('owners.identification', 'Identification'), key: 'identification_number' },
                   { title: t('owners.contactPhone', 'Contact Phone'), key: 'contact_phone' },
                   { title: t('owners.contactEmail', 'Contact Email'), key: 'contact_email' },
-                  { title: t('owners.sharedUnits', 'Shared Units'), key: 'shared_unit_ids', render: (row) => row.shared_unit_ids.length }
+                  { title: t('owners.sharedUnits', 'Shared Units'), key: 'shared_unit_nums', render: (row) => row.shared_unit_nums.join(', ') }
                 ]"
-                :data="filteredSortedData[0].co_owners"
+                :data="selectedOwnerData.co_owners"
                 :pagination="{
                   pageSize: 5
                 }"

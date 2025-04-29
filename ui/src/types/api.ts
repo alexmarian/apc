@@ -298,6 +298,7 @@ export interface OwnerCoOwner {
   contact_phone: string;
   contact_email: string;
   shared_unit_ids: number[];
+  shared_unit_nums: string[];
 }
 
 export interface OwnerUnit {
