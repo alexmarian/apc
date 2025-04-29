@@ -1,8 +1,5 @@
 // Export all utility functions
 
-// Theme utilities
-export * from './theme'
-
 // Formatter utilities
 export * from './formatters'
 

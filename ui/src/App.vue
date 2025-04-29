@@ -3,6 +3,7 @@
 import { RouterLink, RouterView } from 'vue-router'
 import { NIcon, NLayout, NLayoutHeader, NLayoutContent, NMenu, NButton, NDropdown } from 'naive-ui'
 import { h, ref, computed } from 'vue'
+import type { Component } from 'vue';
 import ThemeProvider from '@/providers/ThemeProvider.vue'
 import LanguageSelector from '@/components/LanguageSelector.vue'
 import UserProfileButton from '@/components/UserProfileButton.vue'

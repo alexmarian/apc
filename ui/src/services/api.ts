@@ -11,6 +11,7 @@ import type {
   CategoryCreateRequest,
   Expense,
   ExpenseCreateRequest,
+  ExpenseDistributionResponse,
   LoginRequest,
   LoginResponse,
   Owner,
@@ -55,7 +56,11 @@ api.interceptors.response.use(
     return response
   },
   async (error: AxiosError) => {
-    const originalRequest = error.config
+    const originalRequestOrNull = error.config
+    if (!originalRequestOrNull) {
+      return Promise.reject(error)
+    }
+    const originalRequest: AxiosRequestConfig = originalRequestOrNull
 
     // If error is 401 and we haven't tried refreshing the token yet
     if (error.response?.status === 401 && !originalRequest._retry) {
