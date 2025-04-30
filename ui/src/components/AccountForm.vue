@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { NForm, NFormItem, NInput, NButton, NSpace, NSpin, NAlert, FormRules } from 'naive-ui'
+import { NForm, NFormItem, NInput, NButton, NSpace, NSpin, NAlert } from 'naive-ui'
 import { accountApi } from '@/services/api'
 import type { AccountCreateRequest, AccountUpdateRequest } from '@/types/api'
+import type { FormRules } from 'naive-ui'
 
 // Props
 const props = defineProps<{
