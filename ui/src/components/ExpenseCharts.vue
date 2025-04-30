@@ -23,15 +23,10 @@ import {
   CategoryScale,
   LinearScale,
   BarElement
-
 } from 'chart.js'
-
 import type { ChartData, ChartOptions } from 'chart.js'
 import type { Expense } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
-import { exportChartToPdf, exportFullReportToPdf } from '@/utils/pdfExport'
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
 
 // Register Chart.js components
 ChartJS.register(
@@ -201,7 +196,6 @@ const getCategoriesForTypeAndFamily = (type: string, family: string): ChartDataI
 interface MonthlyExpenseData {
   month: string;
   total: number;
-
   [key: string]: number | string;
 }
 
@@ -254,7 +248,9 @@ const expensesByMonth = computed<MonthlyExpenseData[]>(() => {
 
 // Get all unique expense types
 const expenseTypes = computed<string[]>(() => {
-  return [...new Set(props.expenses.map(e => e.category_type).filter(Boolean))]
+  return [...new Set(props.expenses
+  .map(e => e.category_type || 'Uncategorized')
+  .filter(Boolean) as string[])]
 })
 
 // When expenses change, set the default selected type
@@ -281,10 +277,15 @@ const pieChartOptions = computed<ChartOptions<'pie'>>(() => ({
     tooltip: {
       callbacks: {
         label: (context) => {
-          const label = context.label || ''
-          const value = context.raw as number
-          const percentage = ((value / context.chart.getDatasetMeta(0).total) * 100).toFixed(1)
-          return `${label}: ${formatCurrency(value)} (${percentage}%)`
+          const label = context.label || '';
+          const value = context.raw as number;
+
+          // Calculate percentage manually using dataset values instead of relying on chart meta
+          const dataset = context.chart.data.datasets[0];
+          const total = (dataset.data as number[]).reduce((sum, val) => sum + (val || 0), 0);
+          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+
+          return `${label}: ${formatCurrency(value)} (${percentage}%)`;
         }
       }
     }
@@ -307,9 +308,9 @@ const barChartOptions = computed<ChartOptions<'bar'>>(() => ({
     tooltip: {
       callbacks: {
         label: (context) => {
-          const label = context.dataset.label || ''
-          const value = context.raw as number
-          return `${label}: ${formatCurrency(value)}`
+          const label = context.dataset.label || '';
+          const value = context.raw as number;
+          return `${label}: ${formatCurrency(value)}`;
         }
       }
     }
@@ -325,7 +326,7 @@ const barChartOptions = computed<ChartOptions<'bar'>>(() => ({
       beginAtZero: true,
       ticks: {
         callback: (value) => {
-          return formatCurrency(value as number)
+          return formatCurrency(value as number);
         }
       }
     }
@@ -348,9 +349,9 @@ const stackedBarChartOptions = computed<ChartOptions<'bar'>>(() => ({
     tooltip: {
       callbacks: {
         label: (context) => {
-          const label = context.dataset.label || ''
-          const value = context.raw as number
-          return `${label}: ${formatCurrency(value)}`
+          const label = context.dataset.label || '';
+          const value = context.raw as number;
+          return `${label}: ${formatCurrency(value)}`;
         }
       }
     }
@@ -368,7 +369,7 @@ const stackedBarChartOptions = computed<ChartOptions<'bar'>>(() => ({
       beginAtZero: true,
       ticks: {
         callback: (value) => {
-          return formatCurrency(value as number)
+          return formatCurrency(value as number);
         }
       }
     }
@@ -503,9 +504,9 @@ const getChartRefId = (type: string, family?: string): string => {
   return `${type.replace(/\s+/g, '-')}`
 }
 
-// Export helpers
-const captureChart = async (chartRef: any): Promise<HTMLCanvasElement | null> => {
-  if (!chartRef) return null
+// Helper function to capture chart canvas
+const captureChart = (chartRef: any): HTMLCanvasElement | null => {
+  if (!chartRef?.$el) return null
 
   try {
     // Get the chart canvas element
@@ -519,134 +520,395 @@ const captureChart = async (chartRef: any): Promise<HTMLCanvasElement | null> =>
   }
 }
 
-// Export the current chart to PDF
-const exportCurrentChart = async () => {
-  // Collect all visible charts
-  const charts = []
+// References for the print sections
+const printSectionRef = ref<HTMLElement | null>(null)
 
-  // Main type chart
-  let typeChart
-  if (typeChartMode.value === 'pie') {
-    typeChart = await captureChart(typeChartRef.value)
-    if (typeChart) {
-      charts.push({
-        title: 'Expenses by Type',
-        element: typeChart,
-        data: expensesByType.value
-      })
-    }
-  } else {
-    typeChart = await captureChart(typeChartRef.value)
-    if (typeChart) {
-      charts.push({
-        title: 'Expenses by Type',
-        element: typeChart,
-        data: expensesByType.value
-      })
-    }
+/**
+ * Print the currently visible charts
+ * Uses the browser's built-in print functionality
+ */
+const printVisibleCharts = () => {
+  // Create a new window for printing
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) {
+    alert('Please allow pop-ups to print charts')
+    return
   }
 
-  // Monthly chart
-  const monthlyChart = await captureChart(monthlyChartRef.value)
-  if (monthlyChart) {
-    charts.push({
-      title: 'Monthly Expenses',
-      element: monthlyChart,
-      data: expensesByMonth.value.map(month => ({
-        name: month.month,
-        value: month.total
-      }))
-    })
-  }
-
-  // Find all expanded type and family charts
-  const expandedTypes = expensesByType.value.slice(0, 3) // Assume first 3 types are expanded for demo
-
-  for (const type of expandedTypes) {
-    const typeId = getChartRefId(type.name)
-    if (categoryChartRefs.value[typeId]) {
-      const familyChart = await captureChart(categoryChartRefs.value[typeId])
-      if (familyChart) {
-        charts.push({
-          title: `Families in ${type.name}`,
-          element: familyChart,
-          data: getFamiliesForType(type.name)
-        })
-      }
-
-      // Add some expanded families for this type (for demo)
-      const families = getFamiliesForType(type.name).slice(0, 2)
-      for (const family of families) {
-        const familyId = getChartRefId(type.name, family.name)
-        if (categoryChartRefs.value[familyId]) {
-          const categoryChart = await captureChart(categoryChartRefs.value[familyId])
-          if (categoryChart) {
-            charts.push({
-              title: `Categories in ${family.name}`,
-              element: categoryChart,
-              data: getCategoriesForTypeAndFamily(type.name, family.name)
-            })
+  // Write the print document HTML
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Expense Charts</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          .chart-container { margin-bottom: 40px; page-break-after: auto; }
+          .chart-title { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; }
+          .chart-image { max-width: 100%; height: auto; }
+          @media print {
+            .page-break { page-break-before: always; }
           }
-        }
+        </style>
+      </head>
+      <body>
+        <h1>Expense Charts</h1>
+  `)
+
+  // Capture the main type chart
+  if (typeChartRef.value?.$el) {
+    const typeChart = captureChart(typeChartRef.value)
+    if (typeChart) {
+      printWindow.document.write(`
+        <div class="chart-container">
+          <div class="chart-title">Expenses by Type</div>
+          <img class="chart-image" src="${typeChart.toDataURL('image/png')}" />
+
+          <table>
+            <tr>
+              <th>Category</th>
+              <th>Amount</th>
+              <th>Percentage</th>
+            </tr>
+      `)
+
+      expensesByType.value.forEach(item => {
+        printWindow.document.write(`
+          <tr>
+            <td>${item.name}</td>
+            <td>${formatCurrency(item.value)}</td>
+            <td>${Math.round(item.percentage || 0)}%</td>
+          </tr>
+        `)
+      })
+
+      printWindow.document.write('</table></div>')
+    }
+  }
+
+  // Capture the monthly chart
+  if (monthlyChartRef.value?.$el) {
+    const monthlyChart = captureChart(monthlyChartRef.value)
+    if (monthlyChart) {
+      printWindow.document.write(`
+        <div class="chart-container page-break">
+          <div class="chart-title">Monthly Expense Trends</div>
+          <img class="chart-image" src="${monthlyChart.toDataURL('image/png')}" />
+
+          <table>
+            <tr>
+              <th>Month</th>
+              <th>Total Amount</th>
+            </tr>
+      `)
+
+      expensesByMonth.value.forEach(month => {
+        printWindow.document.write(`
+          <tr>
+            <td>${month.month}</td>
+            <td>${formatCurrency(month.total)}</td>
+          </tr>
+        `)
+      })
+
+      printWindow.document.write('</table></div>')
+    }
+  }
+
+  // Capture expanded family charts (for the first type only, to keep it manageable)
+  if (expensesByType.value.length > 0) {
+    const firstType = expensesByType.value[0]
+    const typeId = getChartRefId(firstType.name)
+
+    if (categoryChartRefs.value[typeId]?.$el) {
+      const familyChart = captureChart(categoryChartRefs.value[typeId])
+      if (familyChart) {
+        printWindow.document.write(`
+          <div class="chart-container page-break">
+            <div class="chart-title">Families in ${firstType.name}</div>
+            <img class="chart-image" src="${familyChart.toDataURL('image/png')}" />
+
+            <table>
+              <tr>
+                <th>Family</th>
+                <th>Amount</th>
+                <th>Percentage</th>
+              </tr>
+        `)
+
+        getFamiliesForType(firstType.name).forEach(family => {
+          printWindow.document.write(`
+            <tr>
+              <td>${family.name}</td>
+              <td>${formatCurrency(family.value)}</td>
+              <td>${Math.round(family.percentage || 0)}%</td>
+            </tr>
+          `)
+        })
+
+        printWindow.document.write('</table></div>')
       }
     }
   }
 
-  // Export each chart
-  charts.forEach((chart, index) => {
-    if (chart.element) {
-      // Small delay between exports to prevent browser issues
-      setTimeout(() => {
-        exportChartToPdf(chart.title, chart.element, chart.data)
-      }, index * 500)
-    }
-  })
+  // Finish the HTML document
+  printWindow.document.write(`
+      </body>
+    </html>
+  `)
+
+  // Wait for images to load before printing
+  printWindow.document.close()
+  printWindow.onload = () => {
+    setTimeout(() => {
+      printWindow.print()
+      // Close the window after printing (or if printing is canceled)
+      printWindow.onafterprint = () => {
+        printWindow.close()
+      }
+    }, 500)
+  }
 }
 
-// Export a full report with all charts and data
-const exportFullReport = async () => {
-  // Use the first available chart
-  let chartElement = null
-
-  if (typeChartRef.value) {
-    chartElement = await captureChart(typeChartRef.value)
+/**
+ * Print a comprehensive expense report
+ * Including summary, types, monthly trends, and category breakdowns
+ */
+const printFullReport = () => {
+  // Create a new window for printing
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) {
+    alert('Please allow pop-ups to print expense report')
+    return
   }
 
-  // Prepare summary data
+  // Calculate totals
   const totalAmount = props.expenses.reduce((sum, expense) => sum + expense.amount, 0)
-  const summaryData = [
-    {
-      label: 'Total Expenses',
-      value: formatCurrency(totalAmount)
-    },
-    {
-      label: 'Number of Expenses',
-      value: props.expenses.length.toString()
-    },
-    {
-      label: 'Average Expense',
-      value: formatCurrency(totalAmount / (props.expenses.length || 1))
-    }
-  ]
+  const averageAmount = totalAmount / (props.expenses.length || 1)
 
-  // Prepare breakdown data
-  const breakdownData = {
-    types: expensesByType.value,
-    months: expensesByMonth.value.map(month => ({
-      month: month.month,
-      value: month.total
-    }))
+  // Write the print document HTML
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Expense Analysis Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          .section { margin-bottom: 40px; page-break-after: auto; }
+          h1 { margin-bottom: 5px; }
+          h2 { margin-top: 30px; margin-bottom: 15px; color: #444; }
+          .subtitle { font-size: 14px; color: #777; margin-bottom: 30px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; }
+          .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px; }
+          .summary-card { background-color: #f9f9f9; padding: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .summary-card-title { font-size: 14px; color: #777; margin-bottom: 5px; }
+          .summary-card-value { font-size: 22px; font-weight: bold; }
+          .chart-image { max-width: 100%; height: auto; }
+          @media print {
+            .page-break { page-break-before: always; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Expense Analysis Report</h1>
+        <div class="subtitle">All time</div>
+
+        <section class="section">
+          <h2>Summary</h2>
+          <div class="summary-grid">
+            <div class="summary-card">
+              <div class="summary-card-title">Total Expenses</div>
+              <div class="summary-card-value">${formatCurrency(totalAmount)}</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-title">Number of Expenses</div>
+              <div class="summary-card-value">${props.expenses.length}</div>
+            </div>
+            <div class="summary-card">
+              <div class="summary-card-title">Average Expense</div>
+              <div class="summary-card-value">${formatCurrency(averageAmount)}</div>
+            </div>
+          </div>
+        </section>
+  `)
+
+  // Expenses by Type section
+  if (typeChartRef.value?.$el) {
+    const typeChart = captureChart(typeChartRef.value)
+    if (typeChart) {
+      printWindow.document.write(`
+        <section class="section">
+          <h2>Expenses by Type</h2>
+          <img class="chart-image" src="${typeChart.toDataURL('image/png')}" />
+
+          <table>
+            <tr>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>Percentage</th>
+              <th>Count</th>
+            </tr>
+      `)
+
+      expensesByType.value.forEach(item => {
+        printWindow.document.write(`
+          <tr>
+            <td>${item.name}</td>
+            <td>${formatCurrency(item.value)}</td>
+            <td>${Math.round(item.percentage || 0)}%</td>
+            <td>${item.count}</td>
+          </tr>
+        `)
+      })
+
+      printWindow.document.write('</table></section>')
+    }
   }
 
-  // Export the full report
-  if (chartElement) {
-    exportFullReportToPdf(
-      'Expense Analysis Report',
-      summaryData,
-      chartElement,
-      breakdownData,
-      'All time'
-    )
+  // Monthly Trends section
+  if (monthlyChartRef.value?.$el) {
+    const monthlyChart = captureChart(monthlyChartRef.value)
+    if (monthlyChart) {
+      printWindow.document.write(`
+        <section class="section page-break">
+          <h2>Monthly Expense Trends</h2>
+          <img class="chart-image" src="${monthlyChart.toDataURL('image/png')}" />
+
+          <table>
+            <tr>
+              <th>Month</th>
+              <th>Total Amount</th>
+            </tr>
+      `)
+
+      expensesByMonth.value.forEach(month => {
+        printWindow.document.write(`
+          <tr>
+            <td>${month.month}</td>
+            <td>${formatCurrency(month.total)}</td>
+          </tr>
+        `)
+      })
+
+      printWindow.document.write('</table></section>')
+    }
+  }
+
+  // Detailed Month Breakdown with Categories
+  printWindow.document.write(`
+    <section class="section page-break">
+      <h2>Detailed Monthly Breakdown by Category</h2>
+      <table>
+        <tr>
+          <th>Month</th>
+  `)
+
+  // Add headers for each expense type
+  expenseTypes.value.forEach(type => {
+    printWindow.document.write(`<th>${type}</th>`)
+  })
+  printWindow.document.write(`<th>Total</th></tr>`)
+
+  // Add data for each month
+  expensesByMonth.value.forEach(month => {
+    printWindow.document.write(`<tr><td>${month.month}</td>`)
+
+    expenseTypes.value.forEach(type => {
+      const value = month[type] as number || 0
+      printWindow.document.write(`<td>${formatCurrency(value)}</td>`)
+    })
+
+    printWindow.document.write(`<td>${formatCurrency(month.total)}</td></tr>`)
+  })
+
+  printWindow.document.write('</table></section>')
+
+  // Type Breakdown section (for each type)
+  printWindow.document.write('<section class="section page-break"><h2>Category Type Breakdown</h2>')
+
+  expensesByType.value.forEach((type, index) => {
+    // Add page break between types except for the first one
+    if (index > 0) {
+      printWindow.document.write('<div class="page-break"></div>')
+    }
+
+    printWindow.document.write(`
+      <div style="margin-top: 30px; margin-bottom: 20px;">
+        <h3>${type.name} - ${formatCurrency(type.value)}</h3>
+        <table>
+          <tr>
+            <th>Family</th>
+            <th>Amount</th>
+            <th>Percentage</th>
+          </tr>
+    `)
+
+    const families = getFamiliesForType(type.name)
+    families.forEach(family => {
+      printWindow.document.write(`
+        <tr>
+          <td>${family.name}</td>
+          <td>${formatCurrency(family.value)}</td>
+          <td>${Math.round(family.percentage || 0)}%</td>
+        </tr>
+      `)
+    })
+
+    printWindow.document.write('</table></div>')
+
+    // If there are families, add a breakdown of the first family's categories
+    if (families.length > 0) {
+      const firstFamily = families[0]
+      const categories = getCategoriesForTypeAndFamily(type.name, firstFamily.name)
+
+      if (categories.length > 0) {
+        printWindow.document.write(`
+          <div style="margin-left: 20px; margin-top: 15px;">
+            <h4>Categories in ${firstFamily.name}</h4>
+            <table>
+              <tr>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Percentage</th>
+              </tr>
+        `)
+
+        categories.forEach(category => {
+          printWindow.document.write(`
+            <tr>
+              <td>${category.name}</td>
+              <td>${formatCurrency(category.value)}</td>
+              <td>${Math.round(category.percentage || 0)}%</td>
+            </tr>
+          `)
+        })
+
+        printWindow.document.write('</table></div>')
+      }
+    }
+  })
+
+  printWindow.document.write('</section>')
+
+  // Finish the HTML document
+  printWindow.document.write(`
+      </body>
+    </html>
+  `)
+
+  // Wait for images to load before printing
+  printWindow.document.close()
+  printWindow.onload = () => {
+    setTimeout(() => {
+      printWindow.print()
+      // Close the window after printing (or if printing is canceled)
+      printWindow.onafterprint = () => {
+        printWindow.close()
+      }
+    }, 500)
   }
 }
 </script>
@@ -662,20 +924,20 @@ const exportFullReport = async () => {
         <NSpace>
           <NTooltip>
             <template #trigger>
-              <NButton type="primary" ghost size="small" @click="exportCurrentChart">
-                Export Visible Charts
+              <NButton type="primary" ghost size="small" @click="printVisibleCharts">
+                Print Visible Charts
               </NButton>
             </template>
-            Export all currently visible charts as PDF
+            Print all currently visible charts
           </NTooltip>
 
           <NTooltip>
             <template #trigger>
-              <NButton type="primary" size="small" @click="exportFullReport">
-                Export Full Report
+              <NButton type="primary" size="small" @click="printFullReport">
+                Print Full Report
               </NButton>
             </template>
-            Export a comprehensive report with summary data and all charts
+            Print a comprehensive report with summary data and all charts
           </NTooltip>
         </NSpace>
       </div>
@@ -921,7 +1183,6 @@ const exportFullReport = async () => {
     </template>
   </div>
 </template>
-
 <style scoped>
 .expense-charts {
   margin-bottom: 20px;
