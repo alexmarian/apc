@@ -258,9 +258,7 @@ onMounted(() => {
       <NSpin :show="loading">
         <NAlert v-if="error" type="error" title="Error" closable>
           {{ error }}
-          <template #action>
-            <NButton @click="fetchExpenses">Retry</NButton>
-          </template>
+          <NButton @click="fetchExpenses">Retry</NButton>
         </NAlert>
 
         <div v-if="expenses.length > 0" class="summary">

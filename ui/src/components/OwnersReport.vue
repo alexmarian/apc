@@ -19,7 +19,7 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { ownerApi } from '@/services/api'
 import { formatPercentage } from '@/utils/formatters'
-import type { OwnerReportItem } from '@/types/api'
+import type { OwnerReportItem, Owner, OwnerUnit, OwnerCoOwner } from '@/types/api'
 import { useI18n } from 'vue-i18n'
 
 // i18n
@@ -32,26 +32,29 @@ const props = defineProps<{
 }>()
 
 // State
-const loading = ref(false)
+const loading = ref<boolean>(false)
 const error = ref<string | null>(null)
 const ownersData = ref<OwnerReportItem[] | null>(null)
 const message = useMessage()
-const includeUnits = ref(false)
-const includeCoOwners = ref(false)
-const searchQuery = ref('')
+const includeUnits = ref<boolean>(false)
+const includeCoOwners = ref<boolean>(false)
+const searchQuery = ref<string>('')
 const sortBy = ref<'name' | 'part'>('part')
 const sortOrder = ref<'asc' | 'desc'>('desc')
 const ownerFilter = ref<number | null>(null)
-const selectedOwnerData = computed(()=>{
+
+// Computed property for selected owner data
+const selectedOwnerData = computed<OwnerReportItem | undefined>(()=>{
   return filteredSortedData.value?.find(item => item.owner.id === ownerFilter.value)
 })
+
 // Column definitions for the data table
-const columns = computed(() => {
+const columns = computed<DataTableColumns<OwnerReportItem>>(() => {
   const cols: DataTableColumns<OwnerReportItem> = [
     {
       title: t('owners.name', 'Owner'),
       key: 'owner.name',
-      sorter: (a, b) => a.owner.name.localeCompare(b.owner.name)
+      sorter: (a: OwnerReportItem, b: OwnerReportItem) => a.owner.name.localeCompare(b.owner.name)
     },
     {
       title: t('owners.identification', 'Identification'),
@@ -68,24 +71,24 @@ const columns = computed(() => {
     {
       title: t('owners.totalArea', 'Total Area'),
       key: 'statistics.total_area',
-      sorter: (a, b) => a.statistics.total_area - b.statistics.total_area,
-      render: (row) => `${row.statistics.total_area.toFixed(2)} m²`
+      sorter: (a: OwnerReportItem, b: OwnerReportItem) => a.statistics.total_area - b.statistics.total_area,
+      render: (row: OwnerReportItem) => `${row.statistics.total_area.toFixed(2)} m²`
     },
     {
       title: t('owners.totalPart', 'Condo Part'),
       key: 'statistics.total_condo_part',
-      sorter: (a, b) => a.statistics.total_condo_part - b.statistics.total_condo_part,
-      render: (row) => formatPercentage(row.statistics.total_condo_part, 4)
+      sorter: (a: OwnerReportItem, b: OwnerReportItem) => a.statistics.total_condo_part - b.statistics.total_condo_part,
+      render: (row: OwnerReportItem) => formatPercentage(row.statistics.total_condo_part, 4)
     },
     {
       title: t('units.title', 'Units'),
       key: 'statistics.total_units',
-      sorter: (a, b) => a.statistics.total_units - b.statistics.total_units
+      sorter: (a: OwnerReportItem, b: OwnerReportItem) => a.statistics.total_units - b.statistics.total_units
     },
     {
       title: t('common.actions', 'Actions'),
       key: 'actions',
-      render: (row) => {
+      render: (row: OwnerReportItem) => {
         return h(
           NSpace,
           { justify: 'center', align: 'center' },
@@ -110,7 +113,7 @@ const columns = computed(() => {
 })
 
 // Fetch owners report
-const fetchOwnersReport = async () => {
+const fetchOwnersReport = async (): Promise<void> => {
   if (!props.associationId) return
 
   try {
@@ -120,8 +123,7 @@ const fetchOwnersReport = async () => {
     const response = await ownerApi.getOwnerReport(
       props.associationId,
       includeUnits.value,
-      includeCoOwners.value,
-      ownerFilter.value || undefined
+      includeCoOwners.value
     )
 
     ownersData.value = response.data
@@ -134,7 +136,7 @@ const fetchOwnersReport = async () => {
 }
 
 // Handle viewing owner details
-const handleViewOwnerDetails = (ownerId: number) => {
+const handleViewOwnerDetails = (ownerId: number): void => {
   if (ownerId === ownerFilter.value) {
     // If already filtered by this owner, clear filter
     ownerFilter.value = null
@@ -145,15 +147,15 @@ const handleViewOwnerDetails = (ownerId: number) => {
 }
 
 // Export to CSV
-const exportToCSV = () => {
-  if (!ownersData.value) {
+const exportToCSV = (): void => {
+  if (!ownersData.value || filteredSortedData.value.length === 0) {
     message.error('No data to export')
     return
   }
 
   try {
     // Create CSV headers
-    const headers = [
+    const headers: string[] = [
       'Owner ID',
       'Owner Name',
       'Identification Number',
@@ -175,16 +177,16 @@ const exportToCSV = () => {
     }
 
     // Create CSV rows
-    const rows = filteredSortedData.value.map(item => {
-      const row = [
+    const rows: (string | number)[][] = filteredSortedData.value.map(item => {
+      const row: (string | number)[] = [
         item.owner.id,
         item.owner.name,
         item.owner.identification_number,
         item.owner.contact_phone,
         item.owner.contact_email,
         item.statistics.total_units,
-        item.statistics.total_area.toFixed(2),
-        (item.statistics.total_condo_part * 100).toFixed(4)
+        parseFloat(item.statistics.total_area.toFixed(2)),
+        parseFloat((item.statistics.total_condo_part * 100).toFixed(4))
       ]
 
       // Add co-owners if included
@@ -257,7 +259,7 @@ const exportToCSV = () => {
 }
 
 // Filter and sort data
-const filteredSortedData = computed(() => {
+const filteredSortedData = computed<OwnerReportItem[]>(() => {
   if (!ownersData.value) return []
 
   let data = [...ownersData.value]
@@ -372,9 +374,7 @@ onMounted(() => {
       <NSpin :show="loading">
         <NAlert v-if="error" type="error" style="margin-bottom: 16px;">
           {{ error }}
-          <template #action>
             <NButton @click="fetchOwnersReport">{{ t('common.retry', 'Retry') }}</NButton>
-          </template>
         </NAlert>
 
         <div v-if="ownersData && filteredSortedData.length > 0" class="owners-table">
@@ -391,20 +391,20 @@ onMounted(() => {
             :pagination="{
               pageSize: 10
             }"
-            :row-key="row => row.owner.id"
+            :row-key="(row: OwnerReportItem) => row.owner.id"
             :bordered="false"
           />
 
           <!-- Units Details (visible when owner is filtered and includeUnits is true) -->
-          <div v-if="ownerFilter !== null && includeUnits && filteredSortedData.length > 0 && selectedOwnerData.units">
+          <div v-if="ownerFilter !== null && includeUnits && filteredSortedData.length > 0 && selectedOwnerData?.units">
             <div class="details-section">
               <h3>{{ t('owners.unitsDetails', "Owner's Units") }}</h3>
               <NDataTable
                 :columns="[
                   { title: t('units.building', 'Building'), key: 'building_name' },
                   { title: t('units.unit', 'Unit'), key: 'unit_number' },
-                  { title: t('units.area', 'Area'), key: 'area', render: (row) => `${row.area.toFixed(2)} m²` },
-                  { title: t('units.part', 'Part'), key: 'part', render: (row) => formatPercentage(row.part, 4) },
+                  { title: t('units.area', 'Area'), key: 'area', render: (row: OwnerUnit) => `${row.area.toFixed(2)} m²` },
+                  { title: t('units.part', 'Part'), key: 'part', render: (row: OwnerUnit) => formatPercentage(row.part, 4) },
                   { title: t('units.type', 'Type'), key: 'unit_type' }
                 ]"
                 :data="selectedOwnerData.units"
@@ -417,7 +417,7 @@ onMounted(() => {
           </div>
 
           <!-- Co-Owners Details (visible when owner is filtered and includeCoOwners is true) -->
-          <div v-if="ownerFilter !== null && includeCoOwners && filteredSortedData.length > 0 && selectedOwnerData.co_owners && selectedOwnerData.co_owners.length > 0">
+          <div v-if="ownerFilter !== null && includeCoOwners && filteredSortedData.length > 0 && selectedOwnerData?.co_owners && selectedOwnerData.co_owners.length > 0">
             <div class="details-section">
               <h3>{{ t('owners.coOwners', 'Co-Owners') }}</h3>
               <NDataTable
@@ -426,7 +426,7 @@ onMounted(() => {
                   { title: t('owners.identification', 'Identification'), key: 'identification_number' },
                   { title: t('owners.contactPhone', 'Contact Phone'), key: 'contact_phone' },
                   { title: t('owners.contactEmail', 'Contact Email'), key: 'contact_email' },
-                  { title: t('owners.sharedUnits', 'Shared Units'), key: 'shared_unit_nums', render: (row) => row.shared_unit_nums.join(', ') }
+                  { title: t('owners.sharedUnits', 'Shared Units'), key: 'shared_unit_nums', render: (row: OwnerCoOwner) => row.shared_unit_nums.join(', ') }
                 ]"
                 :data="selectedOwnerData.co_owners"
                 :pagination="{

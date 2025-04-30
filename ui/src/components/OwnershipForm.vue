@@ -139,7 +139,7 @@ const handleSubmit = async () => {
     }
 
     // Create the ownership
-    await unitApi.createUnitOwnership(
+    await ownershipApi.createUnitOwnership(
       props.associationId,
       props.buildingId,
       props.unitId,
