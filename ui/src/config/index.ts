@@ -29,7 +29,7 @@ const devConfig: AppConfig = {
 // Production configuration
 const prodConfig: AppConfig = {
   apiBaseUrl: import.meta.env.MODE === 'production'
-    ? (import.meta.env.VITE_API_BASE_URL || 'https://api.example.com/v1/api')
+    ? (import.meta.env.VITE_API_BASE_URL || '/v1/api')
     : devConfig.apiBaseUrl,
   apiTimeout: 30000,
   authTokenKey: 'apc_auth_token',

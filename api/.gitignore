@@ -2,3 +2,4 @@
 /apc.db
 sql/samples/*.sql
 /api
+/static/
