@@ -8,12 +8,12 @@ import {
   NSpace,
   NSpin,
   NAlert,
-  FormRules,
   NInputNumber,
   NSelect
 } from 'naive-ui'
 import { unitApi } from '@/services/api'
 import type { Unit } from '@/types/api'
+import type { FormInst, FormRules } from 'naive-ui'
 
 const props = defineProps<{
   associationId: number
@@ -112,13 +112,13 @@ const rules: FormRules = {
 const loading = ref<boolean>(false)
 const submitting = ref<boolean>(false)
 const error = ref<string | null>(null)
-const formRef = ref(null)
+const formRef = ref<FormInst | null>(null)
 const dataLoaded = ref(false)
 
 const resetValidation = async () => {
   if (formRef.value) {
     try {
-      await formRef.value.resetValidation()
+      await formRef.value.restoreValidation()
     } catch (err) {
       console.log('Error resetting validation:', err)
     }
