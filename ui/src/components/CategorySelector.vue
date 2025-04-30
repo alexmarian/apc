@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { NSelect, NSpin } from 'naive-ui'
 import { categoryApi } from '@/services/api'
 import type { Category } from '@/types/api'
@@ -70,11 +70,13 @@ const fetchCategories = async () => {
 const handleChange = (value: number | null) => {
   emit('update:modelValue', value)
 }
-
-// Load categories on mount
-onMounted(() => {
-  fetchCategories()
-})
+watch(
+  () => props.associationId,
+  (newValue) => {
+    fetchCategories()
+  },
+  { immediate: true }
+)
 </script>
 
 <template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { NSelect, NSpin } from 'naive-ui'
 import { buildingApi } from '@/services/api'
 import type { Building } from '@/types/api'
