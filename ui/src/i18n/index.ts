@@ -29,7 +29,7 @@ const i18n = createI18n({
 export default i18n
 
 // Function to change locale
-export const setLocale = (locale: string) => {
+export const setLocale = (locale: "en" | "ro") => {
   i18n.global.locale.value = locale
   localStorage.setItem('userLocale', locale)
   document.querySelector('html')?.setAttribute('lang', locale)

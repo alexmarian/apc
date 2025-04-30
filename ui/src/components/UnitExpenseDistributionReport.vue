@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue';
 import {
   NCard,
   NSpace,
@@ -14,96 +14,94 @@ import {
   NDivider,
   NEmpty,
   useMessage
-} from 'naive-ui'
-import type { DataTableColumns } from 'naive-ui'
-import { expenseApi, categoryApi } from '@/services/api'
-import AssociationSelector from '@/components/AssociationSelector.vue'
-import BuildingSelector from '@/components/BuildingSelector.vue'
-import CategorySelector from '@/components/CategorySelector.vue'
-import { formatCurrency } from '@/utils/formatters'
-import type { ExpenseDistributionResponse } from '@/types/api.ts'
+} from 'naive-ui';
+import type { DataTableColumns } from 'naive-ui';
+import { expenseApi, categoryApi } from '@/services/api';
+import AssociationSelector from '@/components/AssociationSelector.vue';
+import BuildingSelector from '@/components/BuildingSelector.vue';
+import CategorySelector from '@/components/CategorySelector.vue';
+import { formatCurrency } from '@/utils/formatters';
+import type { ExpenseDistributionResponse, Category } from '@/types/api';
 
 // Message provider
-const message = useMessage()
+const message = useMessage();
 
 // Props
 const props = defineProps<{
-  associationId?: number
-  buildingId?: number
-}>()
+  associationId: number | null;
+  buildingId: number | null;
+}>();
 
 // Emits
 const emit = defineEmits<{
-  (e: 'update:associationId', id: number): void
-  (e: 'update:buildingId', id: number): void
-}>()
+  (e: 'update:associationId', id: number): void;
+  (e: 'update:buildingId', id: number): void;
+}>();
 
 // State
-const loading = ref(false)
-const metadataLoading = ref(false)
-const error = ref<string | null>(null)
+const loading = ref<boolean>(false);
+const metadataLoading = ref<boolean>(false);
+const error = ref<string | null>(null);
 const dateRange = ref<[number, number] | null>([
   new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getTime(),
   new Date().getTime()
-])
-const selectedCategoryId = ref<number | null>(null)
-const selectedCategoryType = ref<string | null>(null)
-const selectedCategoryFamily = ref<string | null>(null)
-const distributionMethod = ref<'area' | 'count' | 'equal'>('area')
-const unitType = ref<string | null>(null)
-const distributionData = ref<ExpenseDistributionResponse | null>(null)
-const categories = ref<Category[] | null>(null)
-const categoryOptions = ref<{ label: string, value: string }[]>([])
-const categoryTypeOptions = ref<{ label: string, value: string }[]>([])
-const categoryFamilyOptions = ref<{ label: string, value: string }[]>([])
-const initialLoadComplete = ref(false)
+]);
+const selectedCategoryId = ref<number | null>(null);
+const selectedCategoryType = ref<string | null>(null);
+const selectedCategoryFamily = ref<string | null>(null);
+const distributionMethod = ref<'area' | 'count' | 'equal'>('area');
+const unitType = ref<string | null>(null);
+const distributionData = ref<ExpenseDistributionResponse | null>(null);
+const categories = ref<Category[] | null>(null);
+const categoryOptions = ref<{ label: string; value: string }[]>([]);
+const categoryTypeOptions = ref<{ label: string; value: string }[]>([]);
+const categoryFamilyOptions = ref<{ label: string; value: string }[]>([]);
+const initialLoadComplete = ref<boolean>(false);
 
-// Static unit type options as requested
-const unitTypeOptions = [
+// Static unit type options
+const unitTypeOptions: { label: string; value: string }[] = [
   { label: 'Apartment', value: 'apartment' },
   { label: 'Commercial', value: 'commercial' },
   { label: 'Office', value: 'office' },
   { label: 'Parking', value: 'parking' },
   { label: 'Storage', value: 'storage' }
-]
-
-// Set local association and building IDs if provided as props
-const associationId = computed({
-  get: () => props.associationId || null,
-  set: (value) => emit('update:associationId', value as number)
-})
-
-const buildingId = computed({
-  get: () => props.buildingId || null,
-  set: (value) => emit('update:buildingId', value as number)
-})
+];
 
 // Computed properties
-const startDate = computed(() => {
-  return dateRange.value ? new Date(dateRange.value[0]) : null
-})
+const associationId = computed<number | null>({
+  get: () => props.associationId || null,
+  set: (value) => emit('update:associationId', value as number)
+});
 
-const endDate = computed(() => {
-  return dateRange.value ? new Date(dateRange.value[1]) : null
-})
+const buildingId = computed<number | null>({
+  get: () => props.buildingId || null,
+  set: (value) => emit('update:buildingId', value as number)
+});
 
-const formattedDateRange = computed(() => {
-  if (!dateRange.value) return 'All time'
-  const start = new Date(dateRange.value[0]).toLocaleDateString()
-  const end = new Date(dateRange.value[1]).toLocaleDateString()
-  return `${start} - ${end}`
-})
+const startDate = computed<Date | null>(() => {
+  return dateRange.value ? new Date(dateRange.value[0]) : null;
+});
 
-const totalExpenses = computed(() => {
-  return distributionData.value?.total_expenses || 0
-})
+const endDate = computed<Date | null>(() => {
+  return dateRange.value ? new Date(dateRange.value[1]) : null;
+});
 
-const totalUnits = computed(() => {
-  return distributionData.value?.total_units || 0
-})
+const formattedDateRange = computed<string>(() => {
+  if (!dateRange.value) return 'All time';
+  const start = new Date(dateRange.value[0]).toLocaleDateString();
+  const end = new Date(dateRange.value[1]).toLocaleDateString();
+  return `${start} - ${end}`;
+});
 
-// Distribution table columns
-const distributionColumns = computed(() => {
+const totalExpenses = computed<number>(() => {
+  return distributionData.value?.total_expenses || 0;
+});
+
+const totalUnits = computed<number>(() => {
+  return distributionData.value?.total_units || 0;
+});
+
+const distributionColumns = computed<DataTableColumns<any>>(() => {
   const columns: DataTableColumns<any> = [
     {
       title: 'Unit',
@@ -131,176 +129,150 @@ const distributionColumns = computed(() => {
       render: (row) => formatCurrency(row.total_share),
       sorter: (a, b) => a.total_share - b.total_share
     }
-  ]
+  ];
 
-  // Add category shares if we have category data
-  if (distributionData.value && distributionData.value.category_totals) {
-    const categoryKeys = Object.keys(distributionData.value.category_totals)
+  if (distributionData.value?.category_totals) {
+    const categoryKeys = Object.keys(distributionData.value.category_totals);
 
     for (const category of categoryKeys) {
       columns.push({
         title: category,
         key: category,
         render: (row) => formatCurrency(row.expenses_share[category] || 0)
-      })
+      });
     }
   }
 
-  return columns
-})
+  return columns;
+});
 
 // Methods
-// Fetch data from the expense distribution API
-const fetchDistributionReport = async () => {
+const fetchDistributionReport = async (): Promise<void> => {
   if (!associationId.value) {
-    error.value = 'Please select an association'
-    return
+    error.value = 'Please select an association';
+    return;
   }
 
   try {
-    loading.value = true
-    error.value = null
+    loading.value = true;
+    error.value = null;
 
-    // Format dates for API
-    const startDateStr = startDate.value ? startDate.value.toISOString().split('T')[0] : undefined
-    const endDateStr = endDate.value ? endDate.value.toISOString().split('T')[0] : undefined
+    const startDateStr = startDate.value?.toISOString().split('T')[0];
+    const endDateStr = endDate.value?.toISOString().split('T')[0];
 
-    // Call the expense distribution API
-    const response = await expenseApi.getExpenseDistribution(
-      associationId.value,
-      {
-        start_date: startDateStr,
-        end_date: endDateStr,
-        category_id: selectedCategoryId.value,
-        category_type: selectedCategoryType.value,
-        category_family: selectedCategoryFamily.value,
-        distribution_method: distributionMethod.value,
-        unit_type: unitType.value
-      }
-    )
+    const response = await expenseApi.getExpenseDistribution(associationId.value, {
+      start_date: startDateStr,
+      end_date: endDateStr,
+      category_id: selectedCategoryId.value,
+      category_type: selectedCategoryType.value,
+      category_family: selectedCategoryFamily.value,
+      distribution_method: distributionMethod.value,
+      unit_type: unitType.value
+    });
 
-    distributionData.value = response.data
-    console.log('Distribution data:', distributionData.value)
-    message.success('Report generated successfully')
+    distributionData.value = response.data;
+    message.success('Report generated successfully');
   } catch (err) {
-    console.error('Error fetching expense distribution:', err)
-    error.value = err instanceof Error ? err.message : 'An error occurred while fetching data'
+    console.error('Error fetching expense distribution:', err);
+    error.value = err instanceof Error ? err.message : 'An error occurred while fetching data';
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
-// Fetch category types and families from API
-const fetchCategoryMetadata = async () => {
-  if (!associationId.value) return
+const fetchCategoryMetadata = async (): Promise<void> => {
+  if (!associationId.value) return;
 
   try {
-    metadataLoading.value = true
+    metadataLoading.value = true;
 
-    // Fetch all categories from the existing endpoint
-    const response = await categoryApi.getCategories(associationId.value)
-    categories.value = response.data
+    const response = await categoryApi.getCategories(associationId.value);
+    categories.value = response.data;
 
-    // Extract unique types and families
-    const types = new Set<string>()
-    const families = new Set<string>()
+    const types = new Set<string>();
+    const families = new Set<string>();
 
-    categories.value.forEach(category => {
-      if (category.type) types.add(category.type)
-      if (category.family) families.add(category.family)
-    })
+    categories.value.forEach((category) => {
+      if (category.type) types.add(category.type);
+      if (category.family) families.add(category.family);
+    });
 
-    categoryOptions.value = Array.from(categories).map(cat => ({
+    categoryOptions.value = categories.value.map((cat) => ({
       label: cat.name,
-      value: cat.id
-    }))
-    // Update options
-    categoryTypeOptions.value = Array.from(types).map(type => ({
+      value: cat.id.toString()
+    }));
+
+    categoryTypeOptions.value = Array.from(types).map((type) => ({
       label: type,
       value: type
-    }))
+    }));
 
-    categoryFamilyOptions.value = Array.from(families).map(family => ({
+    categoryFamilyOptions.value = Array.from(families).map((family) => ({
       label: family,
       value: family
-    }))
-
+    }));
   } catch (err) {
-    console.error('Error fetching category metadata:', err)
+    console.error('Error fetching category metadata:', err);
   } finally {
-    metadataLoading.value = false
+    metadataLoading.value = false;
   }
-}
+};
 
-// Update family options when category type changes
-const updateCategoryFamilies = () => {
-  if (!associationId.value) return
+const updateCategoryFamilies = (): void => {
+  if (!associationId.value) return;
 
-  try {
-    metadataLoading.value = true
+  metadataLoading.value = true;
 
-    // Use the categories API to get all categories and filter them
-    categoryApi.getCategories(associationId.value).then(response => {
-      const categories = response.data
-      const families = new Set<string>()
+  categoryApi.getCategories(associationId.value).then((response) => {
+    const categories = response.data;
+    const families = new Set<string>();
 
-      categories.forEach(category => {
-        // Only include families that match the selected type
-        if (selectedCategoryType.value && category.type !== selectedCategoryType.value) {
-          return
-        }
+    categories.forEach((category) => {
+      if (selectedCategoryType.value && category.type !== selectedCategoryType.value) {
+        return;
+      }
 
-        if (category.family) {
-          families.add(category.family)
-        }
-      })
+      if (category.family) {
+        families.add(category.family);
+      }
+    });
 
-      categoryFamilyOptions.value = Array.from(families).map(family => ({
-        label: family,
-        value: family
-      }))
+    categoryFamilyOptions.value = Array.from(families).map((family) => ({
+      label: family,
+      value: family
+    }));
 
-      metadataLoading.value = false
-    })
-  } catch (err) {
-    console.error('Error updating category families:', err)
-    metadataLoading.value = false
-  }
-}
+    metadataLoading.value = false;
+  });
+};
 
-// Reset all filters
-const resetFilters = () => {
+const resetFilters = (): void => {
   dateRange.value = [
     new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getTime(),
     new Date().getTime()
-  ]
-  selectedCategoryId.value = null
-  selectedCategoryType.value = null
-  selectedCategoryFamily.value = null
-  unitType.value = null
-  distributionMethod.value = 'area'
-}
+  ];
+  selectedCategoryId.value = null;
+  selectedCategoryType.value = null;
+  selectedCategoryFamily.value = null;
+  unitType.value = null;
+  distributionMethod.value = 'area';
+};
 
-// Export data to CSV
-const exportToCSV = () => {
+const exportToCSV = (): void => {
   if (!distributionData.value) {
-    message.error('No data to export')
-    return
+    message.error('No data to export');
+    return;
   }
 
   try {
-    // Create CSV header row
-    const headers = ['Unit Number', 'Building', 'Type', 'Area (m²)', 'Distribution Factor', 'Total Share']
-
-    // Add category headers if available
+    const headers = ['Unit Number', 'Building', 'Type', 'Area (m²)', 'Distribution Factor', 'Total Share'];
     const categoryHeaders = distributionData.value.category_totals
       ? Object.keys(distributionData.value.category_totals)
-      : []
+      : [];
 
-    headers.push(...categoryHeaders)
+    headers.push(...categoryHeaders);
 
-    // Create CSV rows
-    const rows = distributionData.value.unit_distributions.map(unit => {
+    const rows = distributionData.value.unit_distributions.map((unit) => {
       const row = [
         unit.unit_number,
         unit.building_name,
@@ -308,84 +280,76 @@ const exportToCSV = () => {
         unit.area,
         (unit.distribution_factor * 100).toFixed(2) + '%',
         unit.total_share.toFixed(2)
-      ]
+      ];
 
-      // Add category values
-      categoryHeaders.forEach(category => {
-        row.push((unit.expenses_share[category] || 0).toFixed(2))
-      })
+      categoryHeaders.forEach((category) => {
+        row.push((unit.expenses_share[category] || 0).toFixed(2));
+      });
 
-      return row
-    })
+      return row;
+    });
 
-    // Create CSV content
-    let csvContent = headers.join(',') + '\n'
-    rows.forEach(row => {
-      csvContent += row.join(',') + '\n'
-    })
+    let csvContent = headers.join(',') + '\n';
+    rows.forEach((row) => {
+      csvContent += row.join(',') + '\n';
+    });
 
-    // Add summary data
-    csvContent += '\n'
-    csvContent += 'Report Period:,' + formattedDateRange.value + '\n'
-    csvContent += 'Distribution Method:,' + distributionMethod.value + '\n'
-    csvContent += 'Total Units:,' + totalUnits.value + '\n'
-    csvContent += 'Total Expenses:,' + totalExpenses.value.toFixed(2) + '\n'
+    csvContent += '\n';
+    csvContent += 'Report Period:,' + formattedDateRange.value + '\n';
+    csvContent += 'Distribution Method:,' + distributionMethod.value + '\n';
+    csvContent += 'Total Units:,' + totalUnits.value + '\n';
+    csvContent += 'Total Expenses:,' + totalExpenses.value.toFixed(2) + '\n';
 
-    // Add category totals
     if (distributionData.value.category_totals) {
-      csvContent += '\nCategory Totals:\n'
-      csvContent += 'Category,Amount\n'
+      csvContent += '\nCategory Totals:\n';
+      csvContent += 'Category,Amount\n';
       Object.entries(distributionData.value.category_totals).forEach(([category, data]: [string, any]) => {
-        csvContent += `${category},${data.amount.toFixed(2)}\n`
-      })
+        csvContent += `${category},${data.amount.toFixed(2)}\n`;
+      });
     }
 
-    // Create a CSV blob and download it
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', `expense_distribution_${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `expense_distribution_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-    message.success('CSV exported successfully')
+    message.success('CSV exported successfully');
   } catch (err) {
-    console.error('Error exporting to CSV:', err)
-    message.error('Failed to export CSV')
+    console.error('Error exporting to CSV:', err);
+    message.error('Failed to export CSV');
   }
-}
+};
 
-// Watch for property changes to reload metadata
+// Watchers
 watch([associationId], () => {
   if (associationId.value) {
-    fetchCategoryMetadata()
-    initialLoadComplete.value = true
+    fetchCategoryMetadata();
+    initialLoadComplete.value = true;
   }
-})
+});
 
-// When category type changes, update family options
 watch([selectedCategoryType], () => {
   if (associationId.value) {
-    // If we select a category type, reset the family selection
     if (selectedCategoryType.value !== null) {
-      selectedCategoryFamily.value = null
+      selectedCategoryFamily.value = null;
     }
 
-    // Update family options based on the selected type
-    updateCategoryFamilies()
+    updateCategoryFamilies();
   }
-})
+});
 
-// Load category metadata on component mount
+// Lifecycle
 onMounted(() => {
   if (associationId.value) {
-    fetchCategoryMetadata()
-    initialLoadComplete.value = true
+    fetchCategoryMetadata();
+    initialLoadComplete.value = true;
   }
-})
+});
 </script>
 
 <template>

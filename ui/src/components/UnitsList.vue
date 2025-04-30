@@ -177,11 +177,11 @@ const fetchUnits = async () => {
   }
 }
 
-const searchQueryChanged = (newValue) => {
+const searchQueryChanged = (newValue: string | null) => {
   searchQuery.value = newValue
   emit('search-query-changed', newValue)
 }
-const unitTypeChanged = (newValue) => {
+const unitTypeChanged = (newValue: string | null) => {
   unitTypeFilter.value = newValue
   emit('unit-type-changed', newValue)
 }
@@ -236,9 +236,7 @@ onMounted(() => {
       <NSpin :show="loading">
         <NAlert v-if="error" type="error" title="Error" closable>
           {{ error }}
-          <template #action>
-            <NButton @click="fetchUnits">Retry</NButton>
-          </template>
+          <NButton @click="fetchUnits">Retry</NButton>
         </NAlert>
 
         <div v-if="filteredUnits.length > 0" class="summary">

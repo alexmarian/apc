@@ -59,7 +59,7 @@ const unitTypeColor = computed(() => {
       <NDescriptionsItem label="Rooms">
         {{ unit.room_count }}
       </NDescriptionsItem>
-      <NDescriptionsItem label="Address" span="2">
+      <NDescriptionsItem label="Address" :span="2">
         {{ unit.address }}
       </NDescriptionsItem>
     </NDescriptions>

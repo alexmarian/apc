@@ -28,7 +28,7 @@ const devConfig: AppConfig = {
 
 // Production configuration
 const prodConfig: AppConfig = {
-  apiBaseUrl: process.env.NODE_ENV === 'production'
+  apiBaseUrl: import.meta.env.MODE === 'production'
     ? (import.meta.env.VITE_API_BASE_URL || 'https://api.example.com/v1/api')
     : devConfig.apiBaseUrl,
   apiTimeout: 30000,
@@ -39,6 +39,6 @@ const prodConfig: AppConfig = {
 }
 
 // Export the appropriate configuration based on environment
-const config: AppConfig = process.env.NODE_ENV === 'production' ? prodConfig : devConfig
+const config: AppConfig = import.meta.env.MODE === 'production' ? prodConfig : devConfig
 
 export default config
