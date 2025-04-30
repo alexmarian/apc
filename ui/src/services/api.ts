@@ -15,7 +15,7 @@ import type {
   LoginRequest,
   LoginResponse,
   Owner,
-  Unit
+  Unit, UnitReportDetails
 } from '@/types/api'
 import config from '@/config'
 import { useAuthStore } from '@/stores/auth'
@@ -141,7 +141,7 @@ export const unitApi = {
     api.put<Unit>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}`, unitData),
 
   getUnitReport: (associationId: number, buildingId: number, unitId: number) =>
-    api.get<any>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}/report`),
+    api.get<UnitReportDetails>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}/report`),
 
   getUnitOwners: (associationId: number, buildingId: number, unitId: number) =>
     api.get<Owner[]>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}/owners`),

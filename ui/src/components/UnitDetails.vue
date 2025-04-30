@@ -18,6 +18,14 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { unitApi } from '@/services/api'
 import OwnershipManager from './OwnershipManager.vue'
+import type {
+  UnitReportDetails,
+  ApiResponse
+} from '@/types/api'
+
+// Use interfaces directly from the imported types
+type Owner = UnitReportDetails['current_owners'][number];
+type OwnershipRecord = UnitReportDetails['ownership_history'][number];
 
 // Props
 const props = defineProps<{
@@ -36,11 +44,18 @@ const emit = defineEmits<{
 // Data
 const loading = ref<boolean>(false)
 const error = ref<string | null>(null)
-const unitReport = ref<any | null>(null)
+const unitReport = ref<UnitReportDetails | null>(null)
 const activeTab = ref<string>('info')
 
+// Define a more specific column type that ensures key property exists
+interface OwnerTableColumn {
+  title: string;
+  key: string;
+  render?: (row: Owner) => any;
+}
+
 // Owners table columns
-const ownersColumns = ref<DataTableColumns<any>>([
+const ownersColumns = ref<OwnerTableColumn[]>([
   {
     title: 'Name',
     key: 'name'
@@ -60,7 +75,7 @@ const ownersColumns = ref<DataTableColumns<any>>([
   {
     title: 'Status',
     key: 'is_active',
-    render(row) {
+    render(row: Owner) {
       return row.is_active
         ? h(NTag, { type: 'success' }, { default: () => 'Active' })
         : h(NTag, { type: 'warning' }, { default: () => 'Inactive' })
@@ -69,7 +84,7 @@ const ownersColumns = ref<DataTableColumns<any>>([
   {
     title: 'Actions',
     key: 'actions',
-    render(row) {
+    render(row: Owner) {
       return h(
         NButton,
         {
@@ -82,8 +97,15 @@ const ownersColumns = ref<DataTableColumns<any>>([
   }
 ])
 
+// Define a more specific column type for ownership history
+interface OwnershipTableColumn {
+  title: string;
+  key: string;
+  render?: (row: OwnershipRecord) => any;
+}
+
 // Ownership history columns
-const ownershipColumns = ref<DataTableColumns<any>>([
+const ownershipColumns = ref<OwnershipTableColumn[]>([
   {
     title: 'Owner',
     key: 'owner_name'
@@ -91,21 +113,21 @@ const ownershipColumns = ref<DataTableColumns<any>>([
   {
     title: 'Start Date',
     key: 'start_date',
-    render(row) {
+    render(row: OwnershipRecord) {
       return new Date(row.start_date).toLocaleDateString()
     }
   },
   {
     title: 'End Date',
     key: 'end_date',
-    render(row) {
+    render(row: OwnershipRecord) {
       return row.end_date ? new Date(row.end_date).toLocaleDateString() : '-'
     }
   },
   {
     title: 'Status',
     key: 'is_active',
-    render(row) {
+    render(row: OwnershipRecord) {
       return row.is_active
         ? h(NTag, { type: 'success' }, { default: () => 'Active' })
         : h(NTag, { type: 'warning' }, { default: () => 'Inactive' })
@@ -118,12 +140,12 @@ const ownershipColumns = ref<DataTableColumns<any>>([
 ])
 
 // Fetch unit report
-const fetchUnitReport = async () => {
+const fetchUnitReport = async (): Promise<void> => {
   try {
     loading.value = true
     error.value = null
 
-    const response = await unitApi.getUnitReport(
+    const response: ApiResponse<UnitReportDetails> = await unitApi.getUnitReport(
       props.associationId,
       props.buildingId,
       props.unitId
@@ -139,12 +161,12 @@ const fetchUnitReport = async () => {
 }
 
 // Handle ownership updates
-const handleOwnershipUpdated = () => {
+const handleOwnershipUpdated = (): void => {
   fetchUnitReport()
 }
 
 // Handle edit unit button click
-const handleEditUnit = () => {
+const handleEditUnit = (): void => {
   emit('edit-unit')
 }
 
@@ -166,9 +188,7 @@ onMounted(() => {
     <NSpin :show="loading">
       <NAlert v-if="error" type="error" style="margin-bottom: 16px;">
         {{ error }}
-        <template #action>
-          <NButton @click="fetchUnitReport">Retry</NButton>
-        </template>
+        <NButton @click="fetchUnitReport">Retry</NButton>
       </NAlert>
 
       <template v-if="unitReport">
@@ -237,7 +257,8 @@ onMounted(() => {
           <NTabPane name="owners" tab="Current Owners">
             <!-- Current Owners -->
             <NCard title="Current Owners" class="report-section">
-              <template v-if="unitReport.current_owners && unitReport.current_owners.filter(owner => owner.is_active).length > 0">
+              <template
+                v-if="unitReport.current_owners && unitReport.current_owners.filter(owner => owner.is_active).length > 0">
                 <NDataTable
                   :columns="ownersColumns"
                   :data="unitReport.current_owners.filter(owner => owner.is_active)"
@@ -255,7 +276,8 @@ onMounted(() => {
           <NTabPane name="ownership" tab="Ownership History">
             <!-- Ownership History -->
             <NCard title="Ownership History" class="report-section">
-              <template v-if="unitReport.ownership_history && unitReport.ownership_history.length > 0">
+              <template
+                v-if="unitReport.ownership_history && unitReport.ownership_history.length > 0">
                 <NDataTable
                   :columns="ownershipColumns"
                   :data="unitReport.ownership_history"
@@ -285,7 +307,8 @@ onMounted(() => {
         <template v-else>
           <!-- Current Owners (always shown in excerpt mode) -->
           <NCard title="Unit Owners" class="report-section">
-            <template v-if="unitReport.current_owners && unitReport.current_owners.filter(owner => owner.is_active).length > 0">
+            <template
+              v-if="unitReport.current_owners && unitReport.current_owners.filter(owner => owner.is_active).length > 0">
               <NDataTable
                 :columns="ownersColumns.filter(col => col.key !== 'actions')"
                 :data="unitReport.current_owners.filter(owner => owner.is_active)"

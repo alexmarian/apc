@@ -11,11 +11,11 @@ import {
   NDatePicker,
   NSelect,
   NCheckbox,
-  useMessage,
-  FormRules,
+  useMessage
 } from 'naive-ui'
 import { ownerApi, unitApi, ownershipApi } from '@/services/api'
 import type { Owner } from '@/types/api'
+import type { FormRules } from 'naive-ui'
 
 const props = defineProps<{
   associationId: number
