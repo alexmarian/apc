@@ -3,3 +3,5 @@ go /.env
 sql/samples/*.sql
 /api
 /static/
+/.env.s
+/.env
