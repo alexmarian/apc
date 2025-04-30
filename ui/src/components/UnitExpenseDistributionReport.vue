@@ -21,7 +21,7 @@ import AssociationSelector from '@/components/AssociationSelector.vue';
 import BuildingSelector from '@/components/BuildingSelector.vue';
 import CategorySelector from '@/components/CategorySelector.vue';
 import { formatCurrency } from '@/utils/formatters';
-import type { ExpenseDistributionResponse, Category } from '@/types/api';
+import type { ExpenseDistributionResponse, Category, UnitDistribution } from '@/types/api'
 
 // Message provider
 const message = useMessage();
@@ -272,12 +272,12 @@ const exportToCSV = (): void => {
 
     headers.push(...categoryHeaders);
 
-    const rows = distributionData.value.unit_distributions.map((unit) => {
+    const rows = distributionData.value.unit_distributions.map((unit: UnitDistribution) => {
       const row = [
-        unit.unit_number,
-        unit.building_name,
-        unit.unit_type,
-        unit.area,
+        unit.unit_info.unit_number,
+        unit.unit_info.building_name,
+        unit.unit_info.unit_type,
+        unit.unit_info.area,
         (unit.distribution_factor * 100).toFixed(2) + '%',
         unit.total_share.toFixed(2)
       ];
