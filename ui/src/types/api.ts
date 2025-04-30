@@ -255,16 +255,15 @@ export interface CategoryTotal {
 }
 
 export interface UnitDistribution {
-  unit_info: {
-    id: number;
-    building_id: number;
-    unit_number: string;
-    building_name: string;
-    building_address: string;
-    unit_type: string;
-    area: number;
-    part: number;
-  };
+
+  id: number;
+  building_id: number;
+  unit_number: string;
+  building_name: string;
+  building_address: string;
+  unit_type: string;
+  area: number;
+  part: number;
   distribution_factor: number;
   expenses_share: Record<string, number>;
   total_share: number;

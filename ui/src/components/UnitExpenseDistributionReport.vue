@@ -265,19 +265,18 @@ const exportToCSV = (): void => {
   }
 
   try {
-    const headers = ['Unit Number', 'Building', 'Type', 'Area (m²)', 'Distribution Factor', 'Total Share'];
+    const headers = ['Unit Number', 'Type', 'Area (m²)', 'Distribution Factor', 'Total Share'];
     const categoryHeaders = distributionData.value.category_totals
       ? Object.keys(distributionData.value.category_totals)
       : [];
 
     headers.push(...categoryHeaders);
-
+    console.log(distributionData.value)
     const rows = distributionData.value.unit_distributions.map((unit: UnitDistribution) => {
       const row = [
-        unit.unit_info.unit_number,
-        unit.unit_info.building_name,
-        unit.unit_info.unit_type,
-        unit.unit_info.area,
+        unit.unit_number,
+        unit.unit_type,
+        unit.area,
         (unit.distribution_factor * 100).toFixed(2) + '%',
         unit.total_share.toFixed(2)
       ];

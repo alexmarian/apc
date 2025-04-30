@@ -1,4 +1,4 @@
-/.env
+go /.env
 /apc.db
 sql/samples/*.sql
 /api
