@@ -8,27 +8,27 @@ import {
 import { usePreferences } from '@/stores/preferences.ts'
 
 const preferences = usePreferences()
-const props = defineProps({
-  theme: {
-    type: String
-  }
-})
-if (!props.theme) {
-  props.theme = preferences.getTheme()
+const props = defineProps<{
+  theme?: string
+}>()
+
+const themes: Record<string, typeof darkTheme> = {
+  darkTheme: darkTheme,
+  lightTheme: lightTheme,
 }
-const themes = {
-  'darkTheme': darkTheme,
-  'lightTheme': lightTheme
-}
+
 const currentTheme = computed(() => {
-  if (themes[props.theme]) {
+  if (props.theme && themes[props.theme]) {
     return themes[props.theme]
+  }else if (preferences.theme && themes[preferences.theme]) {
+    return themes[preferences.theme]
   }
   return darkTheme
 })
+
 watch(currentTheme, () => {
   console.log(props.theme)
-  if (themes[props.theme]) {
+  if (props.theme && themes[props.theme]) {
     preferences.setTheme(props.theme)
   }
 })

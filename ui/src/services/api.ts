@@ -19,7 +19,7 @@ import type {
 } from '@/types/api'
 import config from '@/config'
 import { useAuthStore } from '@/stores/auth'
-
+import type { InternalAxiosRequestConfig } from 'axios';
 import '@/types/axios'
 
 // Create axios instance
@@ -33,22 +33,23 @@ const api = axios.create({
 
 // Request interceptor
 api.interceptors.request.use(
-  (reqConfig: AxiosRequestConfig) => {
-    if (reqConfig.url &&
-      (reqConfig.url.includes('/login') ||
-        reqConfig.url.includes('/refresh'))) {
-      return reqConfig
+  (reqConfig: InternalAxiosRequestConfig) => {
+    if (
+      reqConfig.url &&
+      (reqConfig.url.includes('/login') || reqConfig.url.includes('/refresh'))
+    ) {
+      return reqConfig;
     }
-    const token = localStorage.getItem(config.authTokenKey)
+    const token = localStorage.getItem(config.authTokenKey);
     if (token && reqConfig.headers) {
-      reqConfig.headers.Authorization = `Bearer ${token}`
+      reqConfig.headers.Authorization = `Bearer ${token}`;
     }
-    return reqConfig
+    return reqConfig;
   },
   (error: AxiosError) => {
-    return Promise.reject(error)
+    return Promise.reject(error);
   }
-)
+);
 
 // Response interceptor
 api.interceptors.response.use(
@@ -56,45 +57,31 @@ api.interceptors.response.use(
     return response
   },
   async (error: AxiosError) => {
-    const originalRequestOrNull = error.config
-    if (!originalRequestOrNull) {
+    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean }
+
+    if (!originalRequest) {
       return Promise.reject(error)
     }
-    const originalRequest: AxiosRequestConfig = originalRequestOrNull
-
-    // If error is 401 and we haven't tried refreshing the token yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true // Mark that we've tried refreshing for this request
 
       try {
         const refreshToken = localStorage.getItem(config.refreshTokenKey)
-
-        // Only try refreshing if we have a refresh token
         if (refreshToken) {
-          // Get auth store outside of Vue component
           const authStore = useAuthStore()
-
-          // Try to refresh the token
           const success = await authStore.refreshAccessToken()
 
           if (success) {
-            // Update the Authorization header with new token
             const newToken = localStorage.getItem(config.authTokenKey)
             if (originalRequest.headers) {
               originalRequest.headers.Authorization = `Bearer ${newToken}`
             }
-
-            // Retry the original request with new token
             return api(originalRequest)
           }
         }
-
-        // If we couldn't refresh token or don't have refresh token,
-        // proceed with logout and redirect
         localStorage.removeItem(config.authTokenKey)
         localStorage.removeItem(config.refreshTokenKey)
 
-        // Redirect to login page
         window.location.href = '/login'
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError)
@@ -109,6 +96,7 @@ api.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
 
 // Auth APIs
 export const authApi = {
@@ -290,5 +278,4 @@ export const expenseApi = {
     })
 }
 
-// Export the api instance to allow direct access if needed
-export default api
+export default api;

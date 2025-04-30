@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { NCard, NForm, NFormItem, NInput, NButton, NAlert, NSpace, FormRules } from 'naive-ui'
+import { NCard, NForm, NFormItem, NInput, NButton, NAlert, NSpace } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
-
+import type { FormRules } from 'naive-ui'
 // Get auth store
 const auth = useAuthStore()
 const router = useRouter()
