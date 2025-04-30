@@ -9,11 +9,14 @@ import {
   NAlert,
   useMessage,
   NDatePicker,
-  NSelect
+  NSelect,
+  NCard,
+  NFlex,
+  NText
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { expenseApi } from '@/services/api'
-import type { Expense } from '@/types/api'
+import type { Expense, ApiResponse } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
 import CategorySelector from '@/components/CategorySelector.vue'
 
@@ -32,7 +35,6 @@ const emit = defineEmits<{
   (e: 'category-changed', newCategory: number | null): void
 }>()
 
-
 // Data
 const expenses = ref<Expense[]>([])
 const loading = ref<boolean>(false)
@@ -40,10 +42,10 @@ const error = ref<string | null>(null)
 const message = useMessage()
 
 // Filters - use shared filters if available, otherwise use local state
-const dateRange = ref<[number, number] | null>(props.dateRange)
-const selectedCategory = ref<number | null>(props.selectedCategory)
+const dateRange = ref<[number, number] | null>(props.dateRange ?? null)
+const selectedCategory = ref<number | null>(props.selectedCategory ?? null)
 
-const filteredExpenses = computed(() => {
+const filteredExpenses = computed<Expense[]>(() => {
   if (selectedCategory.value) {
     return expenses.value.filter(expense => expense.category_id === selectedCategory.value)
   } else {
@@ -57,15 +59,15 @@ const columns = ref<DataTableColumns<Expense>>([
     title: 'Date',
     key: 'date',
     sorter: 'default',
-    render(row) {
+    render(row: Expense) {
       return new Date(row.date).toLocaleDateString()
     }
   },
   {
     title: 'Amount',
     key: 'amount',
-    sorter: (a, b) => a.amount - b.amount,
-    render(row) {
+    sorter: (a: Expense, b: Expense) => a.amount - b.amount,
+    render(row: Expense) {
       return formatCurrency(row.amount)
     }
   },
@@ -92,14 +94,14 @@ const columns = ref<DataTableColumns<Expense>>([
   {
     title: 'Account',
     key: 'account_number',
-    render(row) {
+    render(row: Expense) {
       return `${row.account_number} - ${row.account_name || ''}`
     }
   },
   {
     title: 'Actions',
     key: 'actions',
-    render(row) {
+    render(row: Expense) {
       return h(
         NSpace,
         {
@@ -138,7 +140,7 @@ const columns = ref<DataTableColumns<Expense>>([
 ])
 
 // Format date range for display
-const formattedDateRange = computed(() => {
+const formattedDateRange = computed<string>(() => {
   if (!dateRange.value) return 'All dates'
 
   const start = new Date(dateRange.value[0]).toLocaleDateString()
@@ -148,7 +150,7 @@ const formattedDateRange = computed(() => {
 })
 
 // Fetch expenses
-const fetchExpenses = async () => {
+const fetchExpenses = async (): Promise<void> => {
   if (!props.associationId) return
 
   try {
@@ -172,17 +174,16 @@ const fetchExpenses = async () => {
   } finally {
     loading.value = false
   }
-
 }
 
 // Delete expense
-const confirmDeleteExpense = (expenseId: number) => {
+const confirmDeleteExpense = (expenseId: number): void => {
   if (window.confirm('Are you sure you want to delete this expense?')) {
     deleteExpense(expenseId)
   }
 }
 
-const deleteExpense = async (expenseId: number) => {
+const deleteExpense = async (expenseId: number): Promise<void> => {
   try {
     await expenseApi.deleteExpense(props.associationId, expenseId)
 
@@ -199,7 +200,7 @@ const deleteExpense = async (expenseId: number) => {
 }
 
 // Calculate total amount for the filtered expenses
-const totalAmount = computed(() => {
+const totalAmount = computed<number>(() => {
   return filteredExpenses.value.reduce((sum, expense) => sum + expense.amount, 0)
 })
 
@@ -212,19 +213,15 @@ watch(dateRange, (newDateRange) => {
 watch(selectedCategory, (newCategory) => {
   emit('category-changed', newCategory)
 })
+
 watch(filteredExpenses, () => {
   emit('expenses-rendered', filteredExpenses.value)
 })
 
-
 // Reset filters
-const resetFilters = () => {
-  if (typeof dateRange.value === 'object' && dateRange.value !== null) {
-    dateRange.value = null
-  }
-  if (typeof selectedCategory.value === 'object' && selectedCategory.value !== null) {
-    selectedCategory.value = null
-  }
+const resetFilters = (): void => {
+  dateRange.value = null
+  selectedCategory.value = null
 }
 
 onMounted(() => {
@@ -274,8 +271,8 @@ onMounted(() => {
           :bordered="false"
           :single-line="false"
           :pagination="{
-          pageSize: 10
-        }"
+            pageSize: 10
+          }"
         >
           <template #empty>
             <NEmpty description="No expenses found">
@@ -287,9 +284,7 @@ onMounted(() => {
         </NDataTable>
       </NSpin>
     </NCard>
-
   </div>
-
 </template>
 
 <style scoped>

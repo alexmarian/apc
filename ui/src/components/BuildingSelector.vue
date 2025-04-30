@@ -76,7 +76,7 @@ watch(
         v-model:value="selectedBuildingId"
         @update:value="handleUpdateValue"
         :options="options"
-        :placeholder="placeholder || 'Select Building'"
+        :placeholder="'Select Building'"
         :disabled="!props.associationId || loading || props.disabled"
         clearable
         filterable

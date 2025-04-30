@@ -8,12 +8,12 @@ import {
   NSpace,
   NSpin,
   NAlert,
-  FormRules,
   NDatePicker,
   NInputNumber
 } from 'naive-ui'
+import type { FormInst, FormRules } from 'naive-ui'
 import { expenseApi } from '@/services/api'
-import type { ExpenseCreateRequest, Expense } from '@/types/api'
+import type { ExpenseCreateRequest, Expense, ApiResponse } from '@/types/api'
 import CategorySelector from '@/components/CategorySelector.vue'
 import AccountSelector from '@/components/AccountSelector.vue'
 
@@ -40,7 +40,7 @@ const rules: FormRules = {
   amount: [
     { required: true, message: 'Amount is required', trigger: 'blur' },
     {
-      validator: (rule, value) => {
+      validator: (rule: any, value: number) => {
         return Number(value) > 0
       },
       message: 'Amount must be greater than 0',
@@ -61,7 +61,7 @@ const rules: FormRules = {
   ],
   category_id: [
     {
-      validator: (rule, value) => {
+      validator: (rule: any, value: number) => {
         return value > 0
       },
       message: 'Category is required',
@@ -70,7 +70,7 @@ const rules: FormRules = {
   ],
   account_id: [
     {
-      validator: (rule, value) => {
+      validator: (rule: any, value: number) => {
         return value > 0
       },
       message: 'Account is required',
@@ -82,24 +82,24 @@ const rules: FormRules = {
 const loading = ref<boolean>(false)
 const submitting = ref<boolean>(false)
 const error = ref<string | null>(null)
-const formRef = ref(null)
-const dataLoaded = ref(false)
+const formRef = ref<FormInst | null>(null)
+const dataLoaded = ref<boolean>(false)
 
-const formatDateForInput = (timestamp: number | string) => {
+const formatDateForInput = (timestamp: number | string): string => {
   return new Date(timestamp).toISOString().split('T')[0]
 }
 
-const resetValidation = async () => {
+const resetValidation = async (): Promise<void> => {
   if (formRef.value) {
     try {
-      await formRef.value.resetValidation()
+      await formRef.value.restoreValidation()
     } catch (err) {
       console.log('Error resetting validation:', err)
     }
   }
 }
 
-const fetchExpenseDetails = async () => {
+const fetchExpenseDetails = async (): Promise<void> => {
   if (!props.expenseId) return
 
   try {
@@ -107,7 +107,7 @@ const fetchExpenseDetails = async () => {
     error.value = null
 
     const response = await expenseApi.getExpense(props.associationId, props.expenseId)
-    const expenseData = response.data
+    const expenseData: Expense = response.data
 
     formData.amount = Number(expenseData.amount) || 0.01
     formData.description = expenseData.description || ''
@@ -127,13 +127,13 @@ const fetchExpenseDetails = async () => {
   }
 }
 
-const handleDateChange = (timestamp: number) => {
+const handleDateChange = (timestamp: number): void => {
   if (timestamp) {
     formData.date = new Date(timestamp).toISOString().split('T')[0]
   }
 }
 
-const validateFormManually = () => {
+const validateFormManually = (): boolean => {
   if (Number(formData.amount) <= 0) {
     error.value = 'Amount must be greater than 0'
     return false
@@ -162,7 +162,7 @@ const validateFormManually = () => {
   return true
 }
 
-const submitForm = async (e: MouseEvent) => {
+const submitForm = async (e: MouseEvent): Promise<void> => {
   e.preventDefault()
   error.value = null
 
@@ -184,7 +184,7 @@ const submitForm = async (e: MouseEvent) => {
   try {
     submitting.value = true
 
-    const formDataToSubmit = {
+    const formDataToSubmit: ExpenseCreateRequest = {
       amount: Number(formData.amount),
       description: formData.description,
       destination: formData.destination,
@@ -197,7 +197,7 @@ const submitForm = async (e: MouseEvent) => {
 
     if (isCreating) {
       await expenseApi.createExpense(props.associationId, formDataToSubmit)
-    } else {
+    } else if (props.expenseId) {
       await expenseApi.updateExpense(props.associationId, props.expenseId, formDataToSubmit)
     }
 
@@ -210,7 +210,7 @@ const submitForm = async (e: MouseEvent) => {
   }
 }
 
-const cancelForm = () => {
+const cancelForm = (): void => {
   emit('cancelled')
 }
 
