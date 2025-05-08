@@ -315,3 +315,29 @@ export interface OwnerStats {
   total_area: number;
   total_condo_part: number;
 }
+
+export interface VotingOwner {
+  owner_id: number;
+  name: string;
+  identification_number: string;
+  contact_phone: string;
+  contact_email: string;
+  units: Array<{
+    unit_id: number;
+    unit_number: string;
+    building_id: number;
+    building_name: string;
+    area: number;
+    part: number;
+    unit_type: string;
+  }>;
+  total_units: number;
+  total_area: number;
+  voting_share: number;
+}
+
+export interface VotingOwnersResponse {
+  voting_owners: VotingOwner[];
+  total_units: number;
+  total_area: number;
+}

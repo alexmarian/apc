@@ -194,6 +194,8 @@ export const ownerApi = {
         co_owners: includeCoOwners ? 'true' : 'false'
       }
     }),
+  getVotingOwners: (associationId: number) =>
+    api.get<VotingOwner[]>(`/associations/${associationId}/owners/voters`),
   createOwner: (associationId: number, ownerData: {
     name: string;
     identification_number: string;
