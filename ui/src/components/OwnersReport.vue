@@ -31,6 +31,11 @@ const props = defineProps<{
   buildingId?: number | null
 }>()
 
+// Define emits
+const emit = defineEmits<{
+  (e: 'edit-owner', ownerId: number): void
+}>()
+
 // State
 const loading = ref<boolean>(false)
 const error = ref<string | null>(null)
@@ -101,6 +106,15 @@ const columns = computed<DataTableColumns<OwnerReportItem>>(() => {
                   onClick: () => handleViewOwnerDetails(row.owner.id)
                 },
                 { default: () => t('common.details', 'Details') }
+              ),
+              h(
+                NButton,
+                {
+                  size: 'small',
+                  type: 'primary',
+                  onClick: () => handleEditOwner(row.owner.id)
+                },
+                { default: () => t('common.edit', 'Edit') }
               )
             ]
           }
@@ -144,6 +158,11 @@ const handleViewOwnerDetails = (ownerId: number): void => {
     // Filter to show only this owner
     ownerFilter.value = ownerId
   }
+}
+
+// Handle edit owner - emit event to parent
+const handleEditOwner = (ownerId: number): void => {
+  emit('edit-owner', ownerId)
 }
 
 // Export to CSV
@@ -374,7 +393,7 @@ onMounted(() => {
       <NSpin :show="loading">
         <NAlert v-if="error" type="error" style="margin-bottom: 16px;">
           {{ error }}
-            <NButton @click="fetchOwnersReport">{{ t('common.retry', 'Retry') }}</NButton>
+          <NButton @click="fetchOwnersReport">{{ t('common.retry', 'Retry') }}</NButton>
         </NAlert>
 
         <div v-if="ownersData && filteredSortedData.length > 0" class="owners-table">
