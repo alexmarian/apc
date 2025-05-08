@@ -61,7 +61,7 @@ INSERT INTO ownerships (
     start_date, end_date, is_active,
     registration_document, registration_date
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    RETURNING id, unit_id, owner_id, association_id, start_date, end_date, is_active, registration_document, registration_date, created_at, updated_at
+    RETURNING id, unit_id, owner_id, association_id, start_date, end_date, is_active, registration_document, registration_date, created_at, updated_at, is_voting
 `
 
 type CreateOwnershipParams struct {
@@ -99,6 +99,7 @@ func (q *Queries) CreateOwnership(ctx context.Context, arg CreateOwnershipParams
 		&i.RegistrationDate,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsVoting,
 	)
 	return i, err
 }
@@ -118,47 +119,6 @@ type DeactivateOwnershipParams struct {
 func (q *Queries) DeactivateOwnership(ctx context.Context, arg DeactivateOwnershipParams) error {
 	_, err := q.db.ExecContext(ctx, deactivateOwnership, arg.EndDate, arg.ID)
 	return err
-}
-
-const getActiveUnitOwnerships = `-- name: GetActiveUnitOwnerships :many
-
-SELECT id, unit_id, owner_id, association_id, start_date, end_date, is_active, registration_document, registration_date, created_at, updated_at FROM ownerships
-WHERE unit_id = ? AND is_active = true
-`
-
-func (q *Queries) GetActiveUnitOwnerships(ctx context.Context, unitID int64) ([]Ownership, error) {
-	rows, err := q.db.QueryContext(ctx, getActiveUnitOwnerships, unitID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Ownership
-	for rows.Next() {
-		var i Ownership
-		if err := rows.Scan(
-			&i.ID,
-			&i.UnitID,
-			&i.OwnerID,
-			&i.AssociationID,
-			&i.StartDate,
-			&i.EndDate,
-			&i.IsActive,
-			&i.RegistrationDocument,
-			&i.RegistrationDate,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getAssociationOwner = `-- name: GetAssociationOwner :one
@@ -407,7 +367,6 @@ type GetOwnerUnitsWithDetailsForReportRow struct {
 	CoOwnerContactEmail         sql.NullString
 }
 
-// This query is optimized for the owner report, allowing efficient filtering by owner_id
 func (q *Queries) GetOwnerUnitsWithDetailsForReport(ctx context.Context, arg GetOwnerUnitsWithDetailsForReportParams) ([]GetOwnerUnitsWithDetailsForReportRow, error) {
 	rows, err := q.db.QueryContext(ctx, getOwnerUnitsWithDetailsForReport, arg.AssociationID, arg.Column2, arg.ID)
 	if err != nil {

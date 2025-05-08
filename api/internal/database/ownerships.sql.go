@@ -11,9 +11,85 @@ import (
 	"time"
 )
 
+const getActiveUnitOwnerships = `-- name: GetActiveUnitOwnerships :many
+
+SELECT o.id, o.unit_id, o.owner_id, o.association_id, o.start_date, o.end_date, o.is_active, o.registration_document, o.registration_date, o.created_at, o.updated_at, o.is_voting,
+       ow.name            as owner_name,
+       ow.normalized_name as owner_normalized_name,
+       ow.identification_number
+FROM ownerships o,
+     owners ow
+WHERE o.owner_id = ow.id
+  AND o.unit_id = ?
+  and o.association_id = ?
+  AND is_active = true
+`
+
+type GetActiveUnitOwnershipsParams struct {
+	UnitID        int64
+	AssociationID int64
+}
+
+type GetActiveUnitOwnershipsRow struct {
+	ID                   int64
+	UnitID               int64
+	OwnerID              int64
+	AssociationID        int64
+	StartDate            sql.NullTime
+	EndDate              sql.NullTime
+	IsActive             bool
+	RegistrationDocument string
+	RegistrationDate     time.Time
+	CreatedAt            sql.NullTime
+	UpdatedAt            sql.NullTime
+	IsVoting             bool
+	OwnerName            string
+	OwnerNormalizedName  string
+	IdentificationNumber string
+}
+
+func (q *Queries) GetActiveUnitOwnerships(ctx context.Context, arg GetActiveUnitOwnershipsParams) ([]GetActiveUnitOwnershipsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getActiveUnitOwnerships, arg.UnitID, arg.AssociationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetActiveUnitOwnershipsRow
+	for rows.Next() {
+		var i GetActiveUnitOwnershipsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UnitID,
+			&i.OwnerID,
+			&i.AssociationID,
+			&i.StartDate,
+			&i.EndDate,
+			&i.IsActive,
+			&i.RegistrationDocument,
+			&i.RegistrationDate,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.IsVoting,
+			&i.OwnerName,
+			&i.OwnerNormalizedName,
+			&i.IdentificationNumber,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getOwnership = `-- name: GetOwnership :one
 
-SELECT id, unit_id, owner_id, association_id, start_date, end_date, is_active, registration_document, registration_date, created_at, updated_at
+SELECT id, unit_id, owner_id, association_id, start_date, end_date, is_active, registration_document, registration_date, created_at, updated_at, is_voting
 FROM ownerships
 WHERE id = ? LIMIT 1
 `
@@ -33,12 +109,74 @@ func (q *Queries) GetOwnership(ctx context.Context, id int64) (Ownership, error)
 		&i.RegistrationDate,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsVoting,
+	)
+	return i, err
+}
+
+const getUnitOwnership = `-- name: GetUnitOwnership :one
+
+SELECT o.id, o.unit_id, o.owner_id, o.association_id, o.start_date, o.end_date, o.is_active, o.registration_document, o.registration_date, o.created_at, o.updated_at, o.is_voting,
+       ow.name            as owner_name,
+       ow.normalized_name as owner_normalized_name,
+       ow.identification_number
+FROM ownerships o,
+     owners ow
+WHERE o.owner_id = ow.id
+  AND o.unit_id = ?
+  AND o.association_id = ?
+  AND o.id = ?
+`
+
+type GetUnitOwnershipParams struct {
+	UnitID        int64
+	AssociationID int64
+	ID            int64
+}
+
+type GetUnitOwnershipRow struct {
+	ID                   int64
+	UnitID               int64
+	OwnerID              int64
+	AssociationID        int64
+	StartDate            sql.NullTime
+	EndDate              sql.NullTime
+	IsActive             bool
+	RegistrationDocument string
+	RegistrationDate     time.Time
+	CreatedAt            sql.NullTime
+	UpdatedAt            sql.NullTime
+	IsVoting             bool
+	OwnerName            string
+	OwnerNormalizedName  string
+	IdentificationNumber string
+}
+
+func (q *Queries) GetUnitOwnership(ctx context.Context, arg GetUnitOwnershipParams) (GetUnitOwnershipRow, error) {
+	row := q.db.QueryRowContext(ctx, getUnitOwnership, arg.UnitID, arg.AssociationID, arg.ID)
+	var i GetUnitOwnershipRow
+	err := row.Scan(
+		&i.ID,
+		&i.UnitID,
+		&i.OwnerID,
+		&i.AssociationID,
+		&i.StartDate,
+		&i.EndDate,
+		&i.IsActive,
+		&i.RegistrationDocument,
+		&i.RegistrationDate,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IsVoting,
+		&i.OwnerName,
+		&i.OwnerNormalizedName,
+		&i.IdentificationNumber,
 	)
 	return i, err
 }
 
 const getUnitOwnerships = `-- name: GetUnitOwnerships :many
-SELECT o.id, o.unit_id, o.owner_id, o.association_id, o.start_date, o.end_date, o.is_active, o.registration_document, o.registration_date, o.created_at, o.updated_at,
+SELECT o.id, o.unit_id, o.owner_id, o.association_id, o.start_date, o.end_date, o.is_active, o.registration_document, o.registration_date, o.created_at, o.updated_at, o.is_voting,
        ow.name            as owner_name,
        ow.normalized_name as owner_normalized_name,
        ow.identification_number
@@ -66,6 +204,7 @@ type GetUnitOwnershipsRow struct {
 	RegistrationDate     time.Time
 	CreatedAt            sql.NullTime
 	UpdatedAt            sql.NullTime
+	IsVoting             bool
 	OwnerName            string
 	OwnerNormalizedName  string
 	IdentificationNumber string
@@ -92,6 +231,7 @@ func (q *Queries) GetUnitOwnerships(ctx context.Context, arg GetUnitOwnershipsPa
 			&i.RegistrationDate,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.IsVoting,
 			&i.OwnerName,
 			&i.OwnerNormalizedName,
 			&i.IdentificationNumber,
@@ -107,4 +247,25 @@ func (q *Queries) GetUnitOwnerships(ctx context.Context, arg GetUnitOwnershipsPa
 		return nil, err
 	}
 	return items, nil
+}
+
+const setVoting = `-- name: SetVoting :exec
+UPDATE ownerships
+SET is_voting = CASE
+                    WHEN id = ? THEN true
+                    ELSE false
+    END
+WHERE unit_id = ?
+  AND association_id = ?
+`
+
+type SetVotingParams struct {
+	ID            int64
+	UnitID        int64
+	AssociationID int64
+}
+
+func (q *Queries) SetVoting(ctx context.Context, arg SetVotingParams) error {
+	_, err := q.db.ExecContext(ctx, setVoting, arg.ID, arg.UnitID, arg.AssociationID)
+	return err
 }

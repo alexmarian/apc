@@ -90,6 +90,7 @@ type Ownership struct {
 	RegistrationDate     time.Time
 	CreatedAt            sql.NullTime
 	UpdatedAt            sql.NullTime
+	IsVoting             bool
 }
 
 type RefreshToken struct {

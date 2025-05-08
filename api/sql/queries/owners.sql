@@ -56,11 +56,6 @@ INSERT INTO owners (
     RETURNING *;
 --
 
--- name: GetActiveUnitOwnerships :many
-SELECT * FROM ownerships
-WHERE unit_id = ? AND is_active = true;
---
-
 -- name: DeactivateOwnership :exec
 UPDATE ownerships
 SET is_active = false, end_date = ?, updated_at = CURRENT_TIMESTAMP

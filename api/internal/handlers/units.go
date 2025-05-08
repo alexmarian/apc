@@ -165,6 +165,7 @@ func HandleGetBuildingUnitOwnerships(cfg *ApiConfig) func(http.ResponseWriter, *
 				StartDate:                 owner.StartDate.Time,
 				EndDate:                   owner.EndDate.Time,
 				IsActive:                  owner.IsActive,
+				IsVoting:                  owner.IsVoting,
 				RegistrationDocument:      owner.RegistrationDocument,
 				RegistrationDate:          owner.RegistrationDate,
 				CreatedAt:                 owner.CreatedAt.Time,
@@ -412,7 +413,10 @@ func HandleGetUnitReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		currentOwners := []UnitOwner{}
 
 		// Get active ownerships
-		activeOwnerships, err := cfg.Db.GetActiveUnitOwnerships(req.Context(), int64(unitId))
+		activeOwnerships, err := cfg.Db.GetActiveUnitOwnerships(req.Context(), database.GetActiveUnitOwnershipsParams{
+			UnitID:        int64(unitId),
+			AssociationID: int64(associationId),
+		})
 		if err != nil {
 			log.Printf("Error getting active ownerships: %s", err)
 			// Continue anyway to return partial data

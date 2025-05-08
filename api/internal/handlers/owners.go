@@ -14,6 +14,7 @@ import (
 )
 
 const OwnerIdPathValue = "ownerId"
+const OwnershipIdPathValue = "ownershipId"
 
 type Owner struct {
 	ID                   int64     `json:"id"`
@@ -46,6 +47,7 @@ type Ownership struct {
 	StartDate                 time.Time `json:"start_date"`
 	EndDate                   time.Time `json:"end_date"`
 	IsActive                  bool      `json:"is_active"`
+	IsVoting                  bool      `json:"is_voting"`
 	RegistrationDocument      string    `json:"registration_document"`
 	RegistrationDate          time.Time `json:"registration_date"`
 	CreatedAt                 time.Time `json:"created_at"`
@@ -241,6 +243,77 @@ func HandleCreateOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) 
 		RespondWithJSON(rw, http.StatusCreated, ownerResponse)
 	}
 }
+
+func HandleGetUnitOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
+		ownershipId, _ := strconv.Atoi(req.PathValue(OwnershipIdPathValue))
+
+		ownership, err := cfg.Db.GetUnitOwnership(req.Context(), database.GetUnitOwnershipParams{
+			UnitID:        int64(unitId),
+			AssociationID: int64(associationId),
+			ID:            int64(ownershipId),
+		})
+		if err != nil && err != sql.ErrNoRows {
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get current ownerships")
+			return
+		}
+		RespondWithJSON(rw, http.StatusCreated, Ownership{
+			ID:                   ownership.ID,
+			UnitId:               ownership.UnitID,
+			OwnerId:              ownership.OwnerID,
+			AssociationId:        ownership.AssociationID,
+			StartDate:            ownership.StartDate.Time,
+			EndDate:              ownership.EndDate.Time,
+			IsActive:             ownership.IsActive,
+			IsVoting:             ownership.IsVoting,
+			RegistrationDocument: ownership.RegistrationDocument,
+			CreatedAt:            ownership.CreatedAt.Time,
+			UpdatedAt:            ownership.UpdatedAt.Time,
+		})
+	}
+}
+
+func HandleUnitVotingOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
+		ownershipId, _ := strconv.Atoi(req.PathValue(OwnershipIdPathValue))
+
+		err := cfg.Db.SetVoting(req.Context(), database.SetVotingParams{
+			UnitID:        int64(unitId),
+			AssociationID: int64(associationId),
+			ID:            int64(ownershipId),
+		})
+		if err != nil && err != sql.ErrNoRows {
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to update current ownerships")
+			return
+		}
+		ownership, err := cfg.Db.GetUnitOwnership(req.Context(), database.GetUnitOwnershipParams{
+			UnitID:        int64(unitId),
+			AssociationID: int64(associationId),
+			ID:            int64(ownershipId),
+		})
+		if err != nil && err != sql.ErrNoRows {
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get current ownerships")
+			return
+		}
+		RespondWithJSON(rw, http.StatusCreated, Ownership{
+			ID:                   ownership.ID,
+			UnitId:               ownership.UnitID,
+			OwnerId:              ownership.OwnerID,
+			AssociationId:        ownership.AssociationID,
+			StartDate:            ownership.StartDate.Time,
+			EndDate:              ownership.EndDate.Time,
+			IsActive:             ownership.IsActive,
+			IsVoting:             ownership.IsVoting,
+			RegistrationDocument: ownership.RegistrationDocument,
+			CreatedAt:            ownership.CreatedAt.Time,
+			UpdatedAt:            ownership.UpdatedAt.Time,
+		})
+	}
+}
 func HandleCreateUnitOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
@@ -269,7 +342,10 @@ func HandleCreateUnitOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 		}
 
 		// Get current active ownerships for this unit
-		currentOwnerships, err := cfg.Db.GetActiveUnitOwnerships(req.Context(), int64(unitId))
+		currentOwnerships, err := cfg.Db.GetActiveUnitOwnerships(req.Context(), database.GetActiveUnitOwnershipsParams{
+			UnitID:        int64(unitId),
+			AssociationID: int64(associationId),
+		})
 		if err != nil && err != sql.ErrNoRows {
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to get current ownerships")
 			return
