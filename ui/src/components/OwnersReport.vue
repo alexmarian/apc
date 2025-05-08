@@ -493,7 +493,6 @@ onMounted(() => {
   margin-bottom: 16px;
   padding: 12px;
   border-radius: 4px;
-  border: 1px solid var(--border-color);
 }
 
 .stat-item {
@@ -526,7 +525,6 @@ onMounted(() => {
 .details-section {
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid var(--border-color);
 }
 
 .details-section h3 {

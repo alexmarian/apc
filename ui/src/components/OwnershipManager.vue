@@ -326,7 +326,6 @@ onMounted(() => {
 .info-box {
   margin-bottom: 16px;
   padding: 12px;
-  background-color: #f5f7fa;
   border-radius: 4px;
   border-left: 4px solid #2080f0;
 }

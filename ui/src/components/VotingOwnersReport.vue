@@ -455,7 +455,6 @@ watch(() => props.associationId, (newVal) => {
   margin-bottom: 16px;
   padding: 12px;
   border-radius: 4px;
-  background-color: #f5f7fa;
 }
 
 .stat-item {
@@ -478,7 +477,6 @@ watch(() => props.associationId, (newVal) => {
   margin-top: 24px;
   padding: 16px;
   border-radius: 4px;
-  background-color: #f9f9f9;
 }
 
 .details-header {
@@ -496,7 +494,6 @@ watch(() => props.associationId, (newVal) => {
 .empty-state {
   padding: 24px;
   text-align: center;
-  background-color: #f9f9f9;
   border-radius: 4px;
 }
 </style>
