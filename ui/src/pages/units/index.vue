@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { NCard, NButton, NSpace, NPageHeader, NDivider, useMessage } from 'naive-ui'
 import UnitsList from '@/components/UnitsList.vue'
 import UnitForm from '@/components/UnitForm.vue'
-import UnitDetails from '@/components/UnitDetails.vue'
 import AssociationSelector from '@/components/AssociationSelector.vue'
 import BuildingSelector from '@/components/BuildingSelector.vue'
+import { useRouter, useRoute } from 'vue-router'
 import type { Unit } from '@/types/api'
 
 // Setup Naive UI message system
 const message = useMessage()
+const router = useRouter()
+const route = useRoute()
 
 // Selectors
 const associationId = ref<number | null>(null)
@@ -17,16 +19,26 @@ const buildingId = ref<number | null>(null)
 
 // UI state
 const showForm = ref(false)
-const showFullReport = ref(false)
 const editingUnitId = ref<number | undefined>(undefined)
-const selectedUnitId = ref<number | null>(null)
-
-// Filters persistence
 const unitTypeFilter = ref<string | null>(null)
 const searchQuery = ref<string | null>(null)
 
 // For storing units loaded by the list component
 const displayedUnits = ref<Unit[] | null>(null)
+
+// Try to get associationId, buildingId, and editUnitId from query parameters
+onMounted(() => {
+  if (route.query.associationId) {
+    associationId.value = parseInt(route.query.associationId as string)
+  }
+  if (route.query.buildingId) {
+    buildingId.value = parseInt(route.query.buildingId as string)
+  }
+  if (route.query.editUnitId) {
+    editingUnitId.value = parseInt(route.query.editUnitId as string)
+    showForm.value = true
+  }
+})
 
 const setDisplayedUnits = (units: Unit[]) => {
   displayedUnits.value = units
@@ -45,19 +57,26 @@ const canShowUnits = computed(() => {
 const handleEditUnit = (unitId: number) => {
   editingUnitId.value = unitId
   showForm.value = true
-  showFullReport.value = false
-}
 
-const handleViewReport = (unitId: number) => {
-  selectedUnitId.value = unitId
-  showFullReport.value = true
-  showForm.value = false
+  // Update URL to reflect edit mode
+  router.replace({
+    query: {
+      ...route.query,
+      editUnitId: unitId.toString()
+    }
+  })
 }
 
 const handleFormSaved = () => {
   showForm.value = false
   // Show success message
   message.success(`Unit ${editingUnitId.value ? 'updated' : 'created'} successfully`)
+
+  // Remove editUnitId from query params
+  const newQuery = { ...route.query }
+  delete newQuery.editUnitId
+  router.replace({ query: newQuery })
+
   // Reload the units list
   // In a real implementation, you might want to update the list without a full reload
   window.location.reload()
@@ -65,28 +84,43 @@ const handleFormSaved = () => {
 
 const handleFormCancelled = () => {
   showForm.value = false
-}
 
-const handleBackFromReport = () => {
-  showFullReport.value = false
-  selectedUnitId.value = null
+  // Remove editUnitId from query params
+  const newQuery = { ...route.query }
+  delete newQuery.editUnitId
+  router.replace({ query: newQuery })
 }
 
 const handleBuildingIdUpdate = (newBuildingId: number) => {
   buildingId.value = newBuildingId
+
+  // Update URL query parameters
+  router.replace({
+    query: {
+      ...route.query,
+      buildingId: newBuildingId.toString()
+    }
+  })
 }
 
-const handleEditOwner = (ownerId: number) => {
-  // This is a placeholder for navigating to the owner edit page
-  message.info(`Navigate to edit owner with ID: ${ownerId}`)
+const handleAssociationIdUpdate = (newAssociationId: number) => {
+  associationId.value = newAssociationId
+  buildingId.value = null
+
+  // Update URL query parameters
+  router.replace({
+    query: {
+      ...route.query,
+      associationId: newAssociationId.toString(),
+      buildingId: undefined
+    }
+  })
 }
 
 // Clear buildingId when associationId changes
 watch(associationId, () => {
   buildingId.value = null
   showForm.value = false
-  showFullReport.value = false
-  selectedUnitId.value = null
 })
 </script>
 
@@ -100,7 +134,10 @@ watch(associationId, () => {
       <template #header>
         <div style="margin-bottom: 12px;">
           <NSpace align="center">
-            <AssociationSelector v-model:associationId="associationId" />
+            <AssociationSelector
+              v-model:associationId="associationId"
+              @update:associationId="handleAssociationIdUpdate"
+            />
             <BuildingSelector
               v-model:building-id="buildingId"
               v-model:association-id="associationId"
@@ -108,17 +145,6 @@ watch(associationId, () => {
             />
           </NSpace>
         </div>
-      </template>
-
-      <template #extra>
-        <NSpace>
-          <NButton
-            v-if="showFullReport"
-            @click="handleBackFromReport"
-          >
-            Back to Units List
-          </NButton>
-        </NSpace>
       </template>
     </NPageHeader>
 
@@ -142,18 +168,6 @@ watch(associationId, () => {
       </NCard>
     </div>
 
-    <div v-else-if="showFullReport && selectedUnitId">
-      <NCard style="margin-top: 16px;">
-        <UnitDetails
-          :association-id="associationId"
-          :building-id="buildingId"
-          :unit-id="selectedUnitId"
-          @edit-owner="handleEditOwner"
-          @edit-unit="handleEditUnit(selectedUnitId)"
-        />
-      </NCard>
-    </div>
-
     <div v-else-if="canShowUnits">
       <!-- Units list -->
       <UnitsList
@@ -162,34 +176,10 @@ watch(associationId, () => {
         :unit-type-filter="unitTypeFilter"
         :search-query="searchQuery"
         @edit="handleEditUnit"
-        @view-report="handleViewReport"
         @units-rendered="setDisplayedUnits"
         @unit-type-changed="newUnitType => unitTypeFilter = newUnitType"
         @search-query-changed="newQuery => searchQuery = newQuery"
       />
-
-      <!-- Unit Report Preview (shows when a unit is selected) -->
-      <div v-if="selectedUnitId" style="margin-top: 16px;">
-        <NCard title="Unit Summary">
-          <UnitDetails
-            :association-id="associationId"
-            :building-id="buildingId"
-            :unit-id="selectedUnitId"
-            :show-excerpt="true"
-            @edit-owner="handleEditOwner"
-          />
-          <template #footer>
-            <NSpace justify="end">
-              <NButton
-                type="primary"
-                @click="showFullReport = true"
-              >
-                View Full Details
-              </NButton>
-            </NSpace>
-          </template>
-        </NCard>
-      </div>
     </div>
   </div>
 </template>

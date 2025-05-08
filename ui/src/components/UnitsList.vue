@@ -15,7 +15,9 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { unitApi } from '@/services/api'
 import type { Unit } from '@/types/api'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 // Props
 const props = defineProps<{
   associationId: number,
@@ -138,16 +140,19 @@ const columns = ref<DataTableColumns<Unit>>([
               },
               { default: () => 'Edit' }
             ),
-            h(
-              NButton,
+            h(NButton,
               {
-                strong: true,
-                secondary: true,
-                type: 'success',
+                type: 'primary',
                 size: 'small',
-                onClick: () => emit('view-report', row.id)
+                onClick: () => router.push({
+                  path: `/units/${row.id}`,
+                  query: {
+                    associationId: props.associationId.toString(),
+                    buildingId: props.buildingId.toString()
+                  }
+                })
               },
-              { default: () => 'Report' }
+              { default: () => 'View Details' }
             )
           ]
         }

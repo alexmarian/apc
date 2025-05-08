@@ -27,6 +27,14 @@ type Owner struct {
 	UpdatedAt            time.Time `json:"updated_at"`
 }
 
+type OwnerUpdateRequest struct {
+	Name                 string `json:"name"`
+	NormalizedName       string `json:"normalized_name"`
+	IdentificationNumber string `json:"identification_number"`
+	ContactPhone         string `json:"contact_phone"`
+	ContactEmail         string `json:"contact_email"`
+}
+
 type Ownership struct {
 	ID                        int64     `json:"id"`
 	UnitId                    int64     `json:"unit_id"`
@@ -70,6 +78,108 @@ func HandleGetAssociationOwners(cfg *ApiConfig) func(http.ResponseWriter, *http.
 			}
 		}
 		RespondWithJSON(rw, http.StatusCreated, owners)
+	}
+}
+
+func HandleUpdateAssociationOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		ownerId, _ := strconv.Atoi(req.PathValue(OwnerIdPathValue))
+		dbOwner, err := cfg.Db.GetAssociationOwner(req.Context(), database.GetAssociationOwnerParams{
+			ID:            int64(ownerId),
+			AssociationID: int64(associationId),
+		})
+		if err != nil {
+			var errors = fmt.Sprintf("Error getting association owner: %s", err)
+			log.Printf(errors)
+			RespondWithError(rw, http.StatusInternalServerError, errors)
+			return
+		}
+		decoder := json.NewDecoder(req.Body)
+		defer req.Body.Close()
+		var ownerUpdateRequest OwnerUpdateRequest
+		if err := decoder.Decode(&ownerUpdateRequest); err != nil {
+			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
+			return
+		}
+		applyOwnerPartialUpdates(&ownerUpdateRequest, &dbOwner)
+		err = cfg.Db.UpdateAssociationOwner(req.Context(), database.UpdateAssociationOwnerParams{
+			Name:                 ownerUpdateRequest.Name,
+			NormalizedName:       ownerUpdateRequest.NormalizedName,
+			IdentificationNumber: ownerUpdateRequest.IdentificationNumber,
+			ContactPhone:         ownerUpdateRequest.ContactPhone,
+			ContactEmail:         ownerUpdateRequest.ContactEmail,
+			ID:                   int64(ownerId),
+			AssociationID:        int64(associationId),
+		})
+		if err != nil {
+			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
+			return
+		}
+		RespondWithJSON(rw, http.StatusCreated, Owner{
+			ID:                   dbOwner.ID,
+			Name:                 dbOwner.Name,
+			NormalizedName:       dbOwner.NormalizedName,
+			IdentificationNumber: dbOwner.IdentificationNumber,
+			ContactPhone:         dbOwner.ContactPhone,
+			ContactEmail:         dbOwner.ContactEmail,
+			FirstDetectedAt:      dbOwner.FirstDetectedAt.Time,
+			CreatedAt:            dbOwner.CreatedAt.Time,
+			UpdatedAt:            time.Now(),
+		})
+	}
+}
+func applyOwnerPartialUpdates(update *OwnerUpdateRequest, existing *database.Owner) {
+	// Use pointers to distinguish between "field not provided" and "field set to zero value"
+	if update.Name != "" {
+		existing.Name = update.Name
+		existing.NormalizedName = strings.ToLower(update.Name)
+	} else {
+		update.Name = existing.Name
+		update.NormalizedName = existing.NormalizedName
+	}
+	if update.IdentificationNumber != "" {
+		existing.IdentificationNumber = update.IdentificationNumber
+	} else {
+		update.IdentificationNumber = existing.IdentificationNumber
+	}
+	if update.ContactPhone != "" {
+		existing.ContactPhone = update.ContactPhone
+	} else {
+		update.ContactPhone = existing.ContactPhone
+	}
+	if update.ContactEmail != "" {
+		existing.ContactEmail = update.ContactEmail
+	} else {
+		update.ContactEmail = existing.ContactEmail
+	}
+
+}
+func HandleGetAssociationOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		ownerId, _ := strconv.Atoi(req.PathValue(OwnerIdPathValue))
+		dbOwner, err := cfg.Db.GetAssociationOwner(req.Context(), database.GetAssociationOwnerParams{
+			ID:            int64(ownerId),
+			AssociationID: int64(associationId),
+		})
+		if err != nil {
+			var errors = fmt.Sprintf("Error getting association owner: %s", err)
+			log.Printf(errors)
+			RespondWithError(rw, http.StatusInternalServerError, errors)
+			return
+		}
+		RespondWithJSON(rw, http.StatusCreated, Owner{
+			ID:                   dbOwner.ID,
+			Name:                 dbOwner.Name,
+			NormalizedName:       dbOwner.NormalizedName,
+			IdentificationNumber: dbOwner.IdentificationNumber,
+			ContactPhone:         dbOwner.ContactPhone,
+			ContactEmail:         dbOwner.ContactEmail,
+			FirstDetectedAt:      dbOwner.FirstDetectedAt.Time,
+			CreatedAt:            dbOwner.CreatedAt.Time,
+			UpdatedAt:            dbOwner.UpdatedAt.Time,
+		})
 	}
 }
 func HandleCreateOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {

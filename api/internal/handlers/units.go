@@ -197,7 +197,7 @@ func HandleUpdateBuildingUnit(cfg *ApiConfig) func(http.ResponseWriter, *http.Re
 			BuildingID: int64(buildingId),
 		}
 
-		applyPartialUpdates(&updateRequest, existingUnit, &params)
+		applyUnitPartialUpdates(&updateRequest, existingUnit, &params)
 
 		if err := cfg.Db.UpdateBuildingUnitById(req.Context(), params); err != nil {
 			return
@@ -209,7 +209,7 @@ func HandleUpdateBuildingUnit(cfg *ApiConfig) func(http.ResponseWriter, *http.Re
 	}
 }
 
-func applyPartialUpdates(update *UnitUpdateRequest, existing *Unit, params *database.UpdateBuildingUnitByIdParams) {
+func applyUnitPartialUpdates(update *UnitUpdateRequest, existing *Unit, params *database.UpdateBuildingUnitByIdParams) {
 	// Use pointers to distinguish between "field not provided" and "field set to zero value"
 	if update.UnitNumber != nil {
 		params.UnitNumber = *update.UnitNumber

@@ -1,0 +1,203 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { NCard, NButton, NSpace, NPageHeader, NSpin, NAlert, NModal } from 'naive-ui'
+import UnitDetails from '@/components/UnitDetails.vue'
+import UnitForm from '@/components/UnitForm.vue'
+import OwnerForm from '@/components/OwnerForm.vue'
+import { useRoute, useRouter } from 'vue-router'
+import { unitApi } from '@/services/api'
+import type { Unit } from '@/types/api'
+
+const route = useRoute()
+const router = useRouter()
+const refreshKey = ref(0)
+// Extract route params and query params
+const unitId = ref<number>(parseInt(route.params.unitId as string))
+const associationId = ref<number | null>(
+  route.query.associationId ? parseInt(route.query.associationId as string) : null
+)
+const buildingId = ref<number | null>(
+  route.query.buildingId ? parseInt(route.query.buildingId as string) : null
+)
+
+// UI state
+const loading = ref(true)
+const error = ref<string | null>(null)
+const showEditForm = ref(false)
+const showOwnerForm = ref(false)
+const editingOwnerId = ref<number | null>(null)
+
+const verifyParams = async () => {
+  // Only fetch if we have all required IDs
+  if (!associationId.value || !buildingId.value) {
+    error.value = 'Missing association or building ID. Please ensure these are provided in the URL.'
+    loading.value = false
+    return
+  }
+
+  loading.value = true
+  error.value = null
+
+  try {
+    // Use the existing API method that requires all three IDs
+    await unitApi.getUnit(
+      associationId.value,
+      buildingId.value,
+      unitId.value
+    )
+
+    // If the API call is successful, then we have valid IDs
+
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Error fetching unit information'
+    console.error('Error fetching unit data:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Methods for unit editing
+const handleEditUnit = () => {
+  // Toggle the edit form instead of navigating away
+  showEditForm.value = true
+}
+
+const handleFormSaved = () => {
+  // Return to details view and refresh data
+  showEditForm.value = false
+  refreshKey.value++
+}
+
+const handleFormCancelled = () => {
+  // Return to details view without refreshing
+  showEditForm.value = false
+}
+
+// Methods for owner editing
+const handleEditOwner = (ownerId: number) => {
+  editingOwnerId.value = ownerId
+  showOwnerForm.value = true
+}
+
+const handleOwnerFormSaved = () => {
+  showOwnerForm.value = false
+  editingOwnerId.value = null
+
+  // Refresh with a slight delay to ensure backend has updated
+  setTimeout(() => {
+    refreshKey.value++ // Force UnitDetails to re-render
+  }, 300)
+}
+
+const handleOwnerFormCancelled = () => {
+  // Just close the form without refreshing
+  showOwnerForm.value = false
+  editingOwnerId.value = null
+}
+
+const handleBackToUnits = () => {
+  // Navigate back to units list
+  if (associationId.value && buildingId.value) {
+    router.push({
+      path: '/units',
+      query: {
+        associationId: associationId.value.toString(),
+        buildingId: buildingId.value.toString()
+      }
+    })
+  } else {
+    router.push('/units')
+  }
+}
+
+onMounted(() => {
+  verifyParams()
+})
+</script>
+
+<template>
+  <div class="unit-details-page">
+    <NPageHeader>
+      <template #title>
+        {{ showEditForm ? 'Edit Unit' : 'Unit Details' }}
+      </template>
+      <template #extra>
+        <NSpace>
+          <NButton @click="handleBackToUnits">
+            Back to Units List
+          </NButton>
+          <NButton
+            v-if="!showEditForm"
+            type="primary"
+            @click="handleEditUnit"
+            :disabled="loading || error !== null"
+          >
+            Edit Unit
+          </NButton>
+        </NSpace>
+      </template>
+    </NPageHeader>
+
+    <NSpin :show="loading">
+      <NCard v-if="error" style="margin-top: 16px;">
+        <NAlert type="error" title="Error">
+          {{ error }}
+        </NAlert>
+        <div style="text-align: center; padding: 16px;">
+          <NButton @click="verifyParams">Retry</NButton>
+          <NButton @click="handleBackToUnits" style="margin-left: 16px;">
+            Return to Units List
+          </NButton>
+        </div>
+      </NCard>
+
+      <div v-else-if="associationId && buildingId" style="margin-top: 16px;">
+        <!-- Show edit form or details based on state -->
+        <NCard v-if="showEditForm">
+          <UnitForm
+
+            :association-id="associationId"
+            :building-id="buildingId"
+            :unit-id="unitId"
+            @saved="handleFormSaved"
+            @cancelled="handleFormCancelled"
+          />
+        </NCard>
+        <NCard v-else>
+          <UnitDetails
+            :key="refreshKey"
+            :association-id="associationId"
+            :building-id="buildingId"
+            :unit-id="unitId"
+            @edit-owner="handleEditOwner"
+            @edit-unit="handleEditUnit"
+          />
+        </NCard>
+      </div>
+    </NSpin>
+
+    <!-- Owner Edit Modal -->
+    <NModal
+      v-model:show="showOwnerForm"
+      style="width: 650px"
+      preset="card"
+      title="Edit Owner"
+      :mask-closable="false"
+    >
+      <OwnerForm
+        v-if="associationId && editingOwnerId"
+        :association-id="associationId"
+        :owner-id="editingOwnerId"
+        @saved="handleOwnerFormSaved"
+        @cancelled="handleOwnerFormCancelled"
+      />
+    </NModal>
+  </div>
+</template>
+
+<style scoped>
+.unit-details-page {
+  width: 100%;
+  margin: 0 auto;
+}
+</style>

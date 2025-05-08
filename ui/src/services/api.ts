@@ -177,7 +177,16 @@ export const accountApi = {
 export const ownerApi = {
   getOwners: (associationId: number) =>
     api.get<Owner[]>(`/associations/${associationId}/owners`),
+  getOwner: (associationId: number, ownerId: number) =>
+    api.get<Owner>(`/associations/${associationId}/owners/${ownerId}`),
 
+  updateOwner: (associationId: number, ownerId: number, ownerData: {
+    name: string;
+    identification_number: string;
+    contact_phone: string;
+    contact_email: string;
+  }) =>
+    api.put<Owner>(`/associations/${associationId}/owners/${ownerId}`, ownerData),
   getOwnerReport: (associationId: number, includeUnits: boolean = false, includeCoOwners: boolean = false) =>
     api.get(`/associations/${associationId}/owners/report`, {
       params: {
