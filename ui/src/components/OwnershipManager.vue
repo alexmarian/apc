@@ -12,7 +12,8 @@ import {
   NTabPane,
   NDatePicker,
   useMessage,
-  NPopconfirm
+  NPopconfirm,
+  NTag
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { unitApi, ownershipApi } from '@/services/api'
@@ -104,6 +105,30 @@ const handleDisableOwnership = async () => {
   }
 }
 
+// Handle setting voting owner
+const handleSetVotingOwner = async (ownershipId: number) => {
+  try {
+    loading.value = true
+    error.value = null
+
+    await ownershipApi.setOwnershipVoting(
+      props.associationId,
+      props.buildingId,
+      props.unitId,
+      ownershipId
+    )
+
+    message.success('Voting rights updated successfully')
+    fetchOwnerships()
+    emit('updated')
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to update voting rights'
+    console.error('Error updating voting rights:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
 // Ownership table columns
 const columns: DataTableColumns<any> = [
   {
@@ -124,7 +149,32 @@ const columns: DataTableColumns<any> = [
   {
     title: 'Status',
     key: 'is_active',
-    render: (row) => row.is_active ? 'Active' : 'Inactive'
+    render: (row) => {
+      const elements = []
+
+      // Status tag
+      elements.push(
+        h(NTag, {
+          type: row.is_active ? 'success' : 'default',
+          style: 'margin-right: 8px'
+        }, {
+          default: () => row.is_active ? 'Active' : 'Inactive'
+        })
+      )
+
+      // Voting tag
+      if (row.is_voting) {
+        elements.push(
+          h(NTag, {
+            type: 'info'
+          }, {
+            default: () => 'Voting Owner'
+          })
+        )
+      }
+
+      return h('div', {}, elements)
+    }
   },
   {
     title: 'Registration',
@@ -139,27 +189,43 @@ const columns: DataTableColumns<any> = [
         return 'Inactive'
       }
 
-      return h(
-        NPopconfirm,
-        {
-          onPositiveClick: () => openDisableModal(row.id),
-          negativeText: 'Cancel',
-          positiveText: 'Deactivate'
-        },
-        {
-          trigger: () => h(
+      return h(NSpace, {}, {
+        default: () => [
+          // Voting button
+          h(
             NButton,
             {
-              strong: true,
-              secondary: true,
-              type: 'warning',
-              size: 'small'
+              type: row.is_voting ? 'default' : 'primary',
+              size: 'small',
+              onClick: () => handleSetVotingOwner(row.id)
             },
-            { default: () => 'Deactivate' }
+            { default: () => row.is_voting ? 'Remove Voting Rights' : 'Set as Voting Owner' }
           ),
-          default: () => 'Are you sure you want to deactivate this ownership?'
-        }
-      )
+
+          // Deactivate button
+          h(
+            NPopconfirm,
+            {
+              onPositiveClick: () => openDisableModal(row.id),
+              negativeText: 'Cancel',
+              positiveText: 'Deactivate'
+            },
+            {
+              trigger: () => h(
+                NButton,
+                {
+                  strong: true,
+                  secondary: true,
+                  type: 'warning',
+                  size: 'small'
+                },
+                { default: () => 'Deactivate' }
+              ),
+              default: () => 'Are you sure you want to deactivate this ownership?'
+            }
+          )
+        ]
+      })
     }
   }
 ]
@@ -181,6 +247,11 @@ onMounted(() => {
           Create New Owner
         </NButton>
       </NSpace>
+    </div>
+
+    <div class="info-box">
+      <p><strong>Note:</strong> Each unit can have only one voting owner. The voting owner has the right to vote at association meetings.
+        Setting a new voting owner will automatically remove voting rights from any previous voting owner for this unit.</p>
     </div>
 
     <NSpin :show="loading">
@@ -250,6 +321,14 @@ onMounted(() => {
 
 .section-header h3 {
   margin: 0;
+}
+
+.info-box {
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  border-left: 4px solid #2080f0;
 }
 
 .ownerships-table {
