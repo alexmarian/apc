@@ -192,6 +192,94 @@ func (q *Queries) GetAssociationOwners(ctx context.Context, associationID int64)
 	return items, nil
 }
 
+const getAssociationVoters = `-- name: GetAssociationVoters :many
+
+SELECT
+    o.id as owner_id,
+    o.name as owner_name,
+    o.normalized_name as owner_normalized_name,
+    o.identification_number as owner_identification_number,
+    o.contact_phone as owner_contact_phone,
+    o.contact_email as owner_contact_email,
+    o.first_detected_at as owner_first_detected_at,
+    o.created_at as owner_created_at,
+    o.updated_at as owner_updated_at,
+    u.id as unit_id,
+    u.unit_number,
+    u.area,
+    u.part,
+    u.unit_type,
+    b.name as building_name,
+    b.address as building_address
+FROM owners o
+         JOIN ownerships os ON o.id = os.owner_id
+         JOIN units u ON os.unit_id = u.id
+         JOIN buildings b ON u.building_id = b.id
+WHERE
+    o.association_id = ? AND
+    os.is_active = true AND os.is_voting = true
+ORDER BY o.id, u.id
+`
+
+type GetAssociationVotersRow struct {
+	OwnerID                   int64
+	OwnerName                 string
+	OwnerNormalizedName       string
+	OwnerIdentificationNumber string
+	OwnerContactPhone         string
+	OwnerContactEmail         string
+	OwnerFirstDetectedAt      sql.NullTime
+	OwnerCreatedAt            sql.NullTime
+	OwnerUpdatedAt            sql.NullTime
+	UnitID                    int64
+	UnitNumber                string
+	Area                      float64
+	Part                      float64
+	UnitType                  string
+	BuildingName              string
+	BuildingAddress           string
+}
+
+func (q *Queries) GetAssociationVoters(ctx context.Context, associationID int64) ([]GetAssociationVotersRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAssociationVoters, associationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAssociationVotersRow
+	for rows.Next() {
+		var i GetAssociationVotersRow
+		if err := rows.Scan(
+			&i.OwnerID,
+			&i.OwnerName,
+			&i.OwnerNormalizedName,
+			&i.OwnerIdentificationNumber,
+			&i.OwnerContactPhone,
+			&i.OwnerContactEmail,
+			&i.OwnerFirstDetectedAt,
+			&i.OwnerCreatedAt,
+			&i.OwnerUpdatedAt,
+			&i.UnitID,
+			&i.UnitNumber,
+			&i.Area,
+			&i.Part,
+			&i.UnitType,
+			&i.BuildingName,
+			&i.BuildingAddress,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getOwnerById = `-- name: GetOwnerById :one
     
 SELECT id, name, normalized_name, identification_number, contact_phone, contact_email, first_detected_at, association_id, created_at, updated_at FROM owners

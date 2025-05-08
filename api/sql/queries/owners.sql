@@ -96,6 +96,35 @@ WHERE o.owner_id = ? AND o.association_id = ? AND o.is_active = true;
 
 --
 
+-- name: GetAssociationVoters :many
+SELECT
+    o.id as owner_id,
+    o.name as owner_name,
+    o.normalized_name as owner_normalized_name,
+    o.identification_number as owner_identification_number,
+    o.contact_phone as owner_contact_phone,
+    o.contact_email as owner_contact_email,
+    o.first_detected_at as owner_first_detected_at,
+    o.created_at as owner_created_at,
+    o.updated_at as owner_updated_at,
+    u.id as unit_id,
+    u.unit_number,
+    u.area,
+    u.part,
+    u.unit_type,
+    b.name as building_name,
+    b.address as building_address
+FROM owners o
+         JOIN ownerships os ON o.id = os.owner_id
+         JOIN units u ON os.unit_id = u.id
+         JOIN buildings b ON u.building_id = b.id
+WHERE
+    o.association_id = ? AND
+    os.is_active = true AND os.is_voting = true
+ORDER BY o.id, u.id;
+
+--
+
 -- name: GetOwnerUnitsWithDetailsForReport :many
 SELECT
     o.id as owner_id,

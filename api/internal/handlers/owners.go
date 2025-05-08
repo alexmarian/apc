@@ -594,3 +594,77 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 		RespondWithJSON(rw, http.StatusOK, ownerReports)
 	}
 }
+func HandleGetVotersReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+
+		type OwnerUnit struct {
+			UnitID          int64   `json:"unit_id"`
+			UnitNumber      string  `json:"unit_number"`
+			BuildingName    string  `json:"building_name"`
+			BuildingAddress string  `json:"building_address"`
+			Area            float64 `json:"area"`
+			Part            float64 `json:"part"`
+			UnitType        string  `json:"unit_type"`
+		}
+
+		type OwnerReportItem struct {
+			OwnerId              int64       `json:"owner_id"`
+			OwnerName            string      `json:"name"`
+			IdentificationNumber string      `json:"identification_number"`
+			ContactPhone         string      `json:"contact_phone"`
+			ContactEmail         string      `json:"contact_email"`
+			Units                []OwnerUnit `json:"units,omitempty"`
+			TotalUnits           int         `json:"total_units"`
+			TotalArea            float64     `json:"total_area"`
+			VotingShare          float64     `json:"total_condo_part"`
+		}
+
+		voterData, err := cfg.Db.GetAssociationVoters(req.Context(), int64(associationId))
+		if err != nil {
+			log.Printf("Error retrieving owner report data: %s", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve owner report data")
+			return
+		}
+
+		ownerReports := []OwnerReportItem{}
+		ownerMap := make(map[int64]*OwnerReportItem)
+
+		for _, row := range voterData {
+			// If this owner isn't in our map yet, create a new entry
+			if _, exists := ownerMap[row.OwnerID]; !exists {
+				ownerMap[row.OwnerID] = &OwnerReportItem{
+
+					OwnerId:              row.OwnerID,
+					OwnerName:            row.OwnerName,
+					IdentificationNumber: row.OwnerIdentificationNumber,
+					ContactPhone:         row.OwnerContactPhone,
+					ContactEmail:         row.OwnerContactEmail,
+					TotalArea:            0,
+					VotingShare:          0,
+					TotalUnits:           0,
+					Units:                []OwnerUnit{},
+				}
+			}
+
+			ownerEntry := ownerMap[row.OwnerID]
+
+			ownerEntry.Units = append(ownerEntry.Units, OwnerUnit{
+				UnitID:          row.UnitID,
+				UnitNumber:      row.UnitNumber,
+				BuildingName:    row.BuildingName,
+				BuildingAddress: row.BuildingAddress,
+				Area:            row.Area,
+				Part:            row.Part,
+				UnitType:        row.UnitType,
+			})
+			ownerEntry.TotalArea += row.Area
+			ownerEntry.VotingShare += row.Part
+			ownerEntry.TotalUnits++
+		}
+		for _, ownerEntry := range ownerMap {
+			ownerReports = append(ownerReports, *ownerEntry)
+		}
+		RespondWithJSON(rw, http.StatusOK, ownerReports)
+	}
+}

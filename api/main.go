@@ -90,6 +90,8 @@ func main() {
 	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/buildings/{%s}/units/{%s}/ownerships", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue, handlers.UnitIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleCreateUnitOwnership(apiCfg)))
 
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/owners/report", handlers.AssociationIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetOwnerReport(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/owners/voters", handlers.AssociationIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetVotersReport(apiCfg)))
+
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/owners/{%s}", handlers.AssociationIdPathValue, handlers.OwnerIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetAssociationOwner(apiCfg)))
 
 	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/ownerships/{ownershipId}/disable",
