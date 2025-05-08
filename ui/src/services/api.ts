@@ -205,6 +205,9 @@ export const ownerApi = {
 // Ownership APIs
 export const ownershipApi = {
   // Disable an existing ownership
+  setOwnershipVoting: (associationId: number, buildingId: number, unitId: number, ownershipId: number) =>
+    api.post(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}/ownerships/${ownershipId}/voting`),
+
   disableOwnership: (associationId: number, ownershipId: number, endDate?: Date) => {
     const payload = endDate ? { end_date: endDate.toISOString() } : {}
     return api.put(`/associations/${associationId}/ownerships/${ownershipId}/disable`, payload)

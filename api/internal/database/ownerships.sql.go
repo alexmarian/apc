@@ -11,6 +11,25 @@ import (
 	"time"
 )
 
+const disableActiveVoting = `-- name: DisableActiveVoting :exec
+    
+UPDATE ownerships
+SET is_voting = false
+WHERE unit_id = ?
+  AND association_id = ?
+  AND is_voting = true
+`
+
+type DisableActiveVotingParams struct {
+	UnitID        int64
+	AssociationID int64
+}
+
+func (q *Queries) DisableActiveVoting(ctx context.Context, arg DisableActiveVotingParams) error {
+	_, err := q.db.ExecContext(ctx, disableActiveVoting, arg.UnitID, arg.AssociationID)
+	return err
+}
+
 const getActiveUnitOwnerships = `-- name: GetActiveUnitOwnerships :many
 
 SELECT o.id, o.unit_id, o.owner_id, o.association_id, o.start_date, o.end_date, o.is_active, o.registration_document, o.registration_date, o.created_at, o.updated_at, o.is_voting,
@@ -250,12 +269,11 @@ func (q *Queries) GetUnitOwnerships(ctx context.Context, arg GetUnitOwnershipsPa
 }
 
 const setVoting = `-- name: SetVoting :exec
+
 UPDATE ownerships
-SET is_voting = CASE
-                    WHEN id = ? THEN true
-                    ELSE false
-    END
-WHERE unit_id = ?
+SET is_voting = true
+WHERE id = ?
+  AND unit_id = ?
   AND association_id = ?
 `
 

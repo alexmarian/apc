@@ -280,14 +280,24 @@ func HandleUnitVotingOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
 		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
 		ownershipId, _ := strconv.Atoi(req.PathValue(OwnershipIdPathValue))
-
-		err := cfg.Db.SetVoting(req.Context(), database.SetVotingParams{
+		err := cfg.Db.DisableActiveVoting(req.Context(), database.DisableActiveVotingParams{
 			UnitID:        int64(unitId),
 			AssociationID: int64(associationId),
-			ID:            int64(ownershipId),
 		})
 		if err != nil && err != sql.ErrNoRows {
-			RespondWithError(rw, http.StatusInternalServerError, "Failed to update current ownerships")
+			log.Printf("Error {}", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to disable active voting")
+			return
+		}
+		err = cfg.Db.SetVoting(req.Context(), database.SetVotingParams{
+			UnitID:        int64(unitId),
+			AssociationID: int64(associationId),
+
+			ID: int64(ownershipId),
+		})
+		if err != nil && err != sql.ErrNoRows {
+			log.Printf("Error {}", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to set active voting")
 			return
 		}
 		ownership, err := cfg.Db.GetUnitOwnership(req.Context(), database.GetUnitOwnershipParams{
@@ -296,7 +306,7 @@ func HandleUnitVotingOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 			ID:            int64(ownershipId),
 		})
 		if err != nil && err != sql.ErrNoRows {
-			RespondWithError(rw, http.StatusInternalServerError, "Failed to get current ownerships")
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get active voting")
 			return
 		}
 		RespondWithJSON(rw, http.StatusCreated, Ownership{

@@ -37,13 +37,20 @@ WHERE o.owner_id = ow.id
   AND o.id = ?;
 
 --
+    
+-- name: DisableActiveVoting :exec
+UPDATE ownerships
+SET is_voting = false
+WHERE unit_id = ?
+  AND association_id = ?
+  AND is_voting = true;
+--
+
 -- name: SetVoting :exec
 UPDATE ownerships
-SET is_voting = CASE
-                    WHEN id = ? THEN true
-                    ELSE false
-    END
-WHERE unit_id = ?
+SET is_voting = true
+WHERE id = ?
+  AND unit_id = ?
   AND association_id = ?;
 --
 
