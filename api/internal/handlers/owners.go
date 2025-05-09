@@ -337,6 +337,7 @@ func HandleCreateUnitOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 			EndDate              *time.Time `json:"end_date,omitempty"`
 			RegistrationDocument string     `json:"registration_document"`
 			RegistrationDate     time.Time  `json:"registration_date"`
+			ExclusiveOwnership   bool       `json:"is_exclusive"`
 		}
 
 		if err := decoder.Decode(&ownershipRequest); err != nil {
@@ -361,20 +362,20 @@ func HandleCreateUnitOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 			return
 		}
 
-		// Mark current ownerships as inactive
-		for _, ownership := range currentOwnerships {
-			now := time.Now()
-			err = cfg.Db.DeactivateOwnership(req.Context(), database.DeactivateOwnershipParams{
-				ID:      ownership.ID,
-				EndDate: sql.NullTime{Time: now, Valid: true},
-			})
+		if ownershipRequest.ExclusiveOwnership {
+			for _, ownership := range currentOwnerships {
+				now := time.Now()
+				err = cfg.Db.DeactivateOwnership(req.Context(), database.DeactivateOwnershipParams{
+					ID:      ownership.ID,
+					EndDate: sql.NullTime{Time: now, Valid: true},
+				})
 
-			if err != nil {
-				RespondWithError(rw, http.StatusInternalServerError, "Failed to deactivate current ownership")
-				return
+				if err != nil {
+					RespondWithError(rw, http.StatusInternalServerError, "Failed to deactivate current ownership")
+					return
+				}
 			}
 		}
-
 		// Create new ownership
 		var endDateParam sql.NullTime
 		if ownershipRequest.EndDate != nil {
@@ -388,6 +389,7 @@ func HandleCreateUnitOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 			StartDate:            sql.NullTime{Time: ownershipRequest.StartDate},
 			EndDate:              endDateParam,
 			IsActive:             true,
+			IsVoting:             ownershipRequest.ExclusiveOwnership,
 			RegistrationDocument: ownershipRequest.RegistrationDocument,
 			RegistrationDate:     ownershipRequest.RegistrationDate,
 		})

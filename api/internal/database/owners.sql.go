@@ -13,11 +13,9 @@ import (
 
 const createOwner = `-- name: CreateOwner :one
 
-INSERT INTO owners (
-    name, normalized_name, identification_number,
-    contact_phone, contact_email, association_id
-) VALUES (?, ?, ?, ?, ?, ?)
-    RETURNING id, name, normalized_name, identification_number, contact_phone, contact_email, first_detected_at, association_id, created_at, updated_at
+INSERT INTO owners (name, normalized_name, identification_number,
+                    contact_phone, contact_email, association_id)
+VALUES (?, ?, ?, ?, ?, ?) RETURNING id, name, normalized_name, identification_number, contact_phone, contact_email, first_detected_at, association_id, created_at, updated_at
 `
 
 type CreateOwnerParams struct {
@@ -56,12 +54,10 @@ func (q *Queries) CreateOwner(ctx context.Context, arg CreateOwnerParams) (Owner
 
 const createOwnership = `-- name: CreateOwnership :one
 
-INSERT INTO ownerships (
-    unit_id, owner_id, association_id,
-    start_date, end_date, is_active,
-    registration_document, registration_date
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    RETURNING id, unit_id, owner_id, association_id, start_date, end_date, is_active, registration_document, registration_date, created_at, updated_at, is_voting
+INSERT INTO ownerships (unit_id, owner_id, association_id,
+                        start_date, end_date, is_active, is_voting,
+                        registration_document, registration_date)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, unit_id, owner_id, association_id, start_date, end_date, is_active, registration_document, registration_date, created_at, updated_at, is_voting
 `
 
 type CreateOwnershipParams struct {
@@ -71,6 +67,7 @@ type CreateOwnershipParams struct {
 	StartDate            sql.NullTime
 	EndDate              sql.NullTime
 	IsActive             bool
+	IsVoting             bool
 	RegistrationDocument string
 	RegistrationDate     time.Time
 }
@@ -83,6 +80,7 @@ func (q *Queries) CreateOwnership(ctx context.Context, arg CreateOwnershipParams
 		arg.StartDate,
 		arg.EndDate,
 		arg.IsActive,
+		arg.IsVoting,
 		arg.RegistrationDocument,
 		arg.RegistrationDate,
 	)
@@ -107,7 +105,10 @@ func (q *Queries) CreateOwnership(ctx context.Context, arg CreateOwnershipParams
 const deactivateOwnership = `-- name: DeactivateOwnership :exec
 
 UPDATE ownerships
-SET is_active = false, end_date = ?, updated_at = CURRENT_TIMESTAMP
+SET is_active  = false,
+    is_voting  = false,
+    end_date   = ?,
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
 `
 
@@ -125,7 +126,8 @@ const getAssociationOwner = `-- name: GetAssociationOwner :one
 
 SELECT id, name, normalized_name, identification_number, contact_phone, contact_email, first_detected_at, association_id, created_at, updated_at
 FROM owners
-WHERE owners.id = ? and owners.association_id=?
+WHERE owners.id = ?
+  and owners.association_id = ?
 `
 
 type GetAssociationOwnerParams struct {
@@ -194,30 +196,29 @@ func (q *Queries) GetAssociationOwners(ctx context.Context, associationID int64)
 
 const getAssociationVoters = `-- name: GetAssociationVoters :many
 
-SELECT
-    o.id as owner_id,
-    o.name as owner_name,
-    o.normalized_name as owner_normalized_name,
-    o.identification_number as owner_identification_number,
-    o.contact_phone as owner_contact_phone,
-    o.contact_email as owner_contact_email,
-    o.first_detected_at as owner_first_detected_at,
-    o.created_at as owner_created_at,
-    o.updated_at as owner_updated_at,
-    u.id as unit_id,
-    u.unit_number,
-    u.area,
-    u.part,
-    u.unit_type,
-    b.name as building_name,
-    b.address as building_address
+SELECT o.id                    as owner_id,
+       o.name                  as owner_name,
+       o.normalized_name       as owner_normalized_name,
+       o.identification_number as owner_identification_number,
+       o.contact_phone         as owner_contact_phone,
+       o.contact_email         as owner_contact_email,
+       o.first_detected_at     as owner_first_detected_at,
+       o.created_at            as owner_created_at,
+       o.updated_at            as owner_updated_at,
+       u.id                    as unit_id,
+       u.unit_number,
+       u.area,
+       u.part,
+       u.unit_type,
+       b.name                  as building_name,
+       b.address               as building_address
 FROM owners o
          JOIN ownerships os ON o.id = os.owner_id
          JOIN units u ON os.unit_id = u.id
          JOIN buildings b ON u.building_id = b.id
-WHERE
-    o.association_id = ? AND
-    os.is_active = true AND os.is_voting = true
+WHERE o.association_id = ?
+  AND os.is_active = true
+  AND os.is_voting = true
 ORDER BY o.id, u.id
 `
 
@@ -281,8 +282,9 @@ func (q *Queries) GetAssociationVoters(ctx context.Context, associationID int64)
 }
 
 const getOwnerById = `-- name: GetOwnerById :one
-    
-SELECT id, name, normalized_name, identification_number, contact_phone, contact_email, first_detected_at, association_id, created_at, updated_at FROM owners
+
+SELECT id, name, normalized_name, identification_number, contact_phone, contact_email, first_detected_at, association_id, created_at, updated_at
+FROM owners
 WHERE id = ? LIMIT 1
 `
 
@@ -306,25 +308,25 @@ func (q *Queries) GetOwnerById(ctx context.Context, id int64) (Owner, error) {
 
 const getOwnerUnitsWithDetails = `-- name: GetOwnerUnitsWithDetails :many
 
-SELECT
-    u.id as unit_id,
-    u.unit_number,
-    u.area,
-    u.part,
-    u.unit_type,
-    b.name as building_name,
-    b.address as building_address,
-    o2.id as co_owner_id,
-    o2.name as co_owner_name,
-    o2.normalized_name as co_owner_normalized_name,
-    o2.identification_number as co_owner_identification_number,
-    o2.contact_phone as co_owner_contact_phone,
-    o2.contact_email as co_owner_contact_email
+SELECT u.id                     as unit_id,
+       u.unit_number,
+       u.area,
+       u.part,
+       u.unit_type,
+       b.name                   as building_name,
+       b.address                as building_address,
+       o2.id                    as co_owner_id,
+       o2.name                  as co_owner_name,
+       o2.normalized_name       as co_owner_normalized_name,
+       o2.identification_number as co_owner_identification_number,
+       o2.contact_phone         as co_owner_contact_phone,
+       o2.contact_email         as co_owner_contact_email
 FROM ownerships o
          JOIN units u ON o.unit_id = u.id
          JOIN buildings b ON u.building_id = b.id
          LEFT JOIN ownerships o_co ON o.unit_id = o_co.unit_id AND o_co.is_active = true AND o_co.owner_id != o.owner_id
-LEFT JOIN owners o2 ON o_co.owner_id = o2.id
+LEFT JOIN owners o2
+ON o_co.owner_id = o2.id
 WHERE o.owner_id = ? AND o.association_id = ? AND o.is_active = true
 `
 
@@ -388,39 +390,42 @@ func (q *Queries) GetOwnerUnitsWithDetails(ctx context.Context, arg GetOwnerUnit
 
 const getOwnerUnitsWithDetailsForReport = `-- name: GetOwnerUnitsWithDetailsForReport :many
 
-SELECT
-    o.id as owner_id,
-    o.name as owner_name,
-    o.normalized_name as owner_normalized_name,
-    o.identification_number as owner_identification_number,
-    o.contact_phone as owner_contact_phone,
-    o.contact_email as owner_contact_email,
-    o.first_detected_at as owner_first_detected_at,
-    o.created_at as owner_created_at,
-    o.updated_at as owner_updated_at,
-    u.id as unit_id,
-    u.unit_number,
-    u.area,
-    u.part,
-    u.unit_type,
-    b.name as building_name,
-    b.address as building_address,
-    o2.id as co_owner_id,
-    o2.name as co_owner_name,
-    o2.normalized_name as co_owner_normalized_name,
-    o2.identification_number as co_owner_identification_number,
-    o2.contact_phone as co_owner_contact_phone,
-    o2.contact_email as co_owner_contact_email
+SELECT o.id                     as owner_id,
+       o.name                   as owner_name,
+       o.normalized_name        as owner_normalized_name,
+       o.identification_number  as owner_identification_number,
+       o.contact_phone          as owner_contact_phone,
+       o.contact_email          as owner_contact_email,
+       o.first_detected_at      as owner_first_detected_at,
+       o.created_at             as owner_created_at,
+       o.updated_at             as owner_updated_at,
+       u.id                     as unit_id,
+       u.unit_number,
+       u.area,
+       u.part,
+       u.unit_type,
+       b.name                   as building_name,
+       b.address                as building_address,
+       o2.id                    as co_owner_id,
+       o2.name                  as co_owner_name,
+       o2.normalized_name       as co_owner_normalized_name,
+       o2.identification_number as co_owner_identification_number,
+       o2.contact_phone         as co_owner_contact_phone,
+       o2.contact_email         as co_owner_contact_email
 FROM owners o
          JOIN ownerships os ON o.id = os.owner_id
          JOIN units u ON os.unit_id = u.id
          JOIN buildings b ON u.building_id = b.id
          LEFT JOIN ownerships os2 ON os.unit_id = os2.unit_id AND os2.is_active = true AND os2.owner_id != o.id
-LEFT JOIN owners o2 ON os2.owner_id = o2.id
+LEFT JOIN owners o2
+ON os2.owner_id = o2.id
 WHERE
-    o.association_id = ? AND
-    os.is_active = true AND
-    (? = 0 OR o.id = ?) -- This filters by owner_id if provided, otherwise returns all
+    o.association_id = ?
+  AND
+    os.is_active = true
+  AND
+    (? = 0
+   OR o.id = ?) -- This filters by owner_id if provided, otherwise returns all
 ORDER BY o.id, u.id
 `
 
@@ -515,7 +520,8 @@ SELECT owners.id,
 FROM owners,
      ownerships
 WHERE owners.id = ownerships.owner_id
-  AND ownerships.unit_id = ? and ownerships.association_id = ?
+  AND ownerships.unit_id = ?
+  and ownerships.association_id = ?
 `
 
 type GetUnitOwnersParams struct {
@@ -567,7 +573,8 @@ SET name                  = ?,
     contact_phone         = ?,
     contact_email         = ?,
     updated_at            = datetime()
-WHERE id = ? AND association_id = ?
+WHERE id = ?
+  AND association_id = ?
 `
 
 type UpdateAssociationOwnerParams struct {

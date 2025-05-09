@@ -55,7 +55,7 @@ const fetchOwnerships = async () => {
       props.unitId
     )
 
-    ownerships.value = response.data
+    ownerships.value = response.data.filter(o=>o.is_active)
   } catch (err) {
     error.value = err instanceof Error ? err.message : t('common.error', 'Failed to load ownerships')
     console.error('Error fetching ownerships:', err)
@@ -194,19 +194,16 @@ const columns = computed<DataTableColumns<any>>(() => [
 
       return h(NSpace, {}, {
         default: () => [
-          // Voting button
+          !row.is_voting ?
           h(
             NButton,
             {
-              type: row.is_voting ? 'default' : 'primary',
+              type: 'primary',
               size: 'small',
               onClick: () => handleSetVotingOwner(row.id)
             },
-            { default: () => row.is_voting
-                ? t('units.ownership.removeVoting', 'Remove Voting Rights')
-                : t('units.ownership.setVoting', 'Set as Voting Owner')
-            }
-          ),
+            { default: () => t('units.ownership.setVoting', 'Set as Voting Owner')}
+          ):'',
 
           // Deactivate button
           h(
