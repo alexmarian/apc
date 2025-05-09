@@ -24,6 +24,9 @@ import { formatCurrency } from '@/utils/formatters'
 import AssociationSelector from '@/components/AssociationSelector.vue'
 import CategorySelector from '@/components/CategorySelector.vue'
 import ExpenseCharts from '@/components/ExpenseCharts.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 // Association selector
 const associationId = ref<number | null>(null)
@@ -67,7 +70,7 @@ const expensesByType = computed(() => {
   const types: Record<string, number> = {}
 
   expenses.value.forEach(expense => {
-    const type = expense.category_type || 'Uncategorized'
+    const type = expense.category_type || t('expenses.uncategorized', 'Uncategorized')
 
     if (!types[type]) {
       types[type] = 0
@@ -129,7 +132,7 @@ const fetchExpenses = async () => {
       expenses.value = expenses.value.filter(expense => expense.category_id === selectedCategory.value)
     }
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Unknown error occurred'
+    error.value = err instanceof Error ? err.message : t('common.error', 'Unknown error occurred')
     console.error('Error fetching expenses:', err)
   } finally {
     loading.value = false
@@ -149,7 +152,7 @@ watch([associationId, dateRange, selectedCategory], () => {
 
 // Format date range for display
 const formattedDateRange = computed(() => {
-  if (!dateRange.value) return 'All time'
+  if (!dateRange.value) return t('expenses.allTime', 'All time')
 
   const start = new Date(dateRange.value[0]).toLocaleDateString()
   const end = new Date(dateRange.value[1]).toLocaleDateString()
@@ -172,7 +175,7 @@ onMounted(() => {
   <div class="reports-view">
     <NPageHeader>
       <template #title>
-        Expense Reports
+        {{ t('reports.title', 'Expense Reports') }}
       </template>
 
       <template #header>
@@ -185,7 +188,7 @@ onMounted(() => {
     <div v-if="!associationId">
       <NCard style="margin-top: 16px;">
         <div style="text-align: center; padding: 32px;">
-          <p>Please select an association to view expense reports</p>
+          <p>{{ t('expenses.selectAssociation', 'Please select an association to view expense reports') }}</p>
         </div>
       </NCard>
     </div>
@@ -194,78 +197,78 @@ onMounted(() => {
       <!-- Filters -->
       <NCard style="margin-top: 16px;">
         <NFlex align="center" justify="start">
-          <NText>Date Range:</NText>
+          <NText>{{ t('expenses.dateRange', 'Date Range') }}:</NText>
           <NDatePicker
             v-model:value="dateRange"
             type="daterange"
             clearable
             style="width: 240px"
           />
-          <NText>Category:</NText>
+          <NText>{{ t('expenses.category', 'Category') }}:</NText>
           <CategorySelector
             v-model:modelValue="selectedCategory"
             :association-id="associationId"
-            placeholder="All Categories"
+            :placeholder="t('categories.allCategories', 'All Categories')"
             :include-all-option="true"
             style="width: 360px"
           />
-          <NButton @click="resetFilters">Reset Filters</NButton>
+          <NButton @click="resetFilters">{{ t('expenses.resetFilters', 'Reset Filters') }}</NButton>
         </NFlex>
       </NCard>
 
       <NSpin :show="loading">
-        <NAlert v-if="error" type="error" title="Error" closable style="margin-top: 16px;">
+        <NAlert v-if="error" type="error" :title="t('common.error', 'Error')" closable style="margin-top: 16px;">
           {{ error }}
-          <NButton @click="fetchExpenses">Retry</NButton>
+          <NButton @click="fetchExpenses">{{ t('common.retry', 'Retry') }}</NButton>
         </NAlert>
 
         <template v-else-if="expenses.length === 0">
           <NCard style="margin-top: 16px;">
             <div style="text-align: center; padding: 32px;">
-              <p>No expenses found for the selected filters</p>
+              <p>{{ t('expenses.noExpensesFilters', 'No expenses found for the selected filters') }}</p>
             </div>
           </NCard>
         </template>
 
         <template v-else>
           <!-- Summary Statistics -->
-          <NCard style="margin-top: 16px;" title="Summary">
+          <NCard style="margin-top: 16px;" :title="t('expenses.summary', 'Summary')">
             <div class="summary-header">
-              <h3>Expense Summary for {{ formattedDateRange }}</h3>
+              <h3>{{ t('expenses.expenseAnalysis', 'Expense Analysis') }} {{ formattedDateRange }}</h3>
             </div>
 
             <NGrid :cols="3" :x-gap="16">
               <NGridItem>
-                <NStatistic label="Total Expenses" :value="formatCurrency(yearlyTotal)" />
+                <NStatistic :label="t('expenses.totalExpenses', 'Total Expenses')" :value="formatCurrency(yearlyTotal)" />
               </NGridItem>
               <NGridItem>
-                <NStatistic label="Monthly Average" :value="formatCurrency(monthlyAverage)" />
+                <NStatistic :label="t('expenses.averageExpense', 'Monthly Average')" :value="formatCurrency(monthlyAverage)" />
               </NGridItem>
               <NGridItem>
-                <NStatistic label="Number of Expenses" :value="expenses.length" />
+                <NStatistic :label="t('expenses.numberOfExpenses', 'Number of Expenses')" :value="expenses.length" />
               </NGridItem>
             </NGrid>
 
             <NDivider />
 
             <NTabs type="line" animated>
-              <NTabPane name="charts" tab="Visual Reports">
+              <NTabPane name="charts" :tab="t('charts.pieChart', 'Visual Reports')">
                 <ExpenseCharts
                   :expenses="expenses"
                   :dateRange="dateRange"
                 />
               </NTabPane>
 
-              <NTabPane name="breakdown" tab="Breakdown">
+              <NTabPane name="breakdown" :tab="t('expenses.expenseTypeBreakdown', 'Breakdown')">
                 <div class="breakdown-section">
-                  <h3>Expense Breakdown by Type</h3>
+                  <h3>{{ t('expenses.expensesByType', 'Expense Breakdown by Type') }}</h3>
                   <div class="breakdown-table">
                     <table>
                       <thead>
                       <tr>
-                        <th>Type</th>
-                        <th>Amount</th>
-                        <th>Percentage</th>
+                        <th>{{ t('categories.types.title', 'Type') }}</th>
+                        <th>{{ t('charts.amount', 'Amount') }}</th>
+                        <th>{{ t('charts.percentage', 'Percentage') }}</th>
                       </tr>
                       </thead>
                       <tbody>
@@ -282,13 +285,13 @@ onMounted(() => {
                 <NDivider />
 
                 <div class="breakdown-section">
-                  <h3>Monthly Expenses</h3>
+                  <h3>{{ t('expenses.monthlyTrends', 'Monthly Expenses') }}</h3>
                   <div class="breakdown-table">
                     <table>
                       <thead>
                       <tr>
-                        <th>Month</th>
-                        <th>Amount</th>
+                        <th>{{ t('expenses.month', 'Month') }}</th>
+                        <th>{{ t('charts.amount', 'Amount') }}</th>
                       </tr>
                       </thead>
                       <tbody>
