@@ -22,7 +22,10 @@
     "total": "Total",
     "actions": "Actions",
     "details": "Details",
-    "clear": "Clear"
+    "clear": "Clear",
+    "active": "Active",
+    "inactive": "Inactive",
+    "status": "Status"
   },
   "auth": {
     "login": "Login",
@@ -38,14 +41,10 @@
     "title": "Accounts",
     "list": "Accounts",
     "createNew": "Create New Account",
-    "editAccount": "Edit Account",
     "accountNumber": "Account Number",
     "description": "Description",
     "destination": "Destination",
     "status": "Status",
-    "active": "Active",
-    "inactive": "Inactive",
-    "actions": "Actions",
     "confirmDisable": "Are you sure you want to disable this account?",
     "accountDisabled": "Account disabled successfully",
     "accountCreated": "Account created successfully",
@@ -57,7 +56,8 @@
   "associations": {
     "title": "Associations",
     "select": "Select an association",
-    "noAssociations": "No associations found"
+    "noAssociations": "No associations found",
+    "noAssociationsMessage": "Please select an association first"
   },
   "expenses": {
     "title": "Expenses",
@@ -103,7 +103,7 @@
   "owners": {
     "title": "Owners",
     "report": "Owners Report",
-    "voting-report": "Voting Report",
+    "votingReport": "Voting Report",
     "list": "Owners List",
     "cumulative": "Cumulative Ownership",
     "includeUnits": "Include Units",

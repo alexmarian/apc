@@ -73,7 +73,7 @@ const menuOptions = [
         key: 'owners-report'
       },
       {
-        label: () => h(RouterLink, { to: '/owners/voting' }, { default: () => t('owners.voting-report', 'Voting Report') }),
+        label: () => h(RouterLink, { to: '/owners/voting' }, { default: () => t('owners.votingReport', 'Voting Report') }),
         key: 'owners-voting-report'
       }
     ]

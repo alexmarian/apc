@@ -4,40 +4,40 @@ import { NDataTable, NButton, NSpace, NTag, NEmpty, NSpin, NAlert, useMessage } 
 import type { DataTableColumns } from 'naive-ui'
 import { accountApi } from '@/services/api'
 import type { Account } from '@/types/api'
+import { useI18n } from 'vue-i18n'
 
-// Props
+
 const props = defineProps<{
   associationId: number
 }>()
 
-// Emits
+
 const emit = defineEmits<{
   (e: 'edit', accountId: number): void
 }>()
-
-// Data
+const { t } = useI18n()
 const accounts = ref<Account[]>([])
 const loading = ref<boolean>(true)
 const error = ref<string | null>(null)
 const message = useMessage()
 
-// Table columns definition
+
 const columns = ref<DataTableColumns<Account>>([
   {
-    title: 'Account Number',
+    title: t('accounts.accountNumber', 'Account Number'),
     key: 'number',
     sorter: 'default'
   },
   {
-    title: 'Description',
+    title: t('accounts.description', 'Description'),
     key: 'description'
   },
   {
-    title: 'Destination',
+    title: t('accounts.destination', 'Destination'),
     key: 'destination'
   },
   {
-    title: 'Status',
+    title: t('accounts.status', 'Status'),
     key: 'is_active',
     render(row) {
       return h(
@@ -46,12 +46,12 @@ const columns = ref<DataTableColumns<Account>>([
           type: row.is_active ? 'success' : 'error',
           bordered: false
         },
-        { default: () => row.is_active ? 'Active' : 'Inactive' }
+        { default: () => row.is_active ? t('common.active', 'Active') : t('common.inactive', 'Inactive') }
       )
     }
   },
   {
-    title: 'Actions',
+    title: t('common.actions','Actions'),
     key: 'actions',
     render(row) {
       return h(
@@ -72,7 +72,7 @@ const columns = ref<DataTableColumns<Account>>([
                 disabled: !row.is_active,
                 onClick: () => emit('edit', row.id)
               },
-              { default: () => 'Edit' }
+              { default: () => t('common.edit','Edit') }
             ),
             h(
               NButton,
@@ -84,7 +84,7 @@ const columns = ref<DataTableColumns<Account>>([
                 disabled: !row.is_active,
                 onClick: () => disableAccount(row.id)
               },
-              { default: () => 'Disable' }
+              { default: () => t('common.disable','Disable') }
             )
           ]
         }
@@ -112,7 +112,7 @@ const fetchAccounts = async () => {
 // Disable account
 const disableAccount = async (accountId: number) => {
   try {
-    const confirmDisable = window.confirm('Are you sure you want to disable this account?')
+    const confirmDisable = window.confirm(t('accounts.confirmDisable','Are you sure you want to disable this account?'))
     if (!confirmDisable) return
 
     await accountApi.disableAccount(props.associationId, accountId)
@@ -140,8 +140,6 @@ onMounted(() => {
 
 <template>
   <div class="accounts-list">
-    <h2>Accounts</h2>
-
     <NSpin :show="loading">
       <NAlert v-if="error" type="error" title="Error" closable>
         {{ error }}

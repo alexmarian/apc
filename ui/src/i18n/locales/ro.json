@@ -22,7 +22,10 @@
     "total": "Total",
     "actions": "Actions",
     "details": "Details",
-    "clear": "Șterge"
+    "clear": "Șterge",
+    "active": "Activ",
+    "inactive": "Inactiv",
+    "status": "Status"
   },
   "auth": {
     "login": "Autentificare",
@@ -38,14 +41,10 @@
     "title": "Conturi",
     "list": " Listă Conturi",
     "createNew": "Creează Cont Nou",
-    "editAccount": "Editează Cont",
     "accountNumber": "Număr Cont",
     "description": "Descriere",
     "destination": "Destinație",
     "status": "Status",
-    "active": "Activ",
-    "inactive": "Inactiv",
-    "actions": "Acțiuni",
     "confirmDisable": "Sunteți sigur că doriți să dezactivați acest cont?",
     "accountDisabled": "Contul a fost dezactivat cu succes",
     "accountCreated": "Contul a fost creat cu succes",
@@ -57,7 +56,8 @@
   "associations": {
     "title": "Asociații",
     "select": "Selectați o asociație",
-    "noAssociations": "Nu s-au găsit asociații"
+    "noAssociations": "Nu s-au găsit asociații",
+    "noAssociationsMessage": "Vă rugăm să selectați mai întâi o asociație"
   },
   "expenses": {
     "title": "Administrare Cheltuieli",
@@ -103,7 +103,7 @@
   "owners": {
     "title": "Proprietari",
     "report": "Raport Proprietari",
-    "voting-report": "Raport Votare",
+    "votingReport": "Raport Votare",
     "list": "Lista Proprietari",
     "cumulative": "Proprietate Cumulativă",
     "includeUnits": "Include Unitățile",

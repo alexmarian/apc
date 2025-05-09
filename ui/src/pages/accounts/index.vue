@@ -1,29 +1,35 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { NCard, NButton, NSpace, NPageHeader, NGrid, NGridItem, NDropdown, useMessage } from 'naive-ui'
+import {
+  NCard,
+  NButton,
+  NSpace,
+  NPageHeader,
+  NGrid,
+  NGridItem,
+  NDropdown,
+  useMessage
+} from 'naive-ui'
 import AccountsList from '@/components/AccountsList.vue'
 import AccountForm from '@/components/AccountForm.vue'
 import AssociationSelector from '@/components/AssociationSelector.vue'
+import { useI18n } from 'vue-i18n'
 
-// Setup Naive UI message system
 const message = useMessage()
-
-// Association selector
+const { t } = useI18n()
 const associationId = ref<number | null>(null)
 
-// UI state
+
 const showForm = ref(false)
 const editingAccountId = ref<number | undefined>(undefined)
 
-// Computed properties
 const formTitle = computed(() => {
   return editingAccountId.value ? 'Edit Account' : 'Create New Account'
 })
 
-// Methods
 const handleCreateAccount = () => {
   if (!associationId.value) {
-    message.error('Please select an association first')
+    message.error(t('accounts.selectAssociation', 'Please select an association first'))
     return
   }
 
@@ -38,10 +44,11 @@ const handleEditAccount = (accountId: number) => {
 
 const handleFormSaved = () => {
   showForm.value = false
-  // Show success message
-  message.success(`Account ${editingAccountId.value ? 'updated' : 'created'} successfully`)
-  // In a real app, you would refresh the accounts list here or update the local state
-  // For now, just reload the page after a short delay
+  if (editingAccountId.value) {
+    message.success(t('account.accountUpdated', `Account updated successfully`))
+  } else {
+    message.success(t('account.accountCreated', `Account created successfully`))
+  }
   setTimeout(() => {
     location.reload()
   }, 1000)
@@ -56,7 +63,7 @@ const handleFormCancelled = () => {
   <div class="accounts-view">
     <NPageHeader>
       <template #title>
-        Account Management
+        {{ t('accounts.title', 'Account Management') }}
       </template>
 
       <template #header>
@@ -72,7 +79,7 @@ const handleFormCancelled = () => {
           @click="handleCreateAccount"
           :disabled="!associationId"
         >
-          Create New Account
+          {{ t('accounts.createNew', 'Create New Account') }}
         </NButton>
       </template>
     </NPageHeader>
@@ -95,7 +102,7 @@ const handleFormCancelled = () => {
 
     <NCard v-else style="margin-top: 16px;">
       <div style="text-align: center; padding: 32px;">
-        <p>Please select an association to manage accounts</p>
+        <p>{{ t('accounts.createNew', 'Create New Account') }}</p>
       </div>
     </NCard>
   </div>
