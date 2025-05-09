@@ -7,7 +7,9 @@ import OwnerForm from '@/components/OwnerForm.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { unitApi } from '@/services/api'
 import type { Unit } from '@/types/api'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const refreshKey = ref(0)
@@ -30,7 +32,7 @@ const editingOwnerId = ref<number | null>(null)
 const verifyParams = async () => {
   // Only fetch if we have all required IDs
   if (!associationId.value || !buildingId.value) {
-    error.value = 'Missing association or building ID. Please ensure these are provided in the URL.'
+    error.value = t('units.missingIds', 'Missing association or building ID. Please ensure these are provided in the URL.')
     loading.value = false
     return
   }
@@ -49,7 +51,7 @@ const verifyParams = async () => {
     // If the API call is successful, then we have valid IDs
 
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Error fetching unit information'
+    error.value = err instanceof Error ? err.message : t('common.error', 'Error fetching unit information')
     console.error('Error fetching unit data:', err)
   } finally {
     loading.value = false
@@ -119,12 +121,12 @@ onMounted(() => {
   <div class="unit-details-page">
     <NPageHeader>
       <template #title>
-        {{ showEditForm ? 'Edit Unit' : 'Unit Details' }}
+        {{ showEditForm ? t('units.editUnit', 'Edit Unit') : t('units.details', 'Unit Details') }}
       </template>
       <template #extra>
         <NSpace>
           <NButton @click="handleBackToUnits">
-            Back to Units List
+            {{ t('units.backToList', 'Back to Units List') }}
           </NButton>
           <NButton
             v-if="!showEditForm"
@@ -132,7 +134,7 @@ onMounted(() => {
             @click="handleEditUnit"
             :disabled="loading || error !== null"
           >
-            Edit Unit
+            {{ t('units.editUnit', 'Edit Unit') }}
           </NButton>
         </NSpace>
       </template>
@@ -140,13 +142,13 @@ onMounted(() => {
 
     <NSpin :show="loading">
       <NCard v-if="error" style="margin-top: 16px;">
-        <NAlert type="error" title="Error">
+        <NAlert type="error" :title="t('common.error', 'Error')">
           {{ error }}
         </NAlert>
         <div style="text-align: center; padding: 16px;">
-          <NButton @click="verifyParams">Retry</NButton>
+          <NButton @click="verifyParams">{{ t('common.retry', 'Retry') }}</NButton>
           <NButton @click="handleBackToUnits" style="margin-left: 16px;">
-            Return to Units List
+            {{ t('units.backToList', 'Return to Units List') }}
           </NButton>
         </div>
       </NCard>
@@ -155,7 +157,6 @@ onMounted(() => {
         <!-- Show edit form or details based on state -->
         <NCard v-if="showEditForm">
           <UnitForm
-
             :association-id="associationId"
             :building-id="buildingId"
             :unit-id="unitId"
@@ -181,7 +182,7 @@ onMounted(() => {
       v-model:show="showOwnerForm"
       style="width: 650px"
       preset="card"
-      title="Edit Owner"
+      :title="t('units.editOwner', 'Edit Owner')"
       :mask-closable="false"
     >
       <OwnerForm

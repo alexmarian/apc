@@ -73,9 +73,9 @@ const columns = computed<DataTableColumns<VotingOwner>>(() => [
   },
   {
     title: t('owners.votingShare', 'Voting Share'),
-    key: 'to', // Updated to match API response
-    sorter: (a, b) => a.voting_share - b.voting_share,
-    render: (row: VotingOwner) => formatPercentage(row.voting_share, 4)
+    key: 'total_condo_part', // Updated to match API response
+    sorter: (a, b) => a.total_condo_part - b.total_condo_part,
+    render: (row: VotingOwner) => formatPercentage(row.total_condo_part, 4)
   },
   {
     title: t('common.actions', 'Actions'),
@@ -149,7 +149,7 @@ const fetchVotingOwnersReport = async () => {
     const response = await ownerApi.getVotingOwners(props.associationId)
     votingOwners.value = response.data || []
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load voting owners'
+    error.value = err instanceof Error ? err.message : t('owners.voting.loadError', 'Failed to load voting owners')
     console.error('Error fetching voting owners:', err)
     votingOwners.value = []
   } finally {
@@ -174,22 +174,22 @@ const handleEditOwner = (ownerId: number) => {
 // Export to CSV
 const exportToCSV = () => {
   if (!votingOwners.value || votingOwners.value.length === 0) {
-    message.error('No data to export')
+    message.error(t('owners.voting.noDataToExport', 'No data to export'))
     return
   }
 
   try {
     // Create CSV headers
     const headers = [
-      'Owner ID',
-      'Owner Name',
-      'Identification Number',
-      'Contact Phone',
-      'Contact Email',
-      'Units Count',
-      'Total Area (m²)',
-      'Voting Share (%)',
-      'Units'
+      t('owners.voting.csvHeaders.id', 'Owner ID'),
+      t('owners.voting.csvHeaders.name', 'Owner Name'),
+      t('owners.voting.csvHeaders.identification', 'Identification Number'),
+      t('owners.voting.csvHeaders.phone', 'Contact Phone'),
+      t('owners.voting.csvHeaders.email', 'Contact Email'),
+      t('owners.voting.csvHeaders.unitsCount', 'Units Count'),
+      t('owners.voting.csvHeaders.area', 'Total Area (m²)'),
+      t('owners.voting.csvHeaders.votingShare', 'Voting Share (%)'),
+      t('owners.voting.csvHeaders.units', 'Units')
     ]
 
     // Create CSV rows
@@ -202,7 +202,7 @@ const exportToCSV = () => {
         owner.contact_email,
         owner.total_units,
         owner.total_area.toFixed(2),
-        (owner.voting_share * 100).toFixed(4),
+        (owner.total_condo_part * 100).toFixed(4),
         owner.units.map(u => `${u.building_name} - ${u.unit_number}`).join('; ')
       ]
     })
@@ -222,17 +222,17 @@ const exportToCSV = () => {
 
     // Add summary data
     csvContent += '\n'
-    csvContent += 'Report Summary\n'
-    csvContent += `Total Voting Owners,${votingOwners.value.length}\n`
+    csvContent += t('owners.voting.csvHeaders.reportSummary', 'Report Summary') + '\n'
+    csvContent += `${t('owners.voting.csvHeaders.totalOwners', 'Total Voting Owners')},${votingOwners.value.length}\n`
 
     // Calculate totals
     const totalUnits = votingOwners.value.reduce((sum, owner) => sum + owner.total_units, 0)
     const totalArea = votingOwners.value.reduce((sum, owner) => sum + owner.total_area, 0)
-    const totalShare = votingOwners.value.reduce((sum, owner) => sum + owner.voting_share, 0)
+    const totalShare = votingOwners.value.reduce((sum, owner) => sum + owner.total_condo_part, 0)
 
-    csvContent += `Total Units,${totalUnits}\n`
-    csvContent += `Total Area (m²),${totalArea.toFixed(2)}\n`
-    csvContent += `Total Voting Share (%),${(totalShare * 100).toFixed(4)}\n`
+    csvContent += `${t('owners.voting.csvHeaders.totalUnits', 'Total Units')},${totalUnits}\n`
+    csvContent += `${t('owners.voting.csvHeaders.totalArea', 'Total Area (m²)')},${totalArea.toFixed(2)}\n`
+    csvContent += `${t('owners.voting.csvHeaders.totalVotingShare', 'Total Voting Share (%)')},${(totalShare * 100).toFixed(4)}\n`
 
     // Create download link
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
@@ -245,10 +245,10 @@ const exportToCSV = () => {
     link.click()
     document.body.removeChild(link)
 
-    message.success('CSV exported successfully')
+    message.success(t('owners.voting.exportSuccess', 'CSV exported successfully'))
   } catch (err) {
     console.error('Error exporting to CSV:', err)
-    message.error('Failed to export CSV')
+    message.error(t('owners.voting.exportError', 'Failed to export CSV'))
   }
 }
 
@@ -291,7 +291,7 @@ const summaryStats = computed(() => {
 
   const totalUnits = votingOwners.value.reduce((sum, owner) => sum + owner.total_units, 0)
   const totalArea = votingOwners.value.reduce((sum, owner) => sum + owner.total_area, 0)
-  const totalShare = votingOwners.value.reduce((sum, owner) => sum + owner.voting_share, 0)
+  const totalShare = votingOwners.value.reduce((sum, owner) => sum + owner.total_condo_part, 0)
 
   return {
     totalOwners: votingOwners.value.length,
@@ -313,14 +313,14 @@ watch(() => props.associationId, (newVal) => {
 
 <template>
   <div class="voting-owners-report">
-    <NCard :title="t('owners.votingOwnersReport', 'Voting Owners Report')">
+    <NCard :title="t('owners.votingReport', 'Voting Owners Report')">
       <template #header-extra>
         <NButton
           type="primary"
           @click="exportToCSV"
           :disabled="!votingOwners || votingOwners.length === 0"
         >
-          {{ t('common.exportToCsv', 'Export to CSV') }}
+          {{ t('owners.exportToCsv', 'Export to CSV') }}
         </NButton>
       </template>
 
@@ -330,7 +330,7 @@ watch(() => props.associationId, (newVal) => {
             <NInputGroup>
               <NInput
                 v-model:value="searchQuery"
-                :placeholder="t('common.search', 'Search owners...')"
+                :placeholder="t('owners.voting.searchPlaceholder', 'Search voting owners...')"
                 clearable
               />
               <NSelect
@@ -364,19 +364,19 @@ watch(() => props.associationId, (newVal) => {
           <!-- Summary Statistics -->
           <div class="summary-stats" v-if="summaryStats">
             <div class="stat-item">
-              <div class="stat-label">{{ t('common.totalOwners', 'Total Voting Owners') }}</div>
+              <div class="stat-label">{{ t('owners.voting.totalVotingOwners', 'Total Voting Owners') }}</div>
               <div class="stat-value">{{ summaryStats.totalOwners }}</div>
             </div>
             <div class="stat-item">
-              <div class="stat-label">{{ t('common.totalUnits', 'Total Units') }}</div>
+              <div class="stat-label">{{ t('owners.voting.totalUnits', 'Total Units') }}</div>
               <div class="stat-value">{{ summaryStats.totalUnits }}</div>
             </div>
             <div class="stat-item">
-              <div class="stat-label">{{ t('common.totalArea', 'Total Area') }}</div>
+              <div class="stat-label">{{ t('owners.totalArea', 'Total Area') }}</div>
               <div class="stat-value">{{ summaryStats.totalArea.toFixed(2) }} m²</div>
             </div>
             <div class="stat-item">
-              <div class="stat-label">{{ t('common.totalVotingShare', 'Total Voting Share') }}</div>
+              <div class="stat-label">{{ t('owners.voting.totalVotingShare', 'Total Voting Share') }}</div>
               <div class="stat-value">{{ formatPercentage(summaryStats.totalVotingShare, 4) }}</div>
             </div>
           </div>
@@ -395,7 +395,7 @@ watch(() => props.associationId, (newVal) => {
           <!-- Selected Owner Units -->
           <div v-if="selectedOwner" class="owner-details">
             <div class="details-header">
-              <h3>{{ t('owners.unitDetails', 'Units Owned by') }}: {{ selectedOwner.name }}</h3>
+              <h3>{{ t('owners.voting.unitsOwnedBy', 'Units Owned by') }}: {{ selectedOwner.name }}</h3>
               <NButton size="small" @click="selectedOwner = null">{{ t('common.close', 'Close') }}</NButton>
             </div>
             <NDataTable
@@ -412,8 +412,8 @@ watch(() => props.associationId, (newVal) => {
 
         <div v-else-if="!loading && (!votingOwners || votingOwners.length === 0)" class="empty-state">
           <div style="text-align: center; padding: 32px;">
-            <h3>{{ t('owners.noVotingOwners', 'No Voting Owners Found') }}</h3>
-            <p>{{ t('owners.assignVotingRights', 'Assign voting rights to owners in the Unit Details page.') }}</p>
+            <h3>{{ t('owners.voting.noVotingOwners', 'No Voting Owners Found') }}</h3>
+            <p>{{ t('owners.voting.assignVotingRights', 'Assign voting rights to owners in the Unit Details page.') }}</p>
           </div>
         </div>
       </NSpin>

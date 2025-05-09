@@ -7,6 +7,10 @@ import AssociationSelector from '@/components/AssociationSelector.vue'
 import BuildingSelector from '@/components/BuildingSelector.vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { Unit } from '@/types/api'
+import { useI18n } from 'vue-i18n'
+
+// Setup i18n
+const { t } = useI18n()
 
 // Setup Naive UI message system
 const message = useMessage()
@@ -46,7 +50,7 @@ const setDisplayedUnits = (units: Unit[]) => {
 
 // Computed properties
 const formTitle = computed(() => {
-  return editingUnitId.value ? 'Edit Unit' : 'Create New Unit'
+  return editingUnitId.value ? t('units.editUnit', 'Edit Unit') : t('units.createUnit', 'Create New Unit')
 })
 
 const canShowUnits = computed(() => {
@@ -70,7 +74,7 @@ const handleEditUnit = (unitId: number) => {
 const handleFormSaved = () => {
   showForm.value = false
   // Show success message
-  message.success(`Unit ${editingUnitId.value ? 'updated' : 'created'} successfully`)
+  message.success(t('units.unitSaved', `Unit ${editingUnitId.value ? 'updated' : 'created'} successfully`))
 
   // Remove editUnitId from query params
   const newQuery = { ...route.query }
@@ -128,7 +132,7 @@ watch(associationId, () => {
   <div class="units-view">
     <NPageHeader>
       <template #title>
-        Unit Management
+        {{ t('units.management', 'Unit Management') }}
       </template>
 
       <template #header>
@@ -151,7 +155,7 @@ watch(associationId, () => {
     <div v-if="!associationId || !buildingId">
       <NCard style="margin-top: 16px;">
         <div style="text-align: center; padding: 32px;">
-          <p>Please select an association and building to manage units</p>
+          <p>{{ t('units.selectAssociationAndBuilding', 'Please select an association and building to manage units') }}</p>
         </div>
       </NCard>
     </div>

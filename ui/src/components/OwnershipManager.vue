@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, h } from 'vue'
+import { ref, onMounted, h, computed } from 'vue'
 import {
   NDataTable,
   NButton,
@@ -18,6 +18,9 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { unitApi, ownershipApi } from '@/services/api'
 import OwnershipForm from './OwnershipForm.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   associationId: number
@@ -54,7 +57,7 @@ const fetchOwnerships = async () => {
 
     ownerships.value = response.data
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load ownerships'
+    error.value = err instanceof Error ? err.message : t('common.error', 'Failed to load ownerships')
     console.error('Error fetching ownerships:', err)
   } finally {
     loading.value = false
@@ -93,12 +96,12 @@ const handleDisableOwnership = async () => {
       new Date(disableDate.value)
     )
 
-    message.success('Ownership deactivated successfully')
+    message.success(t('units.ownership.deactivateSuccess', 'Ownership deactivated successfully'))
     showDisableModal.value = false
     fetchOwnerships()
     emit('updated')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to deactivate ownership'
+    error.value = err instanceof Error ? err.message : t('units.ownership.deactivateError', 'Failed to deactivate ownership')
     console.error('Error deactivating ownership:', err)
   } finally {
     loading.value = false
@@ -118,11 +121,11 @@ const handleSetVotingOwner = async (ownershipId: number) => {
       ownershipId
     )
 
-    message.success('Voting rights updated successfully')
+    message.success(t('units.ownership.votingUpdated', 'Voting rights updated successfully'))
     fetchOwnerships()
     emit('updated')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to update voting rights'
+    error.value = err instanceof Error ? err.message : t('units.ownership.votingError', 'Failed to update voting rights')
     console.error('Error updating voting rights:', err)
   } finally {
     loading.value = false
@@ -130,24 +133,24 @@ const handleSetVotingOwner = async (ownershipId: number) => {
 }
 
 // Ownership table columns
-const columns: DataTableColumns<any> = [
+const columns = computed<DataTableColumns<any>>(() => [
   {
-    title: 'Owner',
+    title: t('owners.name', 'Owner'),
     key: 'owner_name',
-    render: (row) => row.owner_name || `Owner ID: ${row.owner_id}`
+    render: (row) => row.owner_name || t('units.ownership.ownerId', 'Owner ID: {id}', { id: row.owner_id })
   },
   {
-    title: 'Start Date',
+    title: t('units.ownership.startDate', 'Start Date'),
     key: 'start_date',
     render: (row) => new Date(row.start_date).toLocaleDateString()
   },
   {
-    title: 'End Date',
+    title: t('units.ownership.endDate', 'End Date'),
     key: 'end_date',
     render: (row) => row.end_date ? new Date(row.end_date).toLocaleDateString() : '-'
   },
   {
-    title: 'Status',
+    title: t('common.status', 'Status'),
     key: 'is_active',
     render: (row) => {
       const elements = []
@@ -158,7 +161,7 @@ const columns: DataTableColumns<any> = [
           type: row.is_active ? 'success' : 'default',
           style: 'margin-right: 8px'
         }, {
-          default: () => row.is_active ? 'Active' : 'Inactive'
+          default: () => row.is_active ? t('common.active', 'Active') : t('common.inactive', 'Inactive')
         })
       )
 
@@ -168,7 +171,7 @@ const columns: DataTableColumns<any> = [
           h(NTag, {
             type: 'info'
           }, {
-            default: () => 'Voting Owner'
+            default: () => t('units.ownership.votingOwner', 'Voting Owner')
           })
         )
       }
@@ -177,16 +180,16 @@ const columns: DataTableColumns<any> = [
     }
   },
   {
-    title: 'Registration',
+    title: t('units.ownership.registration', 'Registration'),
     key: 'registration_document',
     render: (row) => `${row.registration_document} (${new Date(row.registration_date).toLocaleDateString()})`
   },
   {
-    title: 'Actions',
+    title: t('common.actions', 'Actions'),
     key: 'actions',
     render: (row) => {
       if (!row.is_active) {
-        return 'Inactive'
+        return t('common.inactive', 'Inactive')
       }
 
       return h(NSpace, {}, {
@@ -199,7 +202,10 @@ const columns: DataTableColumns<any> = [
               size: 'small',
               onClick: () => handleSetVotingOwner(row.id)
             },
-            { default: () => row.is_voting ? 'Remove Voting Rights' : 'Set as Voting Owner' }
+            { default: () => row.is_voting
+                ? t('units.ownership.removeVoting', 'Remove Voting Rights')
+                : t('units.ownership.setVoting', 'Set as Voting Owner')
+            }
           ),
 
           // Deactivate button
@@ -207,8 +213,8 @@ const columns: DataTableColumns<any> = [
             NPopconfirm,
             {
               onPositiveClick: () => openDisableModal(row.id),
-              negativeText: 'Cancel',
-              positiveText: 'Deactivate'
+              negativeText: t('common.cancel', 'Cancel'),
+              positiveText: t('common.disable', 'Deactivate')
             },
             {
               trigger: () => h(
@@ -219,16 +225,16 @@ const columns: DataTableColumns<any> = [
                   type: 'warning',
                   size: 'small'
                 },
-                { default: () => 'Deactivate' }
+                { default: () => t('common.disable', 'Deactivate') }
               ),
-              default: () => 'Are you sure you want to deactivate this ownership?'
+              default: () => t('units.ownership.confirmDeactivate', 'Are you sure you want to deactivate this ownership?')
             }
           )
         ]
       })
     }
   }
-]
+])
 
 onMounted(() => {
   fetchOwnerships()
@@ -238,20 +244,19 @@ onMounted(() => {
 <template>
   <div class="ownership-manager">
     <div class="section-header">
-      <h3>Unit Ownership Management</h3>
+      <h3>{{ t('units.ownership.management', 'Unit Ownership Management') }}</h3>
       <NSpace>
         <NButton type="primary" @click="handleAddOwnership('select')">
-          Add Existing Owner
+          {{ t('units.ownership.addExisting', 'Add Existing Owner') }}
         </NButton>
         <NButton @click="handleAddOwnership('create')">
-          Create New Owner
+          {{ t('units.ownership.createNew', 'Create New Owner') }}
         </NButton>
       </NSpace>
     </div>
 
     <div class="info-box">
-      <p><strong>Note:</strong> Each unit can have only one voting owner. The voting owner has the right to vote at association meetings.
-        Setting a new voting owner will automatically remove voting rights from any previous voting owner for this unit.</p>
+      <p><strong>{{ t('common.note', 'Note') }}:</strong> {{ t('units.ownership.votingNote', 'Each unit can have only one voting owner. The voting owner has the right to vote at association meetings. Setting a new voting owner will automatically remove voting rights from any previous voting owner for this unit.') }}</p>
     </div>
 
     <NSpin :show="loading">
@@ -268,9 +273,9 @@ onMounted(() => {
           :row-class-name="row => !row.is_active ? 'inactive-row' : ''"
         >
           <template #empty>
-            <NEmpty description="No ownerships found for this unit">
+            <NEmpty :description="t('units.ownership.noOwnerships', 'No ownerships found for this unit')">
               <template #extra>
-                <p>Add an owner using the buttons above</p>
+                <p>{{ t('units.ownership.addOwnerPrompt', 'Add an owner using the buttons above') }}</p>
               </template>
             </NEmpty>
           </template>
@@ -280,7 +285,7 @@ onMounted(() => {
 
     <!-- Ownership Form Modal -->
     <NModal v-model:show="showOwnershipModal" style="width: 600px;" preset="card"
-            title="Add Ownership">
+            :title="t('units.ownership.addOwnership', 'Add Ownership')">
       <OwnershipForm
         :association-id="props.associationId"
         :building-id="props.buildingId"
@@ -293,15 +298,15 @@ onMounted(() => {
 
     <!-- Disable Ownership Modal -->
     <NModal v-model:show="showDisableModal" style="width: 400px;" preset="card"
-            title="Deactivate Ownership">
+            :title="t('units.ownership.deactivateOwnership', 'Deactivate Ownership')">
       <div style="margin-bottom: 16px;">
-        <p>Set the date when ownership ends:</p>
+        <p>{{ t('units.ownership.setEndDate', 'Set the date when ownership ends:') }}</p>
         <NDatePicker v-model:value="disableDate" type="date" clearable style="width: 100%" />
       </div>
 
       <div style="display: flex; justify-content: flex-end; gap: 12px;">
-        <NButton @click="showDisableModal = false">Cancel</NButton>
-        <NButton type="warning" @click="handleDisableOwnership">Deactivate</NButton>
+        <NButton @click="showDisableModal = false">{{ t('common.cancel', 'Cancel') }}</NButton>
+        <NButton type="warning" @click="handleDisableOwnership">{{ t('common.disable', 'Deactivate') }}</NButton>
       </div>
     </NModal>
   </div>

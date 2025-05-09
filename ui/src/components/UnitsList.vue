@@ -10,14 +10,20 @@ import {
   NAlert,
   useMessage,
   NInput,
-  NSelect
+  NSelect,
+  NCard,
+  NFlex,
+  NText
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { unitApi } from '@/services/api'
 import type { Unit } from '@/types/api'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const router = useRouter()
+
 // Props
 const props = defineProps<{
   associationId: number,
@@ -54,7 +60,7 @@ const availableUnitTypes = computed(() => {
     }
   })
   return Array.from(types).map(type => ({
-    label: type,
+    label: t(`unitTypes.${type}`, type),
     value: type
   }))
 })
@@ -81,44 +87,45 @@ const filteredUnits = computed(() => {
 })
 
 // Table columns definition
-const columns = ref<DataTableColumns<Unit>>([
+const columns = computed<DataTableColumns<Unit>>(() => [
   {
-    title: 'Unit Number',
+    title: t('units.unit', 'Unit Number'),
     key: 'cadastral_number',
     sorter: 'default'
   },
   {
-    title: 'Type',
-    key: 'unit_type'
+    title: t('units.type', 'Type'),
+    key: 'unit_type',
+    render: (row) => t(`unitTypes.${row.unit_type}`, row.unit_type)
   },
   {
-    title: 'Floor',
+    title: t('units.floor', 'Floor'),
     key: 'floor',
     sorter: (a, b) => a.floor - b.floor
   },
   {
-    title: 'Area',
+    title: t('units.area', 'Area'),
     key: 'area',
     sorter: (a, b) => a.area - b.area
   },
   {
-    title: 'Part',
+    title: t('units.part', 'Part'),
     key: 'part'
   },
   {
-    title: 'Entrance',
+    title: t('units.entrance', 'Entrance'),
     key: 'entrance'
   },
   {
-    title: 'Room Count',
+    title: t('units.roomCount', 'Room Count'),
     key: 'room_count'
   },
   {
-    title: 'Address',
+    title: t('units.address', 'Address'),
     key: 'address'
   },
   {
-    title: 'Actions',
+    title: t('common.actions', 'Actions'),
     key: 'actions',
     render(row) {
       return h(
@@ -138,7 +145,7 @@ const columns = ref<DataTableColumns<Unit>>([
                 size: 'small',
                 onClick: () => emit('edit', row.id)
               },
-              { default: () => 'Edit' }
+              { default: () => t('common.edit', 'Edit') }
             ),
             h(NButton,
               {
@@ -152,7 +159,7 @@ const columns = ref<DataTableColumns<Unit>>([
                   }
                 })
               },
-              { default: () => 'View Details' }
+              { default: () => t('common.details', 'View Details') }
             )
           ]
         }
@@ -175,7 +182,7 @@ const fetchUnits = async () => {
     // Emit the units for parent components
     emit('units-rendered', filteredUnits.value)
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Unknown error occurred'
+    error.value = err instanceof Error ? err.message : t('common.error', 'Unknown error occurred')
     console.error('Error fetching units:', err)
   } finally {
     loading.value = false
@@ -216,37 +223,37 @@ onMounted(() => {
   <div class="units-list">
     <NCard style="margin-top: 16px;">
       <NFlex align="center">
-        <NText>Search:</NText>
+        <NText>{{ t('common.search', 'Search') }}:</NText>
         <NInput
           :value="searchQuery"
           @update:value="searchQueryChanged"
-          placeholder="Search by unit number, address..."
+          :placeholder="t('units.searchPlaceholder', 'Search by unit number, address...')"
           clearable
           style="width: 300px"
         />
-        <NText>Unit Type:</NText>
+        <NText>{{ t('units.type', 'Unit Type') }}:</NText>
         <NSelect
           :value="unitTypeFilter"
           @update:value="unitTypeChanged"
           :options="availableUnitTypes"
-          placeholder="All Types"
+          :placeholder="t('units.allTypes', 'All Types')"
           clearable
           style="width: 200px"
         />
-        <NButton @click="resetFilters">Reset Filters</NButton>
+        <NButton @click="resetFilters">{{ t('common.reset_filters', 'Reset Filters') }}</NButton>
       </NFlex>
     </NCard>
     <NCard style="margin-top: 16px;">
 
       <NSpin :show="loading">
-        <NAlert v-if="error" type="error" title="Error" closable>
+        <NAlert v-if="error" type="error" :title="t('common.error', 'Error')" closable>
           {{ error }}
-          <NButton @click="fetchUnits">Retry</NButton>
+          <NButton @click="fetchUnits">{{ t('common.retry', 'Retry') }}</NButton>
         </NAlert>
 
         <div v-if="filteredUnits.length > 0" class="summary">
           <div>
-            <span class="unit-count">{{ filteredUnits.length }} units found</span>
+            <span class="unit-count">{{ t('units.unitsFound', '{count} units found', { count: filteredUnits.length }) }}</span>
           </div>
         </div>
 
@@ -260,9 +267,9 @@ onMounted(() => {
         }"
         >
           <template #empty>
-            <NEmpty description="No units found">
+            <NEmpty :description="t('units.noUnitsFound', 'No units found')">
               <template #extra>
-                <p>Try changing your search filters.</p>
+                <p>{{ t('units.tryChangingFilters', 'Try changing your search filters.') }}</p>
               </template>
             </NEmpty>
           </template>

@@ -12,6 +12,9 @@ import {
 import { ownerApi } from '@/services/api'
 import type { Owner } from '@/types/api'
 import type { FormInst, FormRules } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   associationId: number
@@ -39,17 +42,17 @@ const formData = reactive<OwnerFormData>({
 
 const rules: FormRules = {
   name: [
-    { required: true, message: 'Name is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', '{field} is required', { field: t('owners.name', 'Name') }), trigger: 'blur' }
   ],
   identification_number: [
-    { required: true, message: 'Identification number is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', '{field} is required', { field: t('owners.identification', 'Identification number') }), trigger: 'blur' }
   ],
   contact_phone: [
-    { required: true, message: 'Contact phone is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', '{field} is required', { field: t('owners.contactPhone', 'Contact phone') }), trigger: 'blur' }
   ],
   contact_email: [
-    { required: true, message: 'Contact email is required', trigger: 'blur' },
-    { type: 'email', message: 'Invalid email format', trigger: 'blur' }
+    { required: true, message: t('validation.required', '{field} is required', { field: t('owners.contactEmail', 'Contact email') }), trigger: 'blur' },
+    { type: 'email', message: t('validation.email', 'Please enter a valid email address'), trigger: 'blur' }
   ]
 }
 
@@ -87,7 +90,7 @@ const fetchOwnerDetails = async () => {
 
     await resetValidation()
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Unknown error occurred'
+    error.value = err instanceof Error ? err.message : t('common.error', 'Unknown error occurred')
     console.error('Error fetching owner details:', err)
   } finally {
     loading.value = false
@@ -96,29 +99,29 @@ const fetchOwnerDetails = async () => {
 
 const validateFormManually = () => {
   if (!formData.name.trim()) {
-    error.value = 'Name is required'
+    error.value = t('validation.required', '{field} is required', { field: t('owners.name', 'Name') })
     return false
   }
 
   if (!formData.identification_number.trim()) {
-    error.value = 'Identification number is required'
+    error.value = t('validation.required', '{field} is required', { field: t('owners.identification', 'Identification number') })
     return false
   }
 
   if (!formData.contact_phone.trim()) {
-    error.value = 'Contact phone is required'
+    error.value = t('validation.required', '{field} is required', { field: t('owners.contactPhone', 'Contact phone') })
     return false
   }
 
   if (!formData.contact_email.trim()) {
-    error.value = 'Contact email is required'
+    error.value = t('validation.required', '{field} is required', { field: t('owners.contactEmail', 'Contact email') })
     return false
   }
 
   // Simple email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(formData.contact_email)) {
-    error.value = 'Invalid email format'
+    error.value = t('validation.email', 'Invalid email format')
     return false
   }
 
@@ -172,7 +175,7 @@ const submitForm = async (e: MouseEvent) => {
 
     emit('saved')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An error occurred while submitting the form'
+    error.value = err instanceof Error ? err.message : t('common.error', 'An error occurred while submitting the form')
     console.error('Error submitting form:', err)
   } finally {
     submitting.value = false
@@ -192,10 +195,10 @@ onMounted(() => {
 
 <template>
   <div class="owner-form">
-    <h2>{{ props.ownerId ? 'Edit Owner' : 'Create New Owner' }}</h2>
+    <h2>{{ props.ownerId ? t('owners.editOwner', 'Edit Owner') : t('owners.createOwner', 'Create New Owner') }}</h2>
 
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" title="Error" style="margin-bottom: 16px;">
+      <NAlert v-if="error" type="error" :title="t('common.error', 'Error')" style="margin-bottom: 16px;">
         {{ error }}
       </NAlert>
 
@@ -207,31 +210,31 @@ onMounted(() => {
         label-width="180px"
         require-mark-placement="right-hanging"
       >
-        <NFormItem label="Name" path="name">
+        <NFormItem :label="t('owners.name', 'Name')" path="name">
           <NInput
             v-model:value="formData.name"
-            placeholder="Enter owner's full name"
+            :placeholder="t('owners.enterName', 'Enter owner\'s full name')"
           />
         </NFormItem>
 
-        <NFormItem label="Identification Number" path="identification_number">
+        <NFormItem :label="t('owners.identification', 'Identification Number')" path="identification_number">
           <NInput
             v-model:value="formData.identification_number"
-            placeholder="Enter identification number"
+            :placeholder="t('owners.enterIdentification', 'Enter identification number')"
           />
         </NFormItem>
 
-        <NFormItem label="Contact Phone" path="contact_phone">
+        <NFormItem :label="t('owners.contactPhone', 'Contact Phone')" path="contact_phone">
           <NInput
             v-model:value="formData.contact_phone"
-            placeholder="Enter contact phone"
+            :placeholder="t('owners.enterPhone', 'Enter contact phone')"
           />
         </NFormItem>
 
-        <NFormItem label="Contact Email" path="contact_email">
+        <NFormItem :label="t('owners.contactEmail', 'Contact Email')" path="contact_email">
           <NInput
             v-model:value="formData.contact_email"
-            placeholder="Enter contact email"
+            :placeholder="t('owners.enterEmail', 'Enter contact email')"
             type="text"
           />
         </NFormItem>
@@ -242,7 +245,7 @@ onMounted(() => {
               @click="cancelForm"
               :disabled="submitting"
             >
-              Cancel
+              {{ t('common.cancel', 'Cancel') }}
             </NButton>
 
             <NButton
@@ -250,7 +253,7 @@ onMounted(() => {
               @click="submitForm"
               :loading="submitting"
             >
-              {{ props.ownerId ? 'Update Owner' : 'Create Owner' }}
+              {{ props.ownerId ? t('common.update', 'Update Owner') : t('common.create', 'Create Owner') }}
             </NButton>
           </NSpace>
         </div>

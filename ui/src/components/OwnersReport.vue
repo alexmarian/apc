@@ -142,7 +142,7 @@ const fetchOwnersReport = async (): Promise<void> => {
 
     ownersData.value = response.data
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load owners report'
+    error.value = err instanceof Error ? err.message : t('owners.loadError', 'Failed to load owners report')
     console.error('Error fetching owners report:', err)
   } finally {
     loading.value = false
@@ -168,31 +168,31 @@ const handleEditOwner = (ownerId: number): void => {
 // Export to CSV
 const exportToCSV = (): void => {
   if (!ownersData.value || filteredSortedData.value.length === 0) {
-    message.error('No data to export')
+    message.error(t('owners.noDataToExport', 'No data to export'))
     return
   }
 
   try {
     // Create CSV headers
     const headers: string[] = [
-      'Owner ID',
-      'Owner Name',
-      'Identification Number',
-      'Contact Phone',
-      'Contact Email',
-      'Total Units',
-      'Total Area (m²)',
-      'Total Condo Part (%)'
+      t('owners.csvHeaders.id', 'Owner ID'),
+      t('owners.csvHeaders.name', 'Owner Name'),
+      t('owners.csvHeaders.identification', 'Identification Number'),
+      t('owners.csvHeaders.phone', 'Contact Phone'),
+      t('owners.csvHeaders.email', 'Contact Email'),
+      t('owners.csvHeaders.units', 'Total Units'),
+      t('owners.csvHeaders.area', 'Total Area (m²)'),
+      t('owners.csvHeaders.part', 'Total Condo Part (%)')
     ]
 
     // Add co-owner headers if included
     if (includeCoOwners.value) {
-      headers.push('Co-Owners')
+      headers.push(t('owners.csvHeaders.coOwners', 'Co-Owners'))
     }
 
     // Add unit headers if included
     if (includeUnits.value) {
-      headers.push('Units')
+      headers.push(t('owners.csvHeaders.unitsList', 'Units'))
     }
 
     // Create CSV rows
@@ -246,18 +246,18 @@ const exportToCSV = (): void => {
 
     // Add summary data
     csvContent += '\n'
-    csvContent += 'Report Summary\n'
-    csvContent += `Total Owners,${filteredSortedData.value.length}\n`
+    csvContent += t('owners.csvHeaders.reportSummary', 'Report Summary') + '\n'
+    csvContent += `${t('owners.csvHeaders.totalOwners', 'Total Owners')},${filteredSortedData.value.length}\n`
 
     const totalArea = filteredSortedData.value.reduce((sum, item) =>
       sum + item.statistics.total_area, 0
     )
-    csvContent += `Total Area (m²),${totalArea.toFixed(2)}\n`
+    csvContent += `${t('owners.csvHeaders.totalArea', 'Total Area (m²)')},${totalArea.toFixed(2)}\n`
 
     const totalPart = filteredSortedData.value.reduce((sum, item) =>
       sum + item.statistics.total_condo_part, 0
     )
-    csvContent += `Total Condo Part (%),${(totalPart * 100).toFixed(4)}\n`
+    csvContent += `${t('owners.csvHeaders.totalPart', 'Total Condo Part (%)')},${(totalPart * 100).toFixed(4)}\n`
 
     // Create a CSV blob and download it
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
@@ -270,10 +270,10 @@ const exportToCSV = (): void => {
     link.click()
     document.body.removeChild(link)
 
-    message.success('CSV exported successfully')
+    message.success(t('owners.exportSuccess', 'CSV exported successfully'))
   } catch (err) {
     console.error('Error exporting to CSV:', err)
-    message.error('Failed to export CSV')
+    message.error(t('owners.exportError', 'Failed to export CSV'))
   }
 }
 
@@ -327,7 +327,7 @@ onMounted(() => {
 
 <template>
   <div class="owners-report">
-    <NCard title="Owners Report">
+    <NCard :title="t('owners.report', 'Owners Report')">
       <template #header-extra>
         <NSpace>
           <NButton
@@ -346,7 +346,7 @@ onMounted(() => {
             <NInputGroup>
               <NInput
                 v-model:value="searchQuery"
-                :placeholder="t('common.search', 'Search owners...')"
+                :placeholder="t('owners.searchPlaceholder', 'Search owners...')"
                 clearable
               />
               <NSelect
@@ -399,7 +399,7 @@ onMounted(() => {
         <div v-if="ownersData && filteredSortedData.length > 0" class="owners-table">
           <div class="summary-stats">
             <div class="stat-item">
-              <div class="stat-label">{{ t('common.total', 'Total Owners') }}:</div>
+              <div class="stat-label">{{ t('owners.totalOwners', 'Total Owners') }}:</div>
               <div class="stat-value">{{ filteredSortedData.length }}</div>
             </div>
           </div>

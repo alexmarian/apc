@@ -22,6 +22,9 @@ import type {
   UnitReportDetails,
   ApiResponse
 } from '@/types/api'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 // Use interfaces directly from the imported types
 type Owner = UnitReportDetails['current_owners'][number];
@@ -57,32 +60,32 @@ interface OwnerTableColumn {
 // Owners table columns
 const ownersColumns = ref<OwnerTableColumn[]>([
   {
-    title: 'Name',
+    title: t('owners.name', 'Name'),
     key: 'name'
   },
   {
-    title: 'Identification',
+    title: t('owners.identification', 'Identification'),
     key: 'identification_number'
   },
   {
-    title: 'Contact Phone',
+    title: t('owners.contactPhone', 'Contact Phone'),
     key: 'contact_phone'
   },
   {
-    title: 'Contact Email',
+    title: t('owners.contactEmail', 'Contact Email'),
     key: 'contact_email'
   },
   {
-    title: 'Status',
+    title: t('common.status', 'Status'),
     key: 'is_active',
     render(row: Owner) {
       return row.is_active
-        ? h(NTag, { type: 'success' }, { default: () => 'Active' })
-        : h(NTag, { type: 'warning' }, { default: () => 'Inactive' })
+        ? h(NTag, { type: 'success' }, { default: () => t('common.active', 'Active') })
+        : h(NTag, { type: 'warning' }, { default: () => t('common.inactive', 'Inactive') })
     }
   },
   {
-    title: 'Actions',
+    title: t('common.actions', 'Actions'),
     key: 'actions',
     render(row: Owner) {
       return h(
@@ -91,7 +94,7 @@ const ownersColumns = ref<OwnerTableColumn[]>([
           size: 'small',
           onClick: () => emit('edit-owner', row.id)
         },
-        { default: () => 'Edit' }
+        { default: () => t('common.edit', 'Edit') }
       )
     }
   }
@@ -107,34 +110,34 @@ interface OwnershipTableColumn {
 // Ownership history columns
 const ownershipColumns = ref<OwnershipTableColumn[]>([
   {
-    title: 'Owner',
+    title: t('owners.name', 'Owner'),
     key: 'owner_name'
   },
   {
-    title: 'Start Date',
+    title: t('units.ownership.startDate', 'Start Date'),
     key: 'start_date',
     render(row: OwnershipRecord) {
       return new Date(row.start_date).toLocaleDateString()
     }
   },
   {
-    title: 'End Date',
+    title: t('units.ownership.endDate', 'End Date'),
     key: 'end_date',
     render(row: OwnershipRecord) {
       return row.end_date ? new Date(row.end_date).toLocaleDateString() : '-'
     }
   },
   {
-    title: 'Status',
+    title: t('common.status', 'Status'),
     key: 'is_active',
     render(row: OwnershipRecord) {
       return row.is_active
-        ? h(NTag, { type: 'success' }, { default: () => 'Active' })
-        : h(NTag, { type: 'warning' }, { default: () => 'Inactive' })
+        ? h(NTag, { type: 'success' }, { default: () => t('common.active', 'Active') })
+        : h(NTag, { type: 'warning' }, { default: () => t('common.inactive', 'Inactive') })
     }
   },
   {
-    title: 'Registration Doc',
+    title: t('units.ownership.registrationDoc', 'Registration Doc'),
     key: 'registration_document'
   }
 ])
@@ -153,7 +156,7 @@ const fetchUnitReport = async (): Promise<void> => {
 
     unitReport.value = response.data
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Unknown error occurred'
+    error.value = err instanceof Error ? err.message : t('common.error', 'Unknown error occurred')
     console.error('Error fetching unit report:', err)
   } finally {
     loading.value = false
@@ -188,75 +191,75 @@ onMounted(() => {
     <NSpin :show="loading">
       <NAlert v-if="error" type="error" style="margin-bottom: 16px;">
         {{ error }}
-        <NButton @click="fetchUnitReport">Retry</NButton>
+        <NButton @click="fetchUnitReport">{{ t('common.retry', 'Retry') }}</NButton>
       </NAlert>
 
       <template v-if="unitReport">
         <div v-if="!props.showExcerpt" class="actions-bar">
           <NSpace>
             <NButton type="primary" @click="handleEditUnit">
-              Edit Unit
+              {{ t('units.editUnit', 'Edit Unit') }}
             </NButton>
           </NSpace>
         </div>
 
         <NTabs v-if="!props.showExcerpt" v-model:value="activeTab" type="line" animated>
-          <NTabPane name="info" tab="Unit Information">
+          <NTabPane name="info" :tab="t('units.information', 'Unit Information')">
             <!-- Unit Details -->
-            <NCard title="Unit Details" class="report-section">
+            <NCard :title="t('units.details', 'Unit Details')" class="report-section">
               <NDescriptions bordered>
-                <NDescriptionsItem label="Unit Number">
+                <NDescriptionsItem :label="t('units.unit', 'Unit Number')">
                   {{ unitReport.unit_details.unit_number }}
                 </NDescriptionsItem>
-                <NDescriptionsItem label="Cadastral Number">
+                <NDescriptionsItem :label="t('units.cadastralNumber', 'Cadastral Number')">
                   {{ unitReport.unit_details.cadastral_number }}
                 </NDescriptionsItem>
-                <NDescriptionsItem label="Address">
+                <NDescriptionsItem :label="t('units.address', 'Address')">
                   {{ unitReport.unit_details.address }}
                 </NDescriptionsItem>
-                <NDescriptionsItem label="Entrance">
+                <NDescriptionsItem :label="t('units.entrance', 'Entrance')">
                   {{ unitReport.unit_details.entrance }}
                 </NDescriptionsItem>
-                <NDescriptionsItem label="Floor">
+                <NDescriptionsItem :label="t('units.floor', 'Floor')">
                   {{ unitReport.unit_details.floor }}
                 </NDescriptionsItem>
-                <NDescriptionsItem label="Unit Type">
-                  {{ unitReport.unit_details.unit_type }}
+                <NDescriptionsItem :label="t('units.type', 'Unit Type')">
+                  {{ t(`unitTypes.${unitReport.unit_details.unit_type}`, unitReport.unit_details.unit_type) }}
                 </NDescriptionsItem>
-                <NDescriptionsItem label="Area">
+                <NDescriptionsItem :label="t('units.area', 'Area')">
                   {{ unitReport.unit_details.area }} m²
                 </NDescriptionsItem>
-                <NDescriptionsItem label="Part">
+                <NDescriptionsItem :label="t('units.part', 'Part')">
                   {{ unitReport.unit_details.part }}
                 </NDescriptionsItem>
-                <NDescriptionsItem label="Room Count">
+                <NDescriptionsItem :label="t('units.roomCount', 'Room Count')">
                   {{ unitReport.unit_details.room_count }}
                 </NDescriptionsItem>
               </NDescriptions>
             </NCard>
 
             <!-- Building Information (only in full view) -->
-            <NCard title="Building Information" class="report-section">
+            <NCard :title="t('units.buildingInformation', 'Building Information')" class="report-section">
               <NDescriptions bordered>
-                <NDescriptionsItem label="Building Name">
+                <NDescriptionsItem :label="t('units.buildingName', 'Building Name')">
                   {{ unitReport.building_details.name }}
                 </NDescriptionsItem>
-                <NDescriptionsItem label="Building Address">
+                <NDescriptionsItem :label="t('units.buildingAddress', 'Building Address')">
                   {{ unitReport.building_details.address }}
                 </NDescriptionsItem>
-                <NDescriptionsItem label="Cadastral Number">
+                <NDescriptionsItem :label="t('units.buildingCadastralNumber', 'Cadastral Number')">
                   {{ unitReport.building_details.cadastral_number }}
                 </NDescriptionsItem>
-                <NDescriptionsItem label="Total Area">
+                <NDescriptionsItem :label="t('units.buildingTotalArea', 'Total Area')">
                   {{ unitReport.building_details.total_area }} m²
                 </NDescriptionsItem>
               </NDescriptions>
             </NCard>
           </NTabPane>
 
-          <NTabPane name="owners" tab="Current Owners">
+          <NTabPane name="owners" :tab="t('units.currentOwners', 'Current Owners')">
             <!-- Current Owners -->
-            <NCard title="Current Owners" class="report-section">
+            <NCard :title="t('units.currentOwners', 'Current Owners')" class="report-section">
               <template
                 v-if="unitReport.current_owners && unitReport.current_owners.filter(owner => owner.is_active).length > 0">
                 <NDataTable
@@ -268,14 +271,14 @@ onMounted(() => {
                 />
               </template>
               <template v-else>
-                <NEmpty description="No active owners found for this unit" />
+                <NEmpty :description="t('units.noActiveOwners', 'No active owners found for this unit')" />
               </template>
             </NCard>
           </NTabPane>
 
-          <NTabPane name="ownership" tab="Ownership History">
+          <NTabPane name="ownership" :tab="t('units.ownershipHistory', 'Ownership History')">
             <!-- Ownership History -->
-            <NCard title="Ownership History" class="report-section">
+            <NCard :title="t('units.ownershipHistory', 'Ownership History')" class="report-section">
               <template
                 v-if="unitReport.ownership_history && unitReport.ownership_history.length > 0">
                 <NDataTable
@@ -287,12 +290,12 @@ onMounted(() => {
                 />
               </template>
               <template v-else>
-                <NEmpty description="No ownership history found for this unit" />
+                <NEmpty :description="t('units.noOwnershipHistory', 'No ownership history found for this unit')" />
               </template>
             </NCard>
           </NTabPane>
 
-          <NTabPane name="manage" tab="Manage Ownership">
+          <NTabPane name="manage" :tab="t('units.manageOwnership', 'Manage Ownership')">
             <!-- Ownership Management -->
             <OwnershipManager
               :association-id="props.associationId"
@@ -306,7 +309,7 @@ onMounted(() => {
         <!-- Excerpt mode (simplified view) -->
         <template v-else>
           <!-- Current Owners (always shown in excerpt mode) -->
-          <NCard title="Unit Owners" class="report-section">
+          <NCard :title="t('units.unitOwners', 'Unit Owners')" class="report-section">
             <template
               v-if="unitReport.current_owners && unitReport.current_owners.filter(owner => owner.is_active).length > 0">
               <NDataTable
@@ -318,14 +321,14 @@ onMounted(() => {
               />
             </template>
             <template v-else>
-              <NEmpty description="No active owners found for this unit" />
+              <NEmpty :description="t('units.noActiveOwners', 'No active owners found for this unit')" />
             </template>
           </NCard>
         </template>
 
       </template>
 
-      <NEmpty v-else-if="!loading && !error" description="No unit report found" />
+      <NEmpty v-else-if="!loading && !error" :description="t('units.noUnitReport', 'No unit report found')" />
     </NSpin>
   </div>
 </template>

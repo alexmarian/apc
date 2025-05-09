@@ -11,11 +11,15 @@ import {
   NDatePicker,
   NSelect,
   NCheckbox,
+  NDivider,
   useMessage
 } from 'naive-ui'
 import { ownerApi, unitApi, ownershipApi } from '@/services/api'
 import type { Owner } from '@/types/api'
 import type { FormRules } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   associationId: number
@@ -59,27 +63,27 @@ const message = useMessage()
 // Form validation rules
 const rules: FormRules = {
   'owner.name': [
-    { required: props.mode === 'create', message: 'Owner name is required', trigger: 'blur' }
+    { required: props.mode === 'create', message: t('validation.required', '{field} is required', { field: t('owners.name', 'Owner name') }), trigger: 'blur' }
   ],
   'owner.identification_number': [
-    { required: props.mode === 'create', message: 'Identification number is required', trigger: 'blur' }
+    { required: props.mode === 'create', message: t('validation.required', '{field} is required', { field: t('owners.identification', 'Identification number') }), trigger: 'blur' }
   ],
   owner_id: [
     {
       required: props.mode === 'select',
       type: 'number',
-      message: 'Please select an owner',
+      message: t('units.ownership.selectOwnerRequired', 'Please select an owner'),
       trigger: 'change'
     }
   ],
   start_date: [
-    { required: true, message: 'Start date is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', '{field} is required', { field: t('units.ownership.startDate', 'Start date') }), trigger: 'blur' }
   ],
   registration_document: [
-    { required: true, message: 'Registration document is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', '{field} is required', { field: t('units.ownership.registrationDoc', 'Registration document') }), trigger: 'blur' }
   ],
   registration_date: [
-    { required: true, message: 'Registration date is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', '{field} is required', { field: t('units.ownership.registrationDate', 'Registration date') }), trigger: 'blur' }
   ]
 }
 
@@ -94,7 +98,7 @@ const fetchOwners = async () => {
     const response = await ownerApi.getOwners(props.associationId)
     owners.value = response.data
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load owners'
+    error.value = err instanceof Error ? err.message : t('common.error', 'Failed to load owners')
     console.error('Error fetching owners:', err)
   } finally {
     loading.value = false
@@ -132,7 +136,7 @@ const handleSubmit = async () => {
     } else {
       // In select mode, use the selected owner ID
       if (!formData.owner_id) {
-        error.value = 'Please select an owner';
+        error.value = t('units.ownership.selectOwnerRequired', 'Please select an owner');
         return;
       }
       ownerId = formData.owner_id;
@@ -153,10 +157,10 @@ const handleSubmit = async () => {
       }
     );
 
-    message.success('Ownership saved successfully');
+    message.success(t('units.ownership.savedSuccess', 'Ownership saved successfully'));
     emit('saved');
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An error occurred while saving';
+    error.value = err instanceof Error ? err.message : t('common.error', 'An error occurred while saving');
     console.error('Error submitting form:', err);
   } finally {
     submitting.value = false;
@@ -171,7 +175,10 @@ onMounted(() => {
 
 <template>
   <div class="ownership-form">
-    <h2>{{ props.mode === 'create' ? 'Add New Owner' : 'Select Existing Owner' }}</h2>
+    <h2>{{ props.mode === 'create'
+      ? t('units.ownership.addNewOwner', 'Add New Owner')
+      : t('units.ownership.selectExistingOwner', 'Select Existing Owner') }}
+    </h2>
 
     <NSpin :show="loading">
       <NAlert v-if="error" type="error" style="margin-bottom: 16px;">
@@ -181,39 +188,51 @@ onMounted(() => {
       <NForm :rules="rules" :model="formData">
         <!-- Owner creation form fields -->
         <template v-if="props.mode === 'create'">
-          <NFormItem label="Owner Name" path="owner.name">
-            <NInput v-model:value="formData.owner.name" placeholder="Enter owner name" />
+          <NFormItem :label="t('owners.name', 'Owner Name')" path="owner.name">
+            <NInput
+              v-model:value="formData.owner.name"
+              :placeholder="t('owners.enterName', 'Enter owner name')"
+            />
           </NFormItem>
 
-          <NFormItem label="Identification Number" path="owner.identification_number">
-            <NInput v-model:value="formData.owner.identification_number" placeholder="Enter ID number" />
+          <NFormItem :label="t('owners.identification', 'Identification Number')" path="owner.identification_number">
+            <NInput
+              v-model:value="formData.owner.identification_number"
+              :placeholder="t('owners.enterIdentification', 'Enter ID number')"
+            />
           </NFormItem>
 
-          <NFormItem label="Phone Number" path="owner.contact_phone">
-            <NInput v-model:value="formData.owner.contact_phone" placeholder="Enter phone number" />
+          <NFormItem :label="t('owners.contactPhone', 'Phone Number')" path="owner.contact_phone">
+            <NInput
+              v-model:value="formData.owner.contact_phone"
+              :placeholder="t('owners.enterPhone', 'Enter phone number')"
+            />
           </NFormItem>
 
-          <NFormItem label="Email" path="owner.contact_email">
-            <NInput v-model:value="formData.owner.contact_email" placeholder="Enter email address" />
+          <NFormItem :label="t('owners.contactEmail', 'Email')" path="owner.contact_email">
+            <NInput
+              v-model:value="formData.owner.contact_email"
+              :placeholder="t('owners.enterEmail', 'Enter email address')"
+            />
           </NFormItem>
         </template>
 
         <!-- Owner selection dropdown -->
         <template v-else>
-          <NFormItem label="Select Owner" path="owner_id">
+          <NFormItem :label="t('units.ownership.selectOwner', 'Select Owner')" path="owner_id">
             <NSelect
               v-model:value="formData.owner_id"
               :options="ownerOptions"
-              placeholder="Select an owner"
+              :placeholder="t('units.ownership.selectOwnerPlaceholder', 'Select an owner')"
               filterable
             />
           </NFormItem>
         </template>
 
         <!-- Ownership details (common for both modes) -->
-        <NDivider>Ownership Details</NDivider>
+        <NDivider>{{ t('units.ownership.details', 'Ownership Details') }}</NDivider>
 
-        <NFormItem label="Start Date" path="start_date">
+        <NFormItem :label="t('units.ownership.startDate', 'Start Date')" path="start_date">
           <NDatePicker
             v-model:value="formData.start_date"
             type="date"
@@ -222,7 +241,7 @@ onMounted(() => {
           />
         </NFormItem>
 
-        <NFormItem label="End Date" path="end_date">
+        <NFormItem :label="t('units.ownership.endDate', 'End Date')" path="end_date">
           <NDatePicker
             v-model:value="formData.end_date"
             type="date"
@@ -231,14 +250,14 @@ onMounted(() => {
           />
         </NFormItem>
 
-        <NFormItem label="Registration Document" path="registration_document">
+        <NFormItem :label="t('units.ownership.registrationDoc', 'Registration Document')" path="registration_document">
           <NInput
             v-model:value="formData.registration_document"
-            placeholder="Enter registration document number"
+            :placeholder="t('units.ownership.enterRegistrationDoc', 'Enter registration document number')"
           />
         </NFormItem>
 
-        <NFormItem label="Registration Date" path="registration_date">
+        <NFormItem :label="t('units.ownership.registrationDate', 'Registration Date')" path="registration_date">
           <NDatePicker
             v-model:value="formData.registration_date"
             type="date"
@@ -249,7 +268,7 @@ onMounted(() => {
 
         <NFormItem path="is_exclusive">
           <NCheckbox v-model:checked="formData.is_exclusive">
-            Exclusive Ownership (deactivates all other current ownerships)
+            {{ t('units.ownership.exclusiveOwnership', 'Exclusive Ownership (deactivates all other current ownerships)') }}
           </NCheckbox>
         </NFormItem>
 
@@ -257,11 +276,11 @@ onMounted(() => {
         <div style="margin-top: 24px;">
           <NSpace justify="end">
             <NButton @click="emit('cancelled')" :disabled="submitting">
-              Cancel
+              {{ t('common.cancel', 'Cancel') }}
             </NButton>
 
             <NButton type="primary" @click="handleSubmit" :loading="submitting">
-              Save Ownership
+              {{ t('units.ownership.saveOwnership', 'Save Ownership') }}
             </NButton>
           </NSpace>
         </div>

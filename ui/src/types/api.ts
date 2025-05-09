@@ -325,7 +325,7 @@ export interface VotingOwner {
   units: Array<VotingUnit>;
   total_units: number;
   total_area: number;
-  voting_share: number;
+  total_condo_part: number;
 }
 
 export interface VotingUnit {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, nextTick, computed } from 'vue'
 import {
   NForm,
   NFormItem,
@@ -13,7 +13,11 @@ import {
 } from 'naive-ui'
 import { unitApi } from '@/services/api'
 import type { Unit } from '@/types/api'
+import { UnitType } from '@/types/api'
 import type { FormInst, FormRules } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   associationId: number
@@ -37,14 +41,11 @@ interface UnitFormData {
   room_count: number
 }
 
-// Default unit types for selection
-const unitTypeOptions = [
-  { label: 'Apartment', value: 'apartment' },
-  { label: 'Commercial', value: 'commercial' },
-  { label: 'Office', value: 'office' },
-  { label: 'Parking', value: 'parking' },
-  { label: 'Storage', value: 'storage' }
-]
+// Use UnitType enum for unit type options
+const unitTypeOptions = computed(() => Object.entries(UnitType).map(([key, value]) => ({
+  label: t(`unitTypes.${value}`),
+  value
+})))
 
 const formData = reactive<UnitFormData>({
   unit_number: '',
@@ -59,51 +60,51 @@ const formData = reactive<UnitFormData>({
 
 const rules: FormRules = {
   unit_number: [
-    { required: true, message: 'Unit number is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', '{field} is required', { field: t('units.unit', 'Unit number') }), trigger: 'blur' }
   ],
   address: [
-    { required: true, message: 'Address is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', '{field} is required', { field: t('units.address', 'Address') }), trigger: 'blur' }
   ],
   entrance: [
-    { required: true, message: 'Entrance is required', trigger: 'blur' },
+    { required: true, message: t('validation.required', '{field} is required', { field: t('units.entrance', 'Entrance') }), trigger: 'blur' },
     {
       type: 'number',
       min: 1,
-      message: 'Entrance must be at least 1',
+      message: t('units.entranceMin', 'Entrance must be at least 1'),
       trigger: 'blur'
     }
   ],
   area: [
-    { required: true, message: 'Area is required', trigger: 'blur' },
+    { required: true, message: t('validation.required', '{field} is required', { field: t('units.area', 'Area') }), trigger: 'blur' },
     {
       type: 'number',
       min: 0.01,
-      message: 'Area must be greater than 0',
+      message: t('units.areaPositive', 'Area must be greater than 0'),
       trigger: 'blur'
     }
   ],
   part: [
-    { required: true, message: 'Part is required', trigger: 'blur' },
+    { required: true, message: t('validation.required', '{field} is required', { field: t('units.part', 'Part') }), trigger: 'blur' },
     {
       type: 'number',
       min: 0,
       max: 1,
-      message: 'Part must be between 0 and 1',
+      message: t('units.partRange', 'Part must be between 0 and 1'),
       trigger: 'blur'
     }
   ],
   unit_type: [
-    { required: true, message: 'Unit type is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', '{field} is required', { field: t('units.type', 'Unit type') }), trigger: 'blur' }
   ],
   floor: [
-    { required: true, message: 'Floor is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', '{field} is required', { field: t('units.floor', 'Floor') }), trigger: 'blur' }
   ],
   room_count: [
-    { required: true, message: 'Room count is required', trigger: 'blur' },
+    { required: true, message: t('validation.required', '{field} is required', { field: t('units.roomCount', 'Room count') }), trigger: 'blur' },
     {
       type: 'number',
       min: 0,
-      message: 'Room count must be at least 0',
+      message: t('units.roomCountMin', 'Room count must be at least 0'),
       trigger: 'blur'
     }
   ]
@@ -149,7 +150,7 @@ const fetchUnitDetails = async () => {
     await nextTick()
     resetValidation()
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Unknown error occurred'
+    error.value = err instanceof Error ? err.message : t('common.error', 'Unknown error occurred')
     console.error('Error fetching unit details:', err)
   } finally {
     loading.value = false
@@ -158,22 +159,22 @@ const fetchUnitDetails = async () => {
 
 const validateFormManually = () => {
   if (!formData.unit_number.trim()) {
-    error.value = 'Unit number is required'
+    error.value = t('validation.required', '{field} is required', { field: t('units.unit', 'Unit number') })
     return false
   }
 
   if (!formData.address.trim()) {
-    error.value = 'Address is required'
+    error.value = t('validation.required', '{field} is required', { field: t('units.address', 'Address') })
     return false
   }
 
   if (formData.area <= 0) {
-    error.value = 'Area must be greater than 0'
+    error.value = t('units.areaPositive', 'Area must be greater than 0')
     return false
   }
 
   if (formData.part < 0 || formData.part > 1) {
-    error.value = 'Part must be between 0 and 1'
+    error.value = t('units.partRange', 'Part must be between 0 and 1')
     return false
   }
 
@@ -225,7 +226,7 @@ const submitForm = async (e: MouseEvent) => {
 
     emit('saved')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An error occurred while submitting the form'
+    error.value = err instanceof Error ? err.message : t('common.error', 'An error occurred while submitting the form')
     console.error('Error submitting form:', err)
   } finally {
     submitting.value = false
@@ -245,10 +246,10 @@ onMounted(() => {
 
 <template>
   <div class="unit-form">
-    <h2>{{ props.unitId ? 'Edit Unit' : 'Create New Unit' }}</h2>
+    <h2>{{ props.unitId ? t('units.editUnit', 'Edit Unit') : t('units.createUnit', 'Create New Unit') }}</h2>
 
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" title="Error" style="margin-bottom: 16px;">
+      <NAlert v-if="error" type="error" :title="t('common.error', 'Error')" style="margin-bottom: 16px;">
         {{ error }}
       </NAlert>
 
@@ -260,21 +261,21 @@ onMounted(() => {
         label-width="120px"
         require-mark-placement="right-hanging"
       >
-        <NFormItem label="Unit Number" path="unit_number">
+        <NFormItem :label="t('units.unit', 'Unit Number')" path="unit_number">
           <NInput
             v-model:value="formData.unit_number"
-            placeholder="Enter unit number"
+            :placeholder="t('units.enterUnitNumber', 'Enter unit number')"
           />
         </NFormItem>
 
-        <NFormItem label="Address" path="address">
+        <NFormItem :label="t('units.address', 'Address')" path="address">
           <NInput
             v-model:value="formData.address"
-            placeholder="Enter address"
+            :placeholder="t('units.enterAddress', 'Enter address')"
           />
         </NFormItem>
 
-        <NFormItem label="Entrance" path="entrance">
+        <NFormItem :label="t('units.entrance', 'Entrance')" path="entrance">
           <NInputNumber
             v-model:value="formData.entrance"
             :min="1"
@@ -283,7 +284,7 @@ onMounted(() => {
           />
         </NFormItem>
 
-        <NFormItem label="Area" path="area">
+        <NFormItem :label="t('units.area', 'Area')" path="area">
           <NInputNumber
             v-model:value="formData.area"
             :min="0.01"
@@ -293,7 +294,7 @@ onMounted(() => {
           />
         </NFormItem>
 
-        <NFormItem label="Part" path="part">
+        <NFormItem :label="t('units.part', 'Part')" path="part">
           <NInputNumber
             v-model:value="formData.part"
             :min="0"
@@ -304,15 +305,15 @@ onMounted(() => {
           />
         </NFormItem>
 
-        <NFormItem label="Unit Type" path="unit_type">
+        <NFormItem :label="t('units.type', 'Unit Type')" path="unit_type">
           <NSelect
             v-model:value="formData.unit_type"
             :options="unitTypeOptions"
-            placeholder="Select unit type"
+            :placeholder="t('units.selectType', 'Select unit type')"
           />
         </NFormItem>
 
-        <NFormItem label="Floor" path="floor">
+        <NFormItem :label="t('units.floor', 'Floor')" path="floor">
           <NInputNumber
             v-model:value="formData.floor"
             :precision="0"
@@ -320,7 +321,7 @@ onMounted(() => {
           />
         </NFormItem>
 
-        <NFormItem label="Room Count" path="room_count">
+        <NFormItem :label="t('units.roomCount', 'Room Count')" path="room_count">
           <NInputNumber
             v-model:value="formData.room_count"
             :min="0"
@@ -335,7 +336,7 @@ onMounted(() => {
               @click="cancelForm"
               :disabled="submitting"
             >
-              Cancel
+              {{ t('common.cancel', 'Cancel') }}
             </NButton>
 
             <NButton
@@ -343,7 +344,7 @@ onMounted(() => {
               @click="submitForm"
               :loading="submitting"
             >
-              {{ props.unitId ? 'Update Unit' : 'Create Unit' }}
+              {{ props.unitId ? t('common.update', 'Update Unit') : t('common.create', 'Create Unit') }}
             </NButton>
           </NSpace>
         </div>
