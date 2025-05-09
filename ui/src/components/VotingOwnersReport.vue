@@ -130,7 +130,7 @@ const unitColumns = computed(() => [
   },
   {
     title: t('units.type', 'Type'),
-    key: 'unit_type'
+    render: (row: VotingUnit) => t(`unitTypes.${row.unit_type}`, row.unit_type)
   }
 ])
 

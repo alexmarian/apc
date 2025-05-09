@@ -19,7 +19,7 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { ownerApi } from '@/services/api'
 import { formatPercentage } from '@/utils/formatters'
-import type { OwnerReportItem, Owner, OwnerUnit, OwnerCoOwner } from '@/types/api'
+import type { OwnerReportItem, Owner, OwnerUnit, OwnerCoOwner, VotingUnit } from '@/types/api'
 import { useI18n } from 'vue-i18n'
 
 // i18n
@@ -424,7 +424,7 @@ onMounted(() => {
                   { title: t('units.unit', 'Unit'), key: 'unit_number' },
                   { title: t('units.area', 'Area'), key: 'area', render: (row: OwnerUnit) => `${row.area.toFixed(2)} m²` },
                   { title: t('units.part', 'Part'), key: 'part', render: (row: OwnerUnit) => formatPercentage(row.part, 4) },
-                  { title: t('units.type', 'Type'), key: 'unit_type' }
+                  { title: t('units.type', 'Type'),  render: (row: VotingUnit) => t(`unitTypes.${row.unit_type}`, row.unit_type) }
                 ]"
                 :data="selectedOwnerData.units"
                 :pagination="{
