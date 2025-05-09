@@ -195,7 +195,6 @@ onMounted(() => {
 
 <template>
   <div class="owner-form">
-    <h2>{{ props.ownerId ? t('owners.editOwner', 'Edit Owner') : t('owners.createOwner', 'Create New Owner') }}</h2>
 
     <NSpin :show="loading">
       <NAlert v-if="error" type="error" :title="t('common.error', 'Error')" style="margin-bottom: 16px;">

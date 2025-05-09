@@ -78,6 +78,7 @@
     "noAssociationsMessage": "Vă rugăm să selectați mai întâi o asociație"
   },
   "expenses": {
+    "management": "Administrare",
     "title": "Administrare Cheltuieli",
     "list": "Listă Cheltuieli",
     "distribution": "Distribuție Cheltuieli",

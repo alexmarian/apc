@@ -1,7 +1,7 @@
 <!-- src/App.vue -->
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
-import { NIcon, NLayout, NLayoutHeader, NLayoutContent, NMenu, NButton, NDropdown } from 'naive-ui'
+import { NIcon, NLayout, NLayoutHeader, NLayoutContent, NMenu, NButton, NDropdown, NSwitch } from 'naive-ui'
 import { h, ref, computed } from 'vue'
 import type { Component } from 'vue';
 import ThemeProvider from '@/providers/ThemeProvider.vue'
@@ -28,7 +28,8 @@ function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
 }
 
-const menuOptions = [
+// Using computed to ensure the menu options update when the language changes
+const menuOptions = computed(() => [
   {
     label: () => h(RouterLink, { to: '/' }, { default: () => t('common.home', 'Home') }),
     key: 'home',
@@ -40,12 +41,12 @@ const menuOptions = [
     icon: renderIcon(AccountBalanceRound)
   },
   {
-    label: t('expenses.title', 'Expenses'),
+    label: () => t('expenses.title', 'Expenses'),
     key: 'expenses-group',
     icon: renderIcon(AttachMoneyRound),
     children: [
       {
-        label: () => h(RouterLink, { to: '/expenses' }, { default: () => t('expenses.list', 'Management') }),
+        label: () => h(RouterLink, { to: '/expenses' }, { default: () => t('expenses.management', 'Management') }),
         key: 'expenses-management'
       },
       {
@@ -55,17 +56,16 @@ const menuOptions = [
       {
         label: () => h(RouterLink, { to: '/expenses/distribution' }, { default: () => t('expenses.distribution', 'Distribution') }),
         key: 'expense-distribution'
-
       }
     ]
   },
   {
-    label: t('units.title', 'Units'),
+    label: () => t('units.title', 'Units'),
     key: 'units-group',
     icon: renderIcon(BedroomParentRound),
     children: [
       {
-        label: () => h(RouterLink, { to: '/units' }, { default: () => t('units.title', 'Management') }),
+        label: () => h(RouterLink, { to: '/units' }, { default: () => t('units.management', 'Management') }),
         key: 'units-management'
       },
       {
@@ -78,23 +78,23 @@ const menuOptions = [
       }
     ]
   }
-]
+])
 
-// Theme options for dropdown with explicit typing
-const themeMenuOptions = [
+// Theme options as computed property to make them translatable
+const themeMenuOptions = computed(() => [
   {
-    label: 'Light Theme',
+    label: t('theme.light', 'Light Theme'),
     key: 'light'
   },
   {
-    label: 'Dark Theme',
+    label: t('theme.dark', 'Dark Theme'),
     key: 'dark'
   },
   {
-    label: 'Auto (System)',
+    label: t('theme.auto', 'Auto (System)'),
     key: 'auto'
   }
-]
+])
 
 </script>
 

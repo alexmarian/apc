@@ -78,6 +78,7 @@
     "noAssociationsMessage": "Please select an association first"
   },
   "expenses": {
+    "management": "Management",
     "title": "Expenses",
     "list": "Expenses List",
     "distribution": "Distribution of Expenses",
