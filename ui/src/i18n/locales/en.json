@@ -87,7 +87,34 @@
     "selectAssociation": "Please select an association to manage expenses",
     "filters": "Filters",
     "resetFilters": "Reset Filters",
-    "totalAmount": "Total Amount"
+    "totalAmount": "Total Amount",
+    "allTime": "All time",
+    "allDates": "All dates",
+    "period": "Period",
+    "expenseAnalysis": "Expense Analysis",
+    "allowPopups": "Please allow pop-ups to open the charts in a new window",
+    "chartError": "There was an error opening the charts page. Please try again.",
+    "expensesByType": "Expenses by Type",
+    "monthlyTrends": "Monthly Expense Trends",
+    "expenseTypeBreakdown": "Expense Type Breakdown",
+    "familyBreakdown": "Family Breakdown",
+    "noFamiliesFound": "No families found for this type",
+    "noCategoriesFound": "No categories found for this family",
+    "noMonthlyData": "No monthly data available",
+    "noExpensesFilters": "No expenses found for the selected filters",
+    "openChartsView": "Open Charts View",
+    "printablePage": "Open all charts in a printable page",
+    "summary": "Expense Summary",
+    "totalExpenses": "Total Expenses",
+    "numberOfExpenses": "Number of Expenses",
+    "averageExpense": "Average Expense",
+    "topCategories": "Top Categories",
+    "noCategoryData": "No category data available",
+    "expensesCount": "expenses",
+    "amountPositive": "Amount must be greater than 0",
+    "printCharts": "Print Charts",
+    "month": "Month",
+    "noChartData": "No chart data available. Please go back to the main application and open charts view again."
   },
   "validation": {
     "required": "{field} is required",
@@ -137,16 +164,19 @@
     "area": "Area",
     "part": "Condo Part",
     "type": "Type",
-    "unit": "Unit"
+    "unit": "Unit",
+    "selectBuilding": "Select Building"
   },
   "categories": {
     "allCategories": "All Categories",
     "types": {
+      "title": "Type",
       "Budgeted": "Budgeted",
       "Maintenance": "Maintenance",
       "Improvement": "Improvement"
     },
     "families": {
+      "title": "Family",
       "personnel": "Personnel Expenses",
       "security": "Security and Safety",
       "building_repairs": "Building Repairs",
@@ -161,6 +191,7 @@
       "miscellaneous": "Miscellaneous"
     },
     "names": {
+      "title": "Category",
       "janitor_salary": "Janitor Salary",
       "cleaner_salary": "Cleaner Salary",
       "building_admin_salary": "Building Administrator Salary",
@@ -202,6 +233,9 @@
     "count": "Count",
     "amount": "Amount",
     "noData": "No data available",
-    "loading": "Loading chart data..."
+    "loading": "Loading chart data...",
+    "pieChart": "Pie Chart",
+    "barChart": "Bar Chart",
+    "percentage": "Percentage"
   }
 }

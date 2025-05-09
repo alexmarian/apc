@@ -3,6 +3,7 @@ import { ref, watch, computed } from 'vue'
 import { NSelect, NSpin } from 'naive-ui'
 import { buildingApi } from '@/services/api'
 import type { Building } from '@/types/api'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   associationId: number | null
@@ -13,6 +14,9 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:buildingId', id: number): void
 }>()
+
+// I18n
+const { t } = useI18n()
 
 // Data
 const buildings = ref<Building[]>([])
@@ -38,7 +42,7 @@ const fetchBuildings = async () => {
       emit('update:buildingId', selectedBuildingId.value)
     }
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Unknown error occurred'
+    error.value = err instanceof Error ? err.message : t('common.error')
     console.error('Error fetching buildings:', err)
     buildings.value = []
   } finally {
@@ -76,7 +80,7 @@ watch(
         v-model:value="selectedBuildingId"
         @update:value="handleUpdateValue"
         :options="options"
-        :placeholder="'Select Building'"
+        :placeholder="t('units.building', 'Select Building')"
         :disabled="!props.associationId || loading || props.disabled"
         clearable
         filterable
@@ -87,10 +91,10 @@ watch(
 </template>
 
 <style scoped>
-.error-text {
-  color: #e03;
-  font-size: 0.85rem;
-  margin-top: 0.5rem;
+.error {
+  color: #d03050;
+  font-size: 0.8rem;
+  margin-top: 4px;
 }
 
 .building-selector {

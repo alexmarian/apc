@@ -19,6 +19,8 @@ import { expenseApi } from '@/services/api'
 import type { Expense, ApiResponse } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
 import CategorySelector from '@/components/CategorySelector.vue'
+import { useI18n } from 'vue-i18n'
+import LocalizedCategoryDisplay from './LocalizedCategoryDisplay.vue'
 
 // Props
 const props = defineProps<{
@@ -34,6 +36,9 @@ const emit = defineEmits<{
   (e: 'date-range-changed', newDateRange: [number, number] | null): void
   (e: 'category-changed', newCategory: number | null): void
 }>()
+
+// I18n
+const { t } = useI18n()
 
 // Data
 const expenses = ref<Expense[]>([])
@@ -56,7 +61,7 @@ const filteredExpenses = computed<Expense[]>(() => {
 // Table columns definition
 const columns = ref<DataTableColumns<Expense>>([
   {
-    title: 'Date',
+    title: t('expenses.date'),
     key: 'date',
     sorter: 'default',
     render(row: Expense) {
@@ -64,7 +69,7 @@ const columns = ref<DataTableColumns<Expense>>([
     }
   },
   {
-    title: 'Amount',
+    title: t('expenses.amount'),
     key: 'amount',
     sorter: (a: Expense, b: Expense) => a.amount - b.amount,
     render(row: Expense) {
@@ -72,34 +77,43 @@ const columns = ref<DataTableColumns<Expense>>([
     }
   },
   {
-    title: 'Description',
+    title: t('expenses.description'),
     key: 'description'
   },
   {
-    title: 'Destination',
+    title: t('expenses.destination'),
     key: 'destination'
   },
   {
-    title: 'Type',
-    key: 'category_type'
+    title: t('categories.types.title', 'Type'),
+    key: 'category_type',
+    render(row: Expense) {
+      return h('span', {}, t(`categories.types.${row.category_type}`))
+    }
   },
   {
-    title: 'Family',
-    key: 'category_family'
+    title: t('categories.families.title', 'Family'),
+    key: 'category_family',
+    render(row: Expense) {
+      return h('span', {}, t(`categories.families.${row.category_family}`))
+    }
   },
   {
-    title: 'Category',
-    key: 'category_name'
+    title: t('categories.names.title', 'Category'),
+    key: 'category_name',
+    render(row: Expense) {
+      return h('span', {}, t(`categories.names.${row.category_name}`))
+    }
   },
   {
-    title: 'Account',
+    title: t('expenses.account'),
     key: 'account_number',
     render(row: Expense) {
       return `${row.account_number} - ${row.account_name || ''}`
     }
   },
   {
-    title: 'Actions',
+    title: t('common.actions'),
     key: 'actions',
     render(row: Expense) {
       return h(
@@ -119,7 +133,7 @@ const columns = ref<DataTableColumns<Expense>>([
                 size: 'small',
                 onClick: () => emit('edit', row.id)
               },
-              { default: () => 'Edit' }
+              { default: () => t('common.edit') }
             ),
             h(
               NButton,
@@ -130,7 +144,7 @@ const columns = ref<DataTableColumns<Expense>>([
                 size: 'small',
                 onClick: () => confirmDeleteExpense(row.id)
               },
-              { default: () => 'Delete' }
+              { default: () => t('common.delete') }
             )
           ]
         }
@@ -141,7 +155,7 @@ const columns = ref<DataTableColumns<Expense>>([
 
 // Format date range for display
 const formattedDateRange = computed<string>(() => {
-  if (!dateRange.value) return 'All dates'
+  if (!dateRange.value) return t('expenses.allDates', 'All dates')
 
   const start = new Date(dateRange.value[0]).toLocaleDateString()
   const end = new Date(dateRange.value[1]).toLocaleDateString()
@@ -169,7 +183,7 @@ const fetchExpenses = async (): Promise<void> => {
     const response = await expenseApi.getExpenses(props.associationId, startDate, endDate)
     expenses.value = response.data
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Unknown error occurred'
+    error.value = err instanceof Error ? err.message : t('common.error')
     console.error('Error fetching expenses:', err)
   } finally {
     loading.value = false
@@ -178,7 +192,7 @@ const fetchExpenses = async (): Promise<void> => {
 
 // Delete expense
 const confirmDeleteExpense = (expenseId: number): void => {
-  if (window.confirm('Are you sure you want to delete this expense?')) {
+  if (window.confirm(t('expenses.confirmDelete'))) {
     deleteExpense(expenseId)
   }
 }
@@ -190,12 +204,12 @@ const deleteExpense = async (expenseId: number): Promise<void> => {
     // Remove from local array
     expenses.value = expenses.value.filter(expense => expense.id !== expenseId)
 
-    message.success('Expense deleted successfully')
+    message.success(t('expenses.expenseDeleted'))
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
+    const errorMessage = err instanceof Error ? err.message : t('common.error')
     error.value = errorMessage
     console.error('Error deleting expense:', err)
-    message.error('Failed to delete expense: ' + errorMessage)
+    message.error(t('common.error') + ': ' + errorMessage)
   }
 }
 
@@ -233,36 +247,36 @@ onMounted(() => {
   <div class="expenses-list">
     <NCard style="margin-top: 16px;">
       <NFlex align="center" justify="start">
-        <NText>Date Range:</NText>
+        <NText>{{ t('expenses.dateRange') }}:</NText>
         <NDatePicker
           v-model:value="dateRange"
           type="daterange"
           clearable
           style="width: 240px"
         />
-        <NText>Category:</NText>
+        <NText>{{ t('expenses.category') }}:</NText>
         <CategorySelector
           v-model:modelValue="selectedCategory"
           :association-id="props.associationId"
-          placeholder="Select Category"
+          :placeholder="t('expenses.category')"
           :include-all-option="true"
           style="width: 360px"
         />
-        <NButton @click="resetFilters">Reset Filters</NButton>
+        <NButton @click="resetFilters">{{ t('expenses.resetFilters') }}</NButton>
       </NFlex>
     </NCard>
     <NCard style="margin-top: 16px;">
       <NSpin :show="loading">
-        <NAlert v-if="error" type="error" title="Error" closable>
+        <NAlert v-if="error" type="error" :title="t('common.error')" closable>
           {{ error }}
-          <NButton @click="fetchExpenses">Retry</NButton>
+          <NButton @click="fetchExpenses">{{ t('common.retry') }}</NButton>
         </NAlert>
 
         <div v-if="expenses.length > 0" class="summary">
           <div>
-            <span class="date-range-label">Period: {{ formattedDateRange }}</span>
+            <span class="date-range-label">{{ t('expenses.period', 'Period') }}: {{ formattedDateRange }}</span>
           </div>
-          <strong>Total Amount: {{ formatCurrency(totalAmount) }}</strong>
+          <strong>{{ t('expenses.totalAmount') }}: {{ formatCurrency(totalAmount) }}</strong>
         </div>
 
         <NDataTable
@@ -275,9 +289,9 @@ onMounted(() => {
           }"
         >
           <template #empty>
-            <NEmpty description="No expenses found">
+            <NEmpty :description="t('expenses.noExpenses')">
               <template #extra>
-                <p>Create a new expense to get started.</p>
+                <p>{{ t('expenses.createToStart') }}</p>
               </template>
             </NEmpty>
           </template>

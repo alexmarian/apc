@@ -16,6 +16,7 @@ import { expenseApi } from '@/services/api'
 import type { ExpenseCreateRequest, Expense, ApiResponse } from '@/types/api'
 import CategorySelector from '@/components/CategorySelector.vue'
 import AccountSelector from '@/components/AccountSelector.vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   associationId: number
@@ -26,6 +27,9 @@ const emit = defineEmits<{
   (e: 'saved'): void
   (e: 'cancelled'): void
 }>()
+
+// I18n
+const { t } = useI18n()
 
 const formData = reactive<ExpenseCreateRequest>({
   amount: 0.01,
@@ -38,33 +42,33 @@ const formData = reactive<ExpenseCreateRequest>({
 
 const rules: FormRules = {
   amount: [
-    { required: true, message: 'Amount is required', trigger: 'blur' },
+    { required: true, message: t('validation.required', { field: t('expenses.amount') }), trigger: 'blur' },
     {
       validator: (rule: any, value: number) => {
         return Number(value) > 0
       },
-      message: 'Amount must be greater than 0',
+      message: t('expenses.amountPositive', 'Amount must be greater than 0'),
       trigger: 'blur'
     }
   ],
   description: [
-    { required: true, message: 'Description is required', trigger: 'blur' },
+    { required: true, message: t('validation.required', { field: t('expenses.description') }), trigger: 'blur' },
     {
       type: 'string',
       max: 255,
-      message: 'Description cannot exceed 255 characters',
+      message: t('validation.maxLength', { field: t('expenses.description'), max: 255 }),
       trigger: 'blur'
     }
   ],
   date: [
-    { required: true, message: 'Date is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', { field: t('expenses.date') }), trigger: 'blur' }
   ],
   category_id: [
     {
       validator: (rule: any, value: number) => {
         return value > 0
       },
-      message: 'Category is required',
+      message: t('validation.required', { field: t('expenses.category') }),
       trigger: 'blur'
     }
   ],
@@ -73,7 +77,7 @@ const rules: FormRules = {
       validator: (rule: any, value: number) => {
         return value > 0
       },
-      message: 'Account is required',
+      message: t('validation.required', { field: t('expenses.account') }),
       trigger: 'blur'
     }
   ]
@@ -120,7 +124,7 @@ const fetchExpenseDetails = async (): Promise<void> => {
     await nextTick()
     resetValidation()
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Unknown error occurred'
+    error.value = err instanceof Error ? err.message : t('common.error')
     console.error('Error fetching expense details:', err)
   } finally {
     loading.value = false
@@ -135,27 +139,27 @@ const handleDateChange = (timestamp: number): void => {
 
 const validateFormManually = (): boolean => {
   if (Number(formData.amount) <= 0) {
-    error.value = 'Amount must be greater than 0'
+    error.value = t('expenses.amountPositive', 'Amount must be greater than 0')
     return false
   }
 
   if (!formData.description.trim()) {
-    error.value = 'Description is required'
+    error.value = t('validation.required', { field: t('expenses.description') })
     return false
   }
 
   if (!formData.date) {
-    error.value = 'Date is required'
+    error.value = t('validation.required', { field: t('expenses.date') })
     return false
   }
 
   if (formData.category_id <= 0) {
-    error.value = 'Category is required'
+    error.value = t('validation.required', { field: t('expenses.category') })
     return false
   }
 
   if (formData.account_id <= 0) {
-    error.value = 'Account is required'
+    error.value = t('validation.required', { field: t('expenses.account') })
     return false
   }
 
@@ -203,7 +207,7 @@ const submitForm = async (e: MouseEvent): Promise<void> => {
 
     emit('saved')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An error occurred while submitting the form'
+    error.value = err instanceof Error ? err.message : t('common.error')
     console.error('Error submitting form:', err)
   } finally {
     submitting.value = false
@@ -223,10 +227,10 @@ onMounted(() => {
 
 <template>
   <div class="expense-form">
-    <h2>{{ props.expenseId ? 'Edit Expense' : 'Create New Expense' }}</h2>
+    <h2>{{ props.expenseId ? t('expenses.editExpense') : t('expenses.createNew') }}</h2>
 
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" title="Error" style="margin-bottom: 16px;">
+      <NAlert v-if="error" type="error" :title="t('common.error')" style="margin-bottom: 16px;">
         {{ error }}
       </NAlert>
 
@@ -238,7 +242,7 @@ onMounted(() => {
         label-width="120px"
         require-mark-placement="right-hanging"
       >
-        <NFormItem label="Amount" path="amount">
+        <NFormItem :label="t('expenses.amount')" path="amount">
           <NInputNumber
             v-model:value="formData.amount"
             :min="0.01"
@@ -247,7 +251,7 @@ onMounted(() => {
           />
         </NFormItem>
 
-        <NFormItem label="Date" path="date">
+        <NFormItem :label="t('expenses.date')" path="date">
           <NDatePicker
             :value="formData.date ? new Date(formData.date).getTime() : null"
             type="date"
@@ -257,35 +261,35 @@ onMounted(() => {
           />
         </NFormItem>
 
-        <NFormItem label="Description" path="description">
+        <NFormItem :label="t('expenses.description')" path="description">
           <NInput
             v-model:value="formData.description"
-            placeholder="Enter description"
+            :placeholder="t('expenses.description')"
           />
         </NFormItem>
 
-        <NFormItem label="Destination" path="destination">
+        <NFormItem :label="t('expenses.destination')" path="destination">
           <NInput
             v-model:value="formData.destination"
-            placeholder="Enter destination (payee)"
+            :placeholder="t('expenses.destination')"
           />
         </NFormItem>
 
-        <NFormItem label="Category" path="category_id">
+        <NFormItem :label="t('expenses.category')" path="category_id">
           <CategorySelector
             v-model:modelValue="formData.category_id"
             :association-id="props.associationId"
-            placeholder="Select category"
+            :placeholder="t('expenses.category')"
             :disabled="submitting"
           />
         </NFormItem>
 
-        <NFormItem label="Account" path="account_id">
+        <NFormItem :label="t('expenses.account')" path="account_id">
           <AccountSelector
             v-model:modelValue="formData.account_id"
             :association-id="props.associationId"
             :active-only="true"
-            placeholder="Select account"
+            :placeholder="t('expenses.account')"
             :disabled="submitting"
           />
         </NFormItem>
@@ -296,7 +300,7 @@ onMounted(() => {
               @click="cancelForm"
               :disabled="submitting"
             >
-              Cancel
+              {{ t('common.cancel') }}
             </NButton>
 
             <NButton
@@ -304,7 +308,7 @@ onMounted(() => {
               @click="submitForm"
               :loading="submitting"
             >
-              {{ props.expenseId ? 'Update Expense' : 'Create Expense' }}
+              {{ props.expenseId ? t('common.update') : t('common.create') }}
             </NButton>
           </NSpace>
         </div>

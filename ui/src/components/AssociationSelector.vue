@@ -4,6 +4,7 @@ import { NSelect, NSpin } from 'naive-ui'
 import config from '@/config'
 import type { Association } from '@/types/api'
 import { associationApi } from '@/services/api.ts'
+import { useI18n } from 'vue-i18n'
 
 // Props
 const props = defineProps<{
@@ -14,6 +15,9 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:associationId', id: number): void
 }>()
+
+// I18n
+const { t } = useI18n()
 
 // State
 const associations = ref<Association[]>([])
@@ -38,7 +42,7 @@ const fetchAssociations = async () => {
     }
   } catch (err) {
     console.error('Error fetching associations:', err)
-    error.value = 'Failed to load associations'
+    error.value = t('common.error')
   } finally {
     loading.value = false
   }
@@ -69,7 +73,7 @@ onMounted(() => {
       <NSelect
         :value="props.associationId"
         :options="options"
-        placeholder="Select an association"
+        :placeholder="t('associations.select')"
         @update:value="handleChange"
         :disabled="loading || associations.length === 0"
       />
@@ -82,5 +86,10 @@ onMounted(() => {
 .association-selector {
   width: 100%;
   max-width: 300px;
+}
+.error {
+  color: #d03050;
+  font-size: 0.8rem;
+  margin-top: 4px;
 }
 </style>

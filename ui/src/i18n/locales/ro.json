@@ -87,7 +87,35 @@
     "selectAssociation": "Vă rugăm selectați o asociație pentru a administra cheltuielile",
     "filters": "Filtre",
     "resetFilters": "Resetează Filtrele",
-    "totalAmount": "Suma Totală"
+    "totalAmount": "Suma Totală",
+    "allTime": "Toate perioadele",
+    "allDates": "Toate datele",
+    "period": "Perioada",
+    "expenseAnalysis": "Analiză Cheltuieli",
+    "allowPopups": "Vă rugăm să permiteți pop-up-urile pentru a deschide graficele într-o fereastră nouă",
+    "chartError": "A apărut o eroare la deschiderea paginii de grafice. Vă rugăm să încercați din nou.",
+    "expensesByType": "Cheltuieli după Tip",
+    "monthlyTrends": "Tendințe Lunare ale Cheltuielilor",
+    "expenseTypeBreakdown": "Detaliere pe Tipuri de Cheltuieli",
+    "familyBreakdown": "Detaliere pe Familii",
+    "noFamiliesFound": "Nu s-au găsit familii pentru acest tip",
+    "noCategoriesFound": "Nu s-au găsit categorii pentru această familie",
+    "noMonthlyData": "Nu există date lunare disponibile",
+    "noExpensesFilters": "Nu s-au găsit cheltuieli pentru filtrele selectate",
+    "openChartsView": "Deschide Vizualizarea Graficelor",
+    "printablePage": "Deschide toate graficele într-o pagină pentru imprimare",
+    "summary": "Rezumat Cheltuieli",
+    "totalExpenses": "Total Cheltuieli",
+    "numberOfExpenses": "Număr de Cheltuieli",
+    "averageExpense": "Cheltuială Medie",
+    "topCategories": "Categorii Principale",
+    "noCategoryData": "Nu există date disponibile pentru categorii",
+    "expensesCount": "cheltuieli",
+    "amountPositive": "Suma trebuie să fie mai mare de 0",
+    "printCharts": "Tipărește Graficele",
+    "month": "Lună",
+    "noChartData": "Lipsesc datele, mai întâi trebuie să adăugați cheltuieli pentru a vizualiza graficele"
+
   },
   "validation": {
     "required": "{field} este obligatoriu",
@@ -137,16 +165,19 @@
     "area": "Suprafață",
     "part": "Cotă Parte",
     "type": "Tip",
-    "unit": "Unit"
+    "unit": "Unit",
+    "selectBuilding": "Selectează Clădire"
   },
   "categories": {
     "allCategories": "Toate Categoriile",
     "types": {
+      "title": "Tip",
       "Budgeted": "Bugetat",
       "Maintenance": "Întreținere",
       "Improvement": "Îmbunătățire"
     },
     "families": {
+      "title": "Familie",
       "personnel": "Cheltuieli de Personal",
       "security": "Securitate",
       "building_repairs": "Reparații Clădire",
@@ -161,6 +192,7 @@
       "miscellaneous": "Diverse"
     },
     "names": {
+      "title": "Categorie",
       "janitor_salary": "Salariu Maturator",
       "cleaner_salary": "Salariu Diridicatoare",
       "building_admin_salary": "Salariu Administrator Bloc",
@@ -202,6 +234,9 @@
     "count": "Număr",
     "amount": "Sumă",
     "noData": "Nu există date disponibile",
-    "loading": "Se încarcă datele graficului..."
+    "loading": "Se încarcă datele graficului...",
+    "pieChart": "Grafic Circular",
+    "barChart": "Grafic cu Bare",
+    "percentage": "Procentaj"
   }
 }

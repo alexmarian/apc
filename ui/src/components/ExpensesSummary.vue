@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { NCard, NDivider, NEmpty, NGradientText, NSpace, NStatistic } from 'naive-ui'
+import { NCard, NDivider, NEmpty, NGradientText, NSpace, NStatistic, NText } from 'naive-ui'
 import type { Expense } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
+import { useI18n } from 'vue-i18n'
+import LocalizedCategoryDisplay from '@/components/LocalizedCategoryDisplay.vue'
 
 // Props
 const props = defineProps<{
   expenses: Expense[]
 }>()
+
+// I18n
+const { t } = useI18n()
 
 // Computed statistics
 const totalExpenses = computed(() => {
@@ -31,7 +36,9 @@ const expensesByCategory = computed(() => {
     if (!acc[categoryKey]) {
       acc[categoryKey] = {
         id: expense.category_id,
-        name: `${expense.category_type} - ${expense.category_name}`,
+        type: expense.category_type,
+        family: expense.category_family,
+        name: expense.category_name,
         total: 0,
         count: 0
       }
@@ -41,7 +48,7 @@ const expensesByCategory = computed(() => {
     acc[categoryKey].count += 1
 
     return acc
-  }, {} as Record<number, { id: number, name: string, total: number, count: number }>)
+  }, {} as Record<number, { id: number, type: string, family: string, name: string, total: number, count: number }>)
 
   // Convert to array and sort by total amount (descending)
   return Object.values(grouped).sort((a, b) => b.total - a.total)
@@ -49,35 +56,41 @@ const expensesByCategory = computed(() => {
 
 const topCategories = computed(() => {
   return expensesByCategory.value.slice(0, 3)
-
 })
 </script>
 
 <template>
-  <NCard title="Expense Summary" class="expense-summary">
+  <NCard :title="t('expenses.summary', 'Expense Summary')" class="expense-summary">
     <template v-if="props.expenses.length === 0">
-      <NEmpty description="No expenses found for the selected filters" />
+      <NEmpty :description="t('expenses.noExpenses')" />
     </template>
 
     <template v-else>
       <NSpace justify="space-around" align="center">
-        <NStatistic label="Total Expenses" :value="formatCurrency(totalExpenses)" />
-        <NStatistic label="Number of Expenses" :value="expenseCount" />
-        <NStatistic label="Average Expense" :value="formatCurrency(averageExpense)" />
+        <NStatistic :label="t('expenses.totalExpenses', 'Total Expenses')" :value="formatCurrency(totalExpenses)" />
+        <NStatistic :label="t('expenses.numberOfExpenses', 'Number of Expenses')" :value="expenseCount" />
+        <NStatistic :label="t('expenses.averageExpense', 'Average Expense')" :value="formatCurrency(averageExpense)" />
       </NSpace>
 
-      <NDivider title-placement="left">Top Categories</NDivider>
+      <NDivider :title="t('expenses.topCategories', 'Top Categories')" title-placement="left"></NDivider>
 
       <div v-if="topCategories.length > 0" class="top-categories">
         <div v-for="category in topCategories" :key="category.id" class="category-item">
-          <NText :size="16" type="warning">{{ category.name }}</NText>
+          <LocalizedCategoryDisplay
+            :type="category.type"
+            :family="category.family"
+            :name="category.name"
+            :show-family="true"
+            :show-type="true"
+            :show-name="true"
+          />
           <div class="category-stats">
             <span>{{ formatCurrency(category.total) }}</span>
-            <span class="category-count">({{ category.count }} expenses)</span>
+            <span class="category-count">({{ category.count }} {{ t('expenses.expensesCount', 'expenses') }})</span>
           </div>
         </div>
       </div>
-      <div v-else class="no-data">No category data available</div>
+      <div v-else class="no-data">{{ t('expenses.noCategoryData', 'No category data available') }}</div>
     </template>
   </NCard>
 </template>
