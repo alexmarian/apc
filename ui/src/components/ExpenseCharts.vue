@@ -6,8 +6,13 @@ import {
   NRadioGroup,
   NRadio,
   NCollapse,
-  NCollapseItem
+  NCollapseItem,
+  NButton,
+  NSpace,
+  NTooltip,
+  NIcon
 } from 'naive-ui'
+import { OpenInNewRound } from '@vicons/material'
 import type { Expense } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
 import PieChart from '@/components/charts/PieChart.vue'
@@ -18,7 +23,8 @@ import type { StackedChartItem, StackedChartSeries } from '@/components/charts/S
 
 // Props
 const props = defineProps<{
-  expenses: Expense[]
+  expenses: Expense[],
+  dateRange?: [number, number] | null
 }>()
 
 // Chart display mode for each section
@@ -220,12 +226,58 @@ const monthlyExpensesData = computed<{items: StackedChartItem[], series: Stacked
   return { items, series }
 })
 
+// Format date range as string for display
+const formattedDateRange = computed(() => {
+  if (!props.dateRange) return 'All time'
+
+  const start = new Date(props.dateRange[0]).toLocaleDateString()
+  const end = new Date(props.dateRange[1]).toLocaleDateString()
+
+  return `${start} - ${end}`
+})
+
 // When expenses change, set the default selected type
 watch(() => props.expenses, () => {
   if (expensesByType.value.length > 0 && (!selectedType.value || !expensesByType.value.find(t => t.name === selectedType.value))) {
     selectedType.value = expensesByType.value[0].name
   }
 }, { immediate: true })
+
+// Function to open the standalone charts page in a new window
+const openStandaloneChartsPage = () => {
+  try {
+    // Prepare data for standalone view
+    // Get detailed data for chart rendering
+    const typeDetails = expensesByType.value.map(type => ({
+      type: type.name,
+      value: type.value,
+      families: getFamiliesForType(type.name)
+    }));
+
+    // Create the data object to pass to the standalone page
+    const chartData = {
+      expenses: props.expenses,
+      expensesByType: expensesByType.value,
+      expensesByMonth: monthlyExpensesData.value,
+      typeDetails
+    };
+
+    // Store data in localStorage so the new window can access it
+    localStorage.setItem('standalone_chart_data', JSON.stringify(chartData));
+    localStorage.setItem('standalone_chart_title', 'Expense Analysis');
+    localStorage.setItem('standalone_chart_date_range', formattedDateRange.value);
+
+    // Open a new window with the standalone page
+    const standaloneWindow = window.open('/reports/standalone-charts', '_blank');
+
+    if (!standaloneWindow) {
+      alert('Please allow pop-ups to open the charts in a new window');
+    }
+  } catch (error) {
+    console.error('Error opening standalone charts page:', error);
+    alert('There was an error opening the charts page. Please try again.');
+  }
+}
 </script>
 
 <template>
@@ -235,6 +287,25 @@ watch(() => props.expenses, () => {
     </template>
 
     <template v-else>
+      <!-- Export Button -->
+      <div class="charts-actions">
+        <NSpace justify="end">
+          <NTooltip>
+            <template #trigger>
+              <NButton type="primary" @click="openStandaloneChartsPage">
+                <template #icon>
+                  <NIcon>
+                    <OpenInNewRound />
+                  </NIcon>
+                </template>
+                Open Charts View
+              </NButton>
+            </template>
+            Open all charts in a printable page
+          </NTooltip>
+        </NSpace>
+      </div>
+
       <!-- Section 1: Expenses by Type -->
       <NCard title="Expenses by Type" style="margin-bottom: 24px;">
         <NRadioGroup v-model:value="typeChartMode" class="mode-selector">
@@ -348,6 +419,11 @@ watch(() => props.expenses, () => {
 <style scoped>
 .expense-charts {
   margin-bottom: 20px;
+}
+
+.charts-actions {
+  margin-bottom: 16px;
+  text-align: right;
 }
 
 .chart-container {
