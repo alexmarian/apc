@@ -36,7 +36,7 @@
   },
   "accounts": {
     "title": "Conturi",
-    "list": "Conturi",
+    "list": " Listă Conturi",
     "createNew": "Creează Cont Nou",
     "editAccount": "Editează Cont",
     "accountNumber": "Număr Cont",
@@ -61,7 +61,8 @@
   },
   "expenses": {
     "title": "Administrare Cheltuieli",
-    "list": "Cheltuieli",
+    "list": "Listă Cheltuieli",
+    "distribution": "Distribuție Cheltuieli",
     "createNew": "Adaugă Cheltuială Nouă",
     "editExpense": "Editează Cheltuială",
     "amount": "Sumă",
@@ -102,6 +103,7 @@
   "owners": {
     "title": "Proprietari",
     "report": "Raport Proprietari",
+    "voting-report": "Raport Votare",
     "list": "Lista Proprietari",
     "cumulative": "Proprietate Cumulativă",
     "includeUnits": "Include Unitățile",
@@ -125,10 +127,68 @@
   },
   "units": {
     "title": "Unități",
+    "list": "Listă Unități",
     "building": "Clădire",
     "area": "Suprafață",
     "part": "Cotă Parte",
     "type": "Tip",
     "unit": "Unit"
+  },
+  "categories": {
+    "types": {
+      "Budgeted": "Bugetat",
+      "Maintenance": "Întreținere",
+      "Improvement": "Îmbunătățire"
+    },
+    "families": {
+      "personnel": "Cheltuieli de Personal",
+      "security": "Securitate",
+      "building_repairs": "Reparații Clădire",
+      "cleaning_services": "Servicii de Curățenie",
+      "maintenance_materials": "Materiale de Întreținere",
+      "equipment_repairs": "Reparații Echipamente",
+      "administrative": "Servicii Administrative",
+      "utilities": "Utilități",
+      "community": "Activități Comunitare",
+      "building_improvements": "Îmbunătățiri Clădire",
+      "reserve_fund": "Fond de Rezervă",
+      "miscellaneous": "Diverse"
+    },
+    "names": {
+      "janitor_salary": "Salariu Maturator",
+      "cleaner_salary": "Salariu Diridicatoare",
+      "building_admin_salary": "Salariu Administrator Bloc",
+      "building_caretaker_salary": "Salariu Îngrijitor Bloc",
+      "cnas_taxes": "Impozite CNAS",
+      "cnam_contributions": "Contribuții CNAM",
+      "other_salary_taxes": "Alte Taxe Salariale",
+      "security_services": "Servicii de pază",
+      "building_repairs": "Reparații clădire",
+      "cleaning_services": "Servicii de curățenie",
+      "maintenance_materials": "Materiale de întreținere",
+      "equipment_repairs": "Reparații echipamente",
+      "accounting_services": "Servicii contabile",
+      "legal_services": "Servicii juridice",
+      "administrative_support": "Suport administrativ",
+      "phone_services": "Servicii de telefonie",
+      "banking_services": "Servicii bancare",
+      "internet_communications": "Internet și comunicații",
+      "community_events": "Evenimente comunitare",
+      "recreational_activities": "Activități recreative",
+      "environmental_activities": "Activități de mediu și ecologizare",
+      "yard_beautification": "Amenajare și înfrumusețare curte",
+      "relaxation_socialization_areas": "Zone de relaxare și socializare",
+      "common_areas_improvements": "Amenajări spații comune",
+      "exterior_improvements": "Îmbunătățiri exterioare",
+      "accessibility_upgrades": "Upgrade-uri de accesibilitate",
+      "access_control_systems": "Sisteme de control al accesului",
+      "video_surveillance": "Supraveghere video",
+      "monthly_reserve_transfer": "Transfer lunar către fondul de rezervă",
+      "office_supplies": "Rechizite de birou",
+      "specialized_equipment": "Echipamente specializate",
+      "protective_equipment": "Echipament de protecție",
+      "various_services": "Servicii diverse",
+      "commissions": "Comisioane"
+    }
   }
 }

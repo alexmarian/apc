@@ -40,12 +40,12 @@ const menuOptions = [
     icon: renderIcon(AccountBalanceRound)
   },
   {
-    label: 'Expenses',
+    label: t('expenses.title', 'Expenses'),
     key: 'expenses-group',
     icon: renderIcon(AttachMoneyRound),
     children: [
       {
-        label: () => h(RouterLink, { to: '/expenses' }, { default: () => t('expenses.title', 'Management') }),
+        label: () => h(RouterLink, { to: '/expenses' }, { default: () => t('expenses.list', 'Management') }),
         key: 'expenses-management'
       },
       {
@@ -53,14 +53,14 @@ const menuOptions = [
         key: 'expenses-reports'
       },
       {
-        label: () => h(RouterLink, { to: '/expenses/distribution' }, { default: () => t('distribution.title', 'Distribution') }),
+        label: () => h(RouterLink, { to: '/expenses/distribution' }, { default: () => t('expenses.distribution', 'Distribution') }),
         key: 'expense-distribution'
 
       }
     ]
   },
   {
-    label: 'Units',
+    label: t('units.title', 'Units'),
     key: 'units-group',
     icon: renderIcon(BedroomParentRound),
     children: [
@@ -73,7 +73,7 @@ const menuOptions = [
         key: 'owners-report'
       },
       {
-        label: () => h(RouterLink, { to: '/owners/voting' }, { default: () => t('owners.votingReport', 'Voting Report') }),
+        label: () => h(RouterLink, { to: '/owners/voting' }, { default: () => t('owners.voting-report', 'Voting Report') }),
         key: 'owners-voting-report'
       }
     ]

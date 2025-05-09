@@ -60,8 +60,9 @@
     "noAssociations": "No associations found"
   },
   "expenses": {
-    "title": "Expense Management",
-    "list": "Expenses",
+    "title": "Expenses",
+    "list": "Expenses List",
+    "distribution": "Distribution of Expenses",
     "createNew": "Create New Expense",
     "editExpense": "Edit Expense",
     "amount": "Amount",
@@ -102,6 +103,7 @@
   "owners": {
     "title": "Owners",
     "report": "Owners Report",
+    "voting-report": "Voting Report",
     "list": "Owners List",
     "cumulative": "Cumulative Ownership",
     "includeUnits": "Include Units",
@@ -125,10 +127,68 @@
   },
   "units": {
     "title": "Units",
+    "list": "Units List",
     "building": "Building",
     "area": "Area",
     "part": "Condo Part",
     "type": "Type",
     "unit": "Unit"
+  },
+  "categories": {
+    "types": {
+      "Budgeted": "Budgeted",
+      "Maintenance": "Maintenance",
+      "Improvement": "Improvement"
+    },
+    "families": {
+      "personnel": "Personnel Expenses",
+      "security": "Security and Safety",
+      "building_repairs": "Building Repairs",
+      "cleaning_services": "Cleaning Services",
+      "maintenance_materials": "Maintenance Materials",
+      "equipment_repairs": "Equipment Repairs",
+      "administrative": "Administrative Services",
+      "utilities": "Utilities",
+      "community": "Community Activities",
+      "building_improvements": "Building Improvements",
+      "reserve_fund": "Reserve Fund",
+      "miscellaneous": "Miscellaneous"
+    },
+    "names": {
+      "janitor_salary": "Janitor Salary",
+      "cleaner_salary": "Cleaner Salary",
+      "building_admin_salary": "Building Administrator Salary",
+      "building_caretaker_salary": "Building Caretaker Salary",
+      "cnas_taxes": "CNAS Taxes",
+      "cnam_contributions": "CNAM Contributions",
+      "other_salary_taxes": "Other Salary Taxes",
+      "security_services": "Security Services",
+      "building_repairs": "Building Repairs",
+      "cleaning_services": "Cleaning Services",
+      "maintenance_materials": "Maintenance Materials",
+      "equipment_repairs": "Equipment Repairs",
+      "accounting_services": "Accounting Services",
+      "legal_services": "Legal Services",
+      "administrative_support": "Administrative Support",
+      "phone_services": "Phone Services",
+      "banking_services": "Banking Services",
+      "internet_communications": "Internet and Communications",
+      "community_events": "Community Events",
+      "recreational_activities": "Recreational Activities",
+      "environmental_activities": "Environmental Activities",
+      "yard_beautification": "Yard Beautification",
+      "relaxation_socialization_areas": "Relaxation and Socialization Areas",
+      "common_areas_improvements": "Common Areas Improvements",
+      "exterior_improvements": "Exterior Improvements",
+      "accessibility_upgrades": "Accessibility Upgrades",
+      "access_control_systems": "Access Control Systems",
+      "video_surveillance": "Video Surveillance",
+      "monthly_reserve_transfer": "Monthly Reserve Fund Transfer",
+      "office_supplies": "Office Supplies",
+      "specialized_equipment": "Specialized Equipment",
+      "protective_equipment": "Protective Equipment",
+      "various_services": "Various Services",
+      "commissions": "Commissions"
+    }
   }
 }
