@@ -25,7 +25,8 @@
     "clear": "Șterge",
     "active": "Activ",
     "inactive": "Inactiv",
-    "status": "Status"
+    "status": "Status",
+    "hide": "Ascunde"
   },
   "auth": {
     "login": "Autentificare",
@@ -115,7 +116,6 @@
     "printCharts": "Tipărește Graficele",
     "month": "Lună",
     "noChartData": "Lipsesc datele, mai întâi trebuie să adăugați cheltuieli pentru a vizualiza graficele"
-
   },
   "validation": {
     "required": "{field} este obligatoriu",

@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { NButton, NCard, NPageHeader, NSpace, useMessage } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import ExpensesList from '@/components/ExpensesList.vue'
 import ExpenseForm from '@/components/ExpenseForm.vue'
 import ExpensesSummary from '@/components/ExpensesSummary.vue'
 import AssociationSelector from '@/components/AssociationSelector.vue'
 import type { Expense } from '@/types/api.ts'
 
+// Setup i18n
+const { t } = useI18n()
+
 // Setup Naive UI message system
 const message = useMessage()
 
 // Association selector
 const associationId = ref<number | null>(null)
-
 
 // UI state
 const showForm = ref(false)
@@ -31,13 +34,15 @@ const setDisplayedExpenses = (expenses: Expense[]) => {
 
 // Computed properties
 const formTitle = computed(() => {
-  return editingExpenseId.value ? 'Edit Expense' : 'Create New Expense'
+  return editingExpenseId.value
+    ? t('expenses.editExpense', 'Edit Expense')
+    : t('expenses.createNew', 'Create New Expense')
 })
 
 // Methods
 const handleCreateExpense = () => {
   if (!associationId.value) {
-    message.error('Please select an association first')
+    message.error(t('expenses.selectAssociation', 'Please select an association first'))
     return
   }
 
@@ -53,7 +58,10 @@ const handleEditExpense = (expenseId: number) => {
 const handleFormSaved = () => {
   showForm.value = false
   // Show success message
-  message.success(`Expense ${editingExpenseId.value ? 'updated' : 'created'} successfully`)
+  const successMsg = editingExpenseId.value
+    ? t('expenses.expenseUpdated', 'Expense updated successfully')
+    : t('expenses.expenseCreated', 'Expense created successfully')
+  message.success(successMsg)
   // check on how to trigger reload
 }
 
@@ -70,7 +78,7 @@ const toggleSummary = () => {
   <div class="expenses-view">
     <NPageHeader>
       <template #title>
-        Expense Management
+        {{ t('expenses.title', 'Expense Management') }}
       </template>
 
       <template #header>
@@ -86,7 +94,7 @@ const toggleSummary = () => {
             secondary
             @click="toggleSummary"
           >
-            {{ showSummary ? 'Hide Summary' : 'Show Summary' }}
+            {{ showSummary ? t('common.hide', 'Hide') + ' ' + t('expenses.summary', 'Summary') : t('common.show', 'Show') + ' ' + t('expenses.summary', 'Summary') }}
           </NButton>
           <NButton
             v-if="!showForm"
@@ -94,7 +102,7 @@ const toggleSummary = () => {
             @click="handleCreateExpense"
             :disabled="!associationId"
           >
-            Create New Expense
+            {{ t('expenses.createNew', 'Create New Expense') }}
           </NButton>
         </NSpace>
       </template>
@@ -103,7 +111,7 @@ const toggleSummary = () => {
     <div v-if="!associationId">
       <NCard style="margin-top: 16px;">
         <div style="text-align: center; padding: 32px;">
-          <p>Please select an association to manage expenses</p>
+          <p>{{ t('expenses.selectAssociation', 'Please select an association to manage expenses') }}</p>
         </div>
       </NCard>
     </div>
@@ -120,19 +128,20 @@ const toggleSummary = () => {
     </div>
     <div v-else>
       <!-- List comes first in vertical layout -->
-        <ExpensesList
-          :association-id="associationId"
-          :date-range="dateRange"
-          :selected-category="selectedCategory"
-          @edit="handleEditExpense"
-          @expenses-rendered="setDisplayedExpenses"
-          @category-changed="newCategory => selectedCategory=newCategory"
-          @date-range-changed="newDateRange => dateRange=newDateRange"
-        />
+      <ExpensesList
+        :association-id="associationId"
+        :date-range="dateRange"
+        :selected-category="selectedCategory"
+        @edit="handleEditExpense"
+        @expenses-rendered="setDisplayedExpenses"
+        @category-changed="newCategory => selectedCategory=newCategory"
+        @date-range-changed="newDateRange => dateRange=newDateRange"
+      />
       <!-- Summary is below the list and can be toggled -->
       <div v-if="showSummary" style="margin-top: 16px;">
         <ExpensesSummary v-if="displayedExpenses"
                          :expenses="displayedExpenses"
+                         :date-range="dateRange"
         />
       </div>
     </div>

@@ -25,7 +25,8 @@
     "clear": "Clear",
     "active": "Active",
     "inactive": "Inactive",
-    "status": "Status"
+    "status": "Status",
+    "hide": "Hide"
   },
   "auth": {
     "login": "Login",

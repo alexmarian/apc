@@ -21,13 +21,16 @@ import BarChart from '@/components/charts/BarChart.vue'
 import StackedBarChart from '@/components/charts/StackedBarChart.vue'
 import type { ChartDataItem } from '@/components/charts/BaseChart.vue'
 import type { StackedChartItem, StackedChartSeries } from '@/components/charts/StackedBarChart.vue'
-// Props
+import LocalizedCategoryDisplay from './LocalizedCategoryDisplay.vue'
 
+// Props
 const props = defineProps<{
   expenses: Expense[],
   dateRange?: [number, number] | null
 }>()
-const { locale } = useI18n()
+
+// I18n
+const { t, locale } = useI18n()
 
 // Chart display mode for each section
 const typeChartMode = ref<'pie' | 'bar'>('pie')
@@ -52,7 +55,8 @@ const expensesByType = computed<ChartDataItem[]>(() => {
 
     if (!acc[type]) {
       acc[type] = {
-        name: type,
+        name: t(`categories.types.${type}`),
+        rawName: type, // Store original value for lookup
         value: 0,
         count: 0
       }
@@ -62,7 +66,7 @@ const expensesByType = computed<ChartDataItem[]>(() => {
     acc[type].count += 1
 
     return acc
-  }, {} as Record<string, ChartDataItem>)
+  }, {} as Record<string, ChartDataItem & { rawName: string }>)
 
   return Object.values(grouped).map((item, index) => ({
     ...item,
@@ -72,10 +76,10 @@ const expensesByType = computed<ChartDataItem[]>(() => {
 })
 
 // Family categorization - group expenses within each type by family
-const expensesByTypeAndFamily = computed<Record<string, Record<string, ChartDataItem>>>(() => {
+const expensesByTypeAndFamily = computed<Record<string, Record<string, ChartDataItem & { rawName: string }>>>(() => {
   if (!props.expenses || props.expenses.length === 0) return {}
 
-  const typeAndFamily: Record<string, Record<string, ChartDataItem>> = {}
+  const typeAndFamily: Record<string, Record<string, ChartDataItem & { rawName: string }>> = {}
 
   // First pass - group by type and family
   props.expenses.forEach(expense => {
@@ -88,7 +92,8 @@ const expensesByTypeAndFamily = computed<Record<string, Record<string, ChartData
 
     if (!typeAndFamily[type][family]) {
       typeAndFamily[type][family] = {
-        name: family,
+        name: t(`categories.families.${family}`),
+        rawName: family, // Store original value for lookup
         value: 0,
         count: 0
       }
@@ -140,7 +145,8 @@ const getCategoriesForTypeAndFamily = (type: string, family: string): ChartDataI
 
     if (!acc[category]) {
       acc[category] = {
-        name: category,
+        name: t(`categories.names.${category}`),
+        rawName: category,
         value: 0,
         count: 0
       }
@@ -150,7 +156,7 @@ const getCategoriesForTypeAndFamily = (type: string, family: string): ChartDataI
     acc[category].count += 1
 
     return acc
-  }, {} as Record<string, ChartDataItem>)
+  }, {} as Record<string, ChartDataItem & { rawName: string }>)
 
   const totalForFamily = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0)
 
@@ -230,7 +236,7 @@ const monthlyExpensesData = computed<{items: StackedChartItem[], series: Stacked
 
 // Format date range as string for display
 const formattedDateRange = computed(() => {
-  if (!props.dateRange) return 'All time'
+  if (!props.dateRange) return t('expenses.allTime', 'All time')
 
   const start = new Date(props.dateRange[0]).toLocaleDateString()
   const end = new Date(props.dateRange[1]).toLocaleDateString()
@@ -248,23 +254,37 @@ watch(() => props.expenses, () => {
 const openStandaloneChartsPage = () => {
   try {
     // Prepare data for standalone view
-    const typeDetails = expensesByType.value.map(type => ({
-      type: type.name,
-      value: type.value,
-      families: getFamiliesForType(type.name)
-    }));
+    const typeDetails = expensesByType.value.map(type => {
+      // Get the families for this type
+      const families = getFamiliesForType(type.rawName);
 
-    // Create the data object to pass to the standalone page
+      return {
+        type: type.name,
+        rawName: type.rawName, // Important: Include the raw name for translation
+        value: type.value,
+        families: families.map(family => ({
+          ...family,
+          // Ensure rawName is preserved for each family
+          rawName: family.rawName
+        }))
+      };
+    });
+
+    // Create the data object to pass to the standalone page with rawNames
     const chartData = {
       expenses: props.expenses,
-      expensesByType: expensesByType.value,
+      expensesByType: expensesByType.value.map(item => ({
+        ...item,
+        // Ensure rawName is preserved for each type
+        rawName: item.rawName
+      })),
       expensesByMonth: monthlyExpensesData.value,
       typeDetails
     };
 
     // Store data in localStorage so the new window can access it
     localStorage.setItem('standalone_chart_data', JSON.stringify(chartData));
-    localStorage.setItem('standalone_chart_title', 'Expense Analysis');
+    localStorage.setItem('standalone_chart_title', t('expenses.expenseAnalysis', 'Expense Analysis'));
     localStorage.setItem('standalone_chart_date_range', formattedDateRange.value);
     localStorage.setItem('standalone_chart_language', locale.value);
 
@@ -272,19 +292,24 @@ const openStandaloneChartsPage = () => {
     const standaloneWindow = window.open('/standalone-charts.html', '_blank');
 
     if (!standaloneWindow) {
-      alert('Please allow pop-ups to open the charts in a new window');
+      alert(t('expenses.allowPopups', 'Please allow pop-ups to open the charts in a new window'));
     }
   } catch (error) {
     console.error('Error opening standalone charts page:', error);
-    alert('There was an error opening the charts page. Please try again.');
+    alert(t('expenses.chartError', 'There was an error opening the charts page. Please try again.'));
   }
+}
+
+// Format a category and value for display
+const formatCategoryAndValue = (categoryName: string, value: number) => {
+  return `${categoryName} - ${formatCurrency(value)}`
 }
 </script>
 
 <template>
   <div class="expense-charts">
     <template v-if="props.expenses.length === 0">
-      <NEmpty description="No expenses found for the selected filters" />
+      <NEmpty :description="t('expenses.noExpensesFilters', 'No expenses found for the selected filters')" />
     </template>
 
     <template v-else>
@@ -299,19 +324,19 @@ const openStandaloneChartsPage = () => {
                     <OpenInNewRound />
                   </NIcon>
                 </template>
-                Open Charts View
+                {{ t('expenses.openChartsView', 'Open Charts View') }}
               </NButton>
             </template>
-            Open all charts in a printable page
+            {{ t('expenses.printablePage', 'Open all charts in a printable page') }}
           </NTooltip>
         </NSpace>
       </div>
 
       <!-- Section 1: Expenses by Type -->
-      <NCard title="Expenses by Type" style="margin-bottom: 24px;">
+      <NCard :title="t('expenses.expensesByType', 'Expenses by Type')" style="margin-bottom: 24px;">
         <NRadioGroup v-model:value="typeChartMode" class="mode-selector">
-          <NRadio value="pie">Pie Chart</NRadio>
-          <NRadio value="bar">Bar Chart</NRadio>
+          <NRadio value="pie">{{ t('charts.pieChart', 'Pie Chart') }}</NRadio>
+          <NRadio value="bar">{{ t('charts.barChart', 'Bar Chart') }}</NRadio>
         </NRadioGroup>
 
         <div class="chart-container">
@@ -328,12 +353,12 @@ const openStandaloneChartsPage = () => {
             :height="300"
           />
 
-          <NEmpty v-else description="Not enough data to display chart" />
+          <NEmpty v-else :description="t('charts.noData', 'No data available')" />
         </div>
       </NCard>
 
       <!-- Section 2: Monthly Trends -->
-      <NCard title="Monthly Expense Trends" style="margin-bottom: 24px;">
+      <NCard :title="t('expenses.monthlyTrends', 'Monthly Expense Trends')" style="margin-bottom: 24px;">
         <div class="chart-container">
           <StackedBarChart
             v-if="monthlyExpensesData.items.length > 0"
@@ -342,69 +367,69 @@ const openStandaloneChartsPage = () => {
             :height="300"
           />
 
-          <NEmpty v-else description="No monthly data available" />
+          <NEmpty v-else :description="t('expenses.noMonthlyData', 'No monthly data available')" />
         </div>
       </NCard>
 
       <!-- Section 3: Expense Type Breakdown -->
-      <NCard title="Expense Type Breakdown" style="margin-bottom: 24px;">
+      <NCard :title="t('expenses.expenseTypeBreakdown', 'Expense Type Breakdown')" style="margin-bottom: 24px;">
         <NRadioGroup v-model:value="categoryChartMode" class="mode-selector">
-          <NRadio value="pie">Pie Chart</NRadio>
-          <NRadio value="bar">Bar Chart</NRadio>
+          <NRadio value="pie">{{ t('charts.pieChart', 'Pie Chart') }}</NRadio>
+          <NRadio value="bar">{{ t('charts.barChart', 'Bar Chart') }}</NRadio>
         </NRadioGroup>
 
         <NCollapse>
           <NCollapseItem
             v-for="type in expensesByType"
-            :key="type.name"
-            :title="type.name + ' - ' + formatCurrency(type.value)"
+            :key="type.rawName"
+            :title="formatCategoryAndValue(type.name, type.value)"
           >
             <!-- Families within this type section -->
             <div class="chart-container">
-              <NCard title="Family Breakdown" size="small" style="margin-bottom: 16px;">
-                <template v-if="getFamiliesForType(type.name).length > 0">
+              <NCard :title="t('expenses.familyBreakdown', 'Family Breakdown')" size="small" style="margin-bottom: 16px;">
+                <template v-if="getFamiliesForType(type.rawName).length > 0">
                   <PieChart
                     v-if="categoryChartMode === 'pie'"
-                    :data="getFamiliesForType(type.name)"
+                    :data="getFamiliesForType(type.rawName)"
                     :showPercentage="true"
                     :height="300"
                   />
 
                   <BarChart
                     v-else
-                    :data="getFamiliesForType(type.name)"
+                    :data="getFamiliesForType(type.rawName)"
                     :height="300"
                   />
                 </template>
                 <template v-else>
-                  <NEmpty description="No families found for this type" />
+                  <NEmpty :description="t('expenses.noFamiliesFound', 'No families found for this type')" />
                 </template>
               </NCard>
 
               <!-- Categories within each family collapsible sections -->
               <NCollapse>
                 <NCollapseItem
-                  v-for="family in getFamiliesForType(type.name)"
-                  :key="family.name"
-                  :title="family.name + ' - ' + formatCurrency(family.value)"
+                  v-for="family in getFamiliesForType(type.rawName)"
+                  :key="family.rawName"
+                  :title="formatCategoryAndValue(family.name, family.value)"
                 >
                   <div class="chart-container">
-                    <template v-if="getCategoriesForTypeAndFamily(type.name, family.name).length > 0">
+                    <template v-if="getCategoriesForTypeAndFamily(type.rawName, family.rawName).length > 0">
                       <PieChart
                         v-if="categoryChartMode === 'pie'"
-                        :data="getCategoriesForTypeAndFamily(type.name, family.name)"
+                        :data="getCategoriesForTypeAndFamily(type.rawName, family.rawName)"
                         :showPercentage="true"
                         :height="300"
                       />
 
                       <BarChart
                         v-else
-                        :data="getCategoriesForTypeAndFamily(type.name, family.name)"
+                        :data="getCategoriesForTypeAndFamily(type.rawName, family.rawName)"
                         :height="300"
                       />
                     </template>
                     <template v-else>
-                      <NEmpty description="No categories found for this family" />
+                      <NEmpty :description="t('expenses.noCategoriesFound', 'No categories found for this family')" />
                     </template>
                   </div>
                 </NCollapseItem>
