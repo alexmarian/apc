@@ -1,4 +1,7 @@
 {
+  "home": {
+    "title": "Acasă"
+  },
   "common": {
     "save": "Salvează",
     "cancel": "Anulează",
@@ -26,7 +29,8 @@
     "active": "Activ",
     "inactive": "Inactiv",
     "status": "Status",
-    "hide": "Ascunde"
+    "hide": "Ascunde",
+    "notFound": "Pagină lipsă"
   },
   "auth": {
     "login": "Autentificare",
@@ -36,7 +40,11 @@
     "totp": "Cod TOTP",
     "loginFailed": "Autentificare eșuată. Verificați datele de conectare.",
     "anonymous": "Anonim",
-    "userProfile": "Profil Utilizator"
+    "userProfile": "Profil Utilizator",
+    "enterUsername": "Enter your username",
+    "enterPassword": "Enter your password",
+    "enterTotp": "Enter your 6-digit code",
+    "totpLength": "TOTP code must be 6 digits"
   },
   "accounts": {
     "title": "Conturi",

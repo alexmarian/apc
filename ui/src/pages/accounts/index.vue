@@ -19,12 +19,13 @@ const message = useMessage()
 const { t } = useI18n()
 const associationId = ref<number | null>(null)
 
-
 const showForm = ref(false)
 const editingAccountId = ref<number | undefined>(undefined)
 
 const formTitle = computed(() => {
-  return editingAccountId.value ? 'Edit Account' : 'Create New Account'
+  return editingAccountId.value
+    ? t('accounts.editAccount', 'Edit Account')
+    : t('accounts.createNew', 'Create New Account')
 })
 
 const handleCreateAccount = () => {
@@ -45,9 +46,9 @@ const handleEditAccount = (accountId: number) => {
 const handleFormSaved = () => {
   showForm.value = false
   if (editingAccountId.value) {
-    message.success(t('account.accountUpdated', `Account updated successfully`))
+    message.success(t('accounts.accountUpdated', 'Account updated successfully'))
   } else {
-    message.success(t('account.accountCreated', `Account created successfully`))
+    message.success(t('accounts.accountCreated', 'Account created successfully'))
   }
   setTimeout(() => {
     location.reload()
@@ -102,7 +103,7 @@ const handleFormCancelled = () => {
 
     <NCard v-else style="margin-top: 16px;">
       <div style="text-align: center; padding: 32px;">
-        <p>{{ t('accounts.createNew', 'Create New Account') }}</p>
+        <p>{{ t('accounts.selectAssociation', 'Please select an association to manage accounts') }}</p>
       </div>
     </NCard>
   </div>

@@ -2,6 +2,9 @@
 import { ref } from 'vue'
 import { NPageHeader } from 'naive-ui'
 import UnitExpenseDistributionReport from '@/components/UnitExpenseDistributionReport.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 // State
 const associationId = ref<number | null>(null)
@@ -21,7 +24,7 @@ const handleUpdateBuildingId = (id: number) => {
   <div class="expense-distribution-page">
     <NPageHeader>
       <template #title>
-        Unit Expense Distribution Report
+        {{ t('expenses.distribution', 'Unit Expense Distribution Report') }}
       </template>
     </NPageHeader>
 

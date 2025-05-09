@@ -1,4 +1,7 @@
 {
+  "home": {
+    "title": "Home"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -26,7 +29,8 @@
     "active": "Active",
     "inactive": "Inactive",
     "status": "Status",
-    "hide": "Hide"
+    "hide": "Hide",
+    "notFound": "Page not found"
   },
   "auth": {
     "login": "Login",
@@ -36,7 +40,11 @@
     "totp": "TOTP Code",
     "loginFailed": "Login failed. Please check your credentials.",
     "anonymous": "Anonymous",
-    "userProfile": "User Profile"
+    "userProfile": "User Profile",
+    "enterUsername": "Enter your username",
+    "enterPassword": "Enter your password",
+    "enterTotp": "Enter your 6-digit code",
+    "totpLength": "TOTP code must be 6 digits"
   },
   "accounts": {
     "title": "Accounts",

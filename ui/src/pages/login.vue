@@ -3,10 +3,13 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { NCard, NForm, NFormItem, NInput, NButton, NAlert, NSpace } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
+import { useI18n } from 'vue-i18n'
 import type { FormRules } from 'naive-ui'
+
 // Get auth store
 const auth = useAuthStore()
 const router = useRouter()
+const { t } = useI18n()
 
 // Form data
 const formData = reactive({
@@ -18,14 +21,14 @@ const formData = reactive({
 // Form validation rules
 const rules: FormRules = {
   login: [
-    { required: true, message: 'Username is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', '{field} is required', { field: t('auth.username', 'Username') }), trigger: 'blur' }
   ],
   password: [
-    { required: true, message: 'Password is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', '{field} is required', { field: t('auth.password', 'Password') }), trigger: 'blur' }
   ],
   totp: [
-    { required: true, message: 'TOTP code is required', trigger: 'blur' },
-    { type: 'string', len: 6, message: 'TOTP code must be 6 digits', trigger: 'blur' }
+    { required: true, message: t('validation.required', '{field} is required', { field: t('auth.totp', 'TOTP code') }), trigger: 'blur' },
+    { type: 'string', len: 6, message: t('auth.totpLength', 'TOTP code must be 6 digits'), trigger: 'blur' }
   ]
 }
 
@@ -56,7 +59,7 @@ const handleLogin = async (e: MouseEvent) => {
 
 <template>
   <div class="login-container">
-    <NCard title="Login" class="login-card">
+    <NCard :title="t('auth.login', 'Login')" class="login-card">
       <NAlert v-if="auth.error" type="error" style="margin-bottom: 16px;">
         {{ auth.error }}
       </NAlert>
@@ -67,27 +70,27 @@ const handleLogin = async (e: MouseEvent) => {
         :rules="rules"
         label-placement="top"
       >
-        <NFormItem label="Username" path="login">
+        <NFormItem :label="t('auth.username', 'Username')" path="login">
           <NInput
             v-model:value="formData.login"
-            placeholder="Enter your username"
+            :placeholder="t('auth.enterUsername', 'Enter your username')"
             autofocus
           />
         </NFormItem>
 
-        <NFormItem label="Password" path="password">
+        <NFormItem :label="t('auth.password', 'Password')" path="password">
           <NInput
             v-model:value="formData.password"
             type="password"
-            placeholder="Enter your password"
+            :placeholder="t('auth.enterPassword', 'Enter your password')"
             show-password-on="click"
           />
         </NFormItem>
 
-        <NFormItem label="TOTP Code" path="totp">
+        <NFormItem :label="t('auth.totp', 'TOTP Code')" path="totp">
           <NInput
             v-model:value="formData.totp"
-            placeholder="Enter your 6-digit code"
+            :placeholder="t('auth.enterTotp', 'Enter your 6-digit code')"
           />
         </NFormItem>
 
@@ -99,7 +102,7 @@ const handleLogin = async (e: MouseEvent) => {
               @click="handleLogin"
               :loading="auth.loading"
             >
-              Login
+              {{ t('auth.login', 'Login') }}
             </NButton>
           </NSpace>
         </div>
