@@ -173,7 +173,7 @@
       }
 
       .type-details {
-          margin-top: a30px;
+          margin-top: 30px;
       }
 
       .page-break {
@@ -279,6 +279,73 @@
 <script>
   // Immediately-invoked function to create app when page loads
   (function() {
+    // Category translations
+    const categoryTranslations = {
+      'en': {
+        types: {
+          'Budgeted': 'Budgeted',
+          'Maintenance': 'Maintenance',
+          'Improvement': 'Improvement'
+        },
+        families: {
+          'personnel': 'Personnel Expenses',
+          'security': 'Security and Safety',
+          'building_repairs': 'Building Repairs',
+          'cleaning_services': 'Cleaning Services',
+          'maintenance_materials': 'Maintenance Materials',
+          'equipment_repairs': 'Equipment Repairs',
+          'administrative': 'Administrative Services',
+          'utilities': 'Utilities',
+          'community': 'Community Activities',
+          'building_improvements': 'Building Improvements',
+          'reserve_fund': 'Reserve Fund',
+          'miscellaneous': 'Miscellaneous'
+        }
+      },
+      'ro': {
+        types: {
+          'Budgeted': 'Bugetat',
+          'Maintenance': 'Întreținere',
+          'Improvement': 'Îmbunătățire'
+        },
+        families: {
+          'personnel': 'Cheltuieli de Personal',
+          'security': 'Securitate',
+          'building_repairs': 'Reparații Clădire',
+          'cleaning_services': 'Servicii de Curățenie',
+          'maintenance_materials': 'Materiale de Întreținere',
+          'equipment_repairs': 'Reparații Echipamente',
+          'administrative': 'Servicii Administrative',
+          'utilities': 'Utilități',
+          'community': 'Activități Comunitare',
+          'building_improvements': 'Îmbunătățiri Clădire',
+          'reserve_fund': 'Fond de Rezervă',
+          'miscellaneous': 'Diverse'
+        }
+      },
+      'ru': {
+        types: {
+          'Budgeted': 'Бюджетные',
+          'Maintenance': 'Техобслуживание',
+          'Improvement': 'Улучшение'
+        },
+        families: {
+          'personnel': 'Расходы на персонал',
+          'security': 'Безопасность',
+          'building_repairs': 'Ремонт здания',
+          'cleaning_services': 'Клининговые услуги',
+          'maintenance_materials': 'Материалы для обслуживания',
+          'equipment_repairs': 'Ремонт оборудования',
+          'administrative': 'Административные услуги',
+          'utilities': 'Коммунальные услуги',
+          'community': 'Общественные мероприятия',
+          'building_improvements': 'Улучшение здания',
+          'reserve_fund': 'Резервный фонд',
+          'miscellaneous': 'Разное'
+        }
+      }
+    }
+
     // Translations
     const translations = {
       'en': {
@@ -302,7 +369,8 @@
         noMonthlyData: 'No monthly data available',
         expenseTypeBreakdown: 'Expense Type Breakdown',
         family: 'Family',
-        noChartData: 'No chart data available. Please go back to the main application and open charts view again.'
+        noChartData: 'No chart data available. Please go back to the main application and open charts view again.',
+        noData: 'No data available'
       },
       'ro': {
         title: 'Analiză Cheltuieli',
@@ -325,7 +393,8 @@
         noMonthlyData: 'Nu există date lunare disponibile',
         expenseTypeBreakdown: 'Defalcare după Tipul Cheltuielilor',
         family: 'Familie',
-        noChartData: 'Nu există date disponibile. Vă rugăm să vă întoarceți la aplicația principală și să deschideți din nou vizualizarea graficelor.'
+        noChartData: 'Nu există date disponibile. Vă rugăm să vă întoarceți la aplicația principală și să deschideți din nou vizualizarea graficelor.',
+        noData: 'Nu există date disponibile'
       },
       'ru': {
         title: 'Анализ Расходов',
@@ -348,7 +417,8 @@
         noMonthlyData: 'Нет доступных ежемесячных данных',
         expenseTypeBreakdown: 'Разбивка по Типу Расходов',
         family: 'Семейство',
-        noChartData: 'Нет доступных данных. Пожалуйста, вернитесь в основное приложение и снова откройте просмотр графиков.'
+        noChartData: 'Нет доступных данных. Пожалуйста, вернитесь в основное приложение и снова откройте просмотр графиков.',
+        noData: 'Нет доступных данных'
       }
     }
 
@@ -542,10 +612,48 @@
       })
     }
 
+    // Function to translate category types and families
+    const translateCategory = (key, type, defaultValue = key) => {
+      // Check if it's a type or family
+      const category = type === 'type' ? 'types' : 'families'
+
+      // Try to get the translation
+      try {
+        if (categoryTranslations[currentLanguage] &&
+          categoryTranslations[currentLanguage][category] &&
+          categoryTranslations[currentLanguage][category][key]) {
+          return categoryTranslations[currentLanguage][category][key]
+        }
+      } catch (e) {
+        console.error('Translation error:', e)
+      }
+
+      // Fallback to default value if translation not found
+      return defaultValue
+    }
+
+    // Function to format month labels better
+    const formatMonthLabel = (monthLabel) => {
+      // Try to parse the month label (e.g., "2023-01")
+      try {
+        const [year, month] = monthLabel.split('-')
+        const date = new Date(parseInt(year), parseInt(month) - 1, 1)
+
+        // Format based on the current language
+        return date.toLocaleDateString(localeInfo[currentLanguage].locale, {
+          year: 'numeric',
+          month: 'short'
+        })
+      } catch (e) {
+        // If parsing fails, return the original label
+        return monthLabel
+      }
+    }
+
     // Create a stacked bar chart for monthly data
     const createStackedBarChart = (containerId) => {
       const container = document.getElementById(containerId)
-      if (!container || chartData.expensesByMonth.items.length === 0) return
+      if (!container || !chartData.expensesByMonth || !chartData.expensesByMonth.items || chartData.expensesByMonth.items.length === 0) return
 
       // Destroy previous chart if it exists
       if (chartInstances[containerId]) {
@@ -559,11 +667,20 @@
       const canvas = document.createElement('canvas')
       container.appendChild(canvas)
 
-      const labels = chartData.expensesByMonth.items.map(item => item.label)
+      // Format the labels
+      const labels = chartData.expensesByMonth.items.map(item => formatMonthLabel(item.label))
+
+      // Prepare datasets with translated series names
       const datasets = chartData.expensesByMonth.series.map((series, index) => {
+        // Translate the series name if it's a category type
+        const translatedName = translateCategory(series.name, 'type', series.name);
+
         return {
-          label: series.name,
-          data: chartData.expensesByMonth.items.map(item => item.values[series.name] || 0),
+          label: translatedName,
+          data: chartData.expensesByMonth.items.map(item => {
+            // Make sure the value exists, otherwise return 0
+            return (item.values && series.name in item.values) ? item.values[series.name] : 0
+          }),
           backgroundColor: series.color || generateColors(chartData.expensesByMonth.series.length)[index],
           borderWidth: 1
         }
@@ -616,22 +733,32 @@
 
     // Render type chart based on mode
     const renderTypeChart = () => {
-      const colors = chartData.expensesByType.map(
-        item => item.color || generateColors(chartData.expensesByType.length)
+      if (!chartData.expensesByType || chartData.expensesByType.length === 0) return
+
+      const colors = chartData.expensesByType.map((item, index) =>
+        item.color || generateColors(chartData.expensesByType.length)[index]
       )
+
+      // Translate type names if they have rawName property
+      const typeLabels = chartData.expensesByType.map(item => {
+        if(!item.rawName){
+          item.rawName = item.name
+        }
+        return item.rawName ? translateCategory(item.rawName, 'type', item.name) : item.name;
+      });
 
       if (typeChartMode === 'pie') {
         createPieChart(
           'type-chart-container',
           chartData.expensesByType.map(item => item.value),
-          chartData.expensesByType.map(item => item.name),
+          typeLabels,
           colors
         )
       } else {
         createBarChart(
           'type-chart-container',
           chartData.expensesByType.map(item => item.value),
-          chartData.expensesByType.map(item => item.name),
+          typeLabels,
           colors
         )
       }
@@ -639,23 +766,33 @@
 
     // Render family charts for a type
     const renderFamilyChart = (typeDetail) => {
+      if (!typeDetail || !typeDetail.families || typeDetail.families.length === 0) return
+
       const chartId = `family-chart-${typeDetail.type.replace(/\s+/g, '-').toLowerCase()}`
-      const colors = typeDetail.families.map(
-        item => item.color || generateColors(typeDetail.families.length)
+      const colors = typeDetail.families.map((item, index) =>
+        item.color || generateColors(typeDetail.families.length)[index]
       )
+
+      // Translate family names if they have rawName property
+      const familyLabels = typeDetail.families.map(family => {
+        if(!family.rawName){
+          family.rawName = family.name
+        }
+        return family.rawName ? translateCategory(family.rawName, 'family', family.name) : family.name;
+      });
 
       if (categoryChartMode === 'pie') {
         createPieChart(
           chartId,
           typeDetail.families.map(item => item.value),
-          typeDetail.families.map(item => item.name),
+          familyLabels,
           colors
         )
       } else {
         createBarChart(
           chartId,
           typeDetail.families.map(item => item.value),
-          typeDetail.families.map(item => item.name),
+          familyLabels,
           colors
         )
       }
@@ -676,7 +813,7 @@
           <div class="standalone-container">
             <div class="header">
               <div>
-                <h1>${t.title}</h1>
+                <h1>${chartTitle || t.title}</h1>
                 ${dateRange ? `<div style="color: #666; margin-top: 5px;">${t.period}: ${dateRange}</div>` : ''}
               </div>
               <div style="display: flex; align-items: center;">
@@ -710,7 +847,7 @@
                 </div>
                 <div class="summary-item">
                   <div class="summary-label">${t.averageExpense}</div>
-                  <div class="summary-value">${formatCurrency(totalAmount / chartData.expenses.length)}</div>
+                  <div class="summary-value">${formatCurrency(totalAmount / (chartData.expenses.length || 1))}</div>
                 </div>
               </div>
             </div>
@@ -729,28 +866,35 @@
 
               <div class="chart-container" id="type-chart-container"></div>
 
-              <div style="margin-top: 20px; overflow-x: auto;">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>${t.type}</th>
-                      <th>${t.amount}</th>
-                      <th>${t.percentage}</th>
-                      <th>${t.count}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${chartData.expensesByType.map(item => `
+              ${chartData.expensesByType && chartData.expensesByType.length > 0 ? `
+                <div style="margin-top: 20px; overflow-x: auto;">
+                  <table>
+                    <thead>
                       <tr>
-                        <td>${item.name}</td>
-                        <td>${formatCurrency(item.value)}</td>
-                        <td>${item.percentage ? item.percentage.toFixed(1) + '%' : '0%'}</td>
-                        <td>${item.count}</td>
+                        <th>${t.type}</th>
+                        <th>${t.amount}</th>
+                        <th>${t.percentage}</th>
+                        <th>${t.count}</th>
                       </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      ${chartData.expensesByType.map(item => {
+        // Try to translate the type name if it looks like a key
+        const displayName = item.rawName ? translateCategory(item.rawName, 'type', item.name) : item.name;
+
+        return `
+                        <tr>
+                          <td>${displayName}</td>
+                          <td>${formatCurrency(item.value)}</td>
+                          <td>${item.percentage ? item.percentage.toFixed(1) + '%' : ((item.value / totalAmount) * 100).toFixed(1) + '%'}</td>
+                          <td>${item.count || 0}</td>
+                        </tr>
+                        `;
+      }).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              ` : `<div style="text-align: center; padding: 20px; color: #999;">${t.noData}</div>`}
             </div>
 
             <!-- Page break for printing -->
@@ -761,7 +905,7 @@
               <h2>${t.monthlyExpenseTrends}</h2>
               <div class="chart-container wide" id="monthly-chart-container"></div>
 
-              ${chartData.expensesByMonth.items.length > 0 ? `
+              ${chartData.expensesByMonth && chartData.expensesByMonth.items && chartData.expensesByMonth.items.length > 0 ? `
                 <div style="margin-top: 20px; overflow-x: auto;">
                   <table>
                     <thead>
@@ -771,12 +915,18 @@
                       </tr>
                     </thead>
                     <tbody>
-                      ${chartData.expensesByMonth.items.map(item => `
+                      ${chartData.expensesByMonth.items.map(item => {
+        // Calculate total for this month either from item.total or by summing values
+        const monthTotal = item.total ||
+          (item.values ? Object.values(item.values).reduce((sum, val) => sum + (parseFloat(val) || 0), 0) : 0);
+
+        return `
                         <tr>
-                          <td>${item.label}</td>
-                          <td>${formatCurrency(item.total)}</td>
+                          <td>${formatMonthLabel(item.label)}</td>
+                          <td>${formatCurrency(monthTotal)}</td>
                         </tr>
-                      `).join('')}
+                        `;
+      }).join('')}
                     </tbody>
                   </table>
                 </div>
@@ -800,36 +950,56 @@
 
         // Add each type detail
         chartData.typeDetails.forEach((typeDetail, index) => {
-          const chartId = `family-chart-${typeDetail.type.replace(/\s+/g, '-').toLowerCase()}`
+          if (!typeDetail) return;
+
+          const safeType = (typeDetail.type || 'unknown').replace(/\s+/g, '-').toLowerCase();
+          const chartId = `family-chart-${safeType}`;
+
+          // Get the original type name for translation, or use the provided one
+          const originalTypeName = typeDetail.rawName || typeDetail.type;
+          const translatedTypeName = translateCategory(originalTypeName, 'type', typeDetail.type);
 
           appHtml += `
               <div class="type-details">
-                <h3>${typeDetail.type} - ${formatCurrency(typeDetail.value)}</h3>
+                <h3>${translatedTypeName} - ${formatCurrency(typeDetail.value)}</h3>
 
                 <div class="chart-container" id="${chartId}"></div>
 
-                <div style="margin-top: 20px; overflow-x: auto;">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>${t.family}</th>
-                        <th>${t.amount}</th>
-                        <th>${t.percentage}</th>
-                        <th>${t.count}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${typeDetail.families.map(family => `
+                ${typeDetail.families && typeDetail.families.length > 0 ? `
+                  <div style="margin-top: 20px; overflow-x: auto;">
+                    <table>
+                      <thead>
                         <tr>
-                          <td>${family.name}</td>
-                          <td>${formatCurrency(family.value)}</td>
-                          <td>${family.percentage ? family.percentage.toFixed(1) + '%' : '0%'}</td>
-                          <td>${family.count}</td>
+                          <th>${t.family}</th>
+                          <th>${t.amount}</th>
+                          <th>${t.percentage}</th>
+                          <th>${t.count}</th>
                         </tr>
-                      `).join('')}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        ${typeDetail.families.map(family => {
+            if (!family) return '';
+
+            // Get the original family name for translation, or use the provided one
+            const originalFamilyName = family.rawName || family.name;
+            const translatedFamilyName = translateCategory(originalFamilyName, 'family', family.name);
+            const percentage = family.percentage
+              ? family.percentage.toFixed(1)
+              : ((family.value / (typeDetail.value || 1)) * 100).toFixed(1);
+
+            return `
+                          <tr>
+                            <td>${translatedFamilyName}</td>
+                            <td>${formatCurrency(family.value)}</td>
+                            <td>${percentage}%</td>
+                            <td>${family.count || 0}</td>
+                          </tr>
+                          `;
+          }).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                ` : `<div style="text-align: center; padding: 20px; color: #999;">${t.noFamiliesFound || 'No family data available'}</div>`}
                 ${index < chartData.typeDetails.length - 1 ? '<hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">' : ''}
               </div>
             `
@@ -870,25 +1040,34 @@
         renderTypeChart()
       })
 
-      // Category chart toggle buttons
+      // Category chart toggle buttons if they exist
       if (chartData.typeDetails && chartData.typeDetails.length > 0) {
-        document.getElementById('category-pie-btn').addEventListener('click', function() {
-          this.classList.add('active')
-          document.getElementById('category-bar-btn').classList.remove('active')
-          categoryChartMode = 'pie'
-          chartData.typeDetails.forEach(typeDetail => {
-            renderFamilyChart(typeDetail)
-          })
-        })
+        const categoryPieBtn = document.getElementById('category-pie-btn')
+        const categoryBarBtn = document.getElementById('category-bar-btn')
 
-        document.getElementById('category-bar-btn').addEventListener('click', function() {
-          this.classList.add('active')
-          document.getElementById('category-pie-btn').classList.remove('active')
-          categoryChartMode = 'bar'
-          chartData.typeDetails.forEach(typeDetail => {
-            renderFamilyChart(typeDetail)
+        if (categoryPieBtn && categoryBarBtn) {
+          categoryPieBtn.addEventListener('click', function() {
+            this.classList.add('active')
+            categoryBarBtn.classList.remove('active')
+            categoryChartMode = 'pie'
+            if (chartData.typeDetails) {
+              chartData.typeDetails.forEach(typeDetail => {
+                if (typeDetail) renderFamilyChart(typeDetail)
+              })
+            }
           })
-        })
+
+          categoryBarBtn.addEventListener('click', function() {
+            this.classList.add('active')
+            categoryPieBtn.classList.remove('active')
+            categoryChartMode = 'bar'
+            if (chartData.typeDetails) {
+              chartData.typeDetails.forEach(typeDetail => {
+                if (typeDetail) renderFamilyChart(typeDetail)
+              })
+            }
+          })
+        }
       }
 
       // Initial render of all charts
@@ -897,7 +1076,7 @@
 
       if (chartData.typeDetails && chartData.typeDetails.length > 0) {
         chartData.typeDetails.forEach(typeDetail => {
-          renderFamilyChart(typeDetail)
+          if (typeDetail) renderFamilyChart(typeDetail)
         })
       }
     }
