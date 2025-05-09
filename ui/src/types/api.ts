@@ -327,7 +327,8 @@ export interface VotingOwner {
   total_area: number;
   voting_share: number;
 }
-export interface VotingUnit{
+
+export interface VotingUnit {
 
   unit_id: number;
   unit_number: string;
@@ -344,3 +345,13 @@ export interface VotingOwnersResponse {
   total_units: number;
   total_area: number;
 }
+
+export enum UnitType {
+  Apartment = 'apartment',
+  Commercial = 'commercial',
+  Office = 'office',
+  Parking = 'parking',
+  Storage = 'storage'
+}
+
+

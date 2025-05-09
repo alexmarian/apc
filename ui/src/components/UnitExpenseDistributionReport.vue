@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue'
 import {
   NCard,
   NSpace,
@@ -14,151 +14,149 @@ import {
   NDivider,
   NEmpty,
   useMessage
-} from 'naive-ui';
-import type { DataTableColumns } from 'naive-ui';
-import { expenseApi, categoryApi } from '@/services/api';
-import AssociationSelector from '@/components/AssociationSelector.vue';
-import BuildingSelector from '@/components/BuildingSelector.vue';
-import CategorySelector from '@/components/CategorySelector.vue';
-import { formatCurrency } from '@/utils/formatters';
+} from 'naive-ui'
+import type { DataTableColumns } from 'naive-ui'
+import { expenseApi, categoryApi } from '@/services/api'
+import AssociationSelector from '@/components/AssociationSelector.vue'
+import BuildingSelector from '@/components/BuildingSelector.vue'
+import CategorySelector from '@/components/CategorySelector.vue'
+import { formatCurrency } from '@/utils/formatters'
 import type { ExpenseDistributionResponse, Category, UnitDistribution } from '@/types/api'
-
+import { UnitType } from '@/types/api'
+import { useI18n } from 'vue-i18n'
 // Message provider
-const message = useMessage();
+const message = useMessage()
 
 // Props
 const props = defineProps<{
   associationId: number | null;
   buildingId: number | null;
-}>();
+}>()
 
 // Emits
 const emit = defineEmits<{
   (e: 'update:associationId', id: number): void;
   (e: 'update:buildingId', id: number): void;
-}>();
-
+}>()
+const { t } = useI18n()
 // State
-const loading = ref<boolean>(false);
-const metadataLoading = ref<boolean>(false);
-const error = ref<string | null>(null);
+const loading = ref<boolean>(false)
+const metadataLoading = ref<boolean>(false)
+const error = ref<string | null>(null)
 const dateRange = ref<[number, number] | null>([
   new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getTime(),
   new Date().getTime()
-]);
-const selectedCategoryId = ref<number | null>(null);
-const selectedCategoryType = ref<string | null>(null);
-const selectedCategoryFamily = ref<string | null>(null);
-const distributionMethod = ref<'area' | 'count' | 'equal'>('area');
-const unitType = ref<string | null>(null);
-const distributionData = ref<ExpenseDistributionResponse | null>(null);
-const categories = ref<Category[] | null>(null);
-const categoryOptions = ref<{ label: string; value: string }[]>([]);
-const categoryTypeOptions = ref<{ label: string; value: string }[]>([]);
-const categoryFamilyOptions = ref<{ label: string; value: string }[]>([]);
-const initialLoadComplete = ref<boolean>(false);
+])
+const selectedCategoryId = ref<number | null>(null)
+const selectedCategoryType = ref<string | null>(null)
+const selectedCategoryFamily = ref<string | null>(null)
+const distributionMethod = ref<'area' | 'count' | 'equal'>('area')
+const unitType = ref<string | null>(null)
+const distributionData = ref<ExpenseDistributionResponse | null>(null)
+const categories = ref<Category[] | null>(null)
+const categoryOptions = ref<{ label: string; value: string }[]>([])
+const categoryTypeOptions = ref<{ label: string; value: string }[]>([])
+const categoryFamilyOptions = ref<{ label: string; value: string }[]>([])
+const initialLoadComplete = ref<boolean>(false)
 
-// Static unit type options
-const unitTypeOptions: { label: string; value: string }[] = [
-  { label: 'Apartment', value: 'apartment' },
-  { label: 'Commercial', value: 'commercial' },
-  { label: 'Office', value: 'office' },
-  { label: 'Parking', value: 'parking' },
-  { label: 'Storage', value: 'storage' }
-];
+const unitTypeOptions: { label: string; value: string }[] = computed(() => Object.entries(UnitType).map(([key, value]) => ({
+  label: t(`unitTypes.${value}`),
+  value: value
+})))
+
 
 // Computed properties
 const associationId = computed<number | null>({
   get: () => props.associationId || null,
   set: (value) => emit('update:associationId', value as number)
-});
+})
 
 const buildingId = computed<number | null>({
   get: () => props.buildingId || null,
   set: (value) => emit('update:buildingId', value as number)
-});
+})
 
 const startDate = computed<Date | null>(() => {
-  return dateRange.value ? new Date(dateRange.value[0]) : null;
-});
+  return dateRange.value ? new Date(dateRange.value[0]) : null
+})
 
 const endDate = computed<Date | null>(() => {
-  return dateRange.value ? new Date(dateRange.value[1]) : null;
-});
+  return dateRange.value ? new Date(dateRange.value[1]) : null
+})
 
 const formattedDateRange = computed<string>(() => {
-  if (!dateRange.value) return 'All time';
-  const start = new Date(dateRange.value[0]).toLocaleDateString();
-  const end = new Date(dateRange.value[1]).toLocaleDateString();
-  return `${start} - ${end}`;
-});
+  if (!dateRange.value) return 'All time'
+  const start = new Date(dateRange.value[0]).toLocaleDateString()
+  const end = new Date(dateRange.value[1]).toLocaleDateString()
+  return `${start} - ${end}`
+})
 
 const totalExpenses = computed<number>(() => {
-  return distributionData.value?.total_expenses || 0;
-});
+  return distributionData.value?.total_expenses || 0
+})
 
 const totalUnits = computed<number>(() => {
-  return distributionData.value?.total_units || 0;
-});
+  return distributionData.value?.total_units || 0
+})
 
 const distributionColumns = computed<DataTableColumns<any>>(() => {
   const columns: DataTableColumns<any> = [
     {
-      title: 'Unit',
+      title: t('units.unit'),
       key: 'unit_info',
       render: (row) => row.unit_number
     },
     {
-      title: 'Type',
+      title: t('units.type'),
       key: 'unit_type',
       render: (row) => row.unit_type
     },
     {
-      title: 'Area',
+      title: t('units.area'),
       key: 'area',
       render: (row) => `${row.area} m²`
     },
     {
-      title: 'Factor',
+      title: t('units.part'),
       key: 'distribution_factor',
       render: (row) => (row.distribution_factor * 100).toFixed(2) + '%'
     },
     {
-      title: 'Total Share',
+      title: t('distribution.total_share'),
       key: 'total_share',
       render: (row) => formatCurrency(row.total_share),
       sorter: (a, b) => a.total_share - b.total_share
     }
-  ];
+  ]
 
   if (distributionData.value?.category_totals) {
-    const categoryKeys = Object.keys(distributionData.value.category_totals);
+    const categoryKeys = Object.keys(distributionData.value.category_totals)
 
     for (const category of categoryKeys) {
       columns.push({
-        title: category,
+        title: t(`categories.names.${category}`),
         key: category,
         render: (row) => formatCurrency(row.expenses_share[category] || 0)
-      });
+      })
     }
   }
 
-  return columns;
-});
+  return columns
+})
 
 // Methods
 const fetchDistributionReport = async (): Promise<void> => {
   if (!associationId.value) {
-    error.value = 'Please select an association';
-    return;
+    error.value = t('association.noAssociationsMessage', 'Please select an association')
+    return
   }
 
   try {
-    loading.value = true;
-    error.value = null;
+    loading.value = true
+    error.value = null
 
-    const startDateStr = startDate.value?.toISOString().split('T')[0];
-    const endDateStr = endDate.value?.toISOString().split('T')[0];
+    const startDateStr = startDate.value?.toISOString().split('T')[0]
+    const endDateStr = endDate.value?.toISOString().split('T')[0]
 
     const response = await expenseApi.getExpenseDistribution(associationId.value, {
       start_date: startDateStr,
@@ -168,109 +166,109 @@ const fetchDistributionReport = async (): Promise<void> => {
       category_family: selectedCategoryFamily.value,
       distribution_method: distributionMethod.value,
       unit_type: unitType.value
-    });
+    })
 
-    distributionData.value = response.data;
-    message.success('Report generated successfully');
+    distributionData.value = response.data
+    message.success(t('distribution.generation_success'))
   } catch (err) {
-    console.error('Error fetching expense distribution:', err);
-    error.value = err instanceof Error ? err.message : 'An error occurred while fetching data';
+    console.error('Error fetching expense distribution:', err)
+    error.value = err instanceof Error ? err.message : t('common.error')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const fetchCategoryMetadata = async (): Promise<void> => {
-  if (!associationId.value) return;
+  if (!associationId.value) return
 
   try {
-    metadataLoading.value = true;
+    metadataLoading.value = true
 
-    const response = await categoryApi.getCategories(associationId.value);
-    categories.value = response.data;
+    const response = await categoryApi.getCategories(associationId.value)
+    categories.value = response.data
 
-    const types = new Set<string>();
-    const families = new Set<string>();
+    const types = new Set<string>()
+    const families = new Set<string>()
 
     categories.value.forEach((category) => {
-      if (category.type) types.add(category.type);
-      if (category.family) families.add(category.family);
-    });
+      if (category.type) types.add(category.type)
+      if (category.family) families.add(category.family)
+    })
 
     categoryOptions.value = categories.value.map((cat) => ({
       label: cat.name,
       value: cat.id.toString()
-    }));
+    }))
 
     categoryTypeOptions.value = Array.from(types).map((type) => ({
-      label: type,
+      label: t(`categories.types.${type}`),
       value: type
-    }));
+    }))
 
     categoryFamilyOptions.value = Array.from(families).map((family) => ({
-      label: family,
+      label: t(`categories.families.${family}`),
       value: family
-    }));
+    }))
   } catch (err) {
-    console.error('Error fetching category metadata:', err);
+    console.error('Error fetching category metadata:', err)
   } finally {
-    metadataLoading.value = false;
+    metadataLoading.value = false
   }
-};
+}
 
 const updateCategoryFamilies = (): void => {
-  if (!associationId.value) return;
+  if (!associationId.value) return
 
-  metadataLoading.value = true;
+  metadataLoading.value = true
 
   categoryApi.getCategories(associationId.value).then((response) => {
-    const categories = response.data;
-    const families = new Set<string>();
+    const categories = response.data
+    const families = new Set<string>()
 
     categories.forEach((category) => {
       if (selectedCategoryType.value && category.type !== selectedCategoryType.value) {
-        return;
+        return
       }
 
       if (category.family) {
-        families.add(category.family);
+        families.add(category.family)
       }
-    });
+    })
 
     categoryFamilyOptions.value = Array.from(families).map((family) => ({
-      label: family,
+      label: t(`categories.families.${family}`),
       value: family
-    }));
+    }))
 
-    metadataLoading.value = false;
-  });
-};
+    metadataLoading.value = false
+  })
+}
 
 const resetFilters = (): void => {
   dateRange.value = [
     new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getTime(),
     new Date().getTime()
-  ];
-  selectedCategoryId.value = null;
-  selectedCategoryType.value = null;
-  selectedCategoryFamily.value = null;
-  unitType.value = null;
-  distributionMethod.value = 'area';
-};
+  ]
+  selectedCategoryId.value = null
+  selectedCategoryType.value = null
+  selectedCategoryFamily.value = null
+  unitType.value = null
+  distributionMethod.value = 'area'
+}
 
 const exportToCSV = (): void => {
   if (!distributionData.value) {
-    message.error('No data to export');
-    return;
+    message.error('No data to export')
+    return
   }
 
   try {
-    const headers = ['Unit Number', 'Type', 'Area (m²)', 'Distribution Factor', 'Total Share'];
+    const headers = [t('units.unit'), t('units.type'), t('units.area')+' (m²)', t('units.part'), t('distribution.total_share')]
     const categoryHeaders = distributionData.value.category_totals
-      ? Object.keys(distributionData.value.category_totals)
-      : [];
+      ? Object.keys(distributionData.value.category_totals).map(category=> t(`categories.names.${category}`))
+      : []
 
-    headers.push(...categoryHeaders);
+    headers.push(...categoryHeaders)
     console.log(distributionData.value)
     const rows = distributionData.value.unit_distributions.map((unit: UnitDistribution) => {
       const row = [
@@ -279,112 +277,112 @@ const exportToCSV = (): void => {
         unit.area,
         (unit.distribution_factor * 100).toFixed(2) + '%',
         unit.total_share.toFixed(2)
-      ];
+      ]
 
       categoryHeaders.forEach((category) => {
-        row.push((unit.expenses_share[category] || 0).toFixed(2));
-      });
+        row.push((unit.expenses_share[category] || 0).toFixed(2))
+      })
 
-      return row;
-    });
+      return row
+    })
 
-    let csvContent = headers.join(',') + '\n';
+    let csvContent = headers.join(',') + '\n'
     rows.forEach((row) => {
-      csvContent += row.join(',') + '\n';
-    });
+      csvContent += row.join(',') + '\n'
+    })
 
-    csvContent += '\n';
-    csvContent += 'Report Period:,' + formattedDateRange.value + '\n';
-    csvContent += 'Distribution Method:,' + distributionMethod.value + '\n';
-    csvContent += 'Total Units:,' + totalUnits.value + '\n';
-    csvContent += 'Total Expenses:,' + totalExpenses.value.toFixed(2) + '\n';
+    csvContent += '\n'
+    csvContent += `${t('distribution.report_period')},` + formattedDateRange.value + '\n'
+    csvContent += `${t('distribution.distribution_method')}:,` + t(`distribution.method.${distributionMethod.value}`) + '\n'
+    csvContent += `${t('distribution.total_units')}:,` + totalUnits.value + '\n'
+    csvContent += `${t('distribution.total_expenses')}:,` + totalExpenses.value.toFixed(2) + '\n'
 
     if (distributionData.value.category_totals) {
-      csvContent += '\nCategory Totals:\n';
-      csvContent += 'Category,Amount\n';
+      csvContent += `\n${t('distribution.category_totals')}:\n`
+      csvContent += `${t('distribution.category_totals_headers')}\n`
       Object.entries(distributionData.value.category_totals).forEach(([category, data]: [string, any]) => {
-        csvContent += `${category},${data.amount.toFixed(2)}\n`;
-      });
+        csvContent += `${category},${data.amount.toFixed(2)}\n`
+      })
     }
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `expense_distribution_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.setAttribute('href', url)
+    link.setAttribute('download', `expense_distribution_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
 
-    message.success('CSV exported successfully');
+    message.success(t('distribution.export_success'))
   } catch (err) {
-    console.error('Error exporting to CSV:', err);
-    message.error('Failed to export CSV');
+    console.error('Error exporting to CSV:', err)
+    message.error('Failed to export CSV')
   }
-};
+}
 
 // Watchers
 watch([associationId], () => {
   if (associationId.value) {
-    fetchCategoryMetadata();
-    initialLoadComplete.value = true;
+    fetchCategoryMetadata()
+    initialLoadComplete.value = true
   }
-});
+})
 
 watch([selectedCategoryType], () => {
   if (associationId.value) {
     if (selectedCategoryType.value !== null) {
-      selectedCategoryFamily.value = null;
+      selectedCategoryFamily.value = null
     }
 
-    updateCategoryFamilies();
+    updateCategoryFamilies()
   }
-});
+})
 
 // Lifecycle
 onMounted(() => {
   if (associationId.value) {
-    fetchCategoryMetadata();
-    initialLoadComplete.value = true;
+    fetchCategoryMetadata()
+    initialLoadComplete.value = true
   }
-});
+})
 </script>
 
 <template>
   <div class="expense-distribution-report">
-    <NCard title="Expense Distribution Report">
+    <NCard :loading="loading">
       <div class="filters-section">
         <div class="selectors">
-          <div class="selector-group">
-            <label>Association:</label>
+          <NSpace justify-center="center" align="center">
+            <NText>{{t('associations.one')}}:</NText>
             <AssociationSelector v-model:associationId="associationId" />
-          </div>
+          </NSpace>
 
-          <div class="selector-group">
-            <label>Building (Optional):</label>
+          <NSpace justify-center="center" align="center">
+            <NText>{{ t('units.building') }}:</NText>
             <BuildingSelector
               v-model:building-id="buildingId"
               v-model:association-id="associationId"
             />
-          </div>
+          </NSpace>
         </div>
 
         <NDivider />
 
         <div class="filter-grid">
-          <div class="filter-group">
-            <label>Date Range:</label>
+          <NFlex vertical>
+            <NText>{{ t('common.dateRange') }}:</NText>
             <NDatePicker
               v-model:value="dateRange"
               type="daterange"
               clearable
               style="width: 100%"
             />
-          </div>
+          </NFlex>
 
-          <div class="filter-group">
-            <label>Unit Type:</label>
+          <NFlex vertical>
+            <NText>{{ t('units.type') }}:</NText>
             <NSelect
               v-model:value="unitType"
               :options="unitTypeOptions"
@@ -392,10 +390,10 @@ onMounted(() => {
               clearable
               style="width: 100%"
             />
-          </div>
+          </NFlex>
 
-          <div class="filter-group">
-            <label>Category Type:</label>
+          <NFlex vertical>
+            <NText>{{ t('categories.types.title') }}</NText>
             <NSelect
               v-model:value="selectedCategoryType"
               :options="categoryTypeOptions"
@@ -404,10 +402,10 @@ onMounted(() => {
               :loading="metadataLoading"
               style="width: 100%"
             />
-          </div>
+          </NFlex>
 
-          <div class="filter-group">
-            <label>Category Family:</label>
+          <NFlex vertical>
+            <NText>{{ t('categories.families.title') }}: </NText>
             <NSelect
               v-model:value="selectedCategoryFamily"
               :options="categoryFamilyOptions"
@@ -416,10 +414,10 @@ onMounted(() => {
               :loading="metadataLoading"
               style="width: 100%"
             />
-          </div>
+          </NFlex>
 
-          <div class="filter-group">
-            <label>Specific Category:</label>
+          <NFlex vertical>
+            <NText>{{ t('categories.names.title') }}</NText>
             <CategorySelector
               v-model:modelValue="selectedCategoryId"
               :association-id="associationId || 0"
@@ -428,28 +426,28 @@ onMounted(() => {
               include-all-option
               :disabled="!associationId"
             />
-          </div>
+          </NFlex>
 
-          <div class="filter-group">
-            <label>Distribution Method:</label>
+          <NFlex vertical>
+            <NText>{{t('distribution.distribution_method')}}</NText>
             <NRadioGroup v-model:value="distributionMethod">
               <NSpace>
-                <NRadio value="area">By Area</NRadio>
-                <NRadio value="count">By Count</NRadio>
-                <NRadio value="equal">Equal</NRadio>
+                <NRadio value="area">{{t('distribution.method.area')}}</NRadio>
+                <NRadio value="count">{{t('distribution.method.count')}}</NRadio>
+                <NRadio value="equal">{{t('distribution.method.equal')}}</NRadio>
               </NSpace>
             </NRadioGroup>
-          </div>
+          </NFlex>
         </div>
 
         <div class="actions">
           <NSpace>
-            <NButton @click="resetFilters">Reset Filters</NButton>
+            <NButton @click="resetFilters">{{ t('common.reset_filters') }}</NButton>
             <NButton type="primary" @click="fetchDistributionReport" :loading="loading">
-              Generate Report
+              {{ t('distribution.generate_report') }}
             </NButton>
             <NButton type="info" @click="exportToCSV" :disabled="!distributionData">
-              Export to CSV
+              {{ t('distribution.export_to_csv') }}
             </NButton>
           </NSpace>
         </div>
@@ -463,39 +461,38 @@ onMounted(() => {
         <div v-if="distributionData" class="report-content">
           <div class="report-summary">
             <div class="summary-item">
-              <div class="summary-label">Period:</div>
+              <div class="summary-label">{{ t('distribution.report_period') }}:</div>
               <div class="summary-value">{{ formattedDateRange }}</div>
             </div>
 
             <div class="summary-item">
-              <div class="summary-label">Distribution:</div>
+              <div class="summary-label">{{ t('distribution.distribution_method') }}:</div>
               <div class="summary-value">
-                {{ distributionMethod === 'area' ? 'By Area' : distributionMethod === 'count' ? 'By Count' : 'Equal'
-                }}
+                {{ t(`distribution.method.${distributionMethod}`) }}
               </div>
             </div>
 
             <div class="summary-item">
-              <div class="summary-label">Total Units:</div>
+              <div class="summary-label">{{ t('distribution.total_units') }}:</div>
               <div class="summary-value">{{ totalUnits }}</div>
             </div>
 
             <div class="summary-item">
-              <div class="summary-label">Total Expenses:</div>
+              <div class="summary-label">{{ t('distribution.total_expenses') }}:</div>
               <div class="summary-value">{{ formatCurrency(totalExpenses) }}</div>
             </div>
           </div>
 
           <div v-if="distributionData.category_totals" class="category-totals">
-            <h4>Category Totals</h4>
+            <h4>{{ t('distribution.category_totals') }}</h4>
             <div class="category-totals-grid">
               <div
                 v-for="(category, name) in distributionData.category_totals"
                 :key="name"
                 class="category-total-item"
               >
-                <div class="category-name">{{ name }}</div>
-                <div class="category-amount">{{ formatCurrency(category.amount) }}</div>
+                <div class="summary-label">{{ t(`categories.names.${name}`) }}</div>
+                <div class="summary-value">{{ formatCurrency(category.amount) }}</div>
               </div>
             </div>
           </div>
@@ -512,7 +509,7 @@ onMounted(() => {
               }"
             >
               <template #empty>
-                <NEmpty description="No distribution data found for the selected filters" />
+                <NEmpty :description="t('distribution.no_data_found')" />
               </template>
             </NDataTable>
           </div>
@@ -520,12 +517,7 @@ onMounted(() => {
 
         <div v-else-if="!loading && !error" class="no-data">
           <NEmpty
-            description="No report data available yet. Click 'Generate Report' to run the calculation.">
-            <template #extra>
-              <NButton type="primary" @click="fetchDistributionReport" :loading="loading">
-                Generate Report
-              </NButton>
-            </template>
+            :description="t('distribution.no_report_data')">
           </NEmpty>
         </div>
       </NSpin>

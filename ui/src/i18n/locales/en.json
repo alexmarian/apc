@@ -30,7 +30,9 @@
     "inactive": "Inactive",
     "status": "Status",
     "hide": "Hide",
-    "notFound": "Page not found"
+    "notFound": "Page not found",
+    "dateRange": "Date Range",
+    "reset_filters": "Reset Filters"
   },
   "auth": {
     "login": "Login",
@@ -69,6 +71,7 @@
   },
   "associations": {
     "title": "Associations",
+    "one": "Association",
     "select": "Select an association",
     "noAssociations": "No associations found",
     "noAssociationsMessage": "Please select an association first"
@@ -172,9 +175,37 @@
     "building": "Building",
     "area": "Area",
     "part": "Condo Part",
-    "type": "Type",
+    "type": "Unit Type",
     "unit": "Unit",
     "selectBuilding": "Select Building"
+  },
+  "distribution": {
+    "title": "Distribution of Expenses",
+    "total_share": "Total Share",
+    "generation_success": "Report generated successfully",
+    "export_success": "Exported successfully",
+    "total_units": "Total Units",
+    "total_expenses": "Total Expenses",
+    "distribution_method": "Distribution Method",
+    "report_period": "Report Period",
+    "category_totals": "Category Totals",
+    "category_totals_headers": "Category,Amount",
+    "method": {
+      "area": "Area",
+      "count": "Count",
+      "equal": "Equal"
+    },
+    "no_report_data": "No report data available yet. Click 'Generate Report' to run the calculation.",
+    "no_data_found": "No data found for the selected filters",
+    "export_to_csv": "Export to CSV",
+    "generate_report": "Generate Report"
+  },
+  "unitTypes": {
+    "apartment" : "Apartment",
+    "commercial" : "Commercial",
+    "office" : "Office",
+    "parking" : "Parking",
+    "storage" : "Storage"
   },
   "categories": {
     "allCategories": "All Categories",
