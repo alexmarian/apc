@@ -322,18 +322,21 @@ export interface VotingOwner {
   identification_number: string;
   contact_phone: string;
   contact_email: string;
-  units: Array<{
-    unit_id: number;
-    unit_number: string;
-    building_id: number;
-    building_name: string;
-    area: number;
-    part: number;
-    unit_type: string;
-  }>;
+  units: Array<VotingUnit>;
   total_units: number;
   total_area: number;
   voting_share: number;
+}
+export interface VotingUnit{
+
+  unit_id: number;
+  unit_number: string;
+  building_id: number;
+  building_name: string;
+  area: number;
+  part: number;
+  unit_type: string;
+
 }
 
 export interface VotingOwnersResponse {

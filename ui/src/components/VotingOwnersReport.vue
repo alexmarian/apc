@@ -17,26 +17,7 @@ import { ownerApi } from '@/services/api'
 import { formatPercentage } from '@/utils/formatters'
 import { useI18n } from 'vue-i18n'
 
-// Define a type for the voter data from API
-interface VotingOwner {
-  owner_id: number;
-  name: string;
-  identification_number: string;
-  contact_phone: string;
-  contact_email: string;
-  units: Array<{
-    unit_id: number;
-    unit_number: string;
-    building_name: string;
-    building_address: string;
-    area: number;
-    part: number;
-    unit_type: string;
-  }>;
-  total_units: number;
-  total_area: number;
-  total_condo_part: number; // This is the voting share in the API response
-}
+import type { VotingOwner, VotingUnit } from '@/types/api'
 
 // Props
 const props = defineProps<{
@@ -88,18 +69,18 @@ const columns = computed<DataTableColumns<VotingOwner>>(() => [
     title: t('owners.totalArea', 'Total Area'),
     key: 'total_area',
     sorter: (a, b) => a.total_area - b.total_area,
-    render: (row) => `${row.total_area.toFixed(2)} m²`
+    render: (row: VotingOwner) => `${row.total_area.toFixed(2)} m²`
   },
   {
     title: t('owners.votingShare', 'Voting Share'),
-    key: 'total_condo_part', // Updated to match API response
-    sorter: (a, b) => a.total_condo_part - b.total_condo_part,
-    render: (row) => formatPercentage(row.total_condo_part, 4)
+    key: 'to', // Updated to match API response
+    sorter: (a, b) => a.voting_share - b.voting_share,
+    render: (row: VotingOwner) => formatPercentage(row.voting_share, 4)
   },
   {
     title: t('common.actions', 'Actions'),
     key: 'actions',
-    render: (row) => h(
+    render:(row: VotingOwner) => h(
       NSpace,
       { justify: 'center' },
       {
@@ -140,12 +121,12 @@ const unitColumns = computed(() => [
   {
     title: t('units.area', 'Area'),
     key: 'area',
-    render: (row) => `${row.area.toFixed(2)} m²`
+    render: (row: VotingUnit) => `${row.area.toFixed(2)} m²`
   },
   {
     title: t('units.part', 'Part'),
     key: 'part',
-    render: (row) => formatPercentage(row.part, 4)
+    render: (row: VotingUnit) => formatPercentage(row.part, 4)
   },
   {
     title: t('units.type', 'Type'),
@@ -221,7 +202,7 @@ const exportToCSV = () => {
         owner.contact_email,
         owner.total_units,
         owner.total_area.toFixed(2),
-        (owner.total_condo_part * 100).toFixed(4),
+        (owner.voting_share * 100).toFixed(4),
         owner.units.map(u => `${u.building_name} - ${u.unit_number}`).join('; ')
       ]
     })
@@ -247,7 +228,7 @@ const exportToCSV = () => {
     // Calculate totals
     const totalUnits = votingOwners.value.reduce((sum, owner) => sum + owner.total_units, 0)
     const totalArea = votingOwners.value.reduce((sum, owner) => sum + owner.total_area, 0)
-    const totalShare = votingOwners.value.reduce((sum, owner) => sum + owner.total_condo_part, 0)
+    const totalShare = votingOwners.value.reduce((sum, owner) => sum + owner.voting_share, 0)
 
     csvContent += `Total Units,${totalUnits}\n`
     csvContent += `Total Area (m²),${totalArea.toFixed(2)}\n`
@@ -295,7 +276,7 @@ const sortedFilteredData = computed<VotingOwner[]>(() => {
     if (sortBy.value === 'name') {
       comparison = a.name.localeCompare(b.name)
     } else if (sortBy.value === 'share') {
-      comparison = a.total_condo_part - b.total_condo_part // Updated to match API
+      comparison = a.voting_share - b.voting_share // Updated to match API
     }
 
     return sortOrder.value === 'asc' ? comparison : -comparison
@@ -310,7 +291,7 @@ const summaryStats = computed(() => {
 
   const totalUnits = votingOwners.value.reduce((sum, owner) => sum + owner.total_units, 0)
   const totalArea = votingOwners.value.reduce((sum, owner) => sum + owner.total_area, 0)
-  const totalShare = votingOwners.value.reduce((sum, owner) => sum + owner.total_condo_part, 0)
+  const totalShare = votingOwners.value.reduce((sum, owner) => sum + owner.voting_share, 0)
 
   return {
     totalOwners: votingOwners.value.length,

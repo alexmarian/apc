@@ -15,11 +15,11 @@ import type {
   LoginRequest,
   LoginResponse,
   Owner,
-  Unit, UnitReportDetails
+  Unit, UnitReportDetails, VotingOwner
 } from '@/types/api'
 import config from '@/config'
 import { useAuthStore } from '@/stores/auth'
-import type { InternalAxiosRequestConfig } from 'axios';
+import type { InternalAxiosRequestConfig } from 'axios'
 import '@/types/axios'
 
 // Create axios instance
@@ -38,18 +38,18 @@ api.interceptors.request.use(
       reqConfig.url &&
       (reqConfig.url.includes('/login') || reqConfig.url.includes('/refresh'))
     ) {
-      return reqConfig;
+      return reqConfig
     }
-    const token = localStorage.getItem(config.authTokenKey);
+    const token = localStorage.getItem(config.authTokenKey)
     if (token && reqConfig.headers) {
-      reqConfig.headers.Authorization = `Bearer ${token}`;
+      reqConfig.headers.Authorization = `Bearer ${token}`
     }
-    return reqConfig;
+    return reqConfig
   },
   (error: AxiosError) => {
-    return Promise.reject(error);
+    return Promise.reject(error)
   }
-);
+)
 
 // Response interceptor
 api.interceptors.response.use(
@@ -292,4 +292,4 @@ export const expenseApi = {
     })
 }
 
-export default api;
+export default api
