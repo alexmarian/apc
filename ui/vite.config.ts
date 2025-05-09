@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'node:url'
+import { resolve } from 'path'
 import VueRouter from 'unplugin-vue-router/vite'
 
 import { defineConfig } from 'vite'
@@ -10,6 +11,14 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
+    }
+  },
+  build: { // Move rollupOptions inside the build property
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        standalone: resolve(__dirname, 'public/standalone-charts.html')
+      }
     }
   }
 })

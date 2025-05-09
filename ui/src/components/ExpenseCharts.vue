@@ -243,11 +243,9 @@ watch(() => props.expenses, () => {
   }
 }, { immediate: true })
 
-// Function to open the standalone charts page in a new window
 const openStandaloneChartsPage = () => {
   try {
     // Prepare data for standalone view
-    // Get detailed data for chart rendering
     const typeDetails = expensesByType.value.map(type => ({
       type: type.name,
       value: type.value,
@@ -267,8 +265,8 @@ const openStandaloneChartsPage = () => {
     localStorage.setItem('standalone_chart_title', 'Expense Analysis');
     localStorage.setItem('standalone_chart_date_range', formattedDateRange.value);
 
-    // Open a new window with the standalone page
-    const standaloneWindow = window.open('/reports/standalone-charts', '_blank');
+    // Open a new window with the standalone HTML page (not a route)
+    const standaloneWindow = window.open('/standalone-charts.html', '_blank');
 
     if (!standaloneWindow) {
       alert('Please allow pop-ups to open the charts in a new window');

@@ -10,11 +10,11 @@ import {
   NIcon
 } from 'naive-ui'
 import { PrintRound } from '@vicons/material'
-import PieChart from './PieChart.vue'
-import BarChart from './BarChart.vue'
-import StackedBarChart from './StackedBarChart.vue'
-import type { ChartDataItem } from './BaseChart.vue'
-import type { StackedChartItem, StackedChartSeries } from './StackedBarChart.vue'
+import PieChart from '@/components/charts/PieChart.vue'
+import BarChart from '@/components/charts/BarChart.vue'
+import StackedBarChart from '@/components/charts/StackedBarChart.vue'
+import type { ChartDataItem } from '@/components/charts/BaseChart.vue'
+import type { StackedChartItem, StackedChartSeries } from '@/components/charts/StackedBarChart.vue'
 import type { Expense } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
 
@@ -342,18 +342,15 @@ table {
 }
 
 th, td {
-  border: 1px solid #ddd;
   padding: 8px;
   text-align: left;
 }
 
 th {
-  background-color: #f2f2f2;
   font-weight: bold;
 }
 
 tr:nth-child(even) {
-  background-color: #f9f9f9;
 }
 
 .type-detail-section {

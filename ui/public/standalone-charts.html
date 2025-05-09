@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expense Charts</title>
+  <style>
+      body {
+          margin: 0;
+          padding: 0;
+          font-family: Arial, sans-serif;
+          color: #333;
+      }
+
+      .standalone-container {
+          padding: 20px;
+          max-width: 1200px;
+          margin: 0 auto;
+      }
+
+      .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          padding-bottom: 15px;
+          border-bottom: 1px solid #eee;
+      }
+
+      .card {
+          background: white;
+          padding: 20px;
+          border-radius: 6px;
+          margin-bottom: 30px;
+          border: 1px solid #eee;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      .summary-content {
+          display: flex;
+          justify-content: space-around;
+          flex-wrap: wrap;
+          gap: 20px;
+      }
+
+      .summary-item {
+          text-align: center;
+          min-width: 150px;
+      }
+
+      .summary-label {
+          font-size: 14px;
+          color: #666;
+          margin-bottom: 8px;
+      }
+
+      .summary-value {
+          font-size: 24px;
+          font-weight: bold;
+      }
+
+      h1, h2, h3 {
+          color: #333;
+      }
+
+      h1 {
+          margin: 0;
+          font-size: 24px;
+      }
+
+      h2 {
+          margin-top: 0;
+          margin-bottom: 16px;
+          font-size: 20px;
+          border-bottom: 1px solid #f0f0f0;
+          padding-bottom: 8px;
+      }
+
+      h3 {
+          margin-top: 20px;
+          font-size: 18px;
+      }
+
+      .chart-container {
+          height: 400px;
+          margin: 0 auto;
+          max-width: 600px;
+          position: relative;
+      }
+
+      .chart-container.wide {
+          max-width: 800px;
+      }
+
+      table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 16px;
+      }
+
+      th, td {
+          padding: 10px;
+          border: 1px solid #ddd;
+          text-align: left;
+      }
+
+      th {
+          background: #f5f5f5;
+          font-weight: 600;
+      }
+
+      tr:nth-child(even) {
+          background-color: #f9f9f9;
+      }
+
+      .buttons {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 15px;
+      }
+
+      .print-button {
+          padding: 8px 16px;
+          background: #1890ff;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 14px;
+          font-weight: 500;
+      }
+
+      .print-button svg {
+          width: 16px;
+          height: 16px;
+      }
+
+      .type-details {
+          margin-top: 30px;
+      }
+
+      .page-break {
+          height: 1px;
+          width: 100%;
+          margin: 30px 0;
+      }
+
+      .chart-toggle {
+          display: flex;
+          justify-content: center;
+          margin-bottom: 20px;
+      }
+
+      .chart-toggle-btn {
+          padding: 6px 14px;
+          background: #f5f5f5;
+          border: 1px solid #d9d9d9;
+          cursor: pointer;
+          font-size: 14px;
+      }
+
+      .chart-toggle-btn:first-child {
+          border-top-left-radius: 4px;
+          border-bottom-left-radius: 4px;
+      }
+
+      .chart-toggle-btn:last-child {
+          border-top-right-radius: 4px;
+          border-bottom-right-radius: 4px;
+      }
+
+      .chart-toggle-btn.active {
+          background: #1890ff;
+          color: white;
+          border-color: #1890ff;
+      }
+
+      /* Print-specific styles */
+      @media print {
+          @page {
+              margin: 1cm;
+          }
+
+          body {
+              font-size: 12pt;
+          }
+
+          .print-button, .chart-toggle {
+              display: none !important;
+          }
+
+          .page-break {
+              page-break-after: always;
+              break-after: page;
+              height: 0;
+              margin: 0;
+          }
+
+          .card {
+              page-break-inside: avoid;
+              border: none;
+              box-shadow: none;
+          }
+
+          * {
+              color: black !important;
+              text-shadow: none !important;
+              box-shadow: none !important;
+          }
+
+          .header {
+              border-bottom: 1px solid #000;
+          }
+
+          h2 {
+              border-bottom: 1px solid #000;
+          }
+      }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- Import libraries from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<script>
+  // Immediately-invoked function to create app when page loads
+  (function() {
+    // Get data from localStorage
+    const chartData = JSON.parse(localStorage.getItem('standalone_chart_data') || 'null')
+    const chartTitle = localStorage.getItem('standalone_chart_title') || 'Expense Analysis'
+    const dateRange = localStorage.getItem('standalone_chart_date_range') || ''
+
+    if (!chartData) {
+      document.getElementById('app').innerHTML = '<div style="text-align: center; padding: 50px; font-size: 16px;">No chart data available. Please go back to the main application and open charts view again.</div>'
+      return
+    }
+
+    // Chart type preferences (default to pie)
+    let typeChartMode = 'pie'
+    let categoryChartMode = 'pie'
+
+    // Chart instances
+    const chartInstances = {}
+
+    // Format currency helper
+    const formatCurrency = (value) => {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'MDL',
+        minimumFractionDigits: 2
+      }).format(value)
+    }
+
+    // Calculate total amount
+    const totalAmount = chartData.expenses.reduce((sum, exp) => sum + exp.amount, 0)
+
+    // Print function
+    const printCharts = () => {
+      window.print()
+    }
+
+    // Generate colors if needed
+    const generateColors = (count) => {
+      const colors = [
+        '#3366FF', '#FF6633', '#33CC99', '#FFCC33', '#FF33CC',
+        '#33CCFF', '#CC99FF', '#99CC33', '#FF9966', '#6699FF'
+      ]
+
+      return Array(count).fill(0).map((_, i) =>
+        colors[i % colors.length]
+      )
+    }
+
+    // Create a pie chart
+    const createPieChart = (containerId, data, labels, colors) => {
+      // Destroy previous chart if it exists
+      if (chartInstances[containerId]) {
+        chartInstances[containerId].destroy()
+      }
+
+      const container = document.getElementById(containerId)
+      if (!container) return
+
+      // Clear container
+      container.innerHTML = ''
+
+      // Create canvas
+      const canvas = document.createElement('canvas')
+      container.appendChild(canvas)
+
+      // Create chart
+      chartInstances[containerId] = new Chart(canvas, {
+        type: 'pie',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: colors,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                padding: 15,
+                usePointStyle: true
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const value = context.raw
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0)
+                  const percentage = ((value / total) * 100).toFixed(1) + '%'
+                  return `${context.label}: ${formatCurrency(value)} (${percentage})`
+                }
+              }
+            }
+          }
+        }
+      })
+    }
+
+    // Create a bar chart
+    const createBarChart = (containerId, data, labels, colors) => {
+      // Destroy previous chart if it exists
+      if (chartInstances[containerId]) {
+        chartInstances[containerId].destroy()
+      }
+
+      const container = document.getElementById(containerId)
+      if (!container) return
+
+      // Clear container
+      container.innerHTML = ''
+
+      // Create canvas
+      const canvas = document.createElement('canvas')
+      container.appendChild(canvas)
+
+      // Create chart
+      chartInstances[containerId] = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Amount',
+            data: data,
+            backgroundColor: colors,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `Amount: ${formatCurrency(context.raw)}`
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return formatCurrency(value)
+                }
+              }
+            }
+          }
+        }
+      })
+    }
+
+    // Create a stacked bar chart for monthly data
+    const createStackedBarChart = (containerId) => {
+      const container = document.getElementById(containerId)
+      if (!container || chartData.expensesByMonth.items.length === 0) return
+
+      // Clear container
+      container.innerHTML = ''
+
+      // Create canvas
+      const canvas = document.createElement('canvas')
+      container.appendChild(canvas)
+
+      const labels = chartData.expensesByMonth.items.map(item => item.label)
+      const datasets = chartData.expensesByMonth.series.map((series, index) => {
+        return {
+          label: series.name,
+          data: chartData.expensesByMonth.items.map(item => item.values[series.name] || 0),
+          backgroundColor: series.color || generateColors(chartData.expensesByMonth.series.length)[index],
+          borderWidth: 1
+        }
+      })
+
+      // Create chart
+      chartInstances[containerId] = new Chart(canvas, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              stacked: true,
+              ticks: {
+                maxRotation: 45,
+                minRotation: 45
+              }
+            },
+            y: {
+              stacked: true,
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return formatCurrency(value)
+                }
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { padding: 15 }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: ${formatCurrency(context.raw)}`
+                }
+              }
+            }
+          }
+        }
+      })
+    }
+
+    // Render type chart based on mode
+    const renderTypeChart = () => {
+      const colors = chartData.expensesByType.map(
+        item => item.color || generateColors(chartData.expensesByType.length)
+      )
+
+      if (typeChartMode === 'pie') {
+        createPieChart(
+          'type-chart-container',
+          chartData.expensesByType.map(item => item.value),
+          chartData.expensesByType.map(item => item.name),
+          colors
+        )
+      } else {
+        createBarChart(
+          'type-chart-container',
+          chartData.expensesByType.map(item => item.value),
+          chartData.expensesByType.map(item => item.name),
+          colors
+        )
+      }
+    }
+
+    // Render family charts for a type
+    const renderFamilyChart = (typeDetail) => {
+      const chartId = `family-chart-${typeDetail.type.replace(/\s+/g, '-').toLowerCase()}`
+      const colors = typeDetail.families.map(
+        item => item.color || generateColors(typeDetail.families.length)
+      )
+
+      if (categoryChartMode === 'pie') {
+        createPieChart(
+          chartId,
+          typeDetail.families.map(item => item.value),
+          typeDetail.families.map(item => item.name),
+          colors
+        )
+      } else {
+        createBarChart(
+          chartId,
+          typeDetail.families.map(item => item.value),
+          typeDetail.families.map(item => item.name),
+          colors
+        )
+      }
+    }
+
+    // Create app content
+    let appHtml = `
+        <div class="standalone-container">
+          <div class="header">
+            <div>
+              <h1>${chartTitle}</h1>
+              ${dateRange ? `<div style="color: #666; margin-top: 5px;">Period: ${dateRange}</div>` : ''}
+            </div>
+            <button id="print-button" class="print-button">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                <rect x="6" y="14" width="12" height="8"></rect>
+              </svg>
+              Print Charts
+            </button>
+          </div>
+
+          <!-- Summary Section -->
+          <div class="card">
+            <h2>Summary</h2>
+            <div class="summary-content">
+              <div class="summary-item">
+                <div class="summary-label">Total Expenses</div>
+                <div class="summary-value">${formatCurrency(totalAmount)}</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">Number of Expenses</div>
+                <div class="summary-value">${chartData.expenses.length}</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">Average Expense</div>
+                <div class="summary-value">${formatCurrency(totalAmount / chartData.expenses.length)}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Page break for printing -->
+          <div class="page-break"></div>
+
+          <!-- Expenses by Type Section -->
+          <div class="card">
+            <h2>Expenses by Type</h2>
+
+            <div class="chart-toggle">
+              <button id="type-pie-btn" class="chart-toggle-btn active">Pie Chart</button>
+              <button id="type-bar-btn" class="chart-toggle-btn">Bar Chart</button>
+            </div>
+
+            <div class="chart-container" id="type-chart-container"></div>
+
+            <div style="margin-top: 20px; overflow-x: auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Percentage</th>
+                    <th>Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${chartData.expensesByType.map(item => `
+                    <tr>
+                      <td>${item.name}</td>
+                      <td>${formatCurrency(item.value)}</td>
+                      <td>${item.percentage ? item.percentage.toFixed(1) + '%' : '0%'}</td>
+                      <td>${item.count}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Page break for printing -->
+          <div class="page-break"></div>
+
+          <!-- Monthly Expense Trends Section -->
+          <div class="card">
+            <h2>Monthly Expense Trends</h2>
+            <div class="chart-container wide" id="monthly-chart-container"></div>
+
+            ${chartData.expensesByMonth.items.length > 0 ? `
+              <div style="margin-top: 20px; overflow-x: auto;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Total Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${chartData.expensesByMonth.items.map(item => `
+                      <tr>
+                        <td>${item.label}</td>
+                        <td>${formatCurrency(item.total)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            ` : '<div style="text-align: center; padding: 20px; color: #999;">No monthly data available</div>'}
+          </div>
+      `
+
+    // Add Type Breakdown Sections - one card per type
+    if (chartData.typeDetails && chartData.typeDetails.length > 0) {
+      appHtml += `
+          <!-- Expense Type Breakdown -->
+          <div class="page-break"></div>
+          <div class="card">
+            <h2>Expense Type Breakdown</h2>
+
+            <div class="chart-toggle">
+              <button id="category-pie-btn" class="chart-toggle-btn active">Pie Chart</button>
+              <button id="category-bar-btn" class="chart-toggle-btn">Bar Chart</button>
+            </div>
+        `
+
+      // Add each type detail
+      chartData.typeDetails.forEach((typeDetail, index) => {
+        const chartId = `family-chart-${typeDetail.type.replace(/\s+/g, '-').toLowerCase()}`
+
+        appHtml += `
+            <div class="type-details">
+              <h3>${typeDetail.type} - ${formatCurrency(typeDetail.value)}</h3>
+
+              <div class="chart-container" id="${chartId}"></div>
+
+              <div style="margin-top: 20px; overflow-x: auto;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Family</th>
+                      <th>Amount</th>
+                      <th>Percentage</th>
+                      <th>Count</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${typeDetail.families.map(family => `
+                      <tr>
+                        <td>${family.name}</td>
+                        <td>${formatCurrency(family.value)}</td>
+                        <td>${family.percentage ? family.percentage.toFixed(1) + '%' : '0%'}</td>
+                        <td>${family.count}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+              ${index < chartData.typeDetails.length - 1 ? '<hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">' : ''}
+            </div>
+          `
+      })
+
+      // Close the card
+      appHtml += `</div>`
+    }
+
+    // Close the container
+    appHtml += `</div>`
+
+    // Set the content
+    document.getElementById('app').innerHTML = appHtml
+
+    // Add event listeners
+    document.getElementById('print-button').addEventListener('click', printCharts)
+
+    // Type chart toggle buttons
+    document.getElementById('type-pie-btn').addEventListener('click', function() {
+      this.classList.add('active')
+      document.getElementById('type-bar-btn').classList.remove('active')
+      typeChartMode = 'pie'
+      renderTypeChart()
+    })
+
+    document.getElementById('type-bar-btn').addEventListener('click', function() {
+      this.classList.add('active')
+      document.getElementById('type-pie-btn').classList.remove('active')
+      typeChartMode = 'bar'
+      renderTypeChart()
+    })
+
+    // Category chart toggle buttons
+    if (chartData.typeDetails && chartData.typeDetails.length > 0) {
+      document.getElementById('category-pie-btn').addEventListener('click', function() {
+        this.classList.add('active')
+        document.getElementById('category-bar-btn').classList.remove('active')
+        categoryChartMode = 'pie'
+        chartData.typeDetails.forEach(typeDetail => {
+          renderFamilyChart(typeDetail)
+        })
+      })
+
+      document.getElementById('category-bar-btn').addEventListener('click', function() {
+        this.classList.add('active')
+        document.getElementById('category-pie-btn').classList.remove('active')
+        categoryChartMode = 'bar'
+        chartData.typeDetails.forEach(typeDetail => {
+          renderFamilyChart(typeDetail)
+        })
+      })
+    }
+
+    // Initial render of all charts
+    renderTypeChart()
+    createStackedBarChart('monthly-chart-container')
+
+    if (chartData.typeDetails && chartData.typeDetails.length > 0) {
+      chartData.typeDetails.forEach(typeDetail => {
+        renderFamilyChart(typeDetail)
+      })
+    }
+  })()
+</script>
+</body>
+</html>
