@@ -21,14 +21,36 @@ const formData = reactive({
 // Form validation rules
 const rules: FormRules = {
   login: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('auth.username', 'Username') }), trigger: 'blur' }
+    {
+      required: true,
+      message: t('validation.required', {
+        field: t('auth.password', 'Password')
+      }),
+      trigger: 'blur'
+    }
   ],
   password: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('auth.password', 'Password') }), trigger: 'blur' }
+    {
+      required: true,
+      message: t('validation.required', {
+        field: t('auth.password', 'Password')
+      }),
+      trigger: 'blur'
+    }
   ],
   totp: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('auth.totp', 'TOTP code') }), trigger: 'blur' },
-    { type: 'string', len: 6, message: t('auth.totpLength', 'TOTP code must be 6 digits'), trigger: 'blur' }
+    {
+      required: true,
+      message: t('validation.required', {
+        field: t('auth.totp', 'TOTP code')
+      }),
+      trigger: 'blur'
+    }, {
+      type: 'string',
+      len: 6,
+      message: t('auth.totpLength', 'TOTP code must be 6 digits'),
+      trigger: 'blur'
+    }
   ]
 }
 

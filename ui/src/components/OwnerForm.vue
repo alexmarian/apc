@@ -42,17 +42,37 @@ const formData = reactive<OwnerFormData>({
 
 const rules: FormRules = {
   name: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('owners.name', 'Name') }), trigger: 'blur' }
+    {
+      required: true,
+      message: t('validation.required', { field: t('owners.name', 'Name') }, '{field} is required'),
+      trigger: 'blur'
+    }
   ],
   identification_number: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('owners.identification', 'Identification number') }), trigger: 'blur' }
+    {
+      required: true,
+      message: t('validation.required', { field: t('owners.identification', 'Identification number') }, '{field} is required'),
+      trigger: 'blur'
+    }
   ],
   contact_phone: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('owners.contactPhone', 'Contact phone') }), trigger: 'blur' }
+    {
+      required: true,
+      message: t('validation.required', { field: t('owners.contactPhone', 'Contact phone') }, '{field} is required'),
+      trigger: 'blur'
+    }
   ],
   contact_email: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('owners.contactEmail', 'Contact email') }), trigger: 'blur' },
-    { type: 'email', message: t('validation.email', 'Please enter a valid email address'), trigger: 'blur' }
+    {
+      required: true,
+      message: t('validation.required', { field: t('owners.contactEmail', 'Contact email') }, '{field} is required'),
+      trigger: 'blur'
+    },
+    {
+      type: 'email',
+      message: t('validation.email', 'Please enter a valid email address'),
+      trigger: 'blur'
+    }
   ]
 }
 
@@ -99,22 +119,26 @@ const fetchOwnerDetails = async () => {
 
 const validateFormManually = () => {
   if (!formData.name.trim()) {
-    error.value = t('validation.required', '{field} is required', { field: t('owners.name', 'Name') })
+    error.value = t('validation.required', { field: t('owners.name', 'Name') },
+      '{field} is required')
     return false
   }
 
   if (!formData.identification_number.trim()) {
-    error.value = t('validation.required', '{field} is required', { field: t('owners.identification', 'Identification number') })
+    error.value = t('validation.required', { field: t('owners.identification', 'Identification number') },
+      '{field} is required')
     return false
   }
 
   if (!formData.contact_phone.trim()) {
-    error.value = t('validation.required', '{field} is required', { field: t('owners.contactPhone', 'Contact phone') })
+    error.value = t('validation.required', { field: t('owners.contactPhone', 'Contact phone') },
+      '{field} is required')
     return false
   }
 
   if (!formData.contact_email.trim()) {
-    error.value = t('validation.required', '{field} is required', { field: t('owners.contactEmail', 'Contact email') })
+    error.value = t('validation.required', { field: t('owners.contactEmail', 'Contact email') },
+      '{field} is required')
     return false
   }
 
@@ -197,7 +221,8 @@ onMounted(() => {
   <div class="owner-form">
 
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" :title="t('common.error', 'Error')" style="margin-bottom: 16px;">
+      <NAlert v-if="error" type="error" :title="t('common.error', 'Error')"
+              style="margin-bottom: 16px;">
         {{ error }}
       </NAlert>
 
@@ -216,7 +241,8 @@ onMounted(() => {
           />
         </NFormItem>
 
-        <NFormItem :label="t('owners.identification', 'Identification Number')" path="identification_number">
+        <NFormItem :label="t('owners.identification', 'Identification Number')"
+                   path="identification_number">
           <NInput
             v-model:value="formData.identification_number"
             :placeholder="t('owners.enterIdentification', 'Enter identification number')"
@@ -252,7 +278,8 @@ onMounted(() => {
               @click="submitForm"
               :loading="submitting"
             >
-              {{ props.ownerId ? t('common.update', 'Update Owner') : t('common.create', 'Create Owner') }}
+              {{ props.ownerId ? t('common.update', 'Update Owner') : t('common.create', 'Create Owner')
+              }}
             </NButton>
           </NSpace>
         </div>

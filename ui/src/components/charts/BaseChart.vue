@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n'
 // Common data item interface used across chart types
 export interface ChartDataItem {
   name: string;
+  rawName: string;
   value: number;
   color?: string;
   percentage?: number;

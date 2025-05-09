@@ -63,10 +63,10 @@ const message = useMessage()
 // Form validation rules
 const rules: FormRules = {
   'owner.name': [
-    { required: props.mode === 'create', message: t('validation.required', '{field} is required', { field: t('owners.name', 'Owner name') }), trigger: 'blur' }
+    { required: props.mode === 'create', message: t('validation.required', { field: t('owners.name', 'Owner name') }, '{field} is required'), trigger: 'blur' }
   ],
   'owner.identification_number': [
-    { required: props.mode === 'create', message: t('validation.required', '{field} is required', { field: t('owners.identification', 'Identification number') }), trigger: 'blur' }
+    { required: props.mode === 'create', message: t('validation.required', { field: t('owners.identification', 'Identification number') }, '{field} is required'), trigger: 'blur' }
   ],
   owner_id: [
     {
@@ -77,13 +77,13 @@ const rules: FormRules = {
     }
   ],
   start_date: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('units.ownership.startDate', 'Start date') }), trigger: 'blur' }
+    { required: true, message: t('validation.required', { field: t('units.ownership.startDate', 'Start date') }, '{field} is required'), trigger: 'blur' }
   ],
   registration_document: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('units.ownership.registrationDoc', 'Registration document') }), trigger: 'blur' }
+    { required: true, message: t('validation.required', { field: t('units.ownership.registrationDoc', 'Registration document') }, '{field} is required'), trigger: 'blur' }
   ],
   registration_date: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('units.ownership.registrationDate', 'Registration date') }), trigger: 'blur' }
+    { required: true, message: t('validation.required', { field: t('units.ownership.registrationDate', 'Registration date') }, '{field} is required'), trigger: 'blur' }
   ]
 }
 

@@ -60,13 +60,25 @@ const formData = reactive<UnitFormData>({
 
 const rules: FormRules = {
   unit_number: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('units.unit', 'Unit number') }), trigger: 'blur' }
+    {
+      required: true,
+      message: t('validation.required',  { field: t('units.unit', 'Unit number') },'{field} is required'),
+      trigger: 'blur'
+    }
   ],
   address: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('units.address', 'Address') }), trigger: 'blur' }
+    {
+      required: true,
+      message: t('validation.required', { field: t('units.address', 'Address') }, '{field} is required'),
+      trigger: 'blur'
+    }
   ],
   entrance: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('units.entrance', 'Entrance') }), trigger: 'blur' },
+    {
+      required: true,
+      message: t('validation.required', { field: t('units.entrance', 'Entrance') }, '{field} is required'),
+      trigger: 'blur'
+    },
     {
       type: 'number',
       min: 1,
@@ -75,7 +87,11 @@ const rules: FormRules = {
     }
   ],
   area: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('units.area', 'Area') }), trigger: 'blur' },
+    {
+      required: true,
+      message: t('validation.required', { field: t('units.area', 'Area') }, '{field} is required'),
+      trigger: 'blur'
+    },
     {
       type: 'number',
       min: 0.01,
@@ -84,7 +100,11 @@ const rules: FormRules = {
     }
   ],
   part: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('units.part', 'Part') }), trigger: 'blur' },
+    {
+      required: true,
+      message: t('validation.required', { field: t('units.part', 'Part') }, '{field} is required'),
+      trigger: 'blur'
+    },
     {
       type: 'number',
       min: 0,
@@ -94,14 +114,28 @@ const rules: FormRules = {
     }
   ],
   unit_type: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('units.type', 'Unit type') }), trigger: 'blur' }
+    {
+      required: true,
+      message: t('validation.required', { field: t('units.type', 'Unit type') }, '{field} is required'),
+      trigger: 'blur'
+    }
   ],
   floor: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('units.floor', 'Floor') }), trigger: 'blur' }
-  ],
-  room_count: [
-    { required: true, message: t('validation.required', '{field} is required', { field: t('units.roomCount', 'Room count') }), trigger: 'blur' },
     {
+      required: true,
+      message: t('validation.required', {
+        field: t('units.floor', 'Floor')
+      }),
+      trigger: 'blur'
+    }],
+  room_count: [
+    {
+      required: true,
+      message: t('validation.required', {
+        field: t('units.roomCount', 'Room count')
+      }),
+      trigger: 'blur'
+    }, {
       type: 'number',
       min: 0,
       message: t('units.roomCountMin', 'Room count must be at least 0'),
@@ -159,22 +193,30 @@ const fetchUnitDetails = async () => {
 
 const validateFormManually = () => {
   if (!formData.unit_number.trim()) {
-    error.value = t('validation.required', '{field} is required', { field: t('units.unit', 'Unit number') })
+    error.value = t('validation.required', {
+      field: t('units.unit', 'Unit number')
+    })
     return false
   }
 
   if (!formData.address.trim()) {
-    error.value = t('validation.required', '{field} is required', { field: t('units.address', 'Address') })
+    error.value = t('validation.required', {
+      field: t('units.address', 'Address')
+    })
     return false
   }
 
   if (formData.area <= 0) {
-    error.value = t('units.areaPositive', 'Area must be greater than 0')
+    error.value = t('validation.required', {
+      field: t('units.areaPositive', 'Unit area')
+    })
     return false
   }
 
   if (formData.part < 0 || formData.part > 1) {
-    error.value = t('units.partRange', 'Part must be between 0 and 1')
+    error.value = t('validation.required', {
+      field: t('units.partRange', 'Unit part')
+    })
     return false
   }
 
@@ -246,10 +288,13 @@ onMounted(() => {
 
 <template>
   <div class="unit-form">
-    <h2>{{ props.unitId ? t('units.editUnit', 'Edit Unit') : t('units.createUnit', 'Create New Unit') }}</h2>
+    <h2>
+      {{ props.unitId ? t('units.editUnit', 'Edit Unit') : t('units.createUnit', 'Create New Unit')
+      }}</h2>
 
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" :title="t('common.error', 'Error')" style="margin-bottom: 16px;">
+      <NAlert v-if="error" type="error" :title="t('common.error', 'Error')"
+              style="margin-bottom: 16px;">
         {{ error }}
       </NAlert>
 
@@ -344,7 +389,8 @@ onMounted(() => {
               @click="submitForm"
               :loading="submitting"
             >
-              {{ props.unitId ? t('common.update', 'Update Unit') : t('common.create', 'Create Unit') }}
+              {{ props.unitId ? t('common.update', 'Update Unit') : t('common.create', 'Create Unit')
+              }}
             </NButton>
           </NSpace>
         </div>

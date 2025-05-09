@@ -130,6 +130,7 @@ const unitColumns = computed(() => [
   },
   {
     title: t('units.type', 'Type'),
+    key: 'unit_type',
     render: (row: VotingUnit) => t(`unitTypes.${row.unit_type}`, row.unit_type)
   }
 ])
@@ -276,7 +277,7 @@ const sortedFilteredData = computed<VotingOwner[]>(() => {
     if (sortBy.value === 'name') {
       comparison = a.name.localeCompare(b.name)
     } else if (sortBy.value === 'share') {
-      comparison = a.voting_share - b.voting_share // Updated to match API
+      comparison = a.total_condo_part - b.total_condo_part // Updated to match API
     }
 
     return sortOrder.value === 'asc' ? comparison : -comparison

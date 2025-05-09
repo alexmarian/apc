@@ -141,9 +141,9 @@ export interface Expense {
   month: number;
   year: number;
   category_id: number;
-  category_type?: string;
-  category_family?: string;
-  category_name?: string;
+  category_type: string;
+  category_family: string;
+  category_name: string;
   account_id: number;
   account_number?: string;
   account_name?: string;

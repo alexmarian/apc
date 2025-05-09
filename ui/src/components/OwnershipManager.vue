@@ -137,7 +137,7 @@ const columns = computed<DataTableColumns<any>>(() => [
   {
     title: t('owners.name', 'Owner'),
     key: 'owner_name',
-    render: (row) => row.owner_name || t('units.ownership.ownerId', 'Owner ID: {id}', { id: row.owner_id })
+    render: (row) => row.owner_name || t('units.ownership.ownerId', { id: row.owner_id }, 'Owner ID: {id}')
   },
   {
     title: t('units.ownership.startDate', 'Start Date'),

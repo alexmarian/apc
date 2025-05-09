@@ -253,7 +253,9 @@ onMounted(() => {
 
         <div v-if="filteredUnits.length > 0" class="summary">
           <div>
-            <span class="unit-count">{{ t('units.unitsFound', '{count} units found', { count: filteredUnits.length }) }}</span>
+            <span class="unit-count">
+              {{ t('units.unitsFound', { count: filteredUnits.length }) }}
+            </span>
           </div>
         </div>
 
