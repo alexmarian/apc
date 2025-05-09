@@ -135,6 +135,7 @@
     "unit": "Unit"
   },
   "categories": {
+    "allCategories": "All Categories",
     "types": {
       "Budgeted": "Budgeted",
       "Maintenance": "Maintenance",

@@ -3,8 +3,9 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { NSelect, NSpin } from 'naive-ui'
 import { categoryApi } from '@/services/api'
 import type { Category } from '@/types/api'
+import { useI18n } from 'vue-i18n'
 
-// Props
+
 const props = defineProps<{
   modelValue: number | null
   associationId: number
@@ -12,30 +13,29 @@ const props = defineProps<{
   includeAllOption?: boolean
   disabled?: boolean
 }>()
+const { t } = useI18n()
 
-// Emits
 const emit = defineEmits<{
   (e: 'update:modelValue', id: number | null): void
 }>()
 
-// State
+
 const categories = ref<Category[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
-// Computed options for NSelect
 const options = computed(() => {
   const categoryOptions = categories.value
   .filter(category => !category.is_deleted)
   .map(category => ({
-    label: `${category.type} - ${category.family} - ${category.name}`,
+    label: `${t(`categories.types.${category.type}`)} - ${t(`categories.families.${category.family}`)} - ${t(`categories.names.${category.name}`)}`,
     value: category.id
   }))
 
-  // Add "All Categories" option if includeAllOption is true
+
   if (props.includeAllOption) {
     categoryOptions.unshift({
-      label: 'All Categories',
+      label: t('categories.allCategories','All Categories'),
       value: null as any // Need to cast this because TypeScript doesn't like null values
     })
   }
@@ -86,7 +86,7 @@ watch(
         filterable
         :value="props.modelValue"
         :options="options"
-        :placeholder="placeholder || 'Select a category'"
+        :placeholder="placeholder || t('common.select','Select a category')"
         @update:value="handleChange"
         :disabled="loading || categories.length === 0 || props.disabled"
       />
