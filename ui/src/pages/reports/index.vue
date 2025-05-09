@@ -14,12 +14,13 @@ import {
   NGrid,
   NGridItem,
   NStatistic,
-  NTooltip
+  NTooltip,
+  NText,
+  NFlex
 } from 'naive-ui'
 import { expenseApi } from '@/services/api'
 import type { Expense } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
-import { exportFullReportToPdf } from '@/utils/pdfExport'
 import AssociationSelector from '@/components/AssociationSelector.vue'
 import CategorySelector from '@/components/CategorySelector.vue'
 import ExpenseCharts from '@/components/ExpenseCharts.vue'
@@ -36,9 +37,6 @@ const error = ref<string | null>(null)
 const dateRange = ref<[number, number] | null>(null)
 const selectedCategory = ref<number | null>(null)
 const reportType = ref<string>('overview')
-
-// Reference to the ExpenseCharts component
-const expenseChartsRef = ref<any>(null)
 
 // Reports data
 const yearlyTotal = computed(() => {
@@ -159,63 +157,6 @@ const formattedDateRange = computed(() => {
   return `${start} - ${end}`
 })
 
-// Export comprehensive report with all data
-const exportReport = () => {
-  try {
-    // Try to find an SVG element in the ExpenseCharts component
-    let chartSvg: SVGElement | null = null
-
-    // Check if the ExpenseCharts component is accessible
-    if (expenseChartsRef.value) {
-      // Look for SVG elements in the component
-      const svgElements = expenseChartsRef.value.$el.querySelectorAll('svg')
-      if (svgElements && svgElements.length > 0) {
-        // Get the first visible SVG
-        for (const svg of svgElements) {
-          if (svg.getBoundingClientRect().height > 0) {
-            chartSvg = svg
-            break
-          }
-        }
-      }
-    }
-
-    // Prepare summary data
-    const summaryData = [
-      {
-        label: 'Total Expenses',
-        value: formatCurrency(yearlyTotal.value)
-      },
-      {
-        label: 'Monthly Average',
-        value: formatCurrency(monthlyAverage.value)
-      },
-      {
-        label: 'Number of Expenses',
-        value: expenses.value.length.toString()
-      }
-    ]
-
-    // Prepare breakdown data
-    const breakdownData = {
-      types: expensesByType.value,
-      months: expensesByMonth.value
-    }
-
-    // Export the full report
-    exportFullReportToPdf(
-      'Expense Analysis Report',
-      summaryData,
-      chartSvg,
-      breakdownData,
-      formattedDateRange.value
-    )
-  } catch (error) {
-    console.error('Error exporting report:', error)
-    alert('There was an error generating the report. Please try again.')
-  }
-}
-
 // Initialize data
 onMounted(() => {
   // Set default date range to current year
@@ -238,16 +179,6 @@ onMounted(() => {
         <div style="margin-bottom: 12px;">
           <AssociationSelector v-model:associationId="associationId" />
         </div>
-      </template>
-
-      <template #extra>
-        <NButton
-          v-if="expenses.length > 0"
-          type="primary"
-          @click="exportReport"
-        >
-          Export Report
-        </NButton>
       </template>
     </NPageHeader>
 
@@ -320,8 +251,8 @@ onMounted(() => {
             <NTabs type="line" animated>
               <NTabPane name="charts" tab="Visual Reports">
                 <ExpenseCharts
-                  ref="expenseChartsRef"
                   :expenses="expenses"
+                  :dateRange="dateRange"
                 />
               </NTabPane>
 

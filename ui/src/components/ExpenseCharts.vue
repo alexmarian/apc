@@ -12,6 +12,7 @@ import {
   NTooltip,
   NIcon
 } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import { OpenInNewRound } from '@vicons/material'
 import type { Expense } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
@@ -20,12 +21,13 @@ import BarChart from '@/components/charts/BarChart.vue'
 import StackedBarChart from '@/components/charts/StackedBarChart.vue'
 import type { ChartDataItem } from '@/components/charts/BaseChart.vue'
 import type { StackedChartItem, StackedChartSeries } from '@/components/charts/StackedBarChart.vue'
-
 // Props
+
 const props = defineProps<{
   expenses: Expense[],
   dateRange?: [number, number] | null
 }>()
+const { locale } = useI18n()
 
 // Chart display mode for each section
 const typeChartMode = ref<'pie' | 'bar'>('pie')
@@ -264,6 +266,7 @@ const openStandaloneChartsPage = () => {
     localStorage.setItem('standalone_chart_data', JSON.stringify(chartData));
     localStorage.setItem('standalone_chart_title', 'Expense Analysis');
     localStorage.setItem('standalone_chart_date_range', formattedDateRange.value);
+    localStorage.setItem('standalone_chart_language', locale.value);
 
     // Open a new window with the standalone HTML page (not a route)
     const standaloneWindow = window.open('/standalone-charts.html', '_blank');
