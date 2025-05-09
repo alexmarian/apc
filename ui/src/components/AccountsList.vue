@@ -6,38 +6,42 @@ import { accountApi } from '@/services/api'
 import type { Account } from '@/types/api'
 import { useI18n } from 'vue-i18n'
 
-
+// Props
 const props = defineProps<{
   associationId: number
 }>()
 
-
+// Emits
 const emit = defineEmits<{
   (e: 'edit', accountId: number): void
 }>()
+
+// I18n
 const { t } = useI18n()
+
+// Data
 const accounts = ref<Account[]>([])
 const loading = ref<boolean>(true)
 const error = ref<string | null>(null)
 const message = useMessage()
 
-
+// Table columns definition
 const columns = ref<DataTableColumns<Account>>([
   {
-    title: t('accounts.accountNumber', 'Account Number'),
+    title: t('accounts.accountNumber'),
     key: 'number',
     sorter: 'default'
   },
   {
-    title: t('accounts.description', 'Description'),
+    title: t('accounts.description'),
     key: 'description'
   },
   {
-    title: t('accounts.destination', 'Destination'),
+    title: t('accounts.destination'),
     key: 'destination'
   },
   {
-    title: t('accounts.status', 'Status'),
+    title: t('accounts.status'),
     key: 'is_active',
     render(row) {
       return h(
@@ -46,12 +50,12 @@ const columns = ref<DataTableColumns<Account>>([
           type: row.is_active ? 'success' : 'error',
           bordered: false
         },
-        { default: () => row.is_active ? t('common.active', 'Active') : t('common.inactive', 'Inactive') }
+        { default: () => row.is_active ? t('accounts.active') : t('accounts.inactive') }
       )
     }
   },
   {
-    title: t('common.actions','Actions'),
+    title: t('common.actions'),
     key: 'actions',
     render(row) {
       return h(
@@ -72,7 +76,7 @@ const columns = ref<DataTableColumns<Account>>([
                 disabled: !row.is_active,
                 onClick: () => emit('edit', row.id)
               },
-              { default: () => t('common.edit','Edit') }
+              { default: () => t('common.edit') }
             ),
             h(
               NButton,
@@ -84,7 +88,7 @@ const columns = ref<DataTableColumns<Account>>([
                 disabled: !row.is_active,
                 onClick: () => disableAccount(row.id)
               },
-              { default: () => t('common.disable','Disable') }
+              { default: () => t('common.disable') }
             )
           ]
         }
@@ -102,7 +106,7 @@ const fetchAccounts = async () => {
     const response = await accountApi.getAccounts(props.associationId)
     accounts.value = response.data
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Unknown error occurred'
+    error.value = err instanceof Error ? err.message : t('common.error')
     console.error('Error fetching accounts:', err)
   } finally {
     loading.value = false
@@ -112,7 +116,7 @@ const fetchAccounts = async () => {
 // Disable account
 const disableAccount = async (accountId: number) => {
   try {
-    const confirmDisable = window.confirm(t('accounts.confirmDisable','Are you sure you want to disable this account?'))
+    const confirmDisable = window.confirm(t('accounts.confirmDisable'))
     if (!confirmDisable) return
 
     await accountApi.disableAccount(props.associationId, accountId)
@@ -123,12 +127,12 @@ const disableAccount = async (accountId: number) => {
       accounts.value[index].is_active = false
     }
 
-    message.success('Account disabled successfully')
+    message.success(t('accounts.accountDisabled'))
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
+    const errorMessage = err instanceof Error ? err.message : t('common.error')
     error.value = errorMessage
     console.error('Error disabling account:', err)
-    message.error('Failed to disable account: ' + errorMessage)
+    message.error(t('common.error') + ': ' + errorMessage)
   }
 }
 
@@ -140,10 +144,12 @@ onMounted(() => {
 
 <template>
   <div class="accounts-list">
+    <h2>{{ t('accounts.list') }}</h2>
+
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" title="Error" closable>
+      <NAlert v-if="error" type="error" :title="t('common.error')" closable>
         {{ error }}
-        <NButton @click="fetchAccounts">Retry</NButton>
+        <NButton @click="fetchAccounts">{{ t('common.retry') }}</NButton>
       </NAlert>
 
       <NDataTable
@@ -160,9 +166,9 @@ onMounted(() => {
         })"
       >
         <template #empty>
-          <NEmpty description="No accounts found">
+          <NEmpty :description="t('accounts.noAccounts')">
             <template #extra>
-              <p>Create a new account to get started.</p>
+              <p>{{ t('accounts.createToStart') }}</p>
             </template>
           </NEmpty>
         </template>

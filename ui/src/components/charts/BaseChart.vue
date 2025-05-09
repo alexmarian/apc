@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { NTooltip, NSpace } from 'naive-ui'
 import { formatCurrency } from '@/utils/formatters'
+import { useI18n } from 'vue-i18n'
 
 // Common data item interface used across chart types
 export interface ChartDataItem {
@@ -19,6 +20,9 @@ const props = defineProps<{
   showPercentage?: boolean;
   showCount?: boolean;
 }>()
+
+// I18n
+const { t } = useI18n()
 
 // Calculate total value for percentages if not already calculated
 const totalValue = computed(() => {
@@ -59,7 +63,7 @@ const dataWithPercentages = computed(() => {
           <div>{{ item.name }}</div>
           <div>{{ formatCurrency(item.value) }}</div>
           <div v-if="showPercentage">{{ item.percentage!.toFixed(1) }}%</div>
-          <div v-if="showCount && item.count">Count: {{ item.count }}</div>
+          <div v-if="showCount && item.count">{{ t('common.total') }}: {{ item.count }}</div>
         </div>
       </NTooltip>
     </NSpace>

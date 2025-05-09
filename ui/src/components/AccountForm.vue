@@ -4,6 +4,7 @@ import { NForm, NFormItem, NInput, NButton, NSpace, NSpin, NAlert } from 'naive-
 import { accountApi } from '@/services/api'
 import type { AccountCreateRequest, AccountUpdateRequest } from '@/types/api'
 import type { FormRules } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 
 // Props
 const props = defineProps<{
@@ -17,6 +18,9 @@ const emit = defineEmits<{
   (e: 'cancelled'): void
 }>()
 
+// I18n
+const { t } = useI18n()
+
 // Form data
 const formData = reactive<AccountCreateRequest>({
   number: '',
@@ -27,10 +31,10 @@ const formData = reactive<AccountCreateRequest>({
 // Form validation rules
 const rules: FormRules = {
   number: [
-    { required: true, message: 'Account number is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', { field: t('accounts.accountNumber') }), trigger: 'blur' }
   ],
   description: [
-    { required: true, message: 'Description is required', trigger: 'blur' }
+    { required: true, message: t('validation.required', { field: t('accounts.description') }), trigger: 'blur' }
   ]
 }
 
@@ -56,7 +60,7 @@ const fetchAccountDetails = async () => {
     formData.destination = accountData.destination
     formData.description = accountData.description
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Unknown error occurred'
+    error.value = err instanceof Error ? err.message : t('common.error')
     console.error('Error fetching account details:', err)
   } finally {
     loading.value = false
@@ -99,9 +103,9 @@ const submitForm = async (e: MouseEvent) => {
     } else if (typeof err === 'object' && err !== null && 'response' in err) {
       // Axios error
       const axiosError = err as any
-      error.value = axiosError.response?.data?.msg || 'An error occurred while submitting the form'
+      error.value = axiosError.response?.data?.msg || t('common.error')
     } else {
-      error.value = 'An unknown error occurred'
+      error.value = t('common.error')
     }
     console.error('Error submitting form:', err)
   } finally {
@@ -124,10 +128,10 @@ onMounted(() => {
 
 <template>
   <div class="account-form">
-    <h2>{{ props.accountId ? 'Edit Account' : 'Create New Account' }}</h2>
+    <h2>{{ props.accountId ? t('common.edit') : t('accounts.createNew') }}</h2>
 
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" title="Error" style="margin-bottom: 16px;">
+      <NAlert v-if="error" type="error" :title="t('common.error')" style="margin-bottom: 16px;">
         {{ error }}
       </NAlert>
 
@@ -139,24 +143,24 @@ onMounted(() => {
         label-width="120px"
         require-mark-placement="right-hanging"
       >
-        <NFormItem label="Account Number" path="number">
+        <NFormItem :label="t('accounts.accountNumber')" path="number">
           <NInput
             v-model:value="formData.number"
-            placeholder="Enter account number"
+            :placeholder="t('accounts.accountNumber')"
           />
         </NFormItem>
 
-        <NFormItem label="Description" path="description">
+        <NFormItem :label="t('accounts.description')" path="description">
           <NInput
             v-model:value="formData.description"
-            placeholder="Enter account description"
+            :placeholder="t('accounts.description')"
           />
         </NFormItem>
 
-        <NFormItem label="Destination" path="destination">
+        <NFormItem :label="t('accounts.destination')" path="destination">
           <NInput
             v-model:value="formData.destination"
-            placeholder="Enter destination (optional)"
+            :placeholder="t('accounts.destination')"
           />
         </NFormItem>
 
@@ -166,7 +170,7 @@ onMounted(() => {
               @click="cancelForm"
               :disabled="submitting"
             >
-              Cancel
+              {{ t('common.cancel') }}
             </NButton>
 
             <NButton
@@ -174,7 +178,7 @@ onMounted(() => {
               @click="submitForm"
               :loading="submitting"
             >
-              {{ props.accountId ? 'Update Account' : 'Create Account' }}
+              {{ props.accountId ? t('common.update') : t('common.create') }}
             </NButton>
           </NSpace>
         </div>

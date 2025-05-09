@@ -41,17 +41,22 @@
     "title": "Accounts",
     "list": "Accounts",
     "createNew": "Create New Account",
+    "editAccount": "Edit Account",
     "accountNumber": "Account Number",
     "description": "Description",
     "destination": "Destination",
     "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "actions": "Actions",
     "confirmDisable": "Are you sure you want to disable this account?",
     "accountDisabled": "Account disabled successfully",
     "accountCreated": "Account created successfully",
     "accountUpdated": "Account updated successfully",
     "noAccounts": "No accounts found",
     "createToStart": "Create a new account to get started.",
-    "selectAssociation": "Please select an association to manage accounts"
+    "selectAssociation": "Please select an association to manage accounts",
+    "select": "Select an account"
   },
   "associations": {
     "title": "Associations",
@@ -191,5 +196,12 @@
       "various_services": "Various Services",
       "commissions": "Commissions"
     }
+  },
+  "charts": {
+    "total": "Total",
+    "count": "Count",
+    "amount": "Amount",
+    "noData": "No data available",
+    "loading": "Loading chart data..."
   }
 }

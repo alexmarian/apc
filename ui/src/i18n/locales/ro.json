@@ -39,19 +39,24 @@
   },
   "accounts": {
     "title": "Conturi",
-    "list": " Listă Conturi",
+    "list": "Conturi",
     "createNew": "Creează Cont Nou",
+    "editAccount": "Editează Cont",
     "accountNumber": "Număr Cont",
     "description": "Descriere",
     "destination": "Destinație",
     "status": "Status",
+    "active": "Activ",
+    "inactive": "Inactiv",
+    "actions": "Acțiuni",
     "confirmDisable": "Sunteți sigur că doriți să dezactivați acest cont?",
     "accountDisabled": "Contul a fost dezactivat cu succes",
     "accountCreated": "Contul a fost creat cu succes",
     "accountUpdated": "Contul a fost actualizat cu succes",
     "noAccounts": "Nu s-au găsit conturi",
     "createToStart": "Creați un cont nou pentru a începe.",
-    "selectAssociation": "Vă rugăm selectați o asociație pentru a administra conturile"
+    "selectAssociation": "Vă rugăm selectați o asociație pentru a administra conturile",
+    "select": "Selectează un cont"
   },
   "associations": {
     "title": "Asociații",
@@ -191,5 +196,12 @@
       "various_services": "Servicii diverse",
       "commissions": "Comisioane"
     }
+  },
+  "charts": {
+    "total": "Total",
+    "count": "Număr",
+    "amount": "Sumă",
+    "noData": "Nu există date disponibile",
+    "loading": "Se încarcă datele graficului..."
   }
 }

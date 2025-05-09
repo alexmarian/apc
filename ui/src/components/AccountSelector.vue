@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { NSelect, NSpin } from 'naive-ui'
 import { accountApi } from '@/services/api'
 import type { Account } from '@/types/api'
+import { useI18n } from 'vue-i18n'
 
 // Props
 const props = defineProps<{
@@ -17,6 +18,9 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:modelValue', id: number | null): void
 }>()
+
+// I18n
+const { t } = useI18n()
 
 // State
 const accounts = ref<Account[]>([])
@@ -63,7 +67,7 @@ const fetchAccounts = async () => {
     }
   } catch (err) {
     console.error('Error fetching accounts:', err)
-    error.value = 'Failed to load accounts'
+    error.value = t('common.error')
   } finally {
     loading.value = false
   }
@@ -86,7 +90,7 @@ onMounted(() => {
       <NSelect
         :value="props.modelValue"
         :options="options"
-        :placeholder="placeholder || 'Select an account'"
+        :placeholder="placeholder || t('accounts.select', 'Select an account')"
         @update:value="handleChange"
         :disabled="loading || accounts.length === 0 || props.disabled"
       />
