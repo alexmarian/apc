@@ -247,13 +247,13 @@ watch(() => props.expenses, () => {
             v-if="typeChartMode === 'pie' && expensesByType.length > 0"
             :data="expensesByType"
             :showPercentage="true"
-            height="300"
+            :height="300"
           />
 
           <BarChart
             v-else-if="typeChartMode === 'bar' && expensesByType.length > 0"
             :data="expensesByType"
-            height="300"
+            :height="300"
           />
 
           <NEmpty v-else description="Not enough data to display chart" />
@@ -267,7 +267,7 @@ watch(() => props.expenses, () => {
             v-if="monthlyExpensesData.items.length > 0"
             :data="monthlyExpensesData.items"
             :series="monthlyExpensesData.series"
-            height="300"
+            :height="300"
           />
 
           <NEmpty v-else description="No monthly data available" />
@@ -295,13 +295,13 @@ watch(() => props.expenses, () => {
                     v-if="categoryChartMode === 'pie'"
                     :data="getFamiliesForType(type.name)"
                     :showPercentage="true"
-                    height="300"
+                    :height="300"
                   />
 
                   <BarChart
                     v-else
                     :data="getFamiliesForType(type.name)"
-                    height="300"
+                    :height="300"
                   />
                 </template>
                 <template v-else>
@@ -322,13 +322,13 @@ watch(() => props.expenses, () => {
                         v-if="categoryChartMode === 'pie'"
                         :data="getCategoriesForTypeAndFamily(type.name, family.name)"
                         :showPercentage="true"
-                        height="300"
+                        :height="300"
                       />
 
                       <BarChart
                         v-else
                         :data="getCategoriesForTypeAndFamily(type.name, family.name)"
-                        height="300"
+                        :height="300"
                       />
                     </template>
                     <template v-else>

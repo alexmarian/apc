@@ -9,7 +9,7 @@ export interface ChartDataItem {
   value: number;
   color?: string;
   percentage?: number;
-  count?: number;
+  count: number;
 }
 
 // Props
