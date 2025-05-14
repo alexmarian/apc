@@ -108,7 +108,16 @@ export const authApi = {
       headers: {
         Authorization: `Bearer ${refreshToken}`
       }
-    })
+    }),
+  requestPasswordReset: (login: string) =>
+    api.post<ApiResponse<null>>('/password-reset/request', { login }),
+
+  resetPassword: (resetData: {
+    token: string,
+    new_password: string,
+    reset_totp_secret?: boolean
+  }) =>
+    api.post<ApiResponse<{ qrCode?: string }>>('/password-reset/reset', resetData)
 }
 
 // Association APIs

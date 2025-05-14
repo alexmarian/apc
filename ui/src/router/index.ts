@@ -10,7 +10,8 @@ router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
   // Check if route requires authentication
-  const isAuthPage = ['/login', '/register'].includes(to.path)
+  console.log(to.path)
+  const isAuthPage = ['/login', '/register', '/reset'].includes(to.path)
 
   if (!isAuthPage && !authStore.isAuthenticated) {
     next('/login')

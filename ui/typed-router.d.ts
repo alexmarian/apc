@@ -28,6 +28,7 @@ declare module 'vue-router/auto-routes' {
     '/owners/voting': RouteRecordInfo<'/owners/voting', '/owners/voting', Record<never, never>, Record<never, never>>,
     '/register': RouteRecordInfo<'/register', '/register', Record<never, never>, Record<never, never>>,
     '/reports/': RouteRecordInfo<'/reports/', '/reports', Record<never, never>, Record<never, never>>,
+    '/reset': RouteRecordInfo<'/reset', '/reset', Record<never, never>, Record<never, never>>,
     '/units/': RouteRecordInfo<'/units/', '/units', Record<never, never>, Record<never, never>>,
     '/units/[unitId]/': RouteRecordInfo<'/units/[unitId]/', '/units/:unitId', { unitId: ParamValue<true> }, { unitId: ParamValue<false> }>,
   }
