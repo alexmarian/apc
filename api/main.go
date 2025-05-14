@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 func main() {
@@ -50,21 +51,22 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.Dir("static")))
 
-	mux.Handle("POST /v1/api/admin/user", http.FileServer(http.Dir("static")))
-
-	// *** UPDATED USER REGISTRATION ***
-	// Old endpoint remains for backward compatibility but is deprecated
 	mux.HandleFunc("POST /v1/api/users", handlers.HandleCreateUserWithToken(apiCfg))
-	// New token-based user endpoints
-	mux.HandleFunc("POST /v1/api/admin/tokens", apiCfg.MiddlewareAuth(handlers.HandleCreateRegistrationToken(apiCfg)))
+	mux.HandleFunc("POST /v1/api/admin/tokens", apiCfg.MiddlewareAdminOnly(handlers.HandleCreateRegistrationToken(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/admin/tokens/{%s}/revoke", handlers.RegistrationTokenPathValue),
-		apiCfg.MiddlewareAuth(handlers.HandleRevokeRegistrationToken(apiCfg)))
+		apiCfg.MiddlewareAdminOnly(handlers.HandleRevokeRegistrationToken(apiCfg)))
 	mux.HandleFunc("GET /v1/api/admin/tokens",
-		apiCfg.MiddlewareAuth(handlers.HandleGetAllRegistrationTokens(apiCfg)))
-
+		apiCfg.MiddlewareAdminOnly(handlers.HandleGetAllRegistrationTokens(apiCfg)))
+	mux.Handle("POST /v1/api/admin/password-reset/request", apiCfg.MiddlewareAdminOnly(handlers.HandleRequestPasswordReset(apiCfg)))
+	loginRateLimiter := handlers.NewRateLimiter(5, 5*time.Minute) // 5 attempts per 5 minutes
 	// Existing user endpoints
 	mux.HandleFunc("PUT /v1/api/users", apiCfg.MiddlewareAuth(handlers.HandleUpdateUser(apiCfg)))
-	mux.HandleFunc("POST /v1/api/login", handlers.HandleLogin(apiCfg))
+	mux.Handle("POST /v1/api/login", handlers.MiddlewareRateLimit(loginRateLimiter)(http.HandlerFunc(handlers.HandleLogin(apiCfg))))
+
+	//resetRateLimiter := handlers.NewRateLimiter(3, 10*time.Minute)
+	//mux.Handle("POST /v1/api/password-reset/request", handlers.MiddlewareRateLimit(resetRateLimiter)(handlers.HandleRequestPasswordReset(apiCfg)))
+	mux.HandleFunc("POST /v1/api/password-reset/reset", handlers.HandleResetPassword(apiCfg))
+
 	mux.HandleFunc("POST /v1/api/refresh", handlers.HandleRefresh(apiCfg))
 
 	mux.HandleFunc("GET /v1/api/associations", apiCfg.MiddlewareAuth(handlers.HandleGetUserAssociations(apiCfg)))

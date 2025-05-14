@@ -42,3 +42,21 @@ func (cfg *ApiConfig) MiddlewareAssociationResource(next http.HandlerFunc) http.
 		next.ServeHTTP(w, r)
 	})
 }
+func (cfg *ApiConfig) MiddlewareAdminOnly(next http.HandlerFunc) http.HandlerFunc {
+	return cfg.MiddlewareAuth(func(w http.ResponseWriter, r *http.Request) {
+		userLogin := GetUserIdFromContext(r)
+
+		user, err := cfg.Db.GetUserByLogin(r.Context(), userLogin)
+		if err != nil {
+			RespondWithError(w, http.StatusInternalServerError, "Failed to verify user privileges")
+			return
+		}
+
+		if !user.IsAdmin {
+			RespondWithError(w, http.StatusForbidden, "Admin privileges required")
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}

@@ -93,6 +93,14 @@ type Ownership struct {
 	IsVoting             bool
 }
 
+type PasswordResetToken struct {
+	Token     string
+	Login     string
+	CreatedAt time.Time
+	ExpiresAt time.Time
+	UsedAt    sql.NullTime
+}
+
 type RefreshToken struct {
 	Token     string
 	CreatedAt time.Time

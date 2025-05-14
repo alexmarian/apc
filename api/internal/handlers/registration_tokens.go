@@ -42,17 +42,6 @@ func HandleCreateRegistrationToken(cfg *ApiConfig) func(http.ResponseWriter, *ht
 	return func(rw http.ResponseWriter, req *http.Request) {
 		// Verify admin rights
 		userLogin := GetUserIdFromContext(req)
-		user, err := cfg.Db.GetUserByLogin(req.Context(), userLogin)
-		if err != nil {
-			log.Printf("Error getting user: %s", err)
-			RespondWithError(rw, http.StatusInternalServerError, "Failed to verify user")
-			return
-		}
-
-		if !user.IsAdmin {
-			RespondWithError(rw, http.StatusForbidden, "Admin rights required")
-			return
-		}
 
 		// Parse request
 		var tokenRequest struct {
