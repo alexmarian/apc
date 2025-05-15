@@ -47,7 +47,22 @@
     "enterUsername": "Enter your username",
     "enterPassword": "Enter your password",
     "enterTotp": "Enter your 6-digit code",
-    "totpLength": "TOTP code must be 6 digits"
+    "totpLength": "TOTP code must be 6 digits",
+    "enterUsername": "Enter your username",
+    "enterPassword": "Enter your password",
+    "enterTotp": "Enter your 6-digit code",
+    "resetPassword": "Reset Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password",
+    "passwordMismatch": "Passwords do not match",
+    "passwordLength": "Password must be at least 8 characters",
+    "enterNewPassword": "Enter your new password",
+    "confirmNewPassword": "Confirm your new password",
+    "resetTOTPHelp": "Reset your TOTP in case you lost access to your authenticator app.",
+    "resetTOTP": "Reset TOTP",
+    "backToLogin": "Back to Login"
+
+
   },
   "accounts": {
     "title": "Accounts",

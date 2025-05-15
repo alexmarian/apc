@@ -47,7 +47,20 @@
     "enterUsername": "Enter your username",
     "enterPassword": "Enter your password",
     "enterTotp": "Enter your 6-digit code",
-    "totpLength": "TOTP code must be 6 digits"
+    "totpLength": "TOTP code must be 6 digits",
+    "enterUsername": "Introduceți numele de utilizator",
+    "enterPassword": "Introduceți parola",
+    "enterTotp": "Introduceți codul TOTP de 6 cifre",
+    "resetPassword": "Resetare Parolă",
+    "newPassword": "Parola Nouă",
+    "confirmPassword": "Confirmă Parola",
+    "passwordMismatch": "Parolele nu se potrivesc",
+    "passwordLength": "Parola trebuie să aibă cel puțin 8 caractere",
+    "enterNewPassword": "Introduceți parola nouă",
+    "confirmNewPassword": "Confirmă parola nouă",
+    "resetTOTPHelp": "Bifați această opțiune pentru a reseta codul TOTP. Acest lucru va reseta autentificarea cu doi factori pentru contul dvs.",
+    "resetTOTP": "Resetare TOTP",
+    "backToLogin": "Inapoi la autentificare"
   },
   "accounts": {
     "title": "Conturi",
