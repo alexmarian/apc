@@ -437,13 +437,14 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 		includeCoOwners := req.URL.Query().Get("co_owners") == "true"
 
 		type OwnerUnit struct {
-			UnitID          int64   `json:"unit_id"`
-			UnitNumber      string  `json:"unit_number"`
-			BuildingName    string  `json:"building_name"`
-			BuildingAddress string  `json:"building_address"`
-			Area            float64 `json:"area"`
-			Part            float64 `json:"part"`
-			UnitType        string  `json:"unit_type"`
+			UnitID              int64   `json:"unit_id"`
+			UnitNumber          string  `json:"unit_number"`
+			BuildingName        string  `json:"building_name"`
+			UnitAddress         string  `json:"unit_address"`
+			UnitCadastralNumber string  `json:"unit_cadastral_number"`
+			Area                float64 `json:"area"`
+			Part                float64 `json:"part"`
+			UnitType            string  `json:"unit_type"`
 		}
 
 		type OwnerStats struct {
@@ -515,13 +516,14 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 				// Include unit details if requested
 				if includeUnits {
 					ownerEntry.Units = append(ownerEntry.Units, OwnerUnit{
-						UnitID:          row.UnitID,
-						UnitNumber:      row.UnitNumber,
-						BuildingName:    row.BuildingName,
-						BuildingAddress: row.BuildingAddress,
-						Area:            row.Area,
-						Part:            row.Part,
-						UnitType:        row.UnitType,
+						UnitID:              row.UnitID,
+						UnitNumber:          row.UnitNumber,
+						BuildingName:        row.BuildingName,
+						UnitAddress:         row.UnitAddress,
+						UnitCadastralNumber: row.UnitCadastralNumber,
+						Area:                row.Area,
+						Part:                row.Part,
+						UnitType:            row.UnitType,
 					})
 				}
 			}

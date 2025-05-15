@@ -401,6 +401,8 @@ SELECT o.id                     as owner_id,
        o.updated_at             as owner_updated_at,
        u.id                     as unit_id,
        u.unit_number,
+       u.address                as unit_address,
+       u.cadastral_number      as unit_cadastral_number,
        u.area,
        u.part,
        u.unit_type,
@@ -447,6 +449,8 @@ type GetOwnerUnitsWithDetailsForReportRow struct {
 	OwnerUpdatedAt              sql.NullTime
 	UnitID                      int64
 	UnitNumber                  string
+	UnitAddress                 string
+	UnitCadastralNumber         string
 	Area                        float64
 	Part                        float64
 	UnitType                    string
@@ -481,6 +485,8 @@ func (q *Queries) GetOwnerUnitsWithDetailsForReport(ctx context.Context, arg Get
 			&i.OwnerUpdatedAt,
 			&i.UnitID,
 			&i.UnitNumber,
+			&i.UnitAddress,
+			&i.UnitCadastralNumber,
 			&i.Area,
 			&i.Part,
 			&i.UnitType,
