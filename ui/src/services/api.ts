@@ -15,7 +15,8 @@ import type {
   LoginRequest,
   LoginResponse,
   Owner,
-  Unit, UnitReportDetails, VotingOwner
+  Unit, UnitReportDetails, VotingOwner,
+  ResetPasswordResponse, ResetPasswordRequest
 } from '@/types/api'
 import config from '@/config'
 import { useAuthStore } from '@/stores/auth'
@@ -109,15 +110,9 @@ export const authApi = {
         Authorization: `Bearer ${refreshToken}`
       }
     }),
-  requestPasswordReset: (login: string) =>
-    api.post<ApiResponse<null>>('/password-reset/request', { login }),
 
-  resetPassword: (resetData: {
-    token: string,
-    new_password: string,
-    reset_totp_secret?: boolean
-  }) =>
-    api.post<ApiResponse<{ qrCode?: string }>>('/password-reset/reset', resetData)
+  resetPassword: (payload: ResetPasswordRequest) =>
+    api.post<ResetPasswordResponse>('/password-reset/reset', payload)
 }
 
 // Association APIs

@@ -354,4 +354,14 @@ export enum UnitType {
   Storage = 'storage'
 }
 
+export interface ResetPasswordResponse {
+  qrCode?: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  new_password: string;
+  reset_totp_secret: boolean;
+}
+
 
