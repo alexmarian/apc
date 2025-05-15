@@ -421,6 +421,8 @@ onMounted(() => {
               <NDataTable
                 :columns="[
                   { title: t('units.building', 'Building'), key: 'building_name' },
+                  { title: t('units.cadastralNumber', 'Cadastral Number'), key: 'unit_cadastral_number' },
+                  { title: t('units.address', 'Address'), key: 'unit_address' },
                   { title: t('units.unit', 'Unit'), key: 'unit_number' },
                   { title: t('units.area', 'Area'), key: 'area', render: (row: OwnerUnit) => `${row.area.toFixed(2)} m²` },
                   { title: t('units.part', 'Part'), key: 'part', render: (row: OwnerUnit) => formatPercentage(row.part, 4) },

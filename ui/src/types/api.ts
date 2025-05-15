@@ -303,6 +303,7 @@ export interface OwnerCoOwner {
 export interface OwnerUnit {
   unit_id: number;
   unit_number: string;
+  unit_cadastral_number: string;
   building_name: string;
   building_address: string;
   area: number;
