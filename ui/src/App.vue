@@ -1,14 +1,14 @@
-<!-- src/App.vue -->
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { NIcon, NLayout, NLayoutHeader, NLayoutContent, NMenu, NButton, NDropdown, NSwitch } from 'naive-ui'
-import { h, ref, computed } from 'vue'
+import { h, ref, computed, watch, nextTick } from 'vue'
 import type { Component } from 'vue';
 import ThemeProvider from '@/providers/ThemeProvider.vue'
 import LanguageSelector from '@/components/LanguageSelector.vue'
 import UserProfileButton from '@/components/UserProfileButton.vue'
 import { useI18n } from 'vue-i18n'
 import { usePreferences } from '@/stores/preferences.ts'
+import { useAuthStore } from '@/stores/auth'
 import {
   AttachMoneyRound,
   AccountBalanceRound,
@@ -18,6 +18,17 @@ import {
 
 const preferences = usePreferences()
 const { t } = useI18n()
+const route = useRoute()
+const authStore = useAuthStore()
+
+// Use visibility class to prevent flickering
+const appReady = ref(false)
+nextTick(() => {
+  appReady.value = true
+})
+
+// Check if current route is an auth page (login, register, etc.)
+const isAuthPage = computed(() => route.meta.isAuthPage)
 
 const isDark = ref(preferences.theme ? preferences.theme === 'darkTheme' : true)
 const currentTheme = computed(() => {
@@ -96,31 +107,59 @@ const themeMenuOptions = computed(() => [
   }
 ])
 
+// Watch for theme changes
+watch(isDark, () => {
+  const newTheme = isDark.value ? 'darkTheme' : 'lightTheme'
+  preferences.setTheme(newTheme)
+})
 </script>
 
 <template>
   <ThemeProvider :theme="currentTheme">
-    <NLayout class="main-layout">
-      <NLayoutHeader bordered class="header">
-        <div class="logo">
-          <img alt="App logo" class="logo-img" src="@/assets/logo.svg" width="32" height="32" />
-          <h1 class="app-title">APC</h1>
-        </div>
-        <NMenu mode="horizontal" :options="menuOptions" />
-        <div class="header-right">
-          <LanguageSelector />
-          <NSwitch v-model:value="isDark" />
-          <UserProfileButton />
-        </div>
-      </NLayoutHeader>
-      <NLayoutContent class="content-margin">
+    <!-- Add a class when app is ready to prevent flickering -->
+    <div :class="{ 'app-visible': appReady, 'app-hidden': !appReady }">
+      <!-- Render the standard layout only for non-auth pages -->
+      <template v-if="!isAuthPage">
+        <NLayout class="main-layout">
+          <NLayoutHeader bordered class="header">
+            <div class="logo">
+              <img alt="App logo" class="logo-img" src="@/assets/logo.svg" width="32" height="32" />
+              <h1 class="app-title">APC</h1>
+            </div>
+            <NMenu mode="horizontal" :options="menuOptions" />
+            <div class="header-right">
+              <LanguageSelector />
+              <NSwitch v-model:value="isDark" />
+              <UserProfileButton />
+            </div>
+          </NLayoutHeader>
+          <NLayoutContent class="content-margin">
+            <RouterView />
+          </NLayoutContent>
+        </NLayout>
+      </template>
+
+      <!-- For auth pages, render just the RouterView without the layout -->
+      <template v-else>
         <RouterView />
-      </NLayoutContent>
-    </NLayout>
+      </template>
+    </div>
   </ThemeProvider>
 </template>
 
 <style scoped>
+/* Hidden class to prevent flickering on initial load */
+.app-hidden {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.app-visible {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.2s ease-in-out;
+}
+
 .main-layout {
   min-height: 100vh;
   width: 100%;

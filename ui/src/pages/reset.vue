@@ -1,9 +1,7 @@
-<!-- ui/src/pages/reset-password/[token].vue -->
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
-  NCard,
   NForm,
   NFormItem,
   NInput,
@@ -13,12 +11,20 @@ import {
   NCheckbox,
   NResult
 } from 'naive-ui'
+import AuthLayout from '@/layouts/AuthLayout.vue'
 import { useI18n } from 'vue-i18n'
-import {authApi} from '@/services/api.ts'
+import { authApi } from '@/services/api.ts'
+import { usePreferences } from '@/stores/preferences.ts'
 
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
+const preferences = usePreferences()
+
+// Check if we're using dark theme
+const isDarkTheme = computed(() => {
+  return preferences.theme === 'darkTheme' || preferences.theme === null
+})
 
 // Form data
 const formData = reactive({
@@ -37,7 +43,6 @@ const formRef = ref(null)
 
 // Get token from route
 onMounted(() => {
-  // const token = route.params.token as string
   const token = route.query.token as string
   if (token) {
     formData.token = token
@@ -89,17 +94,18 @@ const goToLogin = () => {
 </script>
 
 <template>
-  <div class="reset-container">
+  <AuthLayout>
     <!-- Reset Success -->
-    <NCard v-if="success" class="reset-card">
+    <div v-if="success">
       <NResult
         status="success"
         :title="t('auth.passwordResetComplete', 'Password Reset Complete')"
         :description="t('auth.passwordResetSuccess', 'Your password has been reset successfully.')"
+        class="reset-result"
       >
         <template #icon v-if="qrCode">
           <div class="qr-code-container">
-            <h3>
+            <h3 class="qr-code-title" :class="{ 'light': !isDarkTheme }">
               {{ t('auth.scanQRDescription', 'Please scan this QR code with your authenticator app')
               }}</h3>
             <img :src="'data:image/png;base64,' + qrCode" alt="QR Code for TOTP" class="qr-code" />
@@ -111,10 +117,10 @@ const goToLogin = () => {
           </NButton>
         </template>
       </NResult>
-    </NCard>
+    </div>
 
     <!-- Reset Form -->
-    <NCard v-else :title="t('auth.resetPassword', 'Reset Password')" class="reset-card">
+    <div v-else>
       <NAlert v-if="error" type="error" style="margin-bottom: 16px;">
         {{ error }}
       </NAlert>
@@ -124,6 +130,8 @@ const goToLogin = () => {
         :model="formData"
         label-placement="top"
       >
+        <h2 class="form-title" :class="{ 'light': !isDarkTheme }">{{ t('auth.resetPassword', 'Reset Password') }}</h2>
+
         <NFormItem :label="t('auth.newPassword', 'New Password')" path="newPassword">
           <NInput
             v-model:value="formData.newPassword"
@@ -146,7 +154,7 @@ const goToLogin = () => {
           <NCheckbox v-model:checked="formData.resetTOTPSecret">
             {{ t('auth.resetTOTP', 'Reset two-factor authentication (2FA)') }}
           </NCheckbox>
-          <div class="help-text">
+          <div class="help-text" :class="{ 'light': !isDarkTheme }">
             {{ t('auth.resetTOTPHelp', 'Check this if you have lost access to your authenticator app')
             }}
           </div>
@@ -163,33 +171,41 @@ const goToLogin = () => {
               {{ t('auth.resetPassword', 'Reset Password') }}
             </NButton>
 
-            <NButton text @click="goToLogin">
+            <NButton text @click="goToLogin" class="login-link">
               {{ t('auth.backToLogin', 'Back to Login') }}
             </NButton>
           </NSpace>
         </div>
       </NForm>
-    </NCard>
-  </div>
+    </div>
+  </AuthLayout>
 </template>
 
 <style scoped>
-.reset-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 80vh;
+.form-title {
+  color: #e0e0e0;
+  text-align: center;
+  margin-bottom: 24px;
+  font-size: 1.5rem;
 }
 
-.reset-card {
-  width: 100%;
-  max-width: 450px;
+.form-title.light {
+  color: #2c3e50;
+}
+
+:deep(.n-button) {
+  font-weight: bold;
+  height: 40px;
 }
 
 .help-text {
   font-size: 0.85rem;
-  color: #666;
+  color: #aaa;
   margin-top: 4px;
+}
+
+.help-text.light {
+  color: #666;
 }
 
 .qr-code-container {
@@ -199,6 +215,15 @@ const goToLogin = () => {
   margin: 20px 0;
 }
 
+.qr-code-title {
+  color: #e0e0e0;
+  margin-bottom: 12px;
+}
+
+.qr-code-title.light {
+  color: #2c3e50;
+}
+
 .qr-code {
   width: 200px;
   height: 200px;
@@ -206,5 +231,29 @@ const goToLogin = () => {
   padding: 10px;
   background: white;
   margin-top: 12px;
+}
+
+.login-link {
+  color: #41b883 !important;
+}
+
+:deep(.reset-result) {
+  background: transparent !important;
+}
+
+:deep(.reset-result .n-result-header .n-result-icon) {
+  color: #41b883 !important;
+}
+
+:deep(.reset-result .n-result-header .n-result-title) {
+  color: v-bind('isDarkTheme ? "#e0e0e0" : "#2c3e50"');
+}
+
+:deep(.reset-result .n-result-content) {
+  color: v-bind('isDarkTheme ? "#aaa" : "#555"');
+}
+
+:deep(.n-checkbox__label) {
+  color: v-bind('isDarkTheme ? "#e0e0e0" : "#2c3e50"') !important;
 }
 </style>

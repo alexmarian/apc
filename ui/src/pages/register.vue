@@ -1,26 +1,30 @@
-<!-- src/pages/register.vue -->
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
-  NCard,
   NForm,
   NFormItem,
   NInput,
   NButton,
   NAlert,
   NSpace,
-  NResult,
-  useMessage
+  NResult
 } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import tokenService from '@/services/tokenService'
+import AuthLayout from '@/layouts/AuthLayout.vue'
 import type { FormRules } from 'naive-ui'
+import { usePreferences } from '@/stores/preferences.ts'
 
 const router = useRouter()
 const route = useRoute()
-const message = useMessage()
 const { t } = useI18n()
+const preferences = usePreferences()
+
+// Check if we're using dark theme
+const isDarkTheme = computed(() => {
+  return preferences.theme === 'darkTheme' || preferences.theme === null
+})
 
 // Form data
 const formData = reactive({
@@ -146,8 +150,6 @@ async function handleRegister(e: MouseEvent) {
       qrCode.value = response.qrCode
       registrationComplete.value = true
     }
-
-    message.success(t('auth.registrationSuccess', 'Registration successful! Please scan the QR code to set up 2FA.'))
   } catch (err: any) {
     error.value = err.response?.data?.msg || t('errors.registrationFailed', 'Registration failed. Please check your details and try again.')
     console.error('Registration failed:', err)
@@ -163,10 +165,9 @@ function goToLogin() {
 </script>
 
 <template>
-  <div class="register-container">
+  <AuthLayout>
     <!-- Registration Form -->
-    <NCard :title="t('auth.register', 'Register')" class="register-card"
-           v-if="!registrationComplete">
+    <div v-if="!registrationComplete">
       <NAlert v-if="error" type="error" style="margin-bottom: 16px;">
         {{ error }}
       </NAlert>
@@ -177,6 +178,8 @@ function goToLogin() {
         :rules="rules"
         label-placement="top"
       >
+        <h2 class="form-title" :class="{ 'light': !isDarkTheme }">{{ t('auth.register', 'Register') }}</h2>
+
         <NFormItem :label="t('auth.username', 'Username')" path="login">
           <NInput
             id="login-input"
@@ -227,20 +230,21 @@ function goToLogin() {
               {{ t('auth.register', 'Register') }}
             </NButton>
 
-            <NButton text @click="goToLogin">
+            <NButton text @click="goToLogin" class="login-link">
               {{ t('auth.alreadyHaveAccount', 'Already have an account? Login') }}
             </NButton>
           </NSpace>
         </div>
       </NForm>
-    </NCard>
+    </div>
 
     <!-- Registration Success -->
-    <NCard v-if="registrationComplete" class="register-card">
+    <div v-else>
       <NResult
         status="success"
         :title="t('auth.registrationComplete', 'Registration Complete')"
-        :description="t('auth.scanQRDescription', 'Please scan this QR code with your authenticator app (Google Authenticator, Authy, etc.) to set up two-factor authentication. You will need this for logging in.')"
+        :description="t('auth.scanQRDescription', 'Please scan this QR code with your authenticator app to set up two-factor authentication. You will need this for logging in.')"
+        class="qr-result"
       >
         <template #icon>
           <div class="qr-code-container">
@@ -253,21 +257,31 @@ function goToLogin() {
           </NButton>
         </template>
       </NResult>
-    </NCard>
-  </div>
+    </div>
+  </AuthLayout>
 </template>
 
 <style scoped>
-.register-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 80vh;
+.form-title {
+  color: #e0e0e0;
+  text-align: center;
+  margin-bottom: 24px;
+  font-size: 1.5rem;
 }
 
-.register-card {
-  width: 100%;
-  max-width: 450px;
+.form-title.light {
+  color: #2c3e50;
+}
+
+:deep(.n-button) {
+  font-weight: bold;
+  height: 40px;
+}
+
+.token-info {
+  font-size: 0.85rem;
+  color: #41b883;
+  margin-top: 4px;
 }
 
 .qr-code-container {
@@ -284,9 +298,23 @@ function goToLogin() {
   background: white;
 }
 
-.token-info {
-  font-size: 0.85rem;
-  color: var(--n-info-color);
-  margin-top: 4px;
+.login-link {
+  color: #41b883 !important;
+}
+
+:deep(.qr-result) {
+  background: transparent !important;
+}
+
+:deep(.qr-result .n-result-header .n-result-icon) {
+  color: #41b883 !important;
+}
+
+:deep(.qr-result .n-result-header .n-result-title) {
+  color: v-bind('isDarkTheme ? "#e0e0e0" : "#2c3e50"');
+}
+
+:deep(.qr-result .n-result-content) {
+  color: v-bind('isDarkTheme ? "#aaa" : "#555"');
 }
 </style>
