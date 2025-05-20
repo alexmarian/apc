@@ -76,9 +76,14 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		}
 
 		requestLogger := WithRequestContext(requestID, userID, r.URL.Path)
+		clientIP := r.RemoteAddr
+		forwardedFor := r.Header.Get("X-Forwarded-For")
+		if forwardedFor != "" {
+			clientIP = forwardedFor
+		}
 		requestLogger.Info("Request started",
 			zap.String("method", r.Method),
-			zap.String("remote_addr", r.RemoteAddr),
+			zap.String("remote_addr", clientIP),
 			zap.String("user_agent", r.UserAgent()),
 		)
 		ww := NewResponseWriter(w)

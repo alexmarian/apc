@@ -1,6 +1,7 @@
-FROM golang:1.23 AS builder
+FROM almalinux/8-base AS builder
 
 WORKDIR /app
+RUN dnf install -y golang
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
