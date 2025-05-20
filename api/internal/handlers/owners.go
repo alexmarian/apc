@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/alexmarian/apc/api/internal/database"
-	"log"
+	"github.com/alexmarian/apc/api/internal/logging"
+	"go.uber.org/zap"
 	"net/http"
 	"sort"
 	"strconv"
@@ -61,7 +62,7 @@ func HandleGetAssociationOwners(cfg *ApiConfig) func(http.ResponseWriter, *http.
 		ownersFromDb, err := cfg.Db.GetAssociationOwners(req.Context(), int64(associationId))
 		if err != nil {
 			var errors = fmt.Sprintf("Error getting associations: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting associations")
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}
@@ -93,7 +94,7 @@ func HandleUpdateAssociationOwner(cfg *ApiConfig) func(http.ResponseWriter, *htt
 		})
 		if err != nil {
 			var errors = fmt.Sprintf("Error getting association owner: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting association owner")
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}
@@ -167,7 +168,7 @@ func HandleGetAssociationOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 		})
 		if err != nil {
 			var errors = fmt.Sprintf("Error getting association owner: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting association owner")
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}
@@ -222,7 +223,7 @@ func HandleCreateOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) 
 		})
 
 		if err != nil {
-			log.Printf("Error creating owner: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error creating owner", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to create owner")
 			return
 		}
@@ -285,7 +286,7 @@ func HandleUnitVotingOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 			AssociationID: int64(associationId),
 		})
 		if err != nil && err != sql.ErrNoRows {
-			log.Printf("Error {}", err)
+			logging.Logger.Log(zap.WarnLevel, "Error disabling active voting", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to disable active voting")
 			return
 		}
@@ -296,7 +297,7 @@ func HandleUnitVotingOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 			ID: int64(ownershipId),
 		})
 		if err != nil && err != sql.ErrNoRows {
-			log.Printf("Error {}", err)
+			logging.Logger.Log(zap.WarnLevel, "Error setting active voting", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to set active voting")
 			return
 		}
@@ -472,7 +473,7 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			Column2:       specificOwnerId,
 		})
 		if err != nil {
-			log.Printf("Error retrieving owner report data: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error retrieving owner report data", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve owner report data")
 			return
 		}
@@ -626,7 +627,7 @@ func HandleGetVotersReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reque
 
 		voterData, err := cfg.Db.GetAssociationVoters(req.Context(), int64(associationId))
 		if err != nil {
-			log.Printf("Error retrieving owner report data: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error retrieving owner report data", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve owner report data")
 			return
 		}

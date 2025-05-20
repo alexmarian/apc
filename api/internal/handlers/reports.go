@@ -2,7 +2,8 @@ package handlers
 
 import (
 	"github.com/alexmarian/apc/api/internal/database"
-	"log"
+	"github.com/alexmarian/apc/api/internal/logging"
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"time"
@@ -39,7 +40,7 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 			if categoryId > 0 {
 				category, err := cfg.Db.GetCategory(req.Context(), categoryId)
 				if err != nil {
-					log.Printf("Error getting category: %s", err)
+					logging.Logger.Log(zap.WarnLevel, "Error getting category", zap.String("error", err.Error()))
 					RespondWithError(rw, http.StatusNotFound, "Category not found")
 					return
 				}
@@ -75,7 +76,7 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 			Family:        categoryFamily, // Same value
 		})
 		if err != nil {
-			log.Printf("Error getting expenses: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error getting expenses", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve expenses")
 			return
 		}
@@ -108,7 +109,7 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 		// Step 2: Get all buildings in the association
 		buildings, err := cfg.Db.GetAssociationBuildings(req.Context(), int64(associationId))
 		if err != nil {
-			log.Printf("Error getting buildings: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error getting buildings", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve buildings")
 			return
 		}
@@ -130,7 +131,7 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 		for _, building := range buildings {
 			buildingUnits, err := cfg.Db.GetBuildingUnits(req.Context(), building.ID)
 			if err != nil {
-				log.Printf("Error getting units for building %d: %s", building.ID, err)
+				logging.Logger.Log(zap.WarnLevel, "Error getting units for building", zap.Int64("building_id", building.ID), zap.String("error", err.Error()))
 				continue
 			}
 

@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/alexmarian/apc/api/internal/database"
-	"log"
+	"github.com/alexmarian/apc/api/internal/logging"
+	"go.uber.org/zap"
 	"net/http"
 	"time"
 )
@@ -30,7 +31,7 @@ func RespondWithError(w http.ResponseWriter, code int, msg string) {
 	w.WriteHeader(code)
 	data, err := json.Marshal(&ErrorResponse{msg, code})
 	if err != nil {
-		log.Printf("Error encoding response: %s", err)
+		logging.Logger.Log(zap.WarnLevel, "Error encoding response", zap.String("error", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -41,7 +42,7 @@ func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.WriteHeader(code)
 	data, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("Error encoding response: %s", err)
+		logging.Logger.Log(zap.WarnLevel, "Error encoding response", zap.String("error", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

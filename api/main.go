@@ -8,6 +8,7 @@ import (
 	"github.com/alexmarian/apc/api/internal/logging"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
+	"go.uber.org/zap"
 	"log"
 	"net/http"
 	"os"
@@ -15,9 +16,21 @@ import (
 )
 
 func main() {
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel == "" {
+		logLevel = "info" // Default log level
+	}
+
+	logFile := os.Getenv("LOG_FILE")
+	isDevelopment := os.Getenv("ENVIRONMENT") != "production"
+
+	if err := logging.Initialize(logLevel, logFile, isDevelopment); err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	defer logging.Logger.Sync()
 	err := godotenv.Load(".env")
 	if err != nil {
-		log.Printf("warning: assuming default configuration. .env unreadable: %v", err)
+		logging.Logger.Log(zap.WarnLevel, "warning: assuming default configuration. .env unreadable", zap.Error(err))
 	}
 
 	port := os.Getenv("PORT")
@@ -47,21 +60,8 @@ func main() {
 		}
 		dbQueries := database.New(db)
 		apiCfg.Db = dbQueries
-		log.Println("Connected to database!")
+		logging.Logger.Log(zap.InfoLevel, "Connected to database!")
 	}
-
-	logLevel := os.Getenv("LOG_LEVEL")
-	if logLevel == "" {
-		logLevel = "info" // Default log level
-	}
-
-	logFile := os.Getenv("LOG_FILE")
-	isDevelopment := os.Getenv("ENVIRONMENT") != "production"
-
-	if err := logging.Initialize(logLevel, logFile, isDevelopment); err != nil {
-		log.Fatalf("Failed to initialize logger: %v", err)
-	}
-	defer logging.Logger.Sync()
 
 	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.Dir("static")))
@@ -176,6 +176,6 @@ func main() {
 		Handler: corsMiddleware(mux),
 	}
 
-	log.Println("APC api listening on port " + port)
+	logging.Logger.Log(zap.InfoLevel, "APC api listening on port "+port)
 	log.Fatal(srv.ListenAndServe())
 }

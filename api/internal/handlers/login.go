@@ -8,7 +8,6 @@ import (
 	"github.com/alexmarian/apc/api/internal/logging"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"log"
 	"net/http"
 	"time"
 )
@@ -32,7 +31,7 @@ func HandleLogin(cfg *ApiConfig) http.HandlerFunc {
 		err := decoder.Decode(&request)
 		if err != nil {
 			var errors = fmt.Sprintf("Error decoding login user request: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zapcore.WarnLevel, "Error decoding login user request", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusBadRequest, errors)
 			return
 		}

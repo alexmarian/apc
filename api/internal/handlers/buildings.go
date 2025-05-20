@@ -4,7 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/alexmarian/apc/api/internal/database"
-	"log"
+	"github.com/alexmarian/apc/api/internal/logging"
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"time"
@@ -28,7 +29,7 @@ func HandleGetAssociationBuildings(cfg *ApiConfig) func(http.ResponseWriter, *ht
 		buildingsFromList, err := cfg.Db.GetAssociationBuildings(req.Context(), int64(associationId))
 		if err != nil {
 			var errors = fmt.Sprintf("Error getting associations: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting associations")
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}
@@ -58,7 +59,7 @@ func HandleGetAssociationBuilding(cfg *ApiConfig) func(http.ResponseWriter, *htt
 		})
 		if err != nil {
 			var errors = fmt.Sprintf("Error getting buildings: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting associations")
 			if err == sql.ErrNoRows {
 				RespondWithError(rw, http.StatusNotFound, "Building not found")
 				return

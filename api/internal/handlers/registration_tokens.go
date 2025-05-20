@@ -6,7 +6,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"github.com/alexmarian/apc/api/internal/database"
-	"log"
+	"github.com/alexmarian/apc/api/internal/logging"
+	"go.uber.org/zap"
 	"net/http"
 	"time"
 )
@@ -70,7 +71,7 @@ func HandleCreateRegistrationToken(cfg *ApiConfig) func(http.ResponseWriter, *ht
 		// Generate token
 		token, err := generateToken()
 		if err != nil {
-			log.Printf("Error generating token: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error generating token", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to generate token")
 			return
 		}
@@ -88,7 +89,7 @@ func HandleCreateRegistrationToken(cfg *ApiConfig) func(http.ResponseWriter, *ht
 		})
 
 		if err != nil {
-			log.Printf("Error creating token: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error creating token", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to create token")
 			return
 		}
@@ -114,7 +115,7 @@ func HandleRevokeRegistrationToken(cfg *ApiConfig) func(http.ResponseWriter, *ht
 		userLogin := GetUserIdFromContext(req)
 		user, err := cfg.Db.GetUserByLogin(req.Context(), userLogin)
 		if err != nil {
-			log.Printf("Error getting user: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error getting user", zap.String("userLogin", userLogin))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to verify user")
 			return
 		}
@@ -137,7 +138,7 @@ func HandleRevokeRegistrationToken(cfg *ApiConfig) func(http.ResponseWriter, *ht
 		})
 
 		if err != nil {
-			log.Printf("Error revoking token: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error revoking token", zap.String("token", token), zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to revoke token")
 			return
 		}
@@ -155,7 +156,7 @@ func HandleGetAllRegistrationTokens(cfg *ApiConfig) func(http.ResponseWriter, *h
 		userLogin := GetUserIdFromContext(req)
 		user, err := cfg.Db.GetUserByLogin(req.Context(), userLogin)
 		if err != nil {
-			log.Printf("Error getting user: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error getting user", zap.String("userLogin", userLogin))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to verify user")
 			return
 		}
@@ -168,7 +169,7 @@ func HandleGetAllRegistrationTokens(cfg *ApiConfig) func(http.ResponseWriter, *h
 		// Get all tokens with status
 		dbTokens, err := cfg.Db.GetRegistrationTokensStatus(req.Context())
 		if err != nil {
-			log.Printf("Error getting tokens: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error getting tokens", zap.String("userLogin", userLogin))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to get tokens")
 			return
 		}

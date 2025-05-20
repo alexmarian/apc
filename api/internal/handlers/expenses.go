@@ -4,7 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/alexmarian/apc/api/internal/database"
-	"log"
+	"github.com/alexmarian/apc/api/internal/logging"
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"time"
@@ -47,7 +48,7 @@ func HandleCreateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 
 		decoder := json.NewDecoder(req.Body)
 		if err := decoder.Decode(&expense); err != nil {
-			log.Printf("exception decoding expense {}", err)
+			logging.Logger.Log(zap.WarnLevel, "Exception decoding expense", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
 			return
 		}
@@ -93,7 +94,7 @@ func HandleCreateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		})
 
 		if err != nil {
-			log.Printf("Error creating expense: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error creating expense", zap.Error(err))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to create expense")
 			return
 		}
@@ -131,7 +132,7 @@ func HandleUpdateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 			if err == sql.ErrNoRows {
 				RespondWithError(rw, http.StatusNotFound, "Expense not found or doesn't belong to this association")
 			} else {
-				log.Printf("Error retrieving expense: %s", err)
+				logging.Logger.Log(zap.WarnLevel, "Error retrieving expense", zap.Error(err))
 				RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve expense")
 			}
 			return
@@ -217,7 +218,7 @@ func HandleUpdateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		// Update expense
 		updatedExpense, err := cfg.Db.UpdateExpense(req.Context(), updateParams)
 		if err != nil {
-			log.Printf("Error updating expense: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error updating expense", zap.Error(err))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to update expense")
 			return
 		}
@@ -254,7 +255,7 @@ func HandleDeleteExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 			if err == sql.ErrNoRows {
 				RespondWithError(rw, http.StatusNotFound, "Expense not found or doesn't belong to this association")
 			} else {
-				log.Printf("Error retrieving expense: %s", err)
+				logging.Logger.Log(zap.WarnLevel, "Error retrieving expense", zap.Error(err))
 				RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve expense")
 			}
 			return
@@ -263,7 +264,7 @@ func HandleDeleteExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		// Delete expense
 		err = cfg.Db.DeleteExpense(req.Context(), int64(expenseId))
 		if err != nil {
-			log.Printf("Error deleting expense: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error deleting expense", zap.Error(err))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to delete expense")
 			return
 		}
@@ -288,7 +289,7 @@ func HandleGetExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 			if err == sql.ErrNoRows {
 				RespondWithError(rw, http.StatusNotFound, "Expense not found or doesn't belong to this association")
 			} else {
-				log.Printf("Error retrieving expense: %s", err)
+				logging.Logger.Log(zap.WarnLevel, "Error retrieving expense", zap.Error(err))
 				RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve expense")
 			}
 			return

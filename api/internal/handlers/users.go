@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"github.com/alexmarian/apc/api/internal/auth"
 	"github.com/alexmarian/apc/api/internal/database"
-	"log"
+	"github.com/alexmarian/apc/api/internal/logging"
+	"go.uber.org/zap"
 	"net/http"
 	"time"
 )
@@ -26,7 +27,7 @@ func HandleCreateUserWithToken(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 		err := decoder.Decode(&userData)
 		if err != nil {
 			var errors = fmt.Sprintf("Error decoding create user request: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error decoding create user request", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusBadRequest, errors)
 			return
 		}
@@ -34,7 +35,7 @@ func HandleCreateUserWithToken(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 		// Validate the token
 		dbToken, err := cfg.Db.GetValidRegistrationToken(req.Context(), userData.Token)
 		if err != nil {
-			log.Printf("Error validating token: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error validating token", zap.String("token", userData.Token))
 			RespondWithError(rw, http.StatusUnauthorized, "Invalid or expired registration token")
 			return
 		}
@@ -43,7 +44,7 @@ func HandleCreateUserWithToken(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 		hashedPassword, err := auth.HashPassword(userData.Password)
 		if err != nil {
 			var errors = fmt.Sprintf("Error hashing password: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error hashing password", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}
@@ -51,7 +52,7 @@ func HandleCreateUserWithToken(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 		// Generate TOTP secret
 		secret, qrCode, err := auth.GenerateQRCode(userData.Login)
 		if err != nil {
-			log.Printf(err.Error())
+			logging.Logger.Log(zap.WarnLevel, "Error generating QR code", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -65,7 +66,7 @@ func HandleCreateUserWithToken(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 		})
 		if err != nil {
 			var errors = fmt.Sprintf("Error creating user: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error creating user", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}
@@ -76,7 +77,7 @@ func HandleCreateUserWithToken(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 			Token:  userData.Token,
 		})
 		if err != nil {
-			log.Printf("Error marking token as used: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error marking token as used", zap.String("error", err.Error()))
 			// Don't fail the request if this happens
 		}
 
@@ -110,27 +111,27 @@ func HandleUpdateUser(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 		err := decoder.Decode(&request)
 		if err != nil {
 			var errors = fmt.Sprintf("Error decoding update user request: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error decoding update user request", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusBadRequest, errors)
 			return
 		}
 		password, err := auth.HashPassword(request.Password)
 		if err != nil {
 			var errors = fmt.Sprintf("Error hashing password: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error hashing password", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}
 		secret, qrCode, err := auth.GenerateQRCode(request.Login)
 		if err != nil {
-			log.Printf(err.Error())
+			logging.Logger.Log(zap.WarnLevel, "Error generating QR code", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, err.Error())
 		}
 		user, err := cfg.Db.UpdateUserEmailAndPassword(req.Context(), database.UpdateUserEmailAndPasswordParams{
 			password, secret, request.IsAdmin, GetUserIdFromContext(req)})
 		if err != nil {
 			var errors = fmt.Sprintf("Error creating user: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error creating user", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}

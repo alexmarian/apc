@@ -2,7 +2,8 @@ package handlers
 
 import (
 	"fmt"
-	"log"
+	"github.com/alexmarian/apc/api/internal/logging"
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"time"
@@ -25,7 +26,7 @@ func HandleGetUserAssociations(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 		associationsFromList, err := cfg.Db.GetAssociationsFromList(req.Context(), userAssociationsIds)
 		if err != nil {
 			var errors = fmt.Sprintf("Error getting associations: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting associations", zap.String("userAssociationsIds", fmt.Sprintf("%v", userAssociationsIds)))
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}
@@ -49,7 +50,7 @@ func HandleGetUserAssociation(cfg *ApiConfig) func(http.ResponseWriter, *http.Re
 		association, err := cfg.Db.GetAssociations(req.Context(), int64(associationId))
 		if err != nil {
 			var errors = fmt.Sprintf("Error getting associations: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting associations")
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}

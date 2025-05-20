@@ -6,7 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/alexmarian/apc/api/internal/database"
-	"log"
+	"github.com/alexmarian/apc/api/internal/logging"
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"time"
@@ -48,7 +49,7 @@ func HandleGetBuildingUnits(cfg *ApiConfig) func(http.ResponseWriter, *http.Requ
 		unitsFromList, err := cfg.Db.GetBuildingUnits(req.Context(), int64(buildingId))
 		if err != nil {
 			var errors = fmt.Sprintf("Error getting associations: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting associations")
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}
@@ -82,7 +83,7 @@ func HandleGetBuildingUnit(cfg *ApiConfig) func(http.ResponseWriter, *http.Reque
 		unitPayload, err := getUnitPayloadFromDb(req.Context(), cfg, buildingId, unitId)
 		if err != nil {
 			var errors = fmt.Sprintf("Error getting buildings: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting buildings")
 			if err == sql.ErrNoRows {
 				RespondWithError(rw, http.StatusNotFound, "Building not found")
 				return
@@ -106,7 +107,7 @@ func HandleGetBuildingUnitOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.
 		})
 		if err != nil {
 			var errors = fmt.Sprintf("Error getting buildings: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting buildings")
 			if err == sql.ErrNoRows {
 				RespondWithError(rw, http.StatusNotFound, "Building not found")
 				return
@@ -144,7 +145,7 @@ func HandleGetBuildingUnitOwnerships(cfg *ApiConfig) func(http.ResponseWriter, *
 		})
 		if err != nil {
 			var errors = fmt.Sprintf("Error getting buildings: %s", err)
-			log.Printf(errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting buildings")
 			if err == sql.ErrNoRows {
 				RespondWithError(rw, http.StatusNotFound, "Building not found")
 				return
@@ -296,7 +297,7 @@ func HandleGetUnitReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		})
 
 		if err != nil {
-			log.Printf("Error getting unit: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error getting unit", zap.String("unitId", fmt.Sprintf("%d", unitId)))
 			RespondWithError(rw, http.StatusNotFound, "Unit not found")
 			return
 		}
@@ -308,7 +309,7 @@ func HandleGetUnitReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		})
 
 		if err != nil {
-			log.Printf("Error getting building: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error getting building", zap.String("buildingId", fmt.Sprintf("%d", buildingId)))
 			RespondWithError(rw, http.StatusNotFound, "Building not found")
 			return
 		}
@@ -320,7 +321,7 @@ func HandleGetUnitReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		})
 
 		if err != nil {
-			log.Printf("Error getting unit owners: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error getting unit owners", zap.String("unitId", fmt.Sprintf("%d", unitId)))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve unit owners")
 			return
 		}
@@ -332,7 +333,7 @@ func HandleGetUnitReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		})
 
 		if err != nil {
-			log.Printf("Error getting unit ownerships: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error getting unit ownerships", zap.String("unitId", fmt.Sprintf("%d", unitId)))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve unit ownership history")
 			return
 		}
@@ -418,7 +419,7 @@ func HandleGetUnitReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 			AssociationID: int64(associationId),
 		})
 		if err != nil {
-			log.Printf("Error getting active ownerships: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error getting active ownerships", zap.String("unitId", fmt.Sprintf("%d", unitId)))
 			// Continue anyway to return partial data
 		}
 
