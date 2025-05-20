@@ -5,3 +5,5 @@ sql/samples/*.sql
 /static/
 /.env.s
 /.env
+/disttmp
+dist.zip

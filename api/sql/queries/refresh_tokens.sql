@@ -4,7 +4,7 @@ VALUES (?,
         datetime('now'),
         datetime('now'),
         ?,
-        datetime('now', '+60 days'));
+        datetime('now', '+1 days'));
 
 -- name: RevokeRefreshToken :exec
 UPDATE refresh_tokens

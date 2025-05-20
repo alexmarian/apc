@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"github.com/alexmarian/apc/api/internal/auth"
 	"github.com/alexmarian/apc/api/internal/database"
+	"github.com/alexmarian/apc/api/internal/logging"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"log"
 	"net/http"
 	"time"
@@ -35,19 +38,19 @@ func HandleLogin(cfg *ApiConfig) http.HandlerFunc {
 		}
 		user, err := cfg.Db.GetUserByLogin(req.Context(), request.Login)
 		if err != nil {
-			var errors = fmt.Sprintf("Error getting user: %s", err)
-			log.Printf(errors)
-			RespondWithError(rw, http.StatusInternalServerError, errors)
+			logging.Logger.Log(zapcore.WarnLevel, "No user", zap.String("user", request.Login))
+			RespondWithError(rw, http.StatusUnauthorized, "Login failure")
 			return
 		}
 		err = auth.CheckPasswordHash(request.Password, user.PasswordHash)
 		if err != nil {
-			RespondWithError(rw, http.StatusUnauthorized, "Incorrect email or password")
+			logging.Logger.Log(zapcore.WarnLevel, "Incorrect password", zap.String("user", request.Login))
+			RespondWithError(rw, http.StatusUnauthorized, "Login failure")
 			return
 		}
 		if success, err := auth.VerifyTOTPCode(user.ToptSecret, request.TOTP); err != nil || !success {
-			log.Printf("Invalid TOTP code")
-			RespondWithError(rw, http.StatusUnauthorized, "Invalid TOTP code")
+			logging.Logger.Log(zapcore.WarnLevel, "Incorrect topt", zap.String("user", request.Login))
+			RespondWithError(rw, http.StatusUnauthorized, "Login failure")
 			return
 		}
 		seconds := 3600
@@ -68,6 +71,7 @@ func HandleLogin(cfg *ApiConfig) http.HandlerFunc {
 		}
 		associations, err := cfg.Db.GetUserAssociationsByLogin(req.Context(), user.Login)
 		if err != nil {
+			logging.Logger.Log(zapcore.WarnLevel, "No associations", zap.String("user", user.Login))
 			RespondWithError(rw, http.StatusInternalServerError, "Error getting user associations")
 			return
 		}
@@ -92,16 +96,19 @@ func HandleRefresh(cfg *ApiConfig) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		refreshToken, err := auth.GetBearerToken(req.Header)
 		if err != nil {
+			logging.Logger.Log(zapcore.WarnLevel, "No refresh token")
 			RespondWithError(rw, http.StatusUnauthorized, "Invalid token")
 			return
 		}
 		rt, err := cfg.Db.GetValidRefreshToken(req.Context(), refreshToken)
 		if err != nil {
+			logging.Logger.Log(zapcore.WarnLevel, "No valid token", zap.String("token", refreshToken))
 			RespondWithError(rw, http.StatusUnauthorized, "Invalid token")
 			return
 		}
 		associations, err := cfg.Db.GetUserAssociationsByLogin(req.Context(), rt.Login)
 		if err != nil {
+			logging.Logger.Log(zapcore.WarnLevel, "No associations", zap.String("user", rt.Login))
 			RespondWithError(rw, http.StatusInternalServerError, "Error getting user associations")
 			return
 		}

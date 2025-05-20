@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/alexmarian/apc/api/internal/database"
 	"github.com/alexmarian/apc/api/internal/handlers"
+	"github.com/alexmarian/apc/api/internal/logging"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
@@ -48,6 +49,20 @@ func main() {
 		apiCfg.Db = dbQueries
 		log.Println("Connected to database!")
 	}
+
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel == "" {
+		logLevel = "info" // Default log level
+	}
+
+	logFile := os.Getenv("LOG_FILE")
+	isDevelopment := os.Getenv("ENVIRONMENT") != "production"
+
+	if err := logging.Initialize(logLevel, logFile, isDevelopment); err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	defer logging.Logger.Sync()
+
 	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.Dir("static")))
 
@@ -60,14 +75,14 @@ func main() {
 	mux.Handle("POST /v1/api/admin/password-reset/request", apiCfg.MiddlewareAdminOnly(handlers.HandleRequestPasswordReset(apiCfg)))
 	loginRateLimiter := handlers.NewRateLimiter(5, 5*time.Minute) // 5 attempts per 5 minutes
 	// Existing user endpoints
-	mux.HandleFunc("PUT /v1/api/users", apiCfg.MiddlewareAuth(handlers.HandleUpdateUser(apiCfg)))
-	mux.Handle("POST /v1/api/login", handlers.MiddlewareRateLimit(loginRateLimiter)(http.HandlerFunc(handlers.HandleLogin(apiCfg))))
+	mux.Handle("PUT /v1/api/users", apiCfg.MiddlewareAuth(handlers.HandleUpdateUser(apiCfg)))
+	mux.Handle("POST /v1/api/login", logging.LoggingMiddleware(handlers.MiddlewareRateLimit(loginRateLimiter)(http.HandlerFunc(handlers.HandleLogin(apiCfg)))))
 
 	//resetRateLimiter := handlers.NewRateLimiter(3, 10*time.Minute)
 	//mux.Handle("POST /v1/api/password-reset/request", handlers.MiddlewareRateLimit(resetRateLimiter)(handlers.HandleRequestPasswordReset(apiCfg)))
-	mux.HandleFunc("POST /v1/api/password-reset/reset", handlers.HandleResetPassword(apiCfg))
+	mux.Handle("POST /v1/api/password-reset/reset", handlers.HandleResetPassword(apiCfg))
 
-	mux.HandleFunc("POST /v1/api/refresh", handlers.HandleRefresh(apiCfg))
+	mux.Handle("POST /v1/api/refresh", logging.LoggingMiddleware(handlers.HandleRefresh(apiCfg)))
 
 	mux.HandleFunc("GET /v1/api/associations", apiCfg.MiddlewareAuth(handlers.HandleGetUserAssociations(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}", handlers.AssociationIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetUserAssociation(apiCfg)))

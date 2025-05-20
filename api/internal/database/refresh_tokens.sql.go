@@ -15,7 +15,7 @@ VALUES (?,
         datetime('now'),
         datetime('now'),
         ?,
-        datetime('now', '+60 days'))
+        datetime('now', '+1 days'))
 `
 
 type CreateRefreshTokenParams struct {
