@@ -26,8 +26,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'saved'): void
-  (e: 'cancelled'): void
+  saved: []
+  cancelled: []
 }>()
 
 interface UnitFormData {
@@ -41,11 +41,12 @@ interface UnitFormData {
   room_count: number
 }
 
-// Use UnitType enum for unit type options
-const unitTypeOptions = computed(() => Object.entries(UnitType).map(([key, value]) => ({
-  label: t(`unitTypes.${value}`),
-  value
-})))
+const unitTypeOptions = computed(() =>
+  Object.entries(UnitType).map(([key, value]) => ({
+    label: t(`unitTypes.${value}`),
+    value
+  }))
+)
 
 const formData = reactive<UnitFormData>({
   unit_number: '',
@@ -62,102 +63,100 @@ const rules: FormRules = {
   unit_number: [
     {
       required: true,
-      message: t('validation.required',  { field: t('units.unit', 'Unit number') },'{field} is required'),
+      message: t('validation.required', { field: t('units.unit') }),
       trigger: 'blur'
     }
   ],
   address: [
     {
       required: true,
-      message: t('validation.required', { field: t('units.address', 'Address') }, '{field} is required'),
+      message: t('validation.required', { field: t('units.address') }),
       trigger: 'blur'
     }
   ],
   entrance: [
     {
       required: true,
-      message: t('validation.required', { field: t('units.entrance', 'Entrance') }, '{field} is required'),
-      trigger: 'blur'
-    },
-    {
       type: 'number',
       min: 1,
-      message: t('units.entranceMin', 'Entrance must be at least 1'),
+      message: t('units.entranceMin'),
       trigger: 'blur'
     }
   ],
   area: [
     {
       required: true,
-      message: t('validation.required', { field: t('units.area', 'Area') }, '{field} is required'),
-      trigger: 'blur'
-    },
-    {
       type: 'number',
       min: 0.01,
-      message: t('units.areaPositive', 'Area must be greater than 0'),
+      message: t('units.areaPositive'),
       trigger: 'blur'
     }
   ],
   part: [
     {
       required: true,
-      message: t('validation.required', { field: t('units.part', 'Part') }, '{field} is required'),
-      trigger: 'blur'
-    },
-    {
       type: 'number',
       min: 0,
       max: 1,
-      message: t('units.partRange', 'Part must be between 0 and 1'),
+      message: t('units.partRange'),
       trigger: 'blur'
     }
   ],
   unit_type: [
     {
       required: true,
-      message: t('validation.required', { field: t('units.type', 'Unit type') }, '{field} is required'),
+      message: t('validation.required', { field: t('units.type') }),
       trigger: 'blur'
     }
   ],
   floor: [
     {
       required: true,
-      message: t('validation.required', {
-        field: t('units.floor', 'Floor')
-      }),
-      trigger: 'blur'
-    }],
+      type: 'number',
+      message: t('validation.required', { field: t('units.floor') }),
+      trigger: ['blur', 'change']
+    }
+  ],
   room_count: [
     {
       required: true,
-      message: t('validation.required', {
-        field: t('units.roomCount', 'Room count')
-      }),
-      trigger: 'blur'
-    }, {
       type: 'number',
       min: 0,
-      message: t('units.roomCountMin', 'Room count must be at least 0'),
+      message: t('units.roomCountMin'),
       trigger: 'blur'
     }
   ]
 }
 
-const loading = ref<boolean>(false)
-const submitting = ref<boolean>(false)
+const loading = ref(false)
+const submitting = ref(false)
 const error = ref<string | null>(null)
 const formRef = ref<FormInst | null>(null)
-const dataLoaded = ref(false)
+
+const isEditMode = computed(() => !!props.unitId)
 
 const resetValidation = async () => {
   if (formRef.value) {
     try {
       await formRef.value.restoreValidation()
     } catch (err) {
-      console.log('Error resetting validation:', err)
+      console.warn('Error resetting validation:', err)
     }
   }
+}
+
+const resetForm = () => {
+  Object.assign(formData, {
+    unit_number: '',
+    address: '',
+    entrance: 1,
+    area: 0,
+    part: 0,
+    unit_type: 'apartment',
+    floor: 1,
+    room_count: 1
+  })
+  error.value = null
 }
 
 const fetchUnitDetails = async () => {
@@ -170,131 +169,104 @@ const fetchUnitDetails = async () => {
     const response = await unitApi.getUnit(props.associationId, props.buildingId, props.unitId)
     const unitData = response.data
 
-    // Update form data
-    formData.unit_number = unitData.unit_number || ''
-    formData.address = unitData.address || ''
-    formData.entrance = unitData.entrance || 1
-    formData.area = unitData.area || 0
-    formData.part = unitData.part || 0
-    formData.unit_type = unitData.unit_type || 'apartment'
-    formData.floor = unitData.floor || 1
-    formData.room_count = unitData.room_count || 1
+    // Update form data with fallback values
+    Object.assign(formData, {
+      unit_number: unitData.unit_number || '',
+      address: unitData.address || '',
+      entrance: unitData.entrance || 1,
+      area: unitData.area || 0,
+      part: unitData.part || 0,
+      unit_type: unitData.unit_type || 'apartment',
+      floor: unitData.floor || 1,
+      room_count: unitData.room_count || 1
+    })
 
-    dataLoaded.value = true
     await nextTick()
-    resetValidation()
+    await resetValidation()
   } catch (err) {
-    error.value = err instanceof Error ? err.message : t('common.error', 'Unknown error occurred')
+    const errorMessage = err instanceof Error ? err.message : t('common.error')
+    error.value = errorMessage
     console.error('Error fetching unit details:', err)
   } finally {
     loading.value = false
   }
 }
 
-const validateFormManually = () => {
-  if (!formData.unit_number.trim()) {
-    error.value = t('validation.required', {
-      field: t('units.unit', 'Unit number')
-    })
-    return false
-  }
-
-  if (!formData.address.trim()) {
-    error.value = t('validation.required', {
-      field: t('units.address', 'Address')
-    })
-    return false
-  }
-
-  if (formData.area <= 0) {
-    error.value = t('validation.required', {
-      field: t('units.areaPositive', 'Unit area')
-    })
-    return false
-  }
-
-  if (formData.part < 0 || formData.part > 1) {
-    error.value = t('validation.required', {
-      field: t('units.partRange', 'Unit part')
-    })
-    return false
-  }
-
-  return true
-}
-
-const submitForm = async (e: MouseEvent) => {
-  e.preventDefault()
+const handleSubmit = async () => {
   error.value = null
 
-  let isValid = true
-  if (formRef.value) {
-    try {
-      await formRef.value.validate()
-    } catch (err) {
-      console.log('Form validation failed, using manual validation')
-      isValid = false
-    }
-  }
-
-  if (!isValid) {
-    isValid = validateFormManually()
-    if (!isValid) return
+  // Validate form
+  try {
+    await formRef.value?.validate()
+  } catch (validationError) {
+    console.warn('Form validation failed:', validationError)
+    return
   }
 
   try {
     submitting.value = true
 
-    // Prepare the data to update
     const updateData = {
-      unit_number: formData.unit_number,
-      address: formData.address,
+      unit_number: formData.unit_number.trim(),
+      address: formData.address.trim(),
       entrance: formData.entrance,
       unit_type: formData.unit_type,
       floor: formData.floor,
-      room_count: formData.room_count
+      room_count: formData.room_count,
+      // Include area and part if they're editable in the future
+      area: formData.area,
+      part: formData.part
     }
 
-    // For now, we only have the update functionality in the API
-    // We're not creating new units from the UI
-    if (props.unitId) {
+    if (isEditMode.value) {
       await unitApi.updateUnit(
         props.associationId,
         props.buildingId,
-        props.unitId,
+        props.unitId!,
         updateData
       )
+    } else {
+      //never happens
     }
 
     emit('saved')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : t('common.error', 'An error occurred while submitting the form')
+    const errorMessage = err instanceof Error ? err.message : t('common.error')
+    error.value = errorMessage
     console.error('Error submitting form:', err)
   } finally {
     submitting.value = false
   }
 }
 
-const cancelForm = () => {
+const handleCancel = () => {
   emit('cancelled')
 }
 
 onMounted(() => {
-  if (props.unitId) {
+  if (isEditMode.value) {
     fetchUnitDetails()
+  } else {
+    resetForm()
   }
 })
 </script>
 
 <template>
   <div class="unit-form">
-    <h2>
-      {{ props.unitId ? t('units.editUnit', 'Edit Unit') : t('units.createUnit', 'Create New Unit')
-      }}</h2>
+    <h2 class="unit-form__title">
+      {{ isEditMode ? t('units.editUnit') : t('units.createUnit') }}
+    </h2>
 
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" :title="t('common.error', 'Error')"
-              style="margin-bottom: 16px;">
+      <NAlert
+        v-if="error"
+        type="error"
+        :title="t('common.error')"
+        class="unit-form__error"
+        closable
+        @close="error = null"
+      >
         {{ error }}
       </NAlert>
 
@@ -305,92 +277,95 @@ onMounted(() => {
         label-placement="left"
         label-width="120px"
         require-mark-placement="right-hanging"
+        class="unit-form__form"
       >
-        <NFormItem :label="t('units.unit', 'Unit Number')" path="unit_number">
+        <NFormItem :label="t('units.unit')" path="unit_number">
           <NInput
             v-model:value="formData.unit_number"
-            :placeholder="t('units.enterUnitNumber', 'Enter unit number')"
+            :placeholder="t('units.enterUnitNumber')"
+            clearable
           />
         </NFormItem>
 
-        <NFormItem :label="t('units.address', 'Address')" path="address">
+        <NFormItem :label="t('units.address')" path="address">
           <NInput
             v-model:value="formData.address"
-            :placeholder="t('units.enterAddress', 'Enter address')"
+            :placeholder="t('units.enterAddress')"
+            clearable
           />
         </NFormItem>
 
-        <NFormItem :label="t('units.entrance', 'Entrance')" path="entrance">
+        <NFormItem :label="t('units.entrance')" path="entrance">
           <NInputNumber
             v-model:value="formData.entrance"
             :min="1"
             :precision="0"
-            style="width: 100%"
+            class="unit-form__number-input"
           />
         </NFormItem>
 
-        <NFormItem :label="t('units.area', 'Area')" path="area">
+        <NFormItem :label="t('units.area')" path="area">
           <NInputNumber
             v-model:value="formData.area"
             :min="0.01"
             :precision="2"
-            style="width: 100%"
+            class="unit-form__number-input unit-form__number-input--disabled"
             disabled
           />
         </NFormItem>
 
-        <NFormItem :label="t('units.part', 'Part')" path="part">
+        <NFormItem :label="t('units.part')" path="part">
           <NInputNumber
             v-model:value="formData.part"
             :min="0"
             :max="1"
             :precision="3"
-            style="width: 100%"
+            class="unit-form__number-input unit-form__number-input--disabled"
             disabled
           />
         </NFormItem>
 
-        <NFormItem :label="t('units.type', 'Unit Type')" path="unit_type">
+        <NFormItem :label="t('units.type')" path="unit_type">
           <NSelect
             v-model:value="formData.unit_type"
             :options="unitTypeOptions"
-            :placeholder="t('units.selectType', 'Select unit type')"
+            :placeholder="t('units.selectType')"
+            clearable
           />
         </NFormItem>
 
-        <NFormItem :label="t('units.floor', 'Floor')" path="floor">
+        <NFormItem :label="t('units.floor')" path="floor">
           <NInputNumber
             v-model:value="formData.floor"
             :precision="0"
-            style="width: 100%"
+            class="unit-form__number-input"
           />
         </NFormItem>
 
-        <NFormItem :label="t('units.roomCount', 'Room Count')" path="room_count">
+        <NFormItem :label="t('units.roomCount')" path="room_count">
           <NInputNumber
             v-model:value="formData.room_count"
             :min="0"
             :precision="0"
-            style="width: 100%"
+            class="unit-form__number-input"
           />
         </NFormItem>
 
-        <div style="margin-top: 24px;">
+        <div class="unit-form__actions">
           <NSpace justify="end">
             <NButton
-              @click="cancelForm"
+              @click="handleCancel"
               :disabled="submitting"
             >
-              {{ t('common.cancel', 'Cancel') }}
+              {{ t('common.cancel') }}
             </NButton>
 
             <NButton
               type="primary"
-              @click="submitForm"
+              @click="handleSubmit"
               :loading="submitting"
             >
-              {{ props.unitId ? t('common.update', 'Update Unit') : t('common.create', 'Create Unit')
-              }}
+              {{ isEditMode ? t('common.update') : t('common.create') }}
             </NButton>
           </NSpace>
         </div>
@@ -405,5 +380,43 @@ onMounted(() => {
   margin: 0 auto;
   padding: 1.5rem;
   border-radius: 8px;
+}
+
+.unit-form__title {
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-color-1);
+}
+
+.unit-form__error {
+  margin-bottom: 1rem;
+}
+
+.unit-form__form {
+  margin-bottom: 1.5rem;
+}
+
+.unit-form__number-input {
+  width: 100%;
+}
+
+.unit-form__number-input--disabled {
+  --n-text-color-disabled: var(--text-color-2);
+}
+
+.unit-form__number-input--disabled :deep(.n-input-number-input) {
+  text-decoration: none !important;
+}
+
+.unit-form__number-input--disabled :deep(.n-input__input-el[disabled]) {
+  text-decoration: none !important;
+  -webkit-text-decoration: none !important;
+}
+
+.unit-form__actions {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
 }
 </style>
