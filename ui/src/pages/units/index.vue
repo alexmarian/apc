@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { NCard, NButton, NSpace, NPageHeader, NDivider, useMessage } from 'naive-ui'
+import { NCard, NButton, NSpace, NPageHeader, NDivider, useMessage, NModal } from 'naive-ui'
 import UnitsList from '@/components/UnitsList.vue'
 import UnitForm from '@/components/UnitForm.vue'
 import AssociationSelector from '@/components/AssociationSelector.vue'
@@ -22,10 +22,13 @@ const associationId = ref<number | null>(null)
 const buildingId = ref<number | null>(null)
 
 // UI state
-const showForm = ref(false)
+const showUnitEditModal = ref(false)
 const editingUnitId = ref<number | undefined>(undefined)
 const unitTypeFilter = ref<string | null>(null)
 const searchQuery = ref<string | null>(null)
+
+// Reference to the UnitsList component
+const unitsListRef = ref<InstanceType<typeof UnitsList> | null>(null)
 
 // For storing units loaded by the list component
 const displayedUnits = ref<Unit[] | null>(null)
@@ -40,7 +43,7 @@ onMounted(() => {
   }
   if (route.query.editUnitId) {
     editingUnitId.value = parseInt(route.query.editUnitId as string)
-    showForm.value = true
+    showUnitEditModal.value = true
   }
 })
 
@@ -60,7 +63,7 @@ const canShowUnits = computed(() => {
 // Methods
 const handleEditUnit = (unitId: number) => {
   editingUnitId.value = unitId
-  showForm.value = true
+  showUnitEditModal.value = true
 
   // Update URL to reflect edit mode
   router.replace({
@@ -71,23 +74,27 @@ const handleEditUnit = (unitId: number) => {
   })
 }
 
-const handleFormSaved = () => {
-  showForm.value = false
-  // Show success message
-  message.success(t('units.unitSaved', `Unit ${editingUnitId.value ? 'updated' : 'created'} successfully`))
+const handleUnitSaved = (updatedUnit: Unit) => {
+  console.log('Unit saved in parent:', updatedUnit)
+
+  // Update the unit in the list without reloading the entire page
+  if (unitsListRef.value) {
+    unitsListRef.value.updateUnit(updatedUnit)
+  }
+
+  // Close the modal
+  showUnitEditModal.value = false
+  editingUnitId.value = undefined
 
   // Remove editUnitId from query params
   const newQuery = { ...route.query }
   delete newQuery.editUnitId
   router.replace({ query: newQuery })
-
-  // Reload the units list
-  // In a real implementation, you might want to update the list without a full reload
-  window.location.reload()
 }
 
-const handleFormCancelled = () => {
-  showForm.value = false
+const handleUnitFormCancelled = () => {
+  showUnitEditModal.value = false
+  editingUnitId.value = undefined
 
   // Remove editUnitId from query params
   const newQuery = { ...route.query }
@@ -124,7 +131,14 @@ const handleAssociationIdUpdate = (newAssociationId: number) => {
 // Clear buildingId when associationId changes
 watch(associationId, () => {
   buildingId.value = null
-  showForm.value = false
+  showUnitEditModal.value = false
+  editingUnitId.value = undefined
+})
+
+// Watch for buildingId changes to close modal
+watch(buildingId, () => {
+  showUnitEditModal.value = false
+  editingUnitId.value = undefined
 })
 </script>
 
@@ -160,21 +174,10 @@ watch(associationId, () => {
       </NCard>
     </div>
 
-    <div v-else-if="showForm">
-      <NCard style="margin-top: 16px;">
-        <UnitForm
-          :association-id="associationId"
-          :building-id="buildingId"
-          :unit-id="editingUnitId"
-          @saved="handleFormSaved"
-          @cancelled="handleFormCancelled"
-        />
-      </NCard>
-    </div>
-
     <div v-else-if="canShowUnits">
       <!-- Units list -->
       <UnitsList
+        ref="unitsListRef"
         :association-id="associationId"
         :building-id="buildingId"
         :unit-type-filter="unitTypeFilter"
@@ -185,6 +188,25 @@ watch(associationId, () => {
         @search-query-changed="newQuery => searchQuery = newQuery"
       />
     </div>
+
+    <!-- Unit Edit Modal -->
+    <NModal
+      v-model:show="showUnitEditModal"
+      style="width: 650px"
+      preset="card"
+      :title="formTitle"
+      :mask-closable="false"
+      :close-on-esc="true"
+    >
+      <UnitForm
+        v-if="showUnitEditModal && editingUnitId && associationId && buildingId"
+        :association-id="associationId"
+        :building-id="buildingId"
+        :unit-id="editingUnitId"
+        @saved="handleUnitSaved"
+        @cancelled="handleUnitFormCancelled"
+      />
+    </NModal>
   </div>
 </template>
 

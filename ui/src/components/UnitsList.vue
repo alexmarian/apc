@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, h, computed, watch } from 'vue'
+import { ref, onMounted, h, computed, watch, nextTick } from 'vue'
 import { refDebounced } from '@vueuse/core'
 import {
   NDataTable,
@@ -46,11 +46,13 @@ const units = ref<Unit[]>([])
 const loading = ref<boolean>(false)
 const error = ref<string | null>(null)
 const message = useMessage()
+const hasInitialized = ref(false)
 
 // Filters - use shared filters if available, otherwise use local state
 const unitTypeFilter = ref<string | null>(props.unitTypeFilter || null)
 const searchQuery = ref<string | null>(props.searchQuery || null)
-const debouncedSearchQuery = refDebounced(searchQuery, 1000)
+const debouncedSearchQuery = refDebounced(searchQuery, 500)
+
 // Available unit types for filter (will be populated from units)
 const availableUnitTypes = computed(() => {
   const types = new Set<string>()
@@ -89,8 +91,13 @@ const filteredUnits = computed(() => {
 // Table columns definition
 const columns = computed<DataTableColumns<Unit>>(() => [
   {
-    title: t('units.unit', 'Unit Number'),
+    title: t('units.cadastralNumber', 'Cadastral Number'),
     key: 'cadastral_number',
+    sorter: 'default'
+  },
+  {
+    title: t('units.unitNumber', 'Unit Number'),
+    key: 'unit_number',
     sorter: 'default'
   },
   {
@@ -106,11 +113,13 @@ const columns = computed<DataTableColumns<Unit>>(() => [
   {
     title: t('units.area', 'Area'),
     key: 'area',
-    sorter: (a, b) => a.area - b.area
+    sorter: (a, b) => a.area - b.area,
+    render: (row) => `${row.area.toFixed(2)} m²`
   },
   {
     title: t('units.part', 'Part'),
-    key: 'part'
+    key: 'part',
+    render: (row) => `${(row.part * 100).toFixed(3)}%`
   },
   {
     title: t('units.entrance', 'Entrance'),
@@ -168,19 +177,29 @@ const columns = computed<DataTableColumns<Unit>>(() => [
   }
 ])
 
-// Fetch units
+// Fetch units - simplified to prevent loops
 const fetchUnits = async () => {
-  if (!props.associationId || !props.buildingId) return
+  // Prevent multiple simultaneous calls
+  if (loading.value) {
+    console.log('Already loading, skipping fetch')
+    return
+  }
+
+  if (!props.associationId || !props.buildingId) {
+    console.log('Missing associationId or buildingId, skipping fetch')
+    return
+  }
 
   try {
     loading.value = true
     error.value = null
+    console.log('Fetching units for association:', props.associationId, 'building:', props.buildingId)
 
     const response = await unitApi.getUnits(props.associationId, props.buildingId)
     units.value = response.data
+    hasInitialized.value = true
 
-    // Emit the units for parent components
-    emit('units-rendered', filteredUnits.value)
+    console.log('Units fetched successfully:', response.data.length, 'units')
   } catch (err) {
     error.value = err instanceof Error ? err.message : t('common.error', 'Unknown error occurred')
     console.error('Error fetching units:', err)
@@ -189,24 +208,37 @@ const fetchUnits = async () => {
   }
 }
 
+// Method to update a single unit in the list (called when unit is updated)
+const updateUnit = (updatedUnit: Unit) => {
+  const index = units.value.findIndex(unit => unit.id === updatedUnit.id)
+  if (index !== -1) {
+    // Replace the unit in the array while maintaining reactivity
+    units.value.splice(index, 1, updatedUnit)
+    console.log('Unit updated in list:', updatedUnit)
+  }
+}
+
+// Method to add a new unit to the list (for future create functionality)
+const addUnit = (newUnit: Unit) => {
+  units.value.push(newUnit)
+}
+
+// Expose methods for parent components
+defineExpose({
+  updateUnit,
+  addUnit,
+  refreshData: fetchUnits
+})
+
 const searchQueryChanged = (newValue: string | null) => {
   searchQuery.value = newValue
   emit('search-query-changed', newValue)
 }
+
 const unitTypeChanged = (newValue: string | null) => {
   unitTypeFilter.value = newValue
   emit('unit-type-changed', newValue)
 }
-// Watch for changes in filters and refresh data
-watch(unitTypeFilter, (newUnitType) => {
-  emit('unit-type-changed', newUnitType)
-  emit('units-rendered', filteredUnits.value)
-})
-
-watch(searchQuery, (newSearchQuery) => {
-  emit('search-query-changed', newSearchQuery)
-  emit('units-rendered', filteredUnits.value)
-})
 
 // Reset filters
 const resetFilters = () => {
@@ -214,8 +246,34 @@ const resetFilters = () => {
   searchQuery.value = null
 }
 
+// Watch for prop changes and refetch only when necessary
+watch(() => [props.associationId, props.buildingId],
+  ([newAssocId, newBuildId], [oldAssocId, oldBuildId]) => {
+    console.log('Props changed:', { newAssocId, newBuildId, oldAssocId, oldBuildId })
+
+    // Only fetch if both IDs are present and at least one has changed
+    if (newAssocId && newBuildId && (newAssocId !== oldAssocId || newBuildId !== oldBuildId)) {
+      hasInitialized.value = false
+      units.value = []
+      fetchUnits()
+    }
+  },
+  { immediate: false }
+)
+
+// Watch filtered units and emit changes, but only after initialization
+watch(filteredUnits, (newFilteredUnits) => {
+  if (hasInitialized.value) {
+    emit('units-rendered', newFilteredUnits)
+  }
+}, { deep: true })
+
+// Initialize on mount
 onMounted(() => {
-  fetchUnits()
+  console.log('UnitsList mounted with props:', props)
+  if (props.associationId && props.buildingId) {
+    fetchUnits()
+  }
 })
 </script>
 
@@ -243,8 +301,8 @@ onMounted(() => {
         <NButton @click="resetFilters">{{ t('common.reset_filters', 'Reset Filters') }}</NButton>
       </NFlex>
     </NCard>
-    <NCard style="margin-top: 16px;">
 
+    <NCard style="margin-top: 16px;">
       <NSpin :show="loading">
         <NAlert v-if="error" type="error" :title="t('common.error', 'Error')" closable>
           {{ error }}
@@ -265,8 +323,8 @@ onMounted(() => {
           :bordered="false"
           :single-line="false"
           :pagination="{
-          pageSize: 10
-        }"
+            pageSize: 10
+          }"
         >
           <template #empty>
             <NEmpty :description="t('units.noUnitsFound', 'No units found')">
@@ -284,26 +342,6 @@ onMounted(() => {
 <style scoped>
 .units-list {
   margin: 1rem 0;
-}
-
-.filters {
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  border-radius: 4px;
-  background-color: var(--background-color);
-  border: 1px solid var(--border-color);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
-}
-
-.filters > div {
-  display: flex;
-  flex-direction: column; /* Ensure label is above the input */
-  gap: 0.25rem; /* Add spacing between label and input */
-  flex: 1;
-  min-width: 300px;
 }
 
 .summary {

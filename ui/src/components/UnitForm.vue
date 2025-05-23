@@ -9,7 +9,8 @@ import {
   NSpin,
   NAlert,
   NInputNumber,
-  NSelect
+  NSelect,
+  useMessage
 } from 'naive-ui'
 import { unitApi } from '@/services/api'
 import type { Unit } from '@/types/api'
@@ -18,6 +19,7 @@ import type { FormInst, FormRules } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
+const message = useMessage()
 
 const props = defineProps<{
   associationId: number
@@ -26,7 +28,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  saved: []
+  saved: [unit: Unit]  // Pass the updated unit data
   cancelled: []
 }>()
 
@@ -132,6 +134,7 @@ const loading = ref(false)
 const submitting = ref(false)
 const error = ref<string | null>(null)
 const formRef = ref<FormInst | null>(null)
+const originalUnit = ref<Unit | null>(null)
 
 const isEditMode = computed(() => !!props.unitId)
 
@@ -168,6 +171,7 @@ const fetchUnitDetails = async () => {
 
     const response = await unitApi.getUnit(props.associationId, props.buildingId, props.unitId)
     const unitData = response.data
+    originalUnit.value = unitData
 
     // Update form data with fallback values
     Object.assign(formData, {
@@ -218,21 +222,34 @@ const handleSubmit = async () => {
       part: formData.part
     }
 
-    if (isEditMode.value) {
-      await unitApi.updateUnit(
+    if (isEditMode.value && props.unitId) {
+      const response = await unitApi.updateUnit(
         props.associationId,
         props.buildingId,
-        props.unitId!,
+        props.unitId,
         updateData
       )
-    } else {
-      //never happens
-    }
 
-    emit('saved')
+      // Show success message
+      message.success(t('units.unitSaved', { action: t('common.update') }))
+
+      // Emit the updated unit data so parent can update the list without reloading
+      emit('saved', response.data)
+    } else {
+      // Create mode (if implemented in the future)
+      const response = await unitApi.createUnit?.(
+        props.associationId,
+        props.buildingId,
+        updateData
+      )
+
+      message.success(t('units.unitSaved', { action: t('common.create') }))
+      emit('saved', response.data)
+    }
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : t('common.error')
     error.value = errorMessage
+    message.error(errorMessage)
     console.error('Error submitting form:', err)
   } finally {
     submitting.value = false
@@ -279,6 +296,33 @@ onMounted(() => {
         require-mark-placement="right-hanging"
         class="unit-form__form"
       >
+        <NFormItem :label="t('units.cadastralNumber')" path="cadastral_number">
+          <NInput
+            :value="originalUnit?.cadastral_number || ''"
+            :placeholder="t('units.cadastralNumber')"
+            readonly
+            class="unit-form__readonly-input"
+          />
+        </NFormItem>
+
+        <NFormItem :label="t('units.area')" path="area">
+          <NInput
+            :value="originalUnit ? `${originalUnit.area.toFixed(2)} m²` : ''"
+            :placeholder="t('units.area')"
+            readonly
+            class="unit-form__readonly-input"
+          />
+        </NFormItem>
+
+        <NFormItem :label="t('units.part')" path="part">
+          <NInput
+            :value="originalUnit ? `${(originalUnit.part * 100).toFixed(3)}%` : ''"
+            :placeholder="t('units.part')"
+            readonly
+            class="unit-form__readonly-input"
+          />
+        </NFormItem>
+
         <NFormItem :label="t('units.unit')" path="unit_number">
           <NInput
             v-model:value="formData.unit_number"
@@ -301,27 +345,6 @@ onMounted(() => {
             :min="-2"
             :precision="0"
             class="unit-form__number-input"
-          />
-        </NFormItem>
-
-        <NFormItem :label="t('units.area')" path="area">
-          <NInputNumber
-            v-model:value="formData.area"
-            :min="0.01"
-            :precision="2"
-            class="unit-form__number-input unit-form__number-input--disabled"
-            disabled
-          />
-        </NFormItem>
-
-        <NFormItem :label="t('units.part')" path="part">
-          <NInputNumber
-            v-model:value="formData.part"
-            :min="0"
-            :max="1"
-            :precision="3"
-            class="unit-form__number-input unit-form__number-input--disabled"
-            disabled
           />
         </NFormItem>
 
@@ -395,6 +418,17 @@ onMounted(() => {
 
 .unit-form__form {
   margin-bottom: 1.5rem;
+}
+
+.unit-form__readonly-input {
+  background-color: var(--input-color-disabled);
+  color: var(--text-color-disabled);
+}
+
+.unit-form__readonly-input :deep(.n-input__input-el) {
+  background-color: var(--input-color-disabled) !important;
+  color: var(--text-color-disabled) !important;
+  cursor: not-allowed;
 }
 
 .unit-form__number-input {
