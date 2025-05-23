@@ -63,6 +63,7 @@ type Expense struct {
 	AccountID   int64
 	CreatedAt   sql.NullTime
 	UpdatedAt   sql.NullTime
+	DocumentRef sql.NullString
 }
 
 type Owner struct {

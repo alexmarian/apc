@@ -7,13 +7,14 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
 const createExpense = `-- name: CreateExpense :one
 INSERT INTO expenses (amount, description, destination, date,
-                      month, year, category_id, account_id)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, amount, description, destination, date, month, year, category_id, account_id, created_at, updated_at
+                      month, year, document_ref, category_id, account_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, amount, description, destination, date, month, year, category_id, account_id, created_at, updated_at, document_ref
 `
 
 type CreateExpenseParams struct {
@@ -23,6 +24,7 @@ type CreateExpenseParams struct {
 	Date        time.Time
 	Month       int64
 	Year        int64
+	DocumentRef sql.NullString
 	CategoryID  int64
 	AccountID   int64
 }
@@ -35,6 +37,7 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (E
 		arg.Date,
 		arg.Month,
 		arg.Year,
+		arg.DocumentRef,
 		arg.CategoryID,
 		arg.AccountID,
 	)
@@ -51,6 +54,7 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (E
 		&i.AccountID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DocumentRef,
 	)
 	return i, err
 }
@@ -67,7 +71,7 @@ func (q *Queries) DeleteExpense(ctx context.Context, id int64) error {
 }
 
 const getExpenseWithAssociation = `-- name: GetExpenseWithAssociation :one
-SELECT e.id, e.amount, e.description, e.destination, e.date, e.month, e.year, e.category_id, e.account_id, e.created_at, e.updated_at
+SELECT e.id, e.amount, e.description, e.destination, e.date, e.month, e.year, e.category_id, e.account_id, e.created_at, e.updated_at, e.document_ref
 FROM expenses e
          JOIN categories c ON e.category_id = c.id
 WHERE e.id = ?
@@ -94,6 +98,7 @@ func (q *Queries) GetExpenseWithAssociation(ctx context.Context, arg GetExpenseW
 		&i.AccountID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DocumentRef,
 	)
 	return i, err
 }
@@ -106,6 +111,7 @@ SELECT e.id,
        e.date,
        e.month,
        e.year,
+       e.document_ref,
        e.category_id,
        e.account_id,
        c.type        as category_type,
@@ -116,7 +122,9 @@ SELECT e.id,
 FROM expenses e
          JOIN categories c ON e.category_id = c.id
          JOIN accounts a ON e.account_id = a.id
-WHERE c.association_id = ? AND e.date > ? AND e.date < ?
+WHERE c.association_id = ?
+  AND e.date > ?
+  AND e.date < ?
 ORDER BY e.date DESC
 `
 
@@ -134,6 +142,7 @@ type GetExpensesByDateRangeRow struct {
 	Date           time.Time
 	Month          int64
 	Year           int64
+	DocumentRef    sql.NullString
 	CategoryID     int64
 	AccountID      int64
 	CategoryType   string
@@ -160,6 +169,7 @@ func (q *Queries) GetExpensesByDateRange(ctx context.Context, arg GetExpensesByD
 			&i.Date,
 			&i.Month,
 			&i.Year,
+			&i.DocumentRef,
 			&i.CategoryID,
 			&i.AccountID,
 			&i.CategoryType,
@@ -189,6 +199,7 @@ SELECT e.id,
        e.date,
        e.month,
        e.year,
+       e.document_ref,
        e.category_id,
        e.account_id,
        c.type        as category_type,
@@ -203,8 +214,8 @@ WHERE c.association_id = ?
   AND e.date > ?
   AND e.date < ?
   AND (? = 0 OR e.category_id = ?) -- Filter by category_id if provided (non-zero)
-  AND (? = '' OR c.type = ?) -- Filter by category_type if provided (non-empty)
-  AND (? = '' OR c.family = ?) -- Filter by category_family if provided (non-empty)
+  AND (? = '' OR c.type = ?)       -- Filter by category_type if provided (non-empty)
+  AND (? = '' OR c.family = ?)     -- Filter by category_family if provided (non-empty)
 ORDER BY e.date DESC
 `
 
@@ -228,6 +239,7 @@ type GetExpensesByDateRangeWithFiltersRow struct {
 	Date           time.Time
 	Month          int64
 	Year           int64
+	DocumentRef    sql.NullString
 	CategoryID     int64
 	AccountID      int64
 	CategoryType   string
@@ -264,6 +276,7 @@ func (q *Queries) GetExpensesByDateRangeWithFilters(ctx context.Context, arg Get
 			&i.Date,
 			&i.Month,
 			&i.Year,
+			&i.DocumentRef,
 			&i.CategoryID,
 			&i.AccountID,
 			&i.CategoryType,
@@ -287,16 +300,17 @@ func (q *Queries) GetExpensesByDateRangeWithFilters(ctx context.Context, arg Get
 
 const updateExpense = `-- name: UpdateExpense :one
 UPDATE expenses
-SET amount      = ?,
-    description = ?,
-    destination = ?,
-    date        = ?,
-    month       = ?,
-    year        = ?,
-    category_id = ?,
-    account_id  = ?,
-    updated_at  = CURRENT_TIMESTAMP
-WHERE id = ? RETURNING id, amount, description, destination, date, month, year, category_id, account_id, created_at, updated_at
+SET amount       = ?,
+    description  = ?,
+    destination  = ?,
+    date         = ?,
+    month        = ?,
+    year         = ?,
+    category_id  = ?,
+    account_id   = ?,
+    document_ref = ?,
+    updated_at   = CURRENT_TIMESTAMP
+WHERE id = ? RETURNING id, amount, description, destination, date, month, year, category_id, account_id, created_at, updated_at, document_ref
 `
 
 type UpdateExpenseParams struct {
@@ -308,6 +322,7 @@ type UpdateExpenseParams struct {
 	Year        int64
 	CategoryID  int64
 	AccountID   int64
+	DocumentRef sql.NullString
 	ID          int64
 }
 
@@ -321,6 +336,7 @@ func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (E
 		arg.Year,
 		arg.CategoryID,
 		arg.AccountID,
+		arg.DocumentRef,
 		arg.ID,
 	)
 	var i Expense
@@ -336,6 +352,7 @@ func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (E
 		&i.AccountID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DocumentRef,
 	)
 	return i, err
 }

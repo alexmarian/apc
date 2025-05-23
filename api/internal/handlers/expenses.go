@@ -19,6 +19,7 @@ type ExpenseItem struct {
 	Date           time.Time `json:"date,omitempty"`
 	Month          int64     `json:"month,omitempty"`
 	Year           int64     `json:"year,omitempty"`
+	DocumentRef    string    `json:"document_ref,omitempty"`
 	CategoryID     int64     `json:"category_id,omitempty"`
 	CategoryType   string    `json:"category_type,omitempty"`
 	CategoryFamily string    `json:"category_family,omitempty"`
@@ -41,6 +42,7 @@ func HandleCreateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 			Amount      float64   `json:"amount"`
 			Description string    `json:"description"`
 			Destination string    `json:"destination"`
+			DocumentRef string    `json:"document_ref"`
 			Date        time.Time `json:"date"`
 			CategoryID  int64     `json:"category_id"`
 			AccountID   int64     `json:"account_id"`
@@ -86,6 +88,7 @@ func HandleCreateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 			Amount:      expense.Amount,
 			Description: expense.Description,
 			Destination: expense.Destination,
+			DocumentRef: sql.NullString{String: expense.DocumentRef, Valid: expense.DocumentRef != ""},
 			Date:        expense.Date,
 			Month:       int64(month),
 			Year:        int64(year),
@@ -105,6 +108,7 @@ func HandleCreateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 			Amount:      newExpense.Amount,
 			Description: newExpense.Description,
 			Destination: newExpense.Destination,
+			DocumentRef: newExpense.DocumentRef.String,
 			Date:        newExpense.Date,
 			Month:       newExpense.Month,
 			Year:        newExpense.Year,
@@ -143,6 +147,7 @@ func HandleUpdateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 			Amount      *float64   `json:"amount,omitempty"`
 			Description *string    `json:"description,omitempty"`
 			Destination *string    `json:"destination,omitempty"`
+			DocumentRef *string    `json:"document_ref,omitempty"`
 			Date        *time.Time `json:"date,omitempty"`
 			CategoryID  *int64     `json:"category_id,omitempty"`
 			AccountID   *int64     `json:"account_id,omitempty"`
@@ -161,6 +166,7 @@ func HandleUpdateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 			Amount:      existingExpense.Amount,
 			Description: existingExpense.Description,
 			Destination: existingExpense.Destination,
+			DocumentRef: sql.NullString{String: existingExpense.DocumentRef.String, Valid: existingExpense.DocumentRef.Valid},
 			Date:        existingExpense.Date,
 			Month:       existingExpense.Month,
 			Year:        existingExpense.Year,
@@ -214,6 +220,11 @@ func HandleUpdateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 			}
 			updateParams.AccountID = *updateReq.AccountID
 		}
+		if updateReq.DocumentRef != nil {
+			updateParams.DocumentRef = sql.NullString{String: *updateReq.DocumentRef, Valid: *updateReq.DocumentRef != ""}
+		} else {
+			updateParams.DocumentRef = sql.NullString{String: existingExpense.DocumentRef.String, Valid: existingExpense.DocumentRef.Valid}
+		}
 
 		// Update expense
 		updatedExpense, err := cfg.Db.UpdateExpense(req.Context(), updateParams)
@@ -229,6 +240,7 @@ func HandleUpdateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 			Amount:      updatedExpense.Amount,
 			Description: updatedExpense.Description,
 			Destination: updatedExpense.Destination,
+			DocumentRef: updatedExpense.DocumentRef.String,
 			Date:        updatedExpense.Date,
 			Month:       updatedExpense.Month,
 			Year:        updatedExpense.Year,
@@ -300,6 +312,7 @@ func HandleGetExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 			Amount:      dbExpense.Amount,
 			Description: dbExpense.Description,
 			Destination: dbExpense.Destination,
+			DocumentRef: dbExpense.DocumentRef.String,
 			Date:        dbExpense.Date,
 			Month:       dbExpense.Month,
 			Year:        dbExpense.Year,
@@ -334,6 +347,7 @@ func HandleGetExpenses(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) 
 				Amount:         exp.Amount,
 				Description:    exp.Description,
 				Destination:    exp.Destination,
+				DocumentRef:    exp.DocumentRef.String,
 				Date:           exp.Date,
 				CategoryID:     exp.CategoryID,
 				CategoryType:   exp.CategoryType,
