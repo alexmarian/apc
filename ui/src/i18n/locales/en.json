@@ -143,7 +143,9 @@
     "amountPositive": "Amount must be greater than 0",
     "printCharts": "Print Charts",
     "month": "Month",
-    "noChartData": "No chart data available. Please go back to the main application and open charts view again."
+    "noChartData": "No chart data available. Please go back to the main application and open charts view again.",
+    "documentRef": "Document Reference",
+    "enterDocumentRef": "Enter document reference"
   },
   "validation": {
     "required": "{field} is required",

@@ -77,6 +77,10 @@ const columns = ref<DataTableColumns<Expense>>([
     }
   },
   {
+    title: t('expenses.documentRef'),
+    key: 'document_ref'
+  },
+  {
     title: t('expenses.description'),
     key: 'description'
   },

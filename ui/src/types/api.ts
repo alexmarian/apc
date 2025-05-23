@@ -147,6 +147,7 @@ export interface Expense {
   account_id: number;
   account_number?: string;
   account_name?: string;
+  document_ref?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -158,6 +159,7 @@ export interface ExpenseCreateRequest {
   date: string; // ISO format
   category_id: number;
   account_id: number;
+  document_ref: string;
 }
 
 // Category Related Types

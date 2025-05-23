@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, nextTick, computed } from 'vue'
 import {
   NForm,
   NFormItem,
@@ -13,10 +13,12 @@ import {
 } from 'naive-ui'
 import type { FormInst, FormRules } from 'naive-ui'
 import { expenseApi } from '@/services/api'
-import type { ExpenseCreateRequest, Expense, ApiResponse } from '@/types/api'
+import type { ExpenseCreateRequest, Expense } from '@/types/api'
 import CategorySelector from '@/components/CategorySelector.vue'
 import AccountSelector from '@/components/AccountSelector.vue'
 import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   associationId: number
@@ -24,12 +26,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'saved'): void
-  (e: 'cancelled'): void
+  saved: []
+  cancelled: []
 }>()
-
-// I18n
-const { t } = useI18n()
 
 const formData = reactive<ExpenseCreateRequest>({
   amount: 0.01,
@@ -37,22 +36,26 @@ const formData = reactive<ExpenseCreateRequest>({
   destination: '',
   date: new Date().toISOString().split('T')[0],
   category_id: 0,
-  account_id: 0
+  account_id: 0,
+  document_ref: ''
 })
 
 const rules: FormRules = {
   amount: [
-    { required: true, message: t('validation.required', { field: t('expenses.amount') }), trigger: 'blur' },
     {
-      validator: (rule: any, value: number) => {
-        return Number(value) > 0
-      },
-      message: t('expenses.amountPositive', 'Amount must be greater than 0'),
-      trigger: 'blur'
+      required: true,
+      type: 'number',
+      min: 0.01,
+      message: t('expenses.amountPositive'),
+      trigger: ['blur', 'change']
     }
   ],
   description: [
-    { required: true, message: t('validation.required', { field: t('expenses.description') }), trigger: 'blur' },
+    {
+      required: true,
+      message: t('validation.required', { field: t('expenses.description') }),
+      trigger: 'blur'
+    },
     {
       type: 'string',
       max: 255,
@@ -61,49 +64,65 @@ const rules: FormRules = {
     }
   ],
   date: [
-    { required: true, message: t('validation.required', { field: t('expenses.date') }), trigger: 'blur' }
-  ],
-  category_id: [
     {
-      validator: (rule: any, value: number) => {
-        return value > 0
-      },
-      message: t('validation.required', { field: t('expenses.category') }),
+      required: true,
+      message: t('validation.required', { field: t('expenses.date') }),
       trigger: 'blur'
     }
   ],
-  account_id: [
+  category_id: [
     {
-      validator: (rule: any, value: number) => {
-        return value > 0
-      },
-      message: t('validation.required', { field: t('expenses.account') }),
+      type: 'number',
+      min: 1,
+      message: t('validation.required', { field: t('expenses.category') }),
+      trigger: ['blur', 'change']
+    }
+  ],
+  document_ref: [
+    {
+      type: 'string',
+      max: 50,
+      message: t('validation.maxLength', { field: t('expenses.documentRef'), max: 50 }),
       trigger: 'blur'
     }
   ]
 }
 
-const loading = ref<boolean>(false)
-const submitting = ref<boolean>(false)
+const loading = ref(false)
+const submitting = ref(false)
 const error = ref<string | null>(null)
 const formRef = ref<FormInst | null>(null)
-const dataLoaded = ref<boolean>(false)
+
+const isEditMode = computed(() => !!props.expenseId)
 
 const formatDateForInput = (timestamp: number | string): string => {
   return new Date(timestamp).toISOString().split('T')[0]
 }
 
-const resetValidation = async (): Promise<void> => {
+const resetValidation = async () => {
   if (formRef.value) {
     try {
       await formRef.value.restoreValidation()
     } catch (err) {
-      console.log('Error resetting validation:', err)
+      console.warn('Error resetting validation:', err)
     }
   }
 }
 
-const fetchExpenseDetails = async (): Promise<void> => {
+const resetForm = () => {
+  Object.assign(formData, {
+    amount: 0.01,
+    description: '',
+    destination: '',
+    date: new Date().toISOString().split('T')[0],
+    category_id: 0,
+    account_id: 0,
+    document_ref: ''
+  })
+  error.value = null
+}
+
+const fetchExpenseDetails = async () => {
   if (!props.expenseId) return
 
   try {
@@ -113,124 +132,101 @@ const fetchExpenseDetails = async (): Promise<void> => {
     const response = await expenseApi.getExpense(props.associationId, props.expenseId)
     const expenseData: Expense = response.data
 
-    formData.amount = Number(expenseData.amount) || 0.01
-    formData.description = expenseData.description || ''
-    formData.destination = expenseData.destination || ''
-    formData.date = expenseData.date ? formatDateForInput(expenseData.date) : new Date().toISOString().split('T')[0]
-    formData.category_id = Number(expenseData.category_id) || 0
-    formData.account_id = Number(expenseData.account_id) || 0
+    Object.assign(formData, {
+      amount: Number(expenseData.amount) || 0.01,
+      description: expenseData.description || '',
+      destination: expenseData.destination || '',
+      date: expenseData.date ? formatDateForInput(expenseData.date) : new Date().toISOString().split('T')[0],
+      category_id: Number(expenseData.category_id) || 0,
+      account_id: Number(expenseData.account_id) || 0,
+      document_ref: expenseData.document_ref || ''
+    })
 
-    dataLoaded.value = true
     await nextTick()
-    resetValidation()
+    await resetValidation()
   } catch (err) {
-    error.value = err instanceof Error ? err.message : t('common.error')
+    const errorMessage = err instanceof Error ? err.message : t('common.error')
+    error.value = errorMessage
     console.error('Error fetching expense details:', err)
   } finally {
     loading.value = false
   }
 }
 
-const handleDateChange = (timestamp: number): void => {
+const handleDateChange = (timestamp: number | null) => {
   if (timestamp) {
-    formData.date = new Date(timestamp).toISOString().split('T')[0]
+    formData.date = formatDateForInput(timestamp)
   }
 }
 
-const validateFormManually = (): boolean => {
-  if (Number(formData.amount) <= 0) {
-    error.value = t('expenses.amountPositive', 'Amount must be greater than 0')
-    return false
-  }
-
-  if (!formData.description.trim()) {
-    error.value = t('validation.required', { field: t('expenses.description') })
-    return false
-  }
-
-  if (!formData.date) {
-    error.value = t('validation.required', { field: t('expenses.date') })
-    return false
-  }
-
-  if (formData.category_id <= 0) {
-    error.value = t('validation.required', { field: t('expenses.category') })
-    return false
-  }
-
-  if (formData.account_id <= 0) {
-    error.value = t('validation.required', { field: t('expenses.account') })
-    return false
-  }
-
-  return true
-}
-
-const submitForm = async (e: MouseEvent): Promise<void> => {
-  e.preventDefault()
+const handleSubmit = async () => {
   error.value = null
 
-  let isValid = true
-  if (formRef.value) {
-    try {
-      await formRef.value.validate()
-    } catch (err) {
-      console.log('Form validation failed, using manual validation')
-      isValid = false
-    }
-  }
-
-  if (!isValid) {
-    isValid = validateFormManually()
-    if (!isValid) return
+  // Validate form
+  try {
+    await formRef.value?.validate()
+  } catch (validationError) {
+    console.warn('Form validation failed:', validationError)
+    return
   }
 
   try {
     submitting.value = true
 
-    const formDataToSubmit: ExpenseCreateRequest = {
+    const submitData: ExpenseCreateRequest = {
       amount: Number(formData.amount),
-      description: formData.description,
-      destination: formData.destination,
+      description: formData.description.trim(),
+      destination: formData.destination?.trim() || '',
       date: formData.date + 'T00:00:00Z',
       category_id: Number(formData.category_id),
-      account_id: Number(formData.account_id)
+      account_id: Number(formData.account_id),
+      document_ref: formData.document_ref?.trim() || ''
     }
 
-    const isCreating = !props.expenseId
-
-    if (isCreating) {
-      await expenseApi.createExpense(props.associationId, formDataToSubmit)
-    } else if (props.expenseId) {
-      await expenseApi.updateExpense(props.associationId, props.expenseId, formDataToSubmit)
+    if (isEditMode.value) {
+      await expenseApi.updateExpense(props.associationId, props.expenseId!, submitData)
+    } else {
+      await expenseApi.createExpense(props.associationId, submitData)
     }
 
     emit('saved')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : t('common.error')
+    const errorMessage = err instanceof Error ? err.message : t('common.error')
+    error.value = errorMessage
     console.error('Error submitting form:', err)
   } finally {
     submitting.value = false
   }
 }
 
-const cancelForm = (): void => {
+const handleCancel = () => {
   emit('cancelled')
 }
 
 onMounted(() => {
-  if (props.expenseId) {
+  if (isEditMode.value) {
     fetchExpenseDetails()
+  } else {
+    resetForm()
   }
 })
 </script>
 
 <template>
   <div class="expense-form">
-    <h2>{{ props.expenseId ? t('expenses.editExpense') : t('expenses.createNew') }}</h2>
+    <h2 class="expense-form__title">
+      {{ isEditMode ? t('expenses.editExpense') : t('expenses.createNew') }}
+    </h2>
 
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" :title="t('common.error')" style="margin-bottom: 16px;">
+      <NAlert
+        v-if="error"
+        type="error"
+        :title="t('common.error')"
+        class="expense-form__error"
+        closable
+        @close="error = null"
+      >
         {{ error }}
       </NAlert>
 
@@ -241,13 +237,15 @@ onMounted(() => {
         label-placement="left"
         label-width="120px"
         require-mark-placement="right-hanging"
+        class="expense-form__form"
       >
         <NFormItem :label="t('expenses.amount')" path="amount">
           <NInputNumber
             v-model:value="formData.amount"
             :min="0.01"
             :precision="2"
-            style="width: 100%"
+            class="expense-form__number-input"
+            clearable
           />
         </NFormItem>
 
@@ -257,21 +255,27 @@ onMounted(() => {
             type="date"
             clearable
             @update:value="handleDateChange"
-            style="width: 100%"
+            class="expense-form__date-picker"
           />
         </NFormItem>
 
         <NFormItem :label="t('expenses.description')" path="description">
           <NInput
             v-model:value="formData.description"
-            :placeholder="t('expenses.description')"
+            :placeholder="t('expenses.enterDescription')"
+            type="textarea"
+            :rows="3"
+            :maxlength="255"
+            :show-count="true"
+            clearable
           />
         </NFormItem>
 
         <NFormItem :label="t('expenses.destination')" path="destination">
           <NInput
             v-model:value="formData.destination"
-            :placeholder="t('expenses.destination')"
+            :placeholder="t('expenses.enterDestination')"
+            clearable
           />
         </NFormItem>
 
@@ -279,7 +283,7 @@ onMounted(() => {
           <CategorySelector
             v-model:modelValue="formData.category_id"
             :association-id="props.associationId"
-            :placeholder="t('expenses.category')"
+            :placeholder="t('expenses.selectCategory')"
             :disabled="submitting"
           />
         </NFormItem>
@@ -289,15 +293,23 @@ onMounted(() => {
             v-model:modelValue="formData.account_id"
             :association-id="props.associationId"
             :active-only="true"
-            :placeholder="t('expenses.account')"
+            :placeholder="t('expenses.selectAccount')"
             :disabled="submitting"
           />
         </NFormItem>
 
-        <div style="margin-top: 24px;">
+        <NFormItem :label="t('expenses.documentRef')" path="document_ref">
+          <NInput
+            v-model:value="formData.document_ref"
+            :placeholder="t('expenses.enterDocumentRef')"
+            clearable
+          />
+        </NFormItem>
+
+        <div class="expense-form__actions">
           <NSpace justify="end">
             <NButton
-              @click="cancelForm"
+              @click="handleCancel"
               :disabled="submitting"
             >
               {{ t('common.cancel') }}
@@ -305,10 +317,10 @@ onMounted(() => {
 
             <NButton
               type="primary"
-              @click="submitForm"
+              @click="handleSubmit"
               :loading="submitting"
             >
-              {{ props.expenseId ? t('common.update') : t('common.create') }}
+              {{ isEditMode ? t('common.update') : t('common.create') }}
             </NButton>
           </NSpace>
         </div>
@@ -323,5 +335,31 @@ onMounted(() => {
   margin: 0 auto;
   padding: 1.5rem;
   border-radius: 8px;
+}
+
+.expense-form__title {
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-color-1);
+}
+
+.expense-form__error {
+  margin-bottom: 1rem;
+}
+
+.expense-form__form {
+  margin-bottom: 1.5rem;
+}
+
+.expense-form__number-input,
+.expense-form__date-picker {
+  width: 100%;
+}
+
+.expense-form__actions {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
 }
 </style>

@@ -141,7 +141,9 @@
     "amountPositive": "Suma trebuie să fie mai mare de 0",
     "printCharts": "Tipărește Graficele",
     "month": "Lună",
-    "noChartData": "Lipsesc datele, mai întâi trebuie să adăugați cheltuieli pentru a vizualiza graficele"
+    "noChartData": "Lipsesc datele, mai întâi trebuie să adăugați cheltuieli pentru a vizualiza graficele",
+    "documentRef": "Referință Document",
+    "enterDocumentRef": "Introduceți referința documentului"
   },
   "validation": {
     "required": "{field} este obligatoriu",
