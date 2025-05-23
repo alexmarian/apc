@@ -5,465 +5,525 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Expense Charts</title>
   <style>
+    :root {
+      --primary-color: #1890ff;
+      --text-color: #333;
+      --text-color-secondary: #666;
+      --text-color-disabled: #999;
+      --border-color: #eee;
+      --border-color-dark: #ddd;
+      --background-light: #f5f5f5;
+      --background-hover: #f9f9f9;
+      --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.05);
+      --border-radius: 6px;
+      --spacing-small: 8px;
+      --spacing-medium: 16px;
+      --spacing-large: 20px;
+      --spacing-xlarge: 30px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      color: var(--text-color);
+      line-height: 1.6;
+    }
+
+    .standalone-container {
+      padding: var(--spacing-large);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .rtl {
+      direction: rtl;
+      text-align: right;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-large);
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .rtl .header {
+      flex-direction: row-reverse;
+    }
+
+    .header-info h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .header-info .period {
+      color: var(--text-color-secondary);
+      margin-top: 5px;
+      font-size: 14px;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card {
+      background: white;
+      padding: var(--spacing-large);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-xlarge);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-light);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      margin-bottom: var(--spacing-medium);
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid #f0f0f0;
+      padding-bottom: var(--spacing-small);
+    }
+
+    .summary-content {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: var(--spacing-large);
+    }
+
+    .summary-item {
+      text-align: center;
+      min-width: 150px;
+    }
+
+    .summary-label {
+      font-size: 14px;
+      color: var(--text-color-secondary);
+      margin-bottom: var(--spacing-small);
+    }
+
+    .summary-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--primary-color);
+    }
+
+    .chart-container {
+      height: 400px;
+      margin: 0 auto;
+      max-width: 600px;
+      position: relative;
+    }
+
+    .chart-container.wide {
+      max-width: 800px;
+    }
+
+    .chart-toggle {
+      display: flex;
+      justify-content: center;
+      margin-bottom: var(--spacing-large);
+    }
+
+    .chart-toggle-btn {
+      padding: 6px 14px;
+      background: var(--background-light);
+      border: 1px solid var(--border-color-dark);
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .chart-toggle-btn:hover {
+      background: var(--border-color);
+    }
+
+    .chart-toggle-btn:first-child {
+      border-top-left-radius: 4px;
+      border-bottom-left-radius: 4px;
+    }
+
+    .chart-toggle-btn:last-child {
+      border-top-right-radius: 4px;
+      border-bottom-right-radius: 4px;
+    }
+
+    .rtl .chart-toggle-btn:first-child {
+      border-radius: 0 4px 4px 0;
+    }
+
+    .rtl .chart-toggle-btn:last-child {
+      border-radius: 4px 0 0 4px;
+    }
+
+    .chart-toggle-btn.active {
+      background: var(--primary-color);
+      color: white;
+      border-color: var(--primary-color);
+    }
+
+    .language-selector {
+      padding: 5px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color-dark);
+      font-size: 14px;
+      background: white;
+    }
+
+    .print-button {
+      padding: 8px 16px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background-color 0.2s ease;
+    }
+
+    .print-button:hover {
+      background: #40a9ff;
+    }
+
+    .print-button svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: var(--spacing-medium);
+      overflow-x: auto;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 10px 12px;
+      border: 1px solid var(--border-color-dark);
+      text-align: left;
+    }
+
+    .rtl .data-table th,
+    .rtl .data-table td {
+      text-align: right;
+    }
+
+    .data-table th {
+      background: var(--background-light);
+      font-weight: 600;
+      color: var(--text-color);
+    }
+
+    .data-table tr:nth-child(even) {
+      background-color: var(--background-hover);
+    }
+
+    .type-details {
+      margin-top: var(--spacing-xlarge);
+    }
+
+    .type-details h3 {
+      margin-top: var(--spacing-large);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+
+    .type-details hr {
+      margin: var(--spacing-xlarge) 0;
+      border: 0;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .no-data {
+      text-align: center;
+      padding: var(--spacing-large);
+      color: var(--text-color-disabled);
+      font-style: italic;
+    }
+
+    .page-break {
+      height: 1px;
+      width: 100%;
+      margin: var(--spacing-xlarge) 0;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      margin-top: var(--spacing-large);
+    }
+
+    /* Print styles */
+    @media print {
+      @page {
+        margin: 1cm;
+      }
+
       body {
-          margin: 0;
-          padding: 0;
-          font-family: Arial, sans-serif;
-          color: #333;
+        font-size: 12pt;
       }
 
-      .standalone-container {
-          padding: 20px;
-          max-width: 1200px;
-          margin: 0 auto;
-      }
-
-      /* Add RTL support */
-      .rtl {
-          direction: rtl;
-          text-align: right;
-      }
-
-      .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 20px;
-          padding-bottom: 15px;
-          border-bottom: 1px solid #eee;
-      }
-
-      /* Adjust header for RTL */
-      .rtl .header {
-          flex-direction: row-reverse;
-      }
-
-      .card {
-          background: white;
-          padding: 20px;
-          border-radius: 6px;
-          margin-bottom: 30px;
-          border: 1px solid #eee;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-      }
-
-      .summary-content {
-          display: flex;
-          justify-content: space-around;
-          flex-wrap: wrap;
-          gap: 20px;
-      }
-
-      .summary-item {
-          text-align: center;
-          min-width: 150px;
-      }
-
-      .summary-label {
-          font-size: 14px;
-          color: #666;
-          margin-bottom: 8px;
-      }
-
-      .summary-value {
-          font-size: 24px;
-          font-weight: bold;
-      }
-
-      h1, h2, h3 {
-          color: #333;
-      }
-
-      h1 {
-          margin: 0;
-          font-size: 24px;
-      }
-
-      h2 {
-          margin-top: 0;
-          margin-bottom: 16px;
-          font-size: 20px;
-          border-bottom: 1px solid #f0f0f0;
-          padding-bottom: 8px;
-      }
-
-      h3 {
-          margin-top: 20px;
-          font-size: 18px;
-      }
-
-      .chart-container {
-          height: 400px;
-          margin: 0 auto;
-          max-width: 600px;
-          position: relative;
-      }
-
-      .chart-container.wide {
-          max-width: 800px;
-      }
-
-      table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-top: 16px;
-      }
-
-      th, td {
-          padding: 10px;
-          border: 1px solid #ddd;
-          text-align: left;
-      }
-
-      /* Adjust table alignment for RTL */
-      .rtl th, .rtl td {
-          text-align: right;
-      }
-
-      th {
-          background: #f5f5f5;
-          font-weight: 600;
-      }
-
-      tr:nth-child(even) {
-          background-color: #f9f9f9;
-      }
-
-      .buttons {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 15px;
-      }
-
-      /* Adjust buttons for RTL */
-      .rtl .buttons {
-          flex-direction: row-reverse;
-      }
-
-      .print-button {
-          padding: 8px 16px;
-          background: #1890ff;
-          color: white;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 14px;
-          font-weight: 500;
-      }
-
-      .print-button svg {
-          width: 16px;
-          height: 16px;
-      }
-
-      .language-selector {
-          margin-right: 10px;
-          padding: 5px;
-          border-radius: 4px;
-          border: 1px solid #d9d9d9;
-          font-size: 14px;
-      }
-
-      .rtl .language-selector {
-          margin-right: 0;
-          margin-left: 10px;
-      }
-
-      .type-details {
-          margin-top: 30px;
+      .print-button,
+      .chart-toggle,
+      .language-selector,
+      .header-controls {
+        display: none !important;
       }
 
       .page-break {
-          height: 1px;
-          width: 100%;
-          margin: 30px 0;
+        page-break-after: always;
+        break-after: page;
+        height: 0;
+        margin: 0;
       }
 
-      .chart-toggle {
-          display: flex;
-          justify-content: center;
-          margin-bottom: 20px;
+      .card {
+        page-break-inside: avoid;
+        border: none;
+        box-shadow: none;
       }
 
-      .chart-toggle-btn {
-          padding: 6px 14px;
-          background: #f5f5f5;
-          border: 1px solid #d9d9d9;
-          cursor: pointer;
-          font-size: 14px;
+      * {
+        color: black !important;
+        text-shadow: none !important;
+        box-shadow: none !important;
       }
 
-      .chart-toggle-btn:first-child {
-          border-top-left-radius: 4px;
-          border-bottom-left-radius: 4px;
+      .header {
+        border-bottom: 1px solid #000;
       }
 
-      .chart-toggle-btn:last-child {
-          border-top-right-radius: 4px;
-          border-bottom-right-radius: 4px;
+      .card h2 {
+        border-bottom: 1px solid #000;
+      }
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .standalone-container {
+        padding: var(--spacing-medium);
       }
 
-      /* Adjust toggle buttons for RTL */
-      .rtl .chart-toggle-btn:first-child {
-          border-top-left-radius: 0;
-          border-bottom-left-radius: 0;
-          border-top-right-radius: 4px;
-          border-bottom-right-radius: 4px;
+      .header {
+        flex-direction: column;
+        gap: var(--spacing-medium);
       }
 
-      .rtl .chart-toggle-btn:last-child {
-          border-top-right-radius: 0;
-          border-bottom-right-radius: 0;
-          border-top-left-radius: 4px;
-          border-bottom-left-radius: 4px;
+      .header-controls {
+        width: 100%;
+        justify-content: space-between;
       }
 
-      .chart-toggle-btn.active {
-          background: #1890ff;
-          color: white;
-          border-color: #1890ff;
+      .summary-content {
+        flex-direction: column;
+        align-items: center;
       }
 
-      /* Print-specific styles */
-      @media print {
-          @page {
-              margin: 1cm;
-          }
-
-          body {
-              font-size: 12pt;
-          }
-
-          .print-button, .chart-toggle, .language-selector {
-              display: none !important;
-          }
-
-          .page-break {
-              page-break-after: always;
-              break-after: page;
-              height: 0;
-              margin: 0;
-          }
-
-          .card {
-              page-break-inside: avoid;
-              border: none;
-              box-shadow: none;
-          }
-
-          * {
-              color: black !important;
-              text-shadow: none !important;
-              box-shadow: none !important;
-          }
-
-          .header {
-              border-bottom: 1px solid #000;
-          }
-
-          h2 {
-              border-bottom: 1px solid #000;
-          }
+      .chart-container {
+        max-width: 100%;
       }
+    }
   </style>
 </head>
 <body>
 <div id="app"></div>
 
-<!-- Import libraries from CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 
 <script>
-  // Immediately-invoked function to create app when page loads
-  (function() {
-    // Category translations
-    const categoryTranslations = {
-      'en': {
-        types: {
-          'Budgeted': 'Budgeted',
-          'Maintenance': 'Maintenance',
-          'Improvement': 'Improvement'
+  class ExpenseChartsApp {
+    constructor() {
+      this.currentLanguage = localStorage.getItem('standalone_chart_language') || 'en'
+      this.chartData = JSON.parse(localStorage.getItem('standalone_chart_data') || 'null')
+      this.chartTitle = localStorage.getItem('standalone_chart_title') || ''
+      this.dateRange = localStorage.getItem('standalone_chart_date_range') || ''
+
+      this.typeChartMode = 'pie'
+      this.categoryChartMode = 'pie'
+      this.chartInstances = {}
+
+      this.init()
+    }
+
+    init() {
+      if (!this.chartData) {
+        this.renderNoDataMessage()
+        return
+      }
+
+      this.renderUI()
+    }
+
+    get translations() {
+      return {
+        'en': {
+          title: 'Expense Analysis',
+          period: 'Period',
+          printCharts: 'Print Charts',
+          summary: 'Summary',
+          totalExpenses: 'Total Expenses',
+          numberOfExpenses: 'Number of Expenses',
+          averageExpense: 'Average Expense',
+          expensesByType: 'Expenses by Type',
+          pieChart: 'Pie Chart',
+          barChart: 'Bar Chart',
+          type: 'Type',
+          amount: 'Amount',
+          percentage: 'Percentage',
+          count: 'Count',
+          monthlyExpenseTrends: 'Monthly Expense Trends',
+          month: 'Month',
+          totalAmount: 'Total Amount',
+          noMonthlyData: 'No monthly data available',
+          expenseTypeBreakdown: 'Expense Type Breakdown',
+          family: 'Family',
+          noChartData: 'No chart data available. Please go back to the main application and open charts view again.',
+          noData: 'No data available'
         },
-        families: {
-          'personnel': 'Personnel Expenses',
-          'security': 'Security and Safety',
-          'building_repairs': 'Building Repairs',
-          'cleaning_services': 'Cleaning Services',
-          'maintenance_materials': 'Maintenance Materials',
-          'equipment_repairs': 'Equipment Repairs',
-          'administrative': 'Administrative Services',
-          'utilities': 'Utilities',
-          'community': 'Community Activities',
-          'building_improvements': 'Building Improvements',
-          'reserve_fund': 'Reserve Fund',
-          'miscellaneous': 'Miscellaneous'
-        }
-      },
-      'ro': {
-        types: {
-          'Budgeted': 'Bugetat',
-          'Maintenance': 'Întreținere',
-          'Improvement': 'Îmbunătățire'
+        'ro': {
+          title: 'Analiză Cheltuieli',
+          period: 'Perioadă',
+          printCharts: 'Printează Grafice',
+          summary: 'Sumar',
+          totalExpenses: 'Total Cheltuieli',
+          numberOfExpenses: 'Număr de Cheltuieli',
+          averageExpense: 'Cheltuială Medie',
+          expensesByType: 'Cheltuieli după Tip',
+          pieChart: 'Diagramă Circulară',
+          barChart: 'Diagramă cu Bare',
+          type: 'Tip',
+          amount: 'Sumă',
+          percentage: 'Procentaj',
+          count: 'Număr',
+          monthlyExpenseTrends: 'Tendințe Lunare ale Cheltuielilor',
+          month: 'Lună',
+          totalAmount: 'Sumă Totală',
+          noMonthlyData: 'Nu există date lunare disponibile',
+          expenseTypeBreakdown: 'Defalcare după Tipul Cheltuielilor',
+          family: 'Familie',
+          noChartData: 'Nu există date disponibile. Vă rugăm să vă întoarceți la aplicația principală și să deschideți din nou vizualizarea graficelor.',
+          noData: 'Nu există date disponibile'
         },
-        families: {
-          'personnel': 'Cheltuieli de Personal',
-          'security': 'Securitate',
-          'building_repairs': 'Reparații Clădire',
-          'cleaning_services': 'Servicii de Curățenie',
-          'maintenance_materials': 'Materiale de Întreținere',
-          'equipment_repairs': 'Reparații Echipamente',
-          'administrative': 'Servicii Administrative',
-          'utilities': 'Utilități',
-          'community': 'Activități Comunitare',
-          'building_improvements': 'Îmbunătățiri Clădire',
-          'reserve_fund': 'Fond de Rezervă',
-          'miscellaneous': 'Diverse'
-        }
-      },
-      'ru': {
-        types: {
-          'Budgeted': 'Бюджетные',
-          'Maintenance': 'Техобслуживание',
-          'Improvement': 'Улучшение'
-        },
-        families: {
-          'personnel': 'Расходы на персонал',
-          'security': 'Безопасность',
-          'building_repairs': 'Ремонт здания',
-          'cleaning_services': 'Клининговые услуги',
-          'maintenance_materials': 'Материалы для обслуживания',
-          'equipment_repairs': 'Ремонт оборудования',
-          'administrative': 'Административные услуги',
-          'utilities': 'Коммунальные услуги',
-          'community': 'Общественные мероприятия',
-          'building_improvements': 'Улучшение здания',
-          'reserve_fund': 'Резервный фонд',
-          'miscellaneous': 'Разное'
+        'ru': {
+          title: 'Анализ Расходов',
+          period: 'Период',
+          printCharts: 'Печать Графиков',
+          summary: 'Сводка',
+          totalExpenses: 'Всего Расходов',
+          numberOfExpenses: 'Количество Расходов',
+          averageExpense: 'Средний Расход',
+          expensesByType: 'Расходы по Типу',
+          pieChart: 'Круговая Диаграмма',
+          barChart: 'Столбчатая Диаграмма',
+          type: 'Тип',
+          amount: 'Сумма',
+          percentage: 'Процент',
+          count: 'Количество',
+          monthlyExpenseTrends: 'Ежемесячные Тенденции Расходов',
+          month: 'Месяц',
+          totalAmount: 'Общая Сумма',
+          noMonthlyData: 'Нет доступных ежемесячных данных',
+          expenseTypeBreakdown: 'Разбивка по Типу Расходов',
+          family: 'Семейство',
+          noChartData: 'Нет доступных данных. Пожалуйста, вернитесь в основное приложение и снова откройте просмотр графиков.',
+          noData: 'Нет доступных данных'
         }
       }
     }
 
-    // Translations
-    const translations = {
-      'en': {
-        title: 'Expense Analysis',
-        period: 'Period',
-        printCharts: 'Print Charts',
-        summary: 'Summary',
-        totalExpenses: 'Total Expenses',
-        numberOfExpenses: 'Number of Expenses',
-        averageExpense: 'Average Expense',
-        expensesByType: 'Expenses by Type',
-        pieChart: 'Pie Chart',
-        barChart: 'Bar Chart',
-        type: 'Type',
-        amount: 'Amount',
-        percentage: 'Percentage',
-        count: 'Count',
-        monthlyExpenseTrends: 'Monthly Expense Trends',
-        month: 'Month',
-        totalAmount: 'Total Amount',
-        noMonthlyData: 'No monthly data available',
-        expenseTypeBreakdown: 'Expense Type Breakdown',
-        family: 'Family',
-        noChartData: 'No chart data available. Please go back to the main application and open charts view again.',
-        noData: 'No data available'
-      },
-      'ro': {
-        title: 'Analiză Cheltuieli',
-        period: 'Perioadă',
-        printCharts: 'Printează Grafice',
-        summary: 'Sumar',
-        totalExpenses: 'Total Cheltuieli',
-        numberOfExpenses: 'Număr de Cheltuieli',
-        averageExpense: 'Cheltuială Medie',
-        expensesByType: 'Cheltuieli după Tip',
-        pieChart: 'Diagramă Circulară',
-        barChart: 'Diagramă cu Bare',
-        type: 'Tip',
-        amount: 'Sumă',
-        percentage: 'Procentaj',
-        count: 'Număr',
-        monthlyExpenseTrends: 'Tendințe Lunare ale Cheltuielilor',
-        month: 'Lună',
-        totalAmount: 'Sumă Totală',
-        noMonthlyData: 'Nu există date lunare disponibile',
-        expenseTypeBreakdown: 'Defalcare după Tipul Cheltuielilor',
-        family: 'Familie',
-        noChartData: 'Nu există date disponibile. Vă rugăm să vă întoarceți la aplicația principală și să deschideți din nou vizualizarea graficelor.',
-        noData: 'Nu există date disponibile'
-      },
-      'ru': {
-        title: 'Анализ Расходов',
-        period: 'Период',
-        printCharts: 'Печать Графиков',
-        summary: 'Сводка',
-        totalExpenses: 'Всего Расходов',
-        numberOfExpenses: 'Количество Расходов',
-        averageExpense: 'Средний Расход',
-        expensesByType: 'Расходы по Типу',
-        pieChart: 'Круговая Диаграмма',
-        barChart: 'Столбчатая Диаграмма',
-        type: 'Тип',
-        amount: 'Сумма',
-        percentage: 'Процент',
-        count: 'Количество',
-        monthlyExpenseTrends: 'Ежемесячные Тенденции Расходов',
-        month: 'Месяц',
-        totalAmount: 'Общая Сумма',
-        noMonthlyData: 'Нет доступных ежемесячных данных',
-        expenseTypeBreakdown: 'Разбивка по Типу Расходов',
-        family: 'Семейство',
-        noChartData: 'Нет доступных данных. Пожалуйста, вернитесь в основное приложение и снова откройте просмотр графиков.',
-        noData: 'Нет доступных данных'
+    get categoryTranslations() {
+      return {
+        'en': {
+          types: {
+            'Budgeted': 'Budgeted',
+            'Maintenance': 'Maintenance',
+            'Improvement': 'Improvement'
+          },
+          families: {
+            'personnel': 'Personnel Expenses',
+            'security': 'Security and Safety',
+            'building_repairs': 'Building Repairs',
+            'cleaning_services': 'Cleaning Services',
+            'maintenance_materials': 'Maintenance Materials',
+            'equipment_repairs': 'Equipment Repairs',
+            'administrative': 'Administrative Services',
+            'utilities': 'Utilities',
+            'community': 'Community Activities',
+            'building_improvements': 'Building Improvements',
+            'reserve_fund': 'Reserve Fund',
+            'miscellaneous': 'Miscellaneous'
+          }
+        },
+        'ro': {
+          types: {
+            'Budgeted': 'Bugetat',
+            'Maintenance': 'Întreținere',
+            'Improvement': 'Îmbunătățire'
+          },
+          families: {
+            'personnel': 'Cheltuieli de Personal',
+            'security': 'Securitate',
+            'building_repairs': 'Reparații Clădire',
+            'cleaning_services': 'Servicii de Curățenie',
+            'maintenance_materials': 'Materiale de Întreținere',
+            'equipment_repairs': 'Reparații Echipamente',
+            'administrative': 'Servicii Administrative',
+            'utilities': 'Utilități',
+            'community': 'Activități Comunitare',
+            'building_improvements': 'Îmbunătățiri Clădire',
+            'reserve_fund': 'Fond de Rezervă',
+            'miscellaneous': 'Diverse'
+          }
+        },
+        'ru': {
+          types: {
+            'Budgeted': 'Бюджетные',
+            'Maintenance': 'Техобслуживание',
+            'Improvement': 'Улучшение'
+          },
+          families: {
+            'personnel': 'Расходы на персонал',
+            'security': 'Безопасность',
+            'building_repairs': 'Ремонт здания',
+            'cleaning_services': 'Клининговые услуги',
+            'maintenance_materials': 'Материалы для обслуживания',
+            'equipment_repairs': 'Ремонт оборудования',
+            'administrative': 'Административные услуги',
+            'utilities': 'Коммунальные услуги',
+            'community': 'Общественные мероприятия',
+            'building_improvements': 'Улучшение здания',
+            'reserve_fund': 'Резервный фонд',
+            'miscellaneous': 'Разное'
+          }
+        }
       }
     }
 
-    // Locale information for formatting
-    const localeInfo = {
-      'en': {
-        locale: 'en-US',
-        currency: 'MDL',
-        rtl: false
-      },
-      'ro': {
-        locale: 'ro-RO',
-        currency: 'MDL',
-        rtl: false
-      },
-      'ru': {
-        locale: 'ru-RU',
-        currency: 'MDL',
-        rtl: false
+    get localeInfo() {
+      return {
+        'en': { locale: 'en-US', currency: 'MDL', rtl: false },
+        'ro': { locale: 'ro-RO', currency: 'MDL', rtl: false },
+        'ru': { locale: 'ru-RU', currency: 'MDL', rtl: false }
       }
     }
 
-    // Get language from localStorage or default to 'en'
-    let currentLanguage = localStorage.getItem('standalone_chart_language') || 'en'
-
-    // Get data from localStorage
-    const chartData = JSON.parse(localStorage.getItem('standalone_chart_data') || 'null')
-    const chartTitle = localStorage.getItem('standalone_chart_title') || translations[currentLanguage].title
-    const dateRange = localStorage.getItem('standalone_chart_date_range') || ''
-
-    if (!chartData) {
-      document.getElementById('app').innerHTML = `<div style="text-align: center; padding: 50px; font-size: 16px;">${translations[currentLanguage].noChartData}</div>`
-      return
-    }
-
-    // Chart type preferences (default to pie)
-    let typeChartMode = 'pie'
-    let categoryChartMode = 'pie'
-
-    // Chart instances
-    const chartInstances = {}
-
-    // Format currency helper with localization
-    const formatCurrency = (value, lang = currentLanguage) => {
-      const info = localeInfo[lang]
+    formatCurrency(value) {
+      const info = this.localeInfo[this.currentLanguage]
       return new Intl.NumberFormat(info.locale, {
         style: 'currency',
         currency: info.currency,
@@ -471,51 +531,59 @@
       }).format(value)
     }
 
-    // Format date helper with localization
-    const formatDate = (dateStr, lang = currentLanguage) => {
-      const info = localeInfo[lang]
+    formatDate(dateStr) {
+      const info = this.localeInfo[this.currentLanguage]
       return new Date(dateStr).toLocaleDateString(info.locale)
     }
 
-    // Calculate total amount
-    const totalAmount = chartData.expenses.reduce((sum, exp) => sum + exp.amount, 0)
-
-    // Print function
-    const printCharts = () => {
-      window.print()
+    formatMonthLabel(monthLabel) {
+      try {
+        const [year, month] = monthLabel.split('-')
+        const date = new Date(parseInt(year), parseInt(month) - 1, 1)
+        return date.toLocaleDateString(this.localeInfo[this.currentLanguage].locale, {
+          year: 'numeric',
+          month: 'short'
+        })
+      } catch (e) {
+        return monthLabel
+      }
     }
 
-    // Generate colors if needed
-    const generateColors = (count) => {
+    translateCategory(key, type, defaultValue = key) {
+      const category = type === 'type' ? 'types' : 'families'
+      try {
+        const translation = this.categoryTranslations[this.currentLanguage]?.[category]?.[key]
+        return translation || defaultValue
+      } catch (e) {
+        return defaultValue
+      }
+    }
+
+    generateColors(count) {
       const colors = [
         '#3366FF', '#FF6633', '#33CC99', '#FFCC33', '#FF33CC',
         '#33CCFF', '#CC99FF', '#99CC33', '#FF9966', '#6699FF'
       ]
-
-      return Array(count).fill(0).map((_, i) =>
-        colors[i % colors.length]
-      )
+      return Array(count).fill(0).map((_, i) => colors[i % colors.length])
     }
 
-    // Create a pie chart
-    const createPieChart = (containerId, data, labels, colors) => {
-      // Destroy previous chart if it exists
-      if (chartInstances[containerId]) {
-        chartInstances[containerId].destroy()
+    destroyChart(containerId) {
+      if (this.chartInstances[containerId]) {
+        this.chartInstances[containerId].destroy()
+        delete this.chartInstances[containerId]
       }
+    }
+
+    createPieChart(containerId, data, labels, colors) {
+      this.destroyChart(containerId)
 
       const container = document.getElementById(containerId)
       if (!container) return
 
-      // Clear container
-      container.innerHTML = ''
+      container.innerHTML = '<canvas></canvas>'
+      const canvas = container.querySelector('canvas')
 
-      // Create canvas
-      const canvas = document.createElement('canvas')
-      container.appendChild(canvas)
-
-      // Create chart
-      chartInstances[containerId] = new Chart(canvas, {
+      this.chartInstances[containerId] = new Chart(canvas, {
         type: 'pie',
         data: {
           labels: labels,
@@ -531,18 +599,15 @@
           plugins: {
             legend: {
               position: 'bottom',
-              labels: {
-                padding: 15,
-                usePointStyle: true
-              }
+              labels: { padding: 15, usePointStyle: true }
             },
             tooltip: {
               callbacks: {
-                label: function(context) {
+                label: (context) => {
                   const value = context.raw
                   const total = context.dataset.data.reduce((a, b) => a + b, 0)
                   const percentage = ((value / total) * 100).toFixed(1) + '%'
-                  return `${context.label}: ${formatCurrency(value)} (${percentage})`
+                  return `${context.label}: ${this.formatCurrency(value)} (${percentage})`
                 }
               }
             }
@@ -551,28 +616,17 @@
       })
     }
 
-    // Create a bar chart
-    const createBarChart = (containerId, data, labels, colors) => {
-      // Destroy previous chart if it exists
-      if (chartInstances[containerId]) {
-        chartInstances[containerId].destroy()
-      }
+    createBarChart(containerId, data, labels, colors) {
+      this.destroyChart(containerId)
 
       const container = document.getElementById(containerId)
       if (!container) return
 
-      // Clear container
-      container.innerHTML = ''
+      container.innerHTML = '<canvas></canvas>'
+      const canvas = container.querySelector('canvas')
+      const t = this.translations[this.currentLanguage]
 
-      // Create canvas
-      const canvas = document.createElement('canvas')
-      container.appendChild(canvas)
-
-      // Get current translations
-      const t = translations[currentLanguage]
-
-      // Create chart
-      chartInstances[containerId] = new Chart(canvas, {
+      this.chartInstances[containerId] = new Chart(canvas, {
         type: 'bar',
         data: {
           labels: labels,
@@ -587,14 +641,10 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: {
-              display: false
-            },
+            legend: { display: false },
             tooltip: {
               callbacks: {
-                label: function(context) {
-                  return `${t.amount}: ${formatCurrency(context.raw)}`
-                }
+                label: (context) => `${t.amount}: ${this.formatCurrency(context.raw)}`
               }
             }
           },
@@ -602,9 +652,7 @@
             y: {
               beginAtZero: true,
               ticks: {
-                callback: function(value) {
-                  return formatCurrency(value)
-                }
+                callback: (value) => this.formatCurrency(value)
               }
             }
           }
@@ -612,118 +660,47 @@
       })
     }
 
-    // Function to translate category types and families
-    const translateCategory = (key, type, defaultValue = key) => {
-      // Check if it's a type or family
-      const category = type === 'type' ? 'types' : 'families'
-
-      // Try to get the translation
-      try {
-        if (categoryTranslations[currentLanguage] &&
-          categoryTranslations[currentLanguage][category] &&
-          categoryTranslations[currentLanguage][category][key]) {
-          return categoryTranslations[currentLanguage][category][key]
-        }
-      } catch (e) {
-        console.error('Translation error:', e)
-      }
-
-      // Fallback to default value if translation not found
-      return defaultValue
-    }
-
-    // Function to format month labels better
-    const formatMonthLabel = (monthLabel) => {
-      // Try to parse the month label (e.g., "2023-01")
-      try {
-        const [year, month] = monthLabel.split('-')
-        const date = new Date(parseInt(year), parseInt(month) - 1, 1)
-
-        // Format based on the current language
-        return date.toLocaleDateString(localeInfo[currentLanguage].locale, {
-          year: 'numeric',
-          month: 'short'
-        })
-      } catch (e) {
-        // If parsing fails, return the original label
-        return monthLabel
-      }
-    }
-
-    // Create a stacked bar chart for monthly data
-    const createStackedBarChart = (containerId) => {
+    createStackedBarChart(containerId) {
       const container = document.getElementById(containerId)
-      if (!container || !chartData.expensesByMonth || !chartData.expensesByMonth.items || chartData.expensesByMonth.items.length === 0) return
+      const monthlyData = this.chartData.expensesByMonth
 
-      // Destroy previous chart if it exists
-      if (chartInstances[containerId]) {
-        chartInstances[containerId].destroy()
-      }
+      if (!container || !monthlyData?.items?.length) return
 
-      // Clear container
-      container.innerHTML = ''
+      this.destroyChart(containerId)
+      container.innerHTML = '<canvas></canvas>'
+      const canvas = container.querySelector('canvas')
 
-      // Create canvas
-      const canvas = document.createElement('canvas')
-      container.appendChild(canvas)
+      const labels = monthlyData.items.map(item => this.formatMonthLabel(item.label))
+      const datasets = monthlyData.series.map((series, index) => ({
+        label: this.translateCategory(series.name, 'type', series.name),
+        data: monthlyData.items.map(item =>
+          (item.values && series.name in item.values) ? item.values[series.name] : 0
+        ),
+        backgroundColor: series.color || this.generateColors(monthlyData.series.length)[index],
+        borderWidth: 1
+      }))
 
-      // Format the labels
-      const labels = chartData.expensesByMonth.items.map(item => formatMonthLabel(item.label))
+      const t = this.translations[this.currentLanguage]
 
-      // Prepare datasets with translated series names
-      const datasets = chartData.expensesByMonth.series.map((series, index) => {
-        // Translate the series name if it's a category type
-        const translatedName = translateCategory(series.name, 'type', series.name);
-
-        return {
-          label: translatedName,
-          data: chartData.expensesByMonth.items.map(item => {
-            // Make sure the value exists, otherwise return 0
-            return (item.values && series.name in item.values) ? item.values[series.name] : 0
-          }),
-          backgroundColor: series.color || generateColors(chartData.expensesByMonth.series.length)[index],
-          borderWidth: 1
-        }
-      })
-
-      // Get current translations
-      const t = translations[currentLanguage]
-
-      // Create chart
-      chartInstances[containerId] = new Chart(canvas, {
+      this.chartInstances[containerId] = new Chart(canvas, {
         type: 'bar',
         data: { labels, datasets },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: {
-              stacked: true,
-              ticks: {
-                maxRotation: 45,
-                minRotation: 45
-              }
-            },
+            x: { stacked: true, ticks: { maxRotation: 45, minRotation: 45 } },
             y: {
               stacked: true,
               beginAtZero: true,
-              ticks: {
-                callback: function(value) {
-                  return formatCurrency(value)
-                }
-              }
+              ticks: { callback: (value) => this.formatCurrency(value) }
             }
           },
           plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { padding: 15 }
-            },
+            legend: { position: 'bottom', labels: { padding: 15 } },
             tooltip: {
               callbacks: {
-                label: function(context) {
-                  return `${context.dataset.label}: ${formatCurrency(context.raw)}`
-                }
+                label: (context) => `${context.dataset.label}: ${this.formatCurrency(context.raw)}`
               }
             }
           }
@@ -731,96 +708,260 @@
       })
     }
 
-    // Render type chart based on mode
-    const renderTypeChart = () => {
-      if (!chartData.expensesByType || chartData.expensesByType.length === 0) return
+    renderTypeChart() {
+      const typeData = this.chartData.expensesByType
+      if (!typeData?.length) return
 
-      const colors = chartData.expensesByType.map((item, index) =>
-        item.color || generateColors(chartData.expensesByType.length)[index]
+      const colors = typeData.map((item, index) =>
+        item.color || this.generateColors(typeData.length)[index]
       )
 
-      // Translate type names if they have rawName property
-      const typeLabels = chartData.expensesByType.map(item => {
-        if(!item.rawName){
-          item.rawName = item.name
-        }
-        return item.rawName ? translateCategory(item.rawName, 'type', item.name) : item.name;
-      });
+      const typeLabels = typeData.map(item => {
+        if (!item.rawName) item.rawName = item.name
+        return this.translateCategory(item.rawName, 'type', item.name)
+      })
 
-      if (typeChartMode === 'pie') {
-        createPieChart(
-          'type-chart-container',
-          chartData.expensesByType.map(item => item.value),
-          typeLabels,
-          colors
-        )
-      } else {
-        createBarChart(
-          'type-chart-container',
-          chartData.expensesByType.map(item => item.value),
-          typeLabels,
-          colors
-        )
-      }
+      const chartMethod = this.typeChartMode === 'pie' ? 'createPieChart' : 'createBarChart'
+      this[chartMethod](
+        'type-chart-container',
+        typeData.map(item => item.value),
+        typeLabels,
+        colors
+      )
     }
 
-    // Render family charts for a type
-    const renderFamilyChart = (typeDetail) => {
-      if (!typeDetail || !typeDetail.families || typeDetail.families.length === 0) return
+    renderFamilyChart(typeDetail) {
+      if (!typeDetail?.families?.length) return
 
       const chartId = `family-chart-${typeDetail.type.replace(/\s+/g, '-').toLowerCase()}`
       const colors = typeDetail.families.map((item, index) =>
-        item.color || generateColors(typeDetail.families.length)[index]
+        item.color || this.generateColors(typeDetail.families.length)[index]
       )
 
-      // Translate family names if they have rawName property
       const familyLabels = typeDetail.families.map(family => {
-        if(!family.rawName){
-          family.rawName = family.name
-        }
-        return family.rawName ? translateCategory(family.rawName, 'family', family.name) : family.name;
-      });
+        if (!family.rawName) family.rawName = family.name
+        return this.translateCategory(family.rawName, 'family', family.name)
+      })
 
-      if (categoryChartMode === 'pie') {
-        createPieChart(
-          chartId,
-          typeDetail.families.map(item => item.value),
-          familyLabels,
-          colors
-        )
-      } else {
-        createBarChart(
-          chartId,
-          typeDetail.families.map(item => item.value),
-          familyLabels,
-          colors
-        )
-      }
+      const chartMethod = this.categoryChartMode === 'pie' ? 'createPieChart' : 'createBarChart'
+      this[chartMethod](
+        chartId,
+        typeDetail.families.map(item => item.value),
+        familyLabels,
+        colors
+      )
     }
 
-    // Function to render the entire UI with current language
-    const renderUI = () => {
-      // Get translations for current language
-      const t = translations[currentLanguage]
-      const isRtl = localeInfo[currentLanguage].rtl
+    createSummarySection() {
+      const t = this.translations[this.currentLanguage]
+      const totalAmount = this.chartData.expenses.reduce((sum, exp) => sum + exp.amount, 0)
+      const expenseCount = this.chartData.expenses.length
 
-      // Set document language and direction
-      document.documentElement.lang = currentLanguage
+      return `
+          <div class="card">
+            <h2>${t.summary}</h2>
+            <div class="summary-content">
+              <div class="summary-item">
+                <div class="summary-label">${t.totalExpenses}</div>
+                <div class="summary-value">${this.formatCurrency(totalAmount)}</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">${t.numberOfExpenses}</div>
+                <div class="summary-value">${expenseCount}</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">${t.averageExpense}</div>
+                <div class="summary-value">${this.formatCurrency(totalAmount / (expenseCount || 1))}</div>
+              </div>
+            </div>
+          </div>
+        `
+    }
+
+    createTypeSection() {
+      const t = this.translations[this.currentLanguage]
+      const typeData = this.chartData.expensesByType || []
+      const totalAmount = this.chartData.expenses.reduce((sum, exp) => sum + exp.amount, 0)
+
+      const tableRows = typeData.map(item => {
+        const displayName = item.rawName ?
+          this.translateCategory(item.rawName, 'type', item.name) : item.name
+        const percentage = item.percentage || ((item.value / totalAmount) * 100)
+
+        return `
+            <tr>
+              <td>${displayName}</td>
+              <td>${this.formatCurrency(item.value)}</td>
+              <td>${percentage.toFixed(1)}%</td>
+              <td>${item.count || 0}</td>
+            </tr>
+          `
+      }).join('')
+
+      return `
+          <div class="card">
+            <h2>${t.expensesByType}</h2>
+            <div class="chart-toggle">
+              <button id="type-pie-btn" class="chart-toggle-btn active">${t.pieChart}</button>
+              <button id="type-bar-btn" class="chart-toggle-btn">${t.barChart}</button>
+            </div>
+            <div class="chart-container" id="type-chart-container"></div>
+            ${typeData.length > 0 ? `
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>${t.type}</th>
+                      <th>${t.amount}</th>
+                      <th>${t.percentage}</th>
+                      <th>${t.count}</th>
+                    </tr>
+                  </thead>
+                  <tbody>${tableRows}</tbody>
+                </table>
+              </div>
+            ` : `<div class="no-data">${t.noData}</div>`}
+          </div>
+        `
+    }
+
+    createMonthlySection() {
+      const t = this.translations[this.currentLanguage]
+      const monthlyData = this.chartData.expensesByMonth
+
+      let tableRows = ''
+      if (monthlyData?.items?.length) {
+        tableRows = monthlyData.items.map(item => {
+          const monthTotal = item.total ||
+            (item.values ? Object.values(item.values).reduce((sum, val) => sum + (parseFloat(val) || 0), 0) : 0)
+
+          return `
+              <tr>
+                <td>${this.formatMonthLabel(item.label)}</td>
+                <td>${this.formatCurrency(monthTotal)}</td>
+              </tr>
+            `
+        }).join('')
+      }
+
+      return `
+          <div class="card">
+            <h2>${t.monthlyExpenseTrends}</h2>
+            <div class="chart-container wide" id="monthly-chart-container"></div>
+            ${monthlyData?.items?.length ? `
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>${t.month}</th>
+                      <th>${t.totalAmount}</th>
+                    </tr>
+                  </thead>
+                  <tbody>${tableRows}</tbody>
+                </table>
+              </div>
+            ` : `<div class="no-data">${t.noMonthlyData}</div>`}
+          </div>
+        `
+    }
+
+    createTypeDetailsSection() {
+      const t = this.translations[this.currentLanguage]
+      const typeDetails = this.chartData.typeDetails || []
+
+      if (!typeDetails.length) return ''
+
+      const typeDetailsHtml = typeDetails.map((typeDetail, index) => {
+        if (!typeDetail) return ''
+
+        const safeType = (typeDetail.type || 'unknown').replace(/\s+/g, '-').toLowerCase()
+        const chartId = `family-chart-${safeType}`
+        const originalTypeName = typeDetail.rawName || typeDetail.type
+        const translatedTypeName = this.translateCategory(originalTypeName, 'type', typeDetail.type)
+
+        const familyRows = typeDetail.families?.map(family => {
+          if (!family) return ''
+
+          const originalFamilyName = family.rawName || family.name
+          const translatedFamilyName = this.translateCategory(originalFamilyName, 'family', family.name)
+          const percentage = family.percentage || ((family.value / (typeDetail.value || 1)) * 100)
+
+          return `
+              <tr>
+                <td>${translatedFamilyName}</td>
+                <td>${this.formatCurrency(family.value)}</td>
+                <td>${percentage.toFixed(1)}%</td>
+                <td>${family.count || 0}</td>
+              </tr>
+            `
+        }).join('') || ''
+
+        return `
+            <div class="type-details">
+              <h3>${translatedTypeName} - ${this.formatCurrency(typeDetail.value)}</h3>
+              <div class="chart-container" id="${chartId}"></div>
+              ${typeDetail.families?.length ? `
+                <div class="table-wrapper">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>${t.family}</th>
+                        <th>${t.amount}</th>
+                        <th>${t.percentage}</th>
+                        <th>${t.count}</th>
+                      </tr>
+                    </thead>
+                    <tbody>${familyRows}</tbody>
+                  </table>
+                </div>
+              ` : `<div class="no-data">${t.noData}</div>`}
+              ${index < typeDetails.length - 1 ? '<hr>' : ''}
+            </div>
+          `
+      }).join('')
+
+      return `
+          <div class="card">
+            <h2>${t.expenseTypeBreakdown}</h2>
+            <div class="chart-toggle">
+              <button id="category-pie-btn" class="chart-toggle-btn active">${t.pieChart}</button>
+              <button id="category-bar-btn" class="chart-toggle-btn">${t.barChart}</button>
+            </div>
+            ${typeDetailsHtml}
+          </div>
+        `
+    }
+
+    renderNoDataMessage() {
+      const t = this.translations[this.currentLanguage]
+      document.getElementById('app').innerHTML = `
+          <div class="standalone-container">
+            <div class="no-data" style="padding: 50px; font-size: 16px;">
+              ${t.noChartData}
+            </div>
+          </div>
+        `
+    }
+
+    renderUI() {
+      const t = this.translations[this.currentLanguage]
+      const isRtl = this.localeInfo[this.currentLanguage].rtl
+
+      document.documentElement.lang = this.currentLanguage
       document.body.className = isRtl ? 'rtl' : ''
 
-      // Create app content
-      let appHtml = `
+      const html = `
           <div class="standalone-container">
             <div class="header">
-              <div>
-                <h1>${chartTitle || t.title}</h1>
-                ${dateRange ? `<div style="color: #666; margin-top: 5px;">${t.period}: ${dateRange}</div>` : ''}
+              <div class="header-info">
+                <h1>${this.chartTitle || t.title}</h1>
+                ${this.dateRange ? `<div class="period">${t.period}: ${this.dateRange}</div>` : ''}
               </div>
-              <div style="display: flex; align-items: center;">
+              <div class="header-controls">
                 <select id="language-selector" class="language-selector">
-                  <option value="en" ${currentLanguage === 'en' ? 'selected' : ''}>English</option>
-                  <option value="ro" ${currentLanguage === 'ro' ? 'selected' : ''}>Română</option>
-                  <option value="ru" ${currentLanguage === 'ru' ? 'selected' : ''}>Русский</option>
+                  <option value="en" ${this.currentLanguage === 'en' ? 'selected' : ''}>English</option>
+                  <option value="ro" ${this.currentLanguage === 'ro' ? 'selected' : ''}>Română</option>
+                  <option value="ru" ${this.currentLanguage === 'ru' ? 'selected' : ''}>Русский</option>
                 </select>
                 <button id="print-button" class="print-button">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -833,257 +974,84 @@
               </div>
             </div>
 
-            <!-- Summary Section -->
-            <div class="card">
-              <h2>${t.summary}</h2>
-              <div class="summary-content">
-                <div class="summary-item">
-                  <div class="summary-label">${t.totalExpenses}</div>
-                  <div class="summary-value">${formatCurrency(totalAmount)}</div>
-                </div>
-                <div class="summary-item">
-                  <div class="summary-label">${t.numberOfExpenses}</div>
-                  <div class="summary-value">${chartData.expenses.length}</div>
-                </div>
-                <div class="summary-item">
-                  <div class="summary-label">${t.averageExpense}</div>
-                  <div class="summary-value">${formatCurrency(totalAmount / (chartData.expenses.length || 1))}</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Page break for printing -->
+            ${this.createSummarySection()}
             <div class="page-break"></div>
-
-            <!-- Expenses by Type Section -->
-            <div class="card">
-              <h2>${t.expensesByType}</h2>
-
-              <div class="chart-toggle">
-                <button id="type-pie-btn" class="chart-toggle-btn active">${t.pieChart}</button>
-                <button id="type-bar-btn" class="chart-toggle-btn">${t.barChart}</button>
-              </div>
-
-              <div class="chart-container" id="type-chart-container"></div>
-
-              ${chartData.expensesByType && chartData.expensesByType.length > 0 ? `
-                <div style="margin-top: 20px; overflow-x: auto;">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>${t.type}</th>
-                        <th>${t.amount}</th>
-                        <th>${t.percentage}</th>
-                        <th>${t.count}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${chartData.expensesByType.map(item => {
-        // Try to translate the type name if it looks like a key
-        const displayName = item.rawName ? translateCategory(item.rawName, 'type', item.name) : item.name;
-
-        return `
-                        <tr>
-                          <td>${displayName}</td>
-                          <td>${formatCurrency(item.value)}</td>
-                          <td>${item.percentage ? item.percentage.toFixed(1) + '%' : ((item.value / totalAmount) * 100).toFixed(1) + '%'}</td>
-                          <td>${item.count || 0}</td>
-                        </tr>
-                        `;
-      }).join('')}
-                    </tbody>
-                  </table>
-                </div>
-              ` : `<div style="text-align: center; padding: 20px; color: #999;">${t.noData}</div>`}
-            </div>
-
-            <!-- Page break for printing -->
+            ${this.createTypeSection()}
             <div class="page-break"></div>
-
-            <!-- Monthly Expense Trends Section -->
-            <div class="card">
-              <h2>${t.monthlyExpenseTrends}</h2>
-              <div class="chart-container wide" id="monthly-chart-container"></div>
-
-              ${chartData.expensesByMonth && chartData.expensesByMonth.items && chartData.expensesByMonth.items.length > 0 ? `
-                <div style="margin-top: 20px; overflow-x: auto;">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>${t.month}</th>
-                        <th>${t.totalAmount}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${chartData.expensesByMonth.items.map(item => {
-        // Calculate total for this month either from item.total or by summing values
-        const monthTotal = item.total ||
-          (item.values ? Object.values(item.values).reduce((sum, val) => sum + (parseFloat(val) || 0), 0) : 0);
-
-        return `
-                        <tr>
-                          <td>${formatMonthLabel(item.label)}</td>
-                          <td>${formatCurrency(monthTotal)}</td>
-                        </tr>
-                        `;
-      }).join('')}
-                    </tbody>
-                  </table>
-                </div>
-              ` : `<div style="text-align: center; padding: 20px; color: #999;">${t.noMonthlyData}</div>`}
-            </div>
+            ${this.createMonthlySection()}
+            ${this.createTypeDetailsSection()}
+          </div>
         `
 
-      // Add Type Breakdown Sections - one card per type
-      if (chartData.typeDetails && chartData.typeDetails.length > 0) {
-        appHtml += `
-            <!-- Expense Type Breakdown -->
-            <div class="page-break"></div>
-            <div class="card">
-              <h2>${t.expenseTypeBreakdown}</h2>
+      document.getElementById('app').innerHTML = html
+      this.attachEventListeners()
+      this.renderAllCharts()
+    }
 
-              <div class="chart-toggle">
-                <button id="category-pie-btn" class="chart-toggle-btn active">${t.pieChart}</button>
-                <button id="category-bar-btn" class="chart-toggle-btn">${t.barChart}</button>
-              </div>
-          `
-
-        // Add each type detail
-        chartData.typeDetails.forEach((typeDetail, index) => {
-          if (!typeDetail) return;
-
-          const safeType = (typeDetail.type || 'unknown').replace(/\s+/g, '-').toLowerCase();
-          const chartId = `family-chart-${safeType}`;
-
-          // Get the original type name for translation, or use the provided one
-          const originalTypeName = typeDetail.rawName || typeDetail.type;
-          const translatedTypeName = translateCategory(originalTypeName, 'type', typeDetail.type);
-
-          appHtml += `
-              <div class="type-details">
-                <h3>${translatedTypeName} - ${formatCurrency(typeDetail.value)}</h3>
-
-                <div class="chart-container" id="${chartId}"></div>
-
-                ${typeDetail.families && typeDetail.families.length > 0 ? `
-                  <div style="margin-top: 20px; overflow-x: auto;">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>${t.family}</th>
-                          <th>${t.amount}</th>
-                          <th>${t.percentage}</th>
-                          <th>${t.count}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${typeDetail.families.map(family => {
-            if (!family) return '';
-
-            // Get the original family name for translation, or use the provided one
-            const originalFamilyName = family.rawName || family.name;
-            const translatedFamilyName = translateCategory(originalFamilyName, 'family', family.name);
-            const percentage = family.percentage
-              ? family.percentage.toFixed(1)
-              : ((family.value / (typeDetail.value || 1)) * 100).toFixed(1);
-
-            return `
-                          <tr>
-                            <td>${translatedFamilyName}</td>
-                            <td>${formatCurrency(family.value)}</td>
-                            <td>${percentage}%</td>
-                            <td>${family.count || 0}</td>
-                          </tr>
-                          `;
-          }).join('')}
-                      </tbody>
-                    </table>
-                  </div>
-                ` : `<div style="text-align: center; padding: 20px; color: #999;">${t.noFamiliesFound || 'No family data available'}</div>`}
-                ${index < chartData.typeDetails.length - 1 ? '<hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">' : ''}
-              </div>
-            `
-        })
-
-        // Close the card
-        appHtml += `</div>`
-      }
-
-      // Close the container
-      appHtml += `</div>`
-
-      // Set the content
-      document.getElementById('app').innerHTML = appHtml
-
-      // Add event listeners
-      document.getElementById('print-button').addEventListener('click', printCharts)
+    attachEventListeners() {
+      // Print button
+      document.getElementById('print-button')?.addEventListener('click', () => {
+        window.print()
+      })
 
       // Language selector
-      document.getElementById('language-selector').addEventListener('change', function() {
-        currentLanguage = this.value
-        localStorage.setItem('standalone_chart_language', currentLanguage)
-        renderUI()
+      document.getElementById('language-selector')?.addEventListener('change', (e) => {
+        this.currentLanguage = e.target.value
+        localStorage.setItem('standalone_chart_language', this.currentLanguage)
+        this.renderUI()
       })
 
-      // Type chart toggle buttons
-      document.getElementById('type-pie-btn').addEventListener('click', function() {
-        this.classList.add('active')
-        document.getElementById('type-bar-btn').classList.remove('active')
-        typeChartMode = 'pie'
-        renderTypeChart()
+      // Type chart toggle
+      document.getElementById('type-pie-btn')?.addEventListener('click', () => {
+        this.setActiveButton('type-pie-btn', 'type-bar-btn')
+        this.typeChartMode = 'pie'
+        this.renderTypeChart()
       })
 
-      document.getElementById('type-bar-btn').addEventListener('click', function() {
-        this.classList.add('active')
-        document.getElementById('type-pie-btn').classList.remove('active')
-        typeChartMode = 'bar'
-        renderTypeChart()
+      document.getElementById('type-bar-btn')?.addEventListener('click', () => {
+        this.setActiveButton('type-bar-btn', 'type-pie-btn')
+        this.typeChartMode = 'bar'
+        this.renderTypeChart()
       })
 
-      // Category chart toggle buttons if they exist
-      if (chartData.typeDetails && chartData.typeDetails.length > 0) {
-        const categoryPieBtn = document.getElementById('category-pie-btn')
-        const categoryBarBtn = document.getElementById('category-bar-btn')
+      // Category chart toggle
+      document.getElementById('category-pie-btn')?.addEventListener('click', () => {
+        this.setActiveButton('category-pie-btn', 'category-bar-btn')
+        this.categoryChartMode = 'pie'
+        this.renderFamilyCharts()
+      })
 
-        if (categoryPieBtn && categoryBarBtn) {
-          categoryPieBtn.addEventListener('click', function() {
-            this.classList.add('active')
-            categoryBarBtn.classList.remove('active')
-            categoryChartMode = 'pie'
-            if (chartData.typeDetails) {
-              chartData.typeDetails.forEach(typeDetail => {
-                if (typeDetail) renderFamilyChart(typeDetail)
-              })
-            }
-          })
+      document.getElementById('category-bar-btn')?.addEventListener('click', () => {
+        this.setActiveButton('category-bar-btn', 'category-pie-btn')
+        this.categoryChartMode = 'bar'
+        this.renderFamilyCharts()
+      })
+    }
 
-          categoryBarBtn.addEventListener('click', function() {
-            this.classList.add('active')
-            categoryPieBtn.classList.remove('active')
-            categoryChartMode = 'bar'
-            if (chartData.typeDetails) {
-              chartData.typeDetails.forEach(typeDetail => {
-                if (typeDetail) renderFamilyChart(typeDetail)
-              })
-            }
-          })
-        }
-      }
+    setActiveButton(activeId, inactiveId) {
+      document.getElementById(activeId)?.classList.add('active')
+      document.getElementById(inactiveId)?.classList.remove('active')
+    }
 
-      // Initial render of all charts
-      renderTypeChart()
-      createStackedBarChart('monthly-chart-container')
-
-      if (chartData.typeDetails && chartData.typeDetails.length > 0) {
-        chartData.typeDetails.forEach(typeDetail => {
-          if (typeDetail) renderFamilyChart(typeDetail)
+    renderFamilyCharts() {
+      if (this.chartData.typeDetails?.length) {
+        this.chartData.typeDetails.forEach(typeDetail => {
+          if (typeDetail) this.renderFamilyChart(typeDetail)
         })
       }
     }
 
-    // Initial UI render
-    renderUI()
-  })()
+    renderAllCharts() {
+      this.renderTypeChart()
+      this.createStackedBarChart('monthly-chart-container')
+      this.renderFamilyCharts()
+    }
+  }
+
+  // Initialize the app when the page loads
+  document.addEventListener('DOMContentLoaded', () => {
+    new ExpenseChartsApp()
+  })
 </script>
 </body>
 </html>
