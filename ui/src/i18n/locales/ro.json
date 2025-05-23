@@ -33,7 +33,14 @@
     "hide": "Ascunde",
     "notFound": "Pagină lipsă",
     "dateRange": "Interval de date",
-    "reset_filters": "Resetează filtrele"
+    "reset_filters": "Resetează filtrele",
+    "showFilters": "Afișează Filtrele",
+    "hideFilters": "Ascunde Filtrele",
+    "filters": "Filtre",
+    "selectAll": "Selectează Toate",
+    "selectFloors": "Selectează Etajele",
+    "selectEntrances": "Selectează Intrările",
+    "clearFilters": "Șterge Filtrele"
   },
   "auth": {
     "login": "Autentificare",
@@ -197,6 +204,10 @@
     "exportSuccess": "CSV exportat cu succes",
     "exportError": "Nu s-a putut exporta CSV",
     "totalOwners": "Total Proprietari",
+    "relativeShare": "Cotă Relativă",
+    "sortByRelativeShare": "Sortează după Cotă Relativă",
+    "votingShare": "Cotă de Vot",
+    "sortByShare": "Sortează după Cotă de Vot",
     "csvHeaders": {
       "id": "ID Proprietar",
       "name": "Nume Proprietar",
@@ -239,7 +250,14 @@
         "totalOwners": "Total Proprietari cu Drept de Vot",
         "totalUnits": "Total Unități",
         "totalArea": "Suprafață Totală (m²)",
-        "totalVotingShare": "Total Cotă de Vot (%)"
+        "totalVotingShare": "Total Cotă de Vot (%)",
+        "relativeShare": "Cotă Relativă (%)",
+        "filterInfo": "Informații Filtre",
+        "unitTypeFilter": "Filtru Tip Unitate",
+        "floorFilter": "Filtru Etaj",
+        "entranceFilter": "Filtru Intrare",
+        "noFilters": "Nu sunt aplicate filtre - se afișează toți proprietarii cu drept de vot",
+        "totalRelativeShare": "Total Cotă Relativă (%)"
       }
     }
   },
@@ -292,6 +310,7 @@
     "noOwnershipHistory": "Nu s-a găsit istoric de proprietate pentru această unitate",
     "noUnitReport": "Nu s-a găsit raport pentru unitate",
     "missingIds": "Lipsă ID asociație sau clădire. Vă rugăm să vă asigurați că acestea sunt furnizate în URL.",
+    "basement": "Subsol",
     "ownership": {
       "startDate": "Data Începerii",
       "endDate": "Data Terminării",

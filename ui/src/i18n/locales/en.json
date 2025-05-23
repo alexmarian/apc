@@ -33,7 +33,14 @@
     "hide": "Hide",
     "notFound": "Page not found",
     "dateRange": "Date Range",
-    "reset_filters": "Reset Filters"
+    "reset_filters": "Reset Filters",
+    "showFilters": "Show Filters",
+    "hideFilters": "Hide Filters",
+    "filters": "Filters",
+    "selectAll": "Select All",
+    "selectFloors": "Select Floors",
+    "selectEntrances": "Select Entrances",
+    "clearFilters": "Clear Filters"
   },
   "auth": {
     "login": "Login",
@@ -199,6 +206,10 @@
     "exportSuccess": "CSV exported successfully",
     "exportError": "Failed to export CSV",
     "totalOwners": "Total Owners",
+    "relativeShare": "Relative Share",
+    "sortByRelativeShare": "Sort by Relative Share",
+    "votingShare": "Voting Share",
+    "sortByShare": "Sort by Voting Share",
     "csvHeaders": {
       "id": "Owner ID",
       "name": "Owner Name",
@@ -241,7 +252,14 @@
         "totalOwners": "Total Voting Owners",
         "totalUnits": "Total Units",
         "totalArea": "Total Area (m²)",
-        "totalVotingShare": "Total Voting Share (%)"
+        "totalVotingShare": "Total Voting Share (%)",
+        "relativeShare": "Relative Share (%)",
+        "filterInfo": "Filter Information",
+        "unitTypeFilter": "Unit Type Filter",
+        "floorFilter": "Floor Filter",
+        "entranceFilter": "Entrance Filter",
+        "noFilters": "No filters applied - showing all voting owners",
+        "totalRelativeShare": "Total Relative Share (%)"
       }
     }
   },
@@ -294,6 +312,7 @@
     "noOwnershipHistory": "No ownership history found for this unit",
     "noUnitReport": "No unit report found",
     "missingIds": "Missing association or building ID. Please ensure these are provided in the URL.",
+    "basement": "Basement",
     "ownership": {
       "startDate": "Start Date",
       "endDate": "End Date",
