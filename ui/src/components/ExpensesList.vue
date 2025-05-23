@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, h, computed, watch, inject } from 'vue'
+import { ref, onMounted, h, computed, watch } from 'vue'
 import {
   NDataTable,
   NButton,
@@ -32,6 +32,7 @@ const props = defineProps<{
 // Emits
 const emit = defineEmits<{
   (e: 'edit', expenseId: number): void
+  (e: 'create'): void
   (e: 'expenses-rendered', expenses: Expense[]): void
   (e: 'date-range-changed', newDateRange: [number, number] | null): void
   (e: 'category-changed', newCategory: number | null): void
@@ -45,6 +46,7 @@ const expenses = ref<Expense[]>([])
 const loading = ref<boolean>(false)
 const error = ref<string | null>(null)
 const message = useMessage()
+const hasInitialized = ref(false)
 
 // Filters - use shared filters if available, otherwise use local state
 const dateRange = ref<[number, number] | null>(props.dateRange ?? null)
@@ -58,8 +60,91 @@ const filteredExpenses = computed<Expense[]>(() => {
   }
 })
 
+// Fetch expenses - simplified to prevent loops
+const fetchExpenses = async (): Promise<void> => {
+  // Prevent multiple simultaneous calls
+  if (loading.value) {
+    console.log('Already loading expenses, skipping fetch')
+    return
+  }
+
+  if (!props.associationId) {
+    console.log('Missing associationId, skipping fetch')
+    return
+  }
+
+  try {
+    loading.value = true
+    error.value = null
+    console.log('Fetching expenses for association:', props.associationId)
+
+    // Prepare date filters if set
+    let startDate: string | undefined
+    let endDate: string | undefined
+
+    if (dateRange.value) {
+      startDate = new Date(dateRange.value[0]).toISOString().split('T')[0]
+      endDate = new Date(dateRange.value[1]).toISOString().split('T')[0]
+    }
+
+    const response = await expenseApi.getExpenses(props.associationId, startDate, endDate)
+    expenses.value = response.data
+    hasInitialized.value = true
+
+    console.log('Expenses fetched successfully:', response.data.length, 'expenses')
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : t('common.error')
+    console.error('Error fetching expenses:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Method to update a single expense in the list (called when expense is updated)
+const updateExpense = (updatedExpense: Expense) => {
+  const index = expenses.value.findIndex(expense => expense.id === updatedExpense.id)
+  if (index !== -1) {
+    // Find the original expense to get the missing joined data
+    const originalExpense = expenses.value[index]
+
+    // Create complete expense data by merging updated data with existing joined fields
+    const completeExpense: Expense = {
+      ...updatedExpense,
+      // Preserve the joined category and account data from the original expense
+      category_type: originalExpense.category_type,
+      category_family: originalExpense.category_family,
+      category_name: originalExpense.category_name,
+      account_number: originalExpense.account_number,
+      account_name: originalExpense.account_name
+    }
+
+    // Replace the expense in the array while maintaining reactivity
+    expenses.value.splice(index, 1, completeExpense)
+    console.log('Expense updated in list with preserved joined data:', completeExpense)
+  }
+}
+
+// Method to add a new expense to the list
+const addExpense = (newExpense: Expense) => {
+  expenses.value.unshift(newExpense) // Add to beginning for newest first
+  console.log('Expense added to list:', newExpense)
+}
+
+// Expose methods for parent components
+defineExpose({
+  updateExpense,
+  addExpense,
+  refreshData: fetchExpenses
+})
+
 // Table columns definition
 const columns = ref<DataTableColumns<Expense>>([
+  {
+    title: 'ID',
+    key: 'id',
+    width: 80,
+    sorter: (a, b) => a.id - b.id
+  },
   {
     title: t('expenses.date'),
     key: 'date',
@@ -92,28 +177,31 @@ const columns = ref<DataTableColumns<Expense>>([
     title: t('categories.types.title', 'Type'),
     key: 'category_type',
     render(row: Expense) {
-      return h('span', {}, t(`categories.types.${row.category_type}`))
+      return row.category_type ? t(`categories.types.${row.category_type}`, row.category_type) : '-'
     }
   },
   {
     title: t('categories.families.title', 'Family'),
     key: 'category_family',
     render(row: Expense) {
-      return h('span', {}, t(`categories.families.${row.category_family}`))
+      return row.category_family ? t(`categories.families.${row.category_family}`, row.category_family) : '-'
     }
   },
   {
     title: t('categories.names.title', 'Category'),
     key: 'category_name',
     render(row: Expense) {
-      return h('span', {}, t(`categories.names.${row.category_name}`))
+      return row.category_name ? t(`categories.names.${row.category_name}`, row.category_name) : '-'
     }
   },
   {
     title: t('expenses.account'),
     key: 'account_number',
     render(row: Expense) {
-      return `${row.account_number} - ${row.account_name || ''}`
+      if (row.account_number) {
+        return row.account_name ? `${row.account_number} - ${row.account_name}` : row.account_number
+      }
+      return '-'
     }
   },
   {
@@ -167,33 +255,6 @@ const formattedDateRange = computed<string>(() => {
   return `${start} - ${end}`
 })
 
-// Fetch expenses
-const fetchExpenses = async (): Promise<void> => {
-  if (!props.associationId) return
-
-  try {
-    loading.value = true
-    error.value = null
-
-    // Prepare date filters if set
-    let startDate: string | undefined
-    let endDate: string | undefined
-
-    if (dateRange.value) {
-      startDate = new Date(dateRange.value[0]).toISOString().split('T')[0]
-      endDate = new Date(dateRange.value[1]).toISOString().split('T')[0]
-    }
-
-    const response = await expenseApi.getExpenses(props.associationId, startDate, endDate)
-    expenses.value = response.data
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : t('common.error')
-    console.error('Error fetching expenses:', err)
-  } finally {
-    loading.value = false
-  }
-}
-
 // Delete expense
 const confirmDeleteExpense = (expenseId: number): void => {
   if (window.confirm(t('expenses.confirmDelete'))) {
@@ -232,9 +293,27 @@ watch(selectedCategory, (newCategory) => {
   emit('category-changed', newCategory)
 })
 
-watch(filteredExpenses, () => {
-  emit('expenses-rendered', filteredExpenses.value)
-})
+// Watch filtered expenses and emit changes, but only after initialization
+watch(filteredExpenses, (newFilteredExpenses) => {
+  if (hasInitialized.value) {
+    emit('expenses-rendered', newFilteredExpenses)
+  }
+}, { deep: true })
+
+// Watch for associationId changes and refetch only when necessary
+watch(() => props.associationId,
+  (newAssocId, oldAssocId) => {
+    console.log('Association ID changed:', { newAssocId, oldAssocId })
+
+    // Only fetch if ID is present and has changed
+    if (newAssocId && newAssocId !== oldAssocId) {
+      hasInitialized.value = false
+      expenses.value = []
+      fetchExpenses()
+    }
+  },
+  { immediate: false }
+)
 
 // Reset filters
 const resetFilters = (): void => {
@@ -243,12 +322,24 @@ const resetFilters = (): void => {
 }
 
 onMounted(() => {
-  fetchExpenses()
+  console.log('ExpensesList mounted with associationId:', props.associationId)
+  if (props.associationId) {
+    fetchExpenses()
+  }
 })
 </script>
 
 <template>
   <div class="expenses-list">
+    <NCard style="margin-top: 16px;">
+      <div class="expenses-header">
+        <h2>{{ t('expenses.list') }}</h2>
+        <NButton type="primary" @click="emit('create')">
+          {{ t('expenses.createNew') }}
+        </NButton>
+      </div>
+    </NCard>
+
     <NCard style="margin-top: 16px;">
       <NFlex align="center" justify="start">
         <NText>{{ t('expenses.dateRange') }}:</NText>
@@ -269,6 +360,7 @@ onMounted(() => {
         <NButton @click="resetFilters">{{ t('expenses.resetFilters') }}</NButton>
       </NFlex>
     </NCard>
+
     <NCard style="margin-top: 16px;">
       <NSpin :show="loading">
         <NAlert v-if="error" type="error" :title="t('common.error')" closable>
@@ -310,21 +402,15 @@ onMounted(() => {
   margin: 1rem 0;
 }
 
-.filters {
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  border-radius: 4px;
-  background-color: var(--background-color);
-  border: 1px solid var(--border-color);
+.expenses-header {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
+  justify-content: space-between;
   align-items: center;
+  margin-bottom: 0;
 }
 
-.filters > div {
-  flex: 1;
-  min-width: 200px;
+.expenses-header h2 {
+  margin: 0;
 }
 
 .summary {

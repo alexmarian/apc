@@ -9,7 +9,8 @@ import {
   NSpin,
   NAlert,
   NDatePicker,
-  NInputNumber
+  NInputNumber,
+  useMessage
 } from 'naive-ui'
 import type { FormInst, FormRules } from 'naive-ui'
 import { expenseApi } from '@/services/api'
@@ -19,6 +20,7 @@ import AccountSelector from '@/components/AccountSelector.vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
+const message = useMessage()
 
 const props = defineProps<{
   associationId: number
@@ -26,7 +28,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  saved: []
+  saved: [expense: Expense]  // Pass the updated/created expense data
   cancelled: []
 }>()
 
@@ -92,6 +94,7 @@ const loading = ref(false)
 const submitting = ref(false)
 const error = ref<string | null>(null)
 const formRef = ref<FormInst | null>(null)
+const originalExpense = ref<Expense | null>(null)
 
 const isEditMode = computed(() => !!props.expenseId)
 
@@ -131,6 +134,7 @@ const fetchExpenseDetails = async () => {
 
     const response = await expenseApi.getExpense(props.associationId, props.expenseId)
     const expenseData: Expense = response.data
+    originalExpense.value = expenseData
 
     Object.assign(formData, {
       amount: Number(expenseData.amount) || 0.01,
@@ -183,16 +187,22 @@ const handleSubmit = async () => {
       document_ref: formData.document_ref?.trim() || ''
     }
 
-    if (isEditMode.value) {
-      await expenseApi.updateExpense(props.associationId, props.expenseId!, submitData)
+    let response: { data: Expense }
+
+    if (isEditMode.value && props.expenseId) {
+      response = await expenseApi.updateExpense(props.associationId, props.expenseId, submitData)
+      message.success(t('expenses.expenseUpdated'))
     } else {
-      await expenseApi.createExpense(props.associationId, submitData)
+      response = await expenseApi.createExpense(props.associationId, submitData)
+      message.success(t('expenses.expenseCreated'))
     }
 
-    emit('saved')
+    // Emit the updated/created expense data so parent can update the list without reloading
+    emit('saved', response.data)
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : t('common.error')
     error.value = errorMessage
+    message.error(errorMessage)
     console.error('Error submitting form:', err)
   } finally {
     submitting.value = false
@@ -239,6 +249,15 @@ onMounted(() => {
         require-mark-placement="right-hanging"
         class="expense-form__form"
       >
+        <!-- Readonly Expense ID for edit mode -->
+        <NFormItem v-if="isEditMode && originalExpense" :label="'Expense ID'">
+          <NInput
+            :value="originalExpense.id.toString()"
+            readonly
+            class="expense-form__readonly-input"
+          />
+        </NFormItem>
+
         <NFormItem :label="t('expenses.amount')" path="amount">
           <NInputNumber
             v-model:value="formData.amount"
@@ -350,6 +369,17 @@ onMounted(() => {
 
 .expense-form__form {
   margin-bottom: 1.5rem;
+}
+
+.expense-form__readonly-input {
+  background-color: var(--input-color-disabled);
+  color: var(--text-color-disabled);
+}
+
+.expense-form__readonly-input :deep(.n-input__input-el) {
+  background-color: var(--input-color-disabled) !important;
+  color: var(--text-color-disabled) !important;
+  cursor: not-allowed;
 }
 
 .expense-form__number-input,

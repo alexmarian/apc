@@ -6,13 +6,14 @@ import UnitForm from '@/components/UnitForm.vue'
 import OwnerForm from '@/components/OwnerForm.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { unitApi } from '@/services/api'
-import type { Unit } from '@/types/api'
+import type { Unit, Owner } from '@/types/api'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const refreshKey = ref(0)
+
 // Extract route params and query params
 const unitId = ref<number>(parseInt(route.params.unitId as string))
 const associationId = ref<number | null>(
@@ -64,9 +65,13 @@ const handleEditUnit = () => {
   showEditForm.value = true
 }
 
-const handleFormSaved = () => {
-  // Return to details view and refresh data
+const handleUnitSaved = (savedUnit: Unit) => {
+  console.log('Unit saved:', savedUnit)
+
+  // Close the edit form
   showEditForm.value = false
+
+  // Refresh the unit details to show updated info
   refreshKey.value++
 }
 
@@ -81,14 +86,15 @@ const handleEditOwner = (ownerId: number) => {
   showOwnerForm.value = true
 }
 
-const handleOwnerFormSaved = () => {
+const handleOwnerFormSaved = (savedOwner: Owner) => {
+  console.log('Owner saved:', savedOwner)
+
+  // Close the modal
   showOwnerForm.value = false
   editingOwnerId.value = null
 
-  // Refresh with a slight delay to ensure backend has updated
-  setTimeout(() => {
-    refreshKey.value++ // Force UnitDetails to re-render
-  }, 300)
+  // Refresh the unit details to show updated owner info
+  refreshKey.value++
 }
 
 const handleOwnerFormCancelled = () => {
@@ -160,7 +166,7 @@ onMounted(() => {
             :association-id="associationId"
             :building-id="buildingId"
             :unit-id="unitId"
-            @saved="handleFormSaved"
+            @saved="handleUnitSaved"
             @cancelled="handleFormCancelled"
           />
         </NCard>
@@ -182,7 +188,7 @@ onMounted(() => {
       v-model:show="showOwnerForm"
       style="width: 650px"
       preset="card"
-      :title="t('units.editOwner', 'Edit Owner')"
+      :title="t('owners.editOwner', 'Edit Owner')"
       :mask-closable="false"
     >
       <OwnerForm

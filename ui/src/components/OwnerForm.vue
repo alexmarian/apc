@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import {
   NForm,
   NFormItem,
@@ -7,7 +7,8 @@ import {
   NButton,
   NSpace,
   NSpin,
-  NAlert
+  NAlert,
+  useMessage
 } from 'naive-ui'
 import { ownerApi } from '@/services/api'
 import type { Owner } from '@/types/api'
@@ -15,6 +16,7 @@ import type { FormInst, FormRules } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
+const message = useMessage()
 
 const props = defineProps<{
   associationId: number
@@ -22,8 +24,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'saved'): void
-  (e: 'cancelled'): void
+  saved: [owner: Owner]  // Pass the updated/created owner data
+  cancelled: []
 }>()
 
 interface OwnerFormData {
@@ -80,6 +82,9 @@ const loading = ref<boolean>(false)
 const submitting = ref<boolean>(false)
 const error = ref<string | null>(null)
 const formRef = ref<FormInst | null>(null)
+const originalOwner = ref<Owner | null>(null)
+
+const isEditMode = computed(() => !!props.ownerId)
 
 const resetValidation = async () => {
   if (formRef.value) {
@@ -98,9 +103,9 @@ const fetchOwnerDetails = async () => {
     loading.value = true
     error.value = null
 
-    // Add an API method to get an owner by ID
     const response = await ownerApi.getOwner(props.associationId, props.ownerId)
     const ownerData = response.data
+    originalOwner.value = ownerData
 
     // Update form data
     formData.name = ownerData.name || ''
@@ -182,24 +187,31 @@ const submitForm = async (e: MouseEvent) => {
       contact_email: formData.contact_email
     }
 
-    if (props.ownerId) {
+    let response: { data: Owner }
+
+    if (isEditMode.value && props.ownerId) {
       // Update an existing owner
-      await ownerApi.updateOwner(
+      response = await ownerApi.updateOwner(
         props.associationId,
         props.ownerId,
         ownerData
       )
+      message.success(t('owners.ownerUpdated', 'Owner updated successfully'))
     } else {
       // Create a new owner
-      await ownerApi.createOwner(
+      response = await ownerApi.createOwner(
         props.associationId,
         ownerData
       )
+      message.success(t('owners.ownerCreated', 'Owner created successfully'))
     }
 
-    emit('saved')
+    // Emit the updated/created owner data so parent can update without reloading
+    emit('saved', response.data)
   } catch (err) {
-    error.value = err instanceof Error ? err.message : t('common.error', 'An error occurred while submitting the form')
+    const errorMessage = err instanceof Error ? err.message : t('common.error', 'An error occurred while submitting the form')
+    error.value = errorMessage
+    message.error(errorMessage)
     console.error('Error submitting form:', err)
   } finally {
     submitting.value = false
@@ -219,10 +231,11 @@ onMounted(() => {
 
 <template>
   <div class="owner-form">
+    <h2>{{ isEditMode ? t('owners.editOwner') : t('owners.createOwner') }}</h2>
 
     <NSpin :show="loading">
       <NAlert v-if="error" type="error" :title="t('common.error', 'Error')"
-              style="margin-bottom: 16px;">
+              style="margin-bottom: 16px;" closable @close="error = null">
         {{ error }}
       </NAlert>
 
@@ -234,6 +247,15 @@ onMounted(() => {
         label-width="180px"
         require-mark-placement="right-hanging"
       >
+        <!-- Readonly Owner ID for edit mode -->
+        <NFormItem v-if="isEditMode && originalOwner" :label="'Owner ID'">
+          <NInput
+            :value="originalOwner.id.toString()"
+            readonly
+            class="owner-form__readonly-input"
+          />
+        </NFormItem>
+
         <NFormItem :label="t('owners.name', 'Name')" path="name">
           <NInput
             v-model:value="formData.name"
@@ -278,8 +300,7 @@ onMounted(() => {
               @click="submitForm"
               :loading="submitting"
             >
-              {{ props.ownerId ? t('common.update', 'Update Owner') : t('common.create', 'Create Owner')
-              }}
+              {{ isEditMode ? t('common.update', 'Update') : t('common.create', 'Create') }}
             </NButton>
           </NSpace>
         </div>
@@ -294,5 +315,16 @@ onMounted(() => {
   margin: 0 auto;
   padding: 1.5rem;
   border-radius: 8px;
+}
+
+.owner-form__readonly-input {
+  background-color: var(--input-color-disabled);
+  color: var(--text-color-disabled);
+}
+
+.owner-form__readonly-input :deep(.n-input__input-el) {
+  background-color: var(--input-color-disabled) !important;
+  color: var(--text-color-disabled) !important;
+  cursor: not-allowed;
 }
 </style>
