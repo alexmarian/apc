@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { NForm, NFormItem, NInput, NButton, NSpace, NSpin, NAlert } from 'naive-ui'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { NForm, NFormItem, NInput, NButton, NSpace, NSpin, NAlert, useMessage } from 'naive-ui'
 import { accountApi } from '@/services/api'
-import type { AccountCreateRequest, AccountUpdateRequest } from '@/types/api'
+import type { Account, AccountCreateRequest, AccountUpdateRequest } from '@/types/api'
 import type { FormRules } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 
@@ -14,12 +14,13 @@ const props = defineProps<{
 
 // Emits
 const emit = defineEmits<{
-  (e: 'saved'): void
+  (e: 'saved', account: Account): void  // Pass the updated/created account data
   (e: 'cancelled'): void
 }>()
 
 // I18n
 const { t } = useI18n()
+const message = useMessage()
 
 // Form data
 const formData = reactive<AccountCreateRequest>({
@@ -43,6 +44,9 @@ const loading = ref<boolean>(false)
 const submitting = ref<boolean>(false)
 const error = ref<string | null>(null)
 const formRef = ref(null)
+const originalAccount = ref<Account | null>(null)
+
+const isEditMode = computed(() => !!props.accountId)
 
 // Fetch account details if editing
 const fetchAccountDetails = async () => {
@@ -54,6 +58,7 @@ const fetchAccountDetails = async () => {
 
     const response = await accountApi.getAccount(props.associationId, props.accountId)
     const accountData = response.data
+    originalAccount.value = accountData
 
     // Update form data
     formData.number = accountData.number
@@ -80,33 +85,37 @@ const submitForm = async (e: MouseEvent) => {
     submitting.value = true
     error.value = null
 
-    // Determine if creating or updating
-    const isCreating = !props.accountId
+    let response: { data: Account }
 
-    // Send request
-    if (isCreating) {
-      await accountApi.createAccount(props.associationId, formData)
-    } else if (props.accountId) {
+    // Determine if creating or updating
+    if (isEditMode.value && props.accountId) {
       const updateData: AccountUpdateRequest = {
         number: formData.number,
         destination: formData.destination,
         description: formData.description
       }
-      await accountApi.updateAccount(props.associationId, props.accountId, updateData)
+      response = await accountApi.updateAccount(props.associationId, props.accountId, updateData)
+      message.success(t('accounts.accountUpdated'))
+    } else {
+      response = await accountApi.createAccount(props.associationId, formData)
+      message.success(t('accounts.accountCreated'))
     }
 
-    // Notify parent component
-    emit('saved')
+    // Emit the updated/created account data so parent can update the list without reloading
+    emit('saved', response.data)
   } catch (err) {
+    let errorMessage: string
     if (err instanceof Error) {
-      error.value = err.message
+      errorMessage = err.message
     } else if (typeof err === 'object' && err !== null && 'response' in err) {
       // Axios error
       const axiosError = err as any
-      error.value = axiosError.response?.data?.msg || t('common.error')
+      errorMessage = axiosError.response?.data?.msg || t('common.error')
     } else {
-      error.value = t('common.error')
+      errorMessage = t('common.error')
     }
+    error.value = errorMessage
+    message.error(errorMessage)
     console.error('Error submitting form:', err)
   } finally {
     submitting.value = false
@@ -128,10 +137,10 @@ onMounted(() => {
 
 <template>
   <div class="account-form">
-    <h2>{{ props.accountId ? t('common.edit') : t('accounts.createNew') }}</h2>
+    <h2>{{ isEditMode ? t('accounts.editAccount') : t('accounts.createNew') }}</h2>
 
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" :title="t('common.error')" style="margin-bottom: 16px;">
+      <NAlert v-if="error" type="error" :title="t('common.error')" style="margin-bottom: 16px;" closable @close="error = null">
         {{ error }}
       </NAlert>
 
@@ -143,6 +152,15 @@ onMounted(() => {
         label-width="120px"
         require-mark-placement="right-hanging"
       >
+        <!-- Readonly Account ID for edit mode -->
+        <NFormItem v-if="isEditMode && originalAccount" :label="'Account ID'">
+          <NInput
+            :value="originalAccount.id.toString()"
+            readonly
+            class="account-form__readonly-input"
+          />
+        </NFormItem>
+
         <NFormItem :label="t('accounts.accountNumber')" path="number">
           <NInput
             v-model:value="formData.number"
@@ -178,7 +196,7 @@ onMounted(() => {
               @click="submitForm"
               :loading="submitting"
             >
-              {{ props.accountId ? t('common.update') : t('common.create') }}
+              {{ isEditMode ? t('common.update') : t('common.create') }}
             </NButton>
           </NSpace>
         </div>
@@ -193,5 +211,16 @@ onMounted(() => {
   margin: 0 auto;
   padding: 1.5rem;
   border-radius: 8px;
+}
+
+.account-form__readonly-input {
+  background-color: var(--input-color-disabled);
+  color: var(--text-color-disabled);
+}
+
+.account-form__readonly-input :deep(.n-input__input-el) {
+  background-color: var(--input-color-disabled) !important;
+  color: var(--text-color-disabled) !important;
+  cursor: not-allowed;
 }
 </style>
