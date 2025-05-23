@@ -236,15 +236,6 @@ const handleSubmit = async () => {
       // Emit the updated unit data so parent can update the list without reloading
       emit('saved', response.data)
     } else {
-      // Create mode (if implemented in the future)
-      const response = await unitApi.createUnit?.(
-        props.associationId,
-        props.buildingId,
-        updateData
-      )
-
-      message.success(t('units.unitSaved', { action: t('common.create') }))
-      emit('saved', response.data)
     }
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : t('common.error')
