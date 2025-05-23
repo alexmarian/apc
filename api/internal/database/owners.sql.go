@@ -8,6 +8,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -219,8 +220,21 @@ FROM owners o
 WHERE o.association_id = ?
   AND os.is_active = true
   AND os.is_voting = true
+  AND (false=? OR u.unit_type in(/*SLICE:unit_types*/?))
+  AND (false=? OR u.floor in(/*SLICE:unit_floors*/?))
+  AND (false=? OR u.entrance in(/*SLICE:unit_entrances*/?))
 ORDER BY o.id, u.id
 `
+
+type GetAssociationVotersParams struct {
+	AssociationID int64
+	Column2       interface{}
+	UnitTypes     []string
+	Column4       interface{}
+	UnitFloors    []int64
+	Column6       interface{}
+	UnitEntrances []int64
+}
 
 type GetAssociationVotersRow struct {
 	OwnerID                   int64
@@ -241,8 +255,38 @@ type GetAssociationVotersRow struct {
 	BuildingAddress           string
 }
 
-func (q *Queries) GetAssociationVoters(ctx context.Context, associationID int64) ([]GetAssociationVotersRow, error) {
-	rows, err := q.db.QueryContext(ctx, getAssociationVoters, associationID)
+func (q *Queries) GetAssociationVoters(ctx context.Context, arg GetAssociationVotersParams) ([]GetAssociationVotersRow, error) {
+	query := getAssociationVoters
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AssociationID)
+	queryParams = append(queryParams, arg.Column2)
+	if len(arg.UnitTypes) > 0 {
+		for _, v := range arg.UnitTypes {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:unit_types*/?", strings.Repeat(",?", len(arg.UnitTypes))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:unit_types*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.Column4)
+	if len(arg.UnitFloors) > 0 {
+		for _, v := range arg.UnitFloors {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:unit_floors*/?", strings.Repeat(",?", len(arg.UnitFloors))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:unit_floors*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.Column6)
+	if len(arg.UnitEntrances) > 0 {
+		for _, v := range arg.UnitEntrances {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:unit_entrances*/?", strings.Repeat(",?", len(arg.UnitEntrances))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:unit_entrances*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}

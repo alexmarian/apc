@@ -55,6 +55,10 @@ type Ownership struct {
 	UpdatedAt                 time.Time `json:"updated_at"`
 }
 
+const UnitTypeVotersFilter = "unit_types"
+const EntranceVotersFilter = "entrances"
+const FloorVotersFilter = "floors"
+
 func HandleGetAssociationOwners(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
@@ -603,6 +607,9 @@ func HandleGetVotersReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reque
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
 
+		unitTypes := strArrayToRelevantStrArray(strings.Split(req.URL.Query().Get(UnitTypeVotersFilter), ","))
+		entrance, _ := strArrayToInt64Array(strings.Split(req.URL.Query().Get(EntranceVotersFilter), ","))
+		floor, _ := strArrayToInt64Array(strings.Split(req.URL.Query().Get(FloorVotersFilter), ","))
 		type OwnerUnit struct {
 			UnitID          int64   `json:"unit_id"`
 			UnitNumber      string  `json:"unit_number"`
@@ -625,7 +632,16 @@ func HandleGetVotersReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reque
 			VotingShare          float64     `json:"total_condo_part"`
 		}
 
-		voterData, err := cfg.Db.GetAssociationVoters(req.Context(), int64(associationId))
+		voterData, err := cfg.Db.GetAssociationVoters(req.Context(),
+			database.GetAssociationVotersParams{
+				AssociationID: int64(associationId),
+				Column2:       len(unitTypes) > 0,
+				UnitTypes:     unitTypes,
+				Column4:       len(entrance) > 0,
+				UnitEntrances: entrance,
+				Column6:       len(floor) > 0,
+				UnitFloors:    floor,
+			})
 		if err != nil {
 			logging.Logger.Log(zap.WarnLevel, "Error retrieving owner report data", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve owner report data")
@@ -672,4 +688,26 @@ func HandleGetVotersReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reque
 		}
 		RespondWithJSON(rw, http.StatusOK, ownerReports)
 	}
+}
+
+func strArrayToInt64Array(strArray []string) ([]int64, error) {
+	intArray := make([]int64, len(strArray))
+	for i, str := range strArray {
+		val, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		intArray[i] = val
+	}
+	return intArray, nil
+}
+
+func strArrayToRelevantStrArray(strArray []string) []string {
+	relArray := []string{}
+	for _, str := range strArray {
+		if len(str) > 0 {
+			relArray = append(relArray, str)
+		}
+	}
+	return relArray
 }

@@ -123,6 +123,9 @@ FROM owners o
 WHERE o.association_id = ?
   AND os.is_active = true
   AND os.is_voting = true
+  AND (false=? OR u.unit_type in(sqlc.slice('unit_types')))
+  AND (false=? OR u.floor in(sqlc.slice('unit_floors')))
+  AND (false=? OR u.entrance in(sqlc.slice('unit_entrances')))
 ORDER BY o.id, u.id;
 
 --
