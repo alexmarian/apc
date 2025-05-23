@@ -198,8 +198,14 @@ export const ownerApi = {
         co_owners: includeCoOwners ? 'true' : 'false'
       }
     }),
-  getVotingOwners: (associationId: number) =>
-    api.get<VotingOwner[]>(`/associations/${associationId}/owners/voters`),
+  getVotingOwners: (associationId: number, filters?: {
+    unit_types?: string;     // comma-separated list: "apartment,parking"
+    floor?: number;          // specific floor number
+    entrance?: number;       // specific entrance number
+  }) =>
+    api.get<VotingOwner[]>(`/associations/${associationId}/owners/voters`, {
+      params: filters || {}
+    }),
   createOwner: (associationId: number, ownerData: {
     name: string;
     identification_number: string;

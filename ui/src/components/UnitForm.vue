@@ -78,7 +78,7 @@ const rules: FormRules = {
     {
       required: true,
       type: 'number',
-      min: 1,
+      min: -2,
       message: t('units.entranceMin'),
       trigger: 'blur'
     }
@@ -298,7 +298,7 @@ onMounted(() => {
         <NFormItem :label="t('units.entrance')" path="entrance">
           <NInputNumber
             v-model:value="formData.entrance"
-            :min="1"
+            :min="-2"
             :precision="0"
             class="unit-form__number-input"
           />
