@@ -33,7 +33,9 @@ fi
 if [[ $BUILD_API -eq 1 ]]; then
   docker build --target export-stage -f dist/Dockerfile --output disttmp .
 fi
-
+if [[ -f ../dist.zip ]]; then
+  rm ../dist.zip
+fi
 cd disttmp
 zip -r ../dist.zip .
 cd ..
