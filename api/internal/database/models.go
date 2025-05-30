@@ -66,6 +66,57 @@ type Expense struct {
 	DocumentRef sql.NullString
 }
 
+type Gathering struct {
+	ID                          int64
+	AssociationID               int64
+	Title                       string
+	Description                 string
+	Intent                      string
+	GatheringDate               time.Time
+	GatheringType               string
+	Status                      string
+	QualificationUnitTypes      sql.NullString
+	QualificationFloors         sql.NullString
+	QualificationEntrances      sql.NullString
+	QualificationCustomRule     sql.NullString
+	QualifiedUnitsCount         sql.NullInt64
+	QualifiedUnitsTotalPart     sql.NullFloat64
+	ParticipatingUnitsCount     sql.NullInt64
+	ParticipatingUnitsTotalPart sql.NullFloat64
+	CreatedAt                   sql.NullTime
+	UpdatedAt                   sql.NullTime
+}
+
+type GatheringNotification struct {
+	ID               int64
+	GatheringID      int64
+	OwnerID          int64
+	NotificationType string
+	SentAt           sql.NullTime
+	ReadAt           sql.NullTime
+	ResponseStatus   sql.NullString
+}
+
+type GatheringParticipant struct {
+	ID                        int64
+	GatheringID               int64
+	UnitID                    int64
+	ParticipantType           string
+	ParticipantName           string
+	ParticipantIdentification sql.NullString
+	OwnerID                   sql.NullInt64
+	OwnershipID               sql.NullInt64
+	DelegatingOwnerID         sql.NullInt64
+	DelegationDocumentRef     sql.NullString
+	UnitNumber                string
+	UnitBuildingName          string
+	UnitVotingWeight          float64
+	CheckInTime               sql.NullTime
+	VotingCompleted           sql.NullBool
+	CreatedAt                 sql.NullTime
+	UpdatedAt                 sql.NullTime
+}
+
 type Owner struct {
 	ID                   int64
 	Name                 string
@@ -156,4 +207,54 @@ type UsersAssociation struct {
 	AssociationID int64
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+}
+
+type Vote struct {
+	ID             int64
+	GatheringID    int64
+	ParticipantID  int64
+	VotingMatterID int64
+	VotingOptionID sql.NullInt64
+	VoteValue      sql.NullString
+	VoteWeight     float64
+	SubmittedAt    sql.NullTime
+}
+
+type VoteAuditLog struct {
+	ID          int64
+	VoteID      int64
+	Action      string
+	PerformedBy sql.NullString
+	PerformedAt sql.NullTime
+	IpAddress   sql.NullString
+	UserAgent   sql.NullString
+	Details     sql.NullString
+}
+
+type VotingMatter struct {
+	ID                      int64
+	GatheringID             int64
+	OrderIndex              int64
+	Title                   string
+	Description             sql.NullString
+	MatterType              string
+	VotingType              string
+	RequiredMajorityType    string
+	RequiredMajorityValue   float64
+	RequiredQuorum          sql.NullFloat64
+	IsAnonymous             sql.NullBool
+	ShowResultsDuringVoting sql.NullBool
+	AllowAbstention         sql.NullBool
+	IsLocked                sql.NullBool
+	LockedAt                sql.NullTime
+	CreatedAt               sql.NullTime
+	UpdatedAt               sql.NullTime
+}
+
+type VotingOption struct {
+	ID             int64
+	VotingMatterID int64
+	OptionText     string
+	OrderIndex     int64
+	CreatedAt      sql.NullTime
 }
