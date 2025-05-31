@@ -157,6 +157,61 @@ func main() {
 	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/accounts/{%s}/disable", handlers.AssociationIdPathValue, handlers.AccountIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleDisableAccount(apiCfg)))
 
+	// Gatherings
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetGatherings(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/gatherings", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleCreateGathering(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetGathering(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/gatherings/{%s}/status", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleUpdateGatheringStatus(apiCfg)))
+
+	// Voting Matters
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/matters", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetVotingMatters(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/gatherings/{%s}/matters", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleCreateVotingMatter(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/gatherings/{%s}/matters/{%s}", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue, handlers.VotingMatterIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleUpdateVotingMatter(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("DELETE /v1/api/associations/{%s}/gatherings/{%s}/matters/{%s}", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue, handlers.VotingMatterIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleDeleteVotingMatter(apiCfg)))
+
+	// Participants
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/participants", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetParticipants(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/gatherings/{%s}/participants", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleAddParticipant(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/gatherings/{%s}/participants/{%s}/checkin", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue, handlers.ParticipantIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleCheckInParticipant(apiCfg)))
+
+	// Voting (Ballot submission)
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/gatherings/{%s}/participants/{%s}/ballot", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue, handlers.ParticipantIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleSubmitBallot(apiCfg)))
+
+	// Results
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/results", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetVoteResults(apiCfg)))
+
+	// Utility endpoints
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/qualified-units", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetQualifiedUnits(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/non-participating-owners", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetNonParticipatingOwners(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/stats", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetGatheringStats(apiCfg)))
+
+	// Notifications
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/gatherings/{%s}/notifications", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleSendNotification(apiCfg)))
+
+	// Audit logs
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/audit-logs", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetAuditLogs(apiCfg)))
+
+	// Ballot verification (public endpoint)
+	mux.HandleFunc("POST /v1/api/ballot/verify", handlers.HandleVerifyBallot(apiCfg))
+
 	corsMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Access-Control-Allow-Origin", uiOrigin)

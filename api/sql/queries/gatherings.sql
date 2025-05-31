@@ -2,12 +2,10 @@
 SELECT * FROM gatherings
 WHERE association_id = ?
 ORDER BY gathering_date DESC;
---
 
 -- name: GetGathering :one
 SELECT * FROM gatherings
 WHERE id = ? AND association_id = ?;
---
 
 -- name: CreateGathering :one
 INSERT INTO gatherings (
@@ -18,7 +16,6 @@ INSERT INTO gatherings (
 ) VALUES (
              ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
          ) RETURNING *;
---
 
 -- name: UpdateGathering :one
 UPDATE gatherings SET
@@ -34,11 +31,10 @@ UPDATE gatherings SET
                       updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND association_id = ?
     RETURNING *;
---
 
 -- name: UpdateGatheringStatus :one
 UPDATE gatherings SET
-                      status =?,
+                      status = ?,
                       updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND association_id = ?
     RETURNING *;
@@ -51,72 +47,36 @@ UPDATE gatherings SET
                       participating_units_total_part = ?,
                       updated_at = CURRENT_TIMESTAMP
 WHERE id = ?;
---
 
 -- name: GetVotingMatters :many
 SELECT * FROM voting_matters
 WHERE gathering_id = ?
 ORDER BY order_index;
---
 
 -- name: GetVotingMatter :one
 SELECT * FROM voting_matters
 WHERE id = ? AND gathering_id = ?;
---
 
 -- name: CreateVotingMatter :one
 INSERT INTO voting_matters (
-    gathering_id, order_index, title, description, matter_type,
-    voting_type, required_majority_type, required_majority_value,
-    required_quorum, is_anonymous, show_results_during_voting,
-    allow_abstention
+    gathering_id, order_index, title, description, matter_type, voting_config
 ) VALUES (
-             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+             ?, ?, ?, ?, ?, ?
          ) RETURNING *;
---
 
 -- name: UpdateVotingMatter :one
 UPDATE voting_matters SET
                           title = ?,
                           description = ?,
                           matter_type = ?,
-                          voting_type = ?,
-                          required_majority_type = ?,
-                          required_majority_value = ?,
-                          required_quorum = ?,
-                          is_anonymous = ?,
-                          show_results_during_voting = ?,
-                          allow_abstention = ?,
+                          voting_config = ?,
                           updated_at = CURRENT_TIMESTAMP
-WHERE id = ? AND gathering_id = ? AND is_locked = FALSE
+WHERE id = ? AND gathering_id = ?
     RETURNING *;
---
 
--- name: LockVotingMatters :exec
-UPDATE voting_matters SET
-                          is_locked = TRUE,
-                          locked_at = CURRENT_TIMESTAMP
-WHERE gathering_id = ?;
---
-
--- name: GetVotingOptions :many
-SELECT * FROM voting_options
-WHERE voting_matter_id = ?
-ORDER BY order_index;
---
-
--- name: CreateVotingOption :one
-INSERT INTO voting_options (
-    voting_matter_id, option_text, order_index
-) VALUES (
-             ?, ?, ?
-         ) RETURNING *;
---
-
--- name: DeleteVotingOptions :exec
-DELETE  FROM voting_options
-WHERE voting_matter_id = ? ;
---
+-- name: DeleteVotingMatter :exec
+DELETE FROM voting_matters
+WHERE id = ? AND gathering_id = ?;
 
 -- name: GetGatheringParticipants :many
 SELECT
@@ -135,42 +95,29 @@ FROM gathering_participants gp
          LEFT JOIN buildings b ON u.building_id = b.id
 WHERE gp.gathering_id = ?
 ORDER BY gp.participant_name;
---
 
 -- name: GetGatheringParticipant :one
 SELECT * FROM gathering_participants
 WHERE id = ? AND gathering_id = ?;
---
 
 -- name: CreateGatheringParticipant :one
 INSERT INTO gathering_participants (
     gathering_id, unit_id, participant_type, participant_name,
-    participant_identification, owner_id, ownership_id,
-    delegating_owner_id, delegation_document_ref,
-    unit_number, unit_building_name, unit_voting_weight
+    participant_identification, owner_id, delegating_owner_id,
+    delegation_document_ref, unit_info
 ) VALUES (
-             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+             ?, ?, ?, ?, ?, ?, ?, ?, ?
          ) RETURNING *;
---
 
 -- name: CheckInParticipant :exec
 UPDATE gathering_participants SET
                                   check_in_time = CURRENT_TIMESTAMP,
                                   updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND gathering_id = ?;
---
-
--- name: MarkVotingCompleted :exec
-UPDATE gathering_participants SET
-                                  voting_completed = TRUE,
-                                  updated_at = CURRENT_TIMESTAMP
-WHERE id = ?;
---
 
 -- name: GetParticipantByUnit :one
 SELECT * FROM gathering_participants
 WHERE gathering_id = ? AND unit_id = ?;
---
 
 -- name: GetQualifiedUnits :many
 SELECT
@@ -187,11 +134,10 @@ SELECT
 FROM units u
          JOIN buildings b ON u.building_id = b.id
 WHERE b.association_id = ?
-  AND (false=? OR u.unit_type in(sqlc.slice('unit_types')))
-  AND (false=? OR u.floor in(sqlc.slice('unit_floors')))
-  AND (false=? OR u.entrance in(sqlc.slice('unit_entrances')))
+  AND (false = ? OR u.unit_type IN (sqlc.slice('unit_types')))
+  AND (false = ? OR u.floor IN (sqlc.slice('unit_floors')))
+  AND (false = ? OR u.entrance IN (sqlc.slice('unit_entrances')))
 ORDER BY b.name, u.unit_number;
---
 
 -- name: GetNonParticipatingOwners :many
 SELECT DISTINCT
@@ -208,12 +154,12 @@ FROM owners o
 WHERE b.association_id = ?
   AND own.is_active = TRUE
   AND u.id IN (
-    SELECT id FROM units u2
+    SELECT u2.id FROM units u2
                        JOIN buildings b2 ON u2.building_id = b2.id
     WHERE b2.association_id = ?
-      AND (false=? OR u2.unit_type in(sqlc.slice('unit_types')))
-      AND (false=? OR u2.floor in(sqlc.slice('unit_floors')))
-      AND (false=? OR u2.entrance in(sqlc.slice('unit_entrances')))
+      AND (false = ? OR u2.unit_type IN (sqlc.slice('unit_types')))
+      AND (false = ? OR u2.floor IN (sqlc.slice('unit_floors')))
+      AND (false = ? OR u2.entrance IN (sqlc.slice('unit_entrances')))
 )
   AND u.id NOT IN (
     SELECT unit_id FROM gathering_participants
@@ -221,116 +167,143 @@ WHERE b.association_id = ?
 )
 GROUP BY o.id, o.name, o.identification_number, o.contact_email, o.contact_phone
 ORDER BY o.name;
---
 
--- name: CreateVote :one
-INSERT INTO votes (
-    gathering_id, participant_id, voting_matter_id,
-    voting_option_id, vote_value, vote_weight
+-- name: CreateBallot :one
+INSERT INTO voting_ballots (
+    gathering_id, participant_id, ballot_content, ballot_hash,
+    submitted_ip, submitted_user_agent
 ) VALUES (
              ?, ?, ?, ?, ?, ?
          ) RETURNING *;
---
 
--- name: GetVotes :many
+-- name: GetBallotByParticipant :one
+SELECT * FROM voting_ballots
+WHERE gathering_id = ? AND participant_id = ?;
+
+-- name: GetBallotsForGathering :many
 SELECT
-    v.*,
-    vm.title as matter_title,
-    vo.option_text,
+    vb.*,
     gp.participant_name,
-    gp.unit_number
-FROM votes v
-         JOIN voting_matters vm ON v.voting_matter_id = vm.id
-         LEFT JOIN voting_options vo ON v.voting_option_id = vo.id
-         JOIN gathering_participants gp ON v.participant_id = gp.id
-WHERE v.gathering_id = ?
-ORDER BY vm.order_index, v.submitted_at;
---
+    gp.unit_id,
+    gp.unit_info
+FROM voting_ballots vb
+         JOIN gathering_participants gp ON vb.participant_id = gp.id
+WHERE vb.gathering_id = ?
+ORDER BY vb.submitted_at;
 
--- name: GetVotesByMatter :many
-SELECT
-    v.*,
-    vo.option_text,
-    gp.participant_name,
-    gp.unit_number,
-    gp.participant_type
-FROM votes v
-         LEFT JOIN voting_options vo ON v.voting_option_id = vo.id
-         JOIN gathering_participants gp ON v.participant_id = gp.id
-WHERE v.voting_matter_id = ?
-ORDER BY v.submitted_at;
---
+-- name: InvalidateBallot :exec
+UPDATE voting_ballots SET
+                          is_valid = FALSE,
+                          invalidated_at = CURRENT_TIMESTAMP,
+                          invalidation_reason = ?
+WHERE id = ?;
 
--- name: GetVoteResults :many
+-- name: GetVoteTally :one
+SELECT * FROM vote_tallies
+WHERE gathering_id = ? AND voting_matter_id = ?;
+
+-- name: UpsertVoteTally :one
+INSERT INTO vote_tallies (gathering_id, voting_matter_id, tally_data)
+VALUES (?, ?, ?)
+    ON CONFLICT (gathering_id, voting_matter_id)
+DO UPDATE SET
+    tally_data = ?,
+           last_updated = CURRENT_TIMESTAMP
+           RETURNING *;
+
+-- name: GetAllVoteTallies :many
 SELECT
-    vm.id as matter_id,
+    vt.*,
     vm.title as matter_title,
-    vm.required_majority_type,
-    vm.required_majority_value,
-    vm.is_anonymous,
-    vo.id as option_id,
-    vo.option_text,
-    COALESCE(SUM(v.vote_weight), 0) as total_weight,
-    COUNT(v.id) as vote_count
-FROM voting_matters vm
-         LEFT JOIN voting_options vo ON vm.id = vo.voting_matter_id
-         LEFT JOIN votes v ON vo.id = v.voting_option_id
-WHERE vm.gathering_id = ?
-GROUP BY vm.id, vm.title, vm.required_majority_type,
-         vm.required_majority_value, vm.is_anonymous, vo.id, vo.option_text
-ORDER BY vm.order_index, vo.order_index;
---
-
--- name: GetParticipantVotes :many
-SELECT
-    v.*,
-    vm.title as matter_title,
-    vo.option_text
-FROM votes v
-         JOIN voting_matters vm ON v.voting_matter_id = vm.id
-         LEFT JOIN voting_options vo ON v.voting_option_id = vo.id
-WHERE v.participant_id = ?
+    vm.matter_type,
+    vm.voting_config
+FROM vote_tallies vt
+         JOIN voting_matters vm ON vt.voting_matter_id = vm.id
+WHERE vt.gathering_id = ?
 ORDER BY vm.order_index;
---
-
--- name: CreateNotification :one
-INSERT INTO gathering_notifications (
-    gathering_id, owner_id, notification_type
-) VALUES (
-             ?, ?, ?
-         ) ON CONFLICT (gathering_id, owner_id, notification_type)
-DO UPDATE SET sent_at = CURRENT_TIMESTAMP
-                  RETURNING *;
---
-
--- name: UpdateNotificationStatus :exec
-UPDATE gathering_notifications SET
-                                   read_at = CURRENT_TIMESTAMP,
-                                   response_status = ?
-WHERE gathering_id = ? AND owner_id = ? AND notification_type = ?;
---
-
--- name: GetNotifications :many
-SELECT * FROM gathering_notifications
-WHERE gathering_id = ?
-ORDER BY sent_at DESC;
---
 
 -- name: CreateAuditLog :exec
-INSERT INTO vote_audit_log (
-    vote_id, action, performed_by, ip_address, user_agent, details
+INSERT INTO voting_audit_log (
+    gathering_id, entity_type, entity_id, action,
+    performed_by, ip_address, details
 ) VALUES (
-             ?, ?, ?, ?, ?, ?
+             ?, ?, ?, ?, ?, ?, ?
          );
---
+
+-- name: GetAuditLogs :many
+SELECT * FROM voting_audit_log
+WHERE gathering_id = ?
+ORDER BY performed_at DESC
+    LIMIT ?;
+
+-- name: CreateNotification :one
+INSERT INTO voting_notifications (
+    gathering_id, owner_id, notification_type, sent_via
+) VALUES (
+             ?, ?, ?, ?
+         ) ON CONFLICT (gathering_id, owner_id, notification_type)
+DO UPDATE SET
+    sent_at = CURRENT_TIMESTAMP,
+                  sent_via = ?
+                  RETURNING *;
+
+-- name: UpdateNotificationRead :exec
+UPDATE voting_notifications SET
+    read_at = CURRENT_TIMESTAMP
+WHERE gathering_id = ? AND owner_id = ? AND notification_type = ?;
+
+-- name: GetNotifications :many
+SELECT
+    vn.*,
+    o.name as owner_name,
+    o.contact_email,
+    o.contact_phone
+FROM voting_notifications vn
+         JOIN owners o ON vn.owner_id = o.id
+WHERE vn.gathering_id = ?
+ORDER BY vn.sent_at DESC;
 
 -- name: GetGatheringStats :one
+SELECT * FROM gatherings
+WHERE id = ? AND association_id = ?;
+
+-- name: GetGatheringParticipantCount :one
+SELECT COUNT(*) as count FROM gathering_participants
+WHERE gathering_id = ?;
+
+-- name: GetGatheringBallotCount :one
+SELECT COUNT(*) as count FROM voting_ballots
+WHERE gathering_id = ? AND is_valid = TRUE;
+
+-- name: GetActiveOwnerUnitsForGathering :many
 SELECT
-    g.*,
-    COUNT(DISTINCT gp.id) as participant_count,
-    COUNT(DISTINCT CASE WHEN gp.voting_completed THEN gp.id END) as completed_count,
-    COALESCE(SUM(gp.unit_voting_weight), 0) as total_participating_weight
-FROM gatherings g
-         LEFT JOIN gathering_participants gp ON g.id = gp.gathering_id
-WHERE g.id = ? AND g.association_id = ?
-GROUP BY g.id;
+    o.id as owner_id,
+    o.name as owner_name,
+    o.normalized_name as owner_normalized_name,
+    o.identification_number as owner_identification,
+    o.contact_email as owner_contact_email,
+    o.contact_phone as owner_contact_phone,
+    u.id as unit_id,
+    u.cadastral_number,
+    u.unit_number,
+    u.area,
+    u.part as voting_weight,
+    u.unit_type,
+    u.floor,
+    u.entrance,
+    b.id as building_id,
+    b.name as building_name,
+    b.address as building_address,
+    b.association_id,
+    own.id as ownership_id
+FROM owners o
+         JOIN ownerships own ON o.id = own.owner_id
+         JOIN units u ON own.unit_id = u.id
+         JOIN buildings b ON u.building_id = b.id
+WHERE own.is_active = TRUE
+  AND own.is_voting = TRUE
+  AND b.association_id = ?
+  AND (false = ? OR u.unit_type IN (sqlc.slice('unit_types')))
+  AND (false = ? OR u.floor IN (sqlc.slice('unit_floors')))
+  AND (false = ? OR u.entrance IN (sqlc.slice('unit_entrances')))
+ORDER BY o.name, u.unit_number;

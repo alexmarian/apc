@@ -13,7 +13,6 @@ import (
 )
 
 const checkInParticipant = `-- name: CheckInParticipant :exec
-
 UPDATE gathering_participants SET
                                   check_in_time = CURRENT_TIMESTAMP,
                                   updated_at = CURRENT_TIMESTAMP
@@ -31,37 +30,85 @@ func (q *Queries) CheckInParticipant(ctx context.Context, arg CheckInParticipant
 }
 
 const createAuditLog = `-- name: CreateAuditLog :exec
-
-INSERT INTO vote_audit_log (
-    vote_id, action, performed_by, ip_address, user_agent, details
+INSERT INTO voting_audit_log (
+    gathering_id, entity_type, entity_id, action,
+    performed_by, ip_address, details
 ) VALUES (
-             ?, ?, ?, ?, ?, ?
+             ?, ?, ?, ?, ?, ?, ?
          )
 `
 
 type CreateAuditLogParams struct {
-	VoteID      int64
+	GatheringID int64
+	EntityType  string
+	EntityID    int64
 	Action      string
 	PerformedBy sql.NullString
 	IpAddress   sql.NullString
-	UserAgent   sql.NullString
 	Details     sql.NullString
 }
 
 func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) error {
 	_, err := q.db.ExecContext(ctx, createAuditLog,
-		arg.VoteID,
+		arg.GatheringID,
+		arg.EntityType,
+		arg.EntityID,
 		arg.Action,
 		arg.PerformedBy,
 		arg.IpAddress,
-		arg.UserAgent,
 		arg.Details,
 	)
 	return err
 }
 
-const createGathering = `-- name: CreateGathering :one
+const createBallot = `-- name: CreateBallot :one
+INSERT INTO voting_ballots (
+    gathering_id, participant_id, ballot_content, ballot_hash,
+    submitted_ip, submitted_user_agent
+) VALUES (
+             ?, ?, ?, ?, ?, ?
+         ) RETURNING id, gathering_id, participant_id, ballot_content, ballot_hash, submitted_at, submitted_ip, submitted_user_agent, signature, signature_timestamp, signature_certificate, is_valid, invalidated_at, invalidation_reason
+`
 
+type CreateBallotParams struct {
+	GatheringID        int64
+	ParticipantID      int64
+	BallotContent      string
+	BallotHash         string
+	SubmittedIp        sql.NullString
+	SubmittedUserAgent sql.NullString
+}
+
+func (q *Queries) CreateBallot(ctx context.Context, arg CreateBallotParams) (VotingBallot, error) {
+	row := q.db.QueryRowContext(ctx, createBallot,
+		arg.GatheringID,
+		arg.ParticipantID,
+		arg.BallotContent,
+		arg.BallotHash,
+		arg.SubmittedIp,
+		arg.SubmittedUserAgent,
+	)
+	var i VotingBallot
+	err := row.Scan(
+		&i.ID,
+		&i.GatheringID,
+		&i.ParticipantID,
+		&i.BallotContent,
+		&i.BallotHash,
+		&i.SubmittedAt,
+		&i.SubmittedIp,
+		&i.SubmittedUserAgent,
+		&i.Signature,
+		&i.SignatureTimestamp,
+		&i.SignatureCertificate,
+		&i.IsValid,
+		&i.InvalidatedAt,
+		&i.InvalidationReason,
+	)
+	return i, err
+}
+
+const createGathering = `-- name: CreateGathering :one
 INSERT INTO gatherings (
     association_id, title, description, intent, gathering_date,
     gathering_type, status, qualification_unit_types,
@@ -125,15 +172,13 @@ func (q *Queries) CreateGathering(ctx context.Context, arg CreateGatheringParams
 }
 
 const createGatheringParticipant = `-- name: CreateGatheringParticipant :one
-
 INSERT INTO gathering_participants (
     gathering_id, unit_id, participant_type, participant_name,
-    participant_identification, owner_id, ownership_id,
-    delegating_owner_id, delegation_document_ref,
-    unit_number, unit_building_name, unit_voting_weight
+    participant_identification, owner_id, delegating_owner_id,
+    delegation_document_ref, unit_info
 ) VALUES (
-             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-         ) RETURNING id, gathering_id, unit_id, participant_type, participant_name, participant_identification, owner_id, ownership_id, delegating_owner_id, delegation_document_ref, unit_number, unit_building_name, unit_voting_weight, check_in_time, voting_completed, created_at, updated_at
+             ?, ?, ?, ?, ?, ?, ?, ?, ?
+         ) RETURNING id, gathering_id, unit_id, participant_type, participant_name, participant_identification, owner_id, delegating_owner_id, delegation_document_ref, unit_info, check_in_time, created_at, updated_at
 `
 
 type CreateGatheringParticipantParams struct {
@@ -143,12 +188,9 @@ type CreateGatheringParticipantParams struct {
 	ParticipantName           string
 	ParticipantIdentification sql.NullString
 	OwnerID                   sql.NullInt64
-	OwnershipID               sql.NullInt64
 	DelegatingOwnerID         sql.NullInt64
 	DelegationDocumentRef     sql.NullString
-	UnitNumber                string
-	UnitBuildingName          string
-	UnitVotingWeight          float64
+	UnitInfo                  string
 }
 
 func (q *Queries) CreateGatheringParticipant(ctx context.Context, arg CreateGatheringParticipantParams) (GatheringParticipant, error) {
@@ -159,12 +201,9 @@ func (q *Queries) CreateGatheringParticipant(ctx context.Context, arg CreateGath
 		arg.ParticipantName,
 		arg.ParticipantIdentification,
 		arg.OwnerID,
-		arg.OwnershipID,
 		arg.DelegatingOwnerID,
 		arg.DelegationDocumentRef,
-		arg.UnitNumber,
-		arg.UnitBuildingName,
-		arg.UnitVotingWeight,
+		arg.UnitInfo,
 	)
 	var i GatheringParticipant
 	err := row.Scan(
@@ -175,14 +214,10 @@ func (q *Queries) CreateGatheringParticipant(ctx context.Context, arg CreateGath
 		&i.ParticipantName,
 		&i.ParticipantIdentification,
 		&i.OwnerID,
-		&i.OwnershipID,
 		&i.DelegatingOwnerID,
 		&i.DelegationDocumentRef,
-		&i.UnitNumber,
-		&i.UnitBuildingName,
-		&i.UnitVotingWeight,
+		&i.UnitInfo,
 		&i.CheckInTime,
-		&i.VotingCompleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -190,104 +225,59 @@ func (q *Queries) CreateGatheringParticipant(ctx context.Context, arg CreateGath
 }
 
 const createNotification = `-- name: CreateNotification :one
-
-INSERT INTO gathering_notifications (
-    gathering_id, owner_id, notification_type
+INSERT INTO voting_notifications (
+    gathering_id, owner_id, notification_type, sent_via
 ) VALUES (
-             ?, ?, ?
+             ?, ?, ?, ?
          ) ON CONFLICT (gathering_id, owner_id, notification_type)
-DO UPDATE SET sent_at = CURRENT_TIMESTAMP
-                  RETURNING id, gathering_id, owner_id, notification_type, sent_at, read_at, response_status
+DO UPDATE SET
+    sent_at = CURRENT_TIMESTAMP,
+                  sent_via = ?
+                  RETURNING id, gathering_id, owner_id, notification_type, sent_at, sent_via, read_at
 `
 
 type CreateNotificationParams struct {
 	GatheringID      int64
 	OwnerID          int64
 	NotificationType string
+	SentVia          sql.NullString
 }
 
-func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotificationParams) (GatheringNotification, error) {
-	row := q.db.QueryRowContext(ctx, createNotification, arg.GatheringID, arg.OwnerID, arg.NotificationType)
-	var i GatheringNotification
+func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotificationParams) (VotingNotification, error) {
+	row := q.db.QueryRowContext(ctx, createNotification,
+		arg.GatheringID,
+		arg.OwnerID,
+		arg.NotificationType,
+		arg.SentVia,
+	)
+	var i VotingNotification
 	err := row.Scan(
 		&i.ID,
 		&i.GatheringID,
 		&i.OwnerID,
 		&i.NotificationType,
 		&i.SentAt,
+		&i.SentVia,
 		&i.ReadAt,
-		&i.ResponseStatus,
-	)
-	return i, err
-}
-
-const createVote = `-- name: CreateVote :one
-
-INSERT INTO votes (
-    gathering_id, participant_id, voting_matter_id,
-    voting_option_id, vote_value, vote_weight
-) VALUES (
-             ?, ?, ?, ?, ?, ?
-         ) RETURNING id, gathering_id, participant_id, voting_matter_id, voting_option_id, vote_value, vote_weight, submitted_at
-`
-
-type CreateVoteParams struct {
-	GatheringID    int64
-	ParticipantID  int64
-	VotingMatterID int64
-	VotingOptionID sql.NullInt64
-	VoteValue      sql.NullString
-	VoteWeight     float64
-}
-
-func (q *Queries) CreateVote(ctx context.Context, arg CreateVoteParams) (Vote, error) {
-	row := q.db.QueryRowContext(ctx, createVote,
-		arg.GatheringID,
-		arg.ParticipantID,
-		arg.VotingMatterID,
-		arg.VotingOptionID,
-		arg.VoteValue,
-		arg.VoteWeight,
-	)
-	var i Vote
-	err := row.Scan(
-		&i.ID,
-		&i.GatheringID,
-		&i.ParticipantID,
-		&i.VotingMatterID,
-		&i.VotingOptionID,
-		&i.VoteValue,
-		&i.VoteWeight,
-		&i.SubmittedAt,
 	)
 	return i, err
 }
 
 const createVotingMatter = `-- name: CreateVotingMatter :one
-
 INSERT INTO voting_matters (
-    gathering_id, order_index, title, description, matter_type,
-    voting_type, required_majority_type, required_majority_value,
-    required_quorum, is_anonymous, show_results_during_voting,
-    allow_abstention
+    gathering_id, order_index, title, description, matter_type, voting_config
 ) VALUES (
-             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-         ) RETURNING id, gathering_id, order_index, title, description, matter_type, voting_type, required_majority_type, required_majority_value, required_quorum, is_anonymous, show_results_during_voting, allow_abstention, is_locked, locked_at, created_at, updated_at
+             ?, ?, ?, ?, ?, ?
+         ) RETURNING id, gathering_id, order_index, title, description, matter_type, voting_config, created_at, updated_at
 `
 
 type CreateVotingMatterParams struct {
-	GatheringID             int64
-	OrderIndex              int64
-	Title                   string
-	Description             sql.NullString
-	MatterType              string
-	VotingType              string
-	RequiredMajorityType    string
-	RequiredMajorityValue   float64
-	RequiredQuorum          sql.NullFloat64
-	IsAnonymous             sql.NullBool
-	ShowResultsDuringVoting sql.NullBool
-	AllowAbstention         sql.NullBool
+	GatheringID  int64
+	OrderIndex   int64
+	Title        string
+	Description  sql.NullString
+	MatterType   string
+	VotingConfig string
 }
 
 func (q *Queries) CreateVotingMatter(ctx context.Context, arg CreateVotingMatterParams) (VotingMatter, error) {
@@ -297,13 +287,7 @@ func (q *Queries) CreateVotingMatter(ctx context.Context, arg CreateVotingMatter
 		arg.Title,
 		arg.Description,
 		arg.MatterType,
-		arg.VotingType,
-		arg.RequiredMajorityType,
-		arg.RequiredMajorityValue,
-		arg.RequiredQuorum,
-		arg.IsAnonymous,
-		arg.ShowResultsDuringVoting,
-		arg.AllowAbstention,
+		arg.VotingConfig,
 	)
 	var i VotingMatter
 	err := row.Scan(
@@ -313,62 +297,373 @@ func (q *Queries) CreateVotingMatter(ctx context.Context, arg CreateVotingMatter
 		&i.Title,
 		&i.Description,
 		&i.MatterType,
-		&i.VotingType,
-		&i.RequiredMajorityType,
-		&i.RequiredMajorityValue,
-		&i.RequiredQuorum,
-		&i.IsAnonymous,
-		&i.ShowResultsDuringVoting,
-		&i.AllowAbstention,
-		&i.IsLocked,
-		&i.LockedAt,
+		&i.VotingConfig,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const createVotingOption = `-- name: CreateVotingOption :one
-
-INSERT INTO voting_options (
-    voting_matter_id, option_text, order_index
-) VALUES (
-             ?, ?, ?
-         ) RETURNING id, voting_matter_id, option_text, order_index, created_at
+const deleteVotingMatter = `-- name: DeleteVotingMatter :exec
+DELETE FROM voting_matters
+WHERE id = ? AND gathering_id = ?
 `
 
-type CreateVotingOptionParams struct {
-	VotingMatterID int64
-	OptionText     string
-	OrderIndex     int64
+type DeleteVotingMatterParams struct {
+	ID          int64
+	GatheringID int64
 }
 
-func (q *Queries) CreateVotingOption(ctx context.Context, arg CreateVotingOptionParams) (VotingOption, error) {
-	row := q.db.QueryRowContext(ctx, createVotingOption, arg.VotingMatterID, arg.OptionText, arg.OrderIndex)
-	var i VotingOption
+func (q *Queries) DeleteVotingMatter(ctx context.Context, arg DeleteVotingMatterParams) error {
+	_, err := q.db.ExecContext(ctx, deleteVotingMatter, arg.ID, arg.GatheringID)
+	return err
+}
+
+const getActiveOwnerUnitsForGathering = `-- name: GetActiveOwnerUnitsForGathering :many
+SELECT
+    o.id as owner_id,
+    o.name as owner_name,
+    o.normalized_name as owner_normalized_name,
+    o.identification_number as owner_identification,
+    o.contact_email as owner_contact_email,
+    o.contact_phone as owner_contact_phone,
+    u.id as unit_id,
+    u.cadastral_number,
+    u.unit_number,
+    u.area,
+    u.part as voting_weight,
+    u.unit_type,
+    u.floor,
+    u.entrance,
+    b.id as building_id,
+    b.name as building_name,
+    b.address as building_address,
+    b.association_id,
+    own.id as ownership_id
+FROM owners o
+         JOIN ownerships own ON o.id = own.owner_id
+         JOIN units u ON own.unit_id = u.id
+         JOIN buildings b ON u.building_id = b.id
+WHERE own.is_active = TRUE
+  AND own.is_voting = TRUE
+  AND b.association_id = ?
+  AND (false = ? OR u.unit_type IN (/*SLICE:unit_types*/?))
+  AND (false = ? OR u.floor IN (/*SLICE:unit_floors*/?))
+  AND (false = ? OR u.entrance IN (/*SLICE:unit_entrances*/?))
+ORDER BY o.name, u.unit_number
+`
+
+type GetActiveOwnerUnitsForGatheringParams struct {
+	AssociationID int64
+	Column2       interface{}
+	UnitTypes     []string
+	Column4       interface{}
+	UnitFloors    []int64
+	Column6       interface{}
+	UnitEntrances []int64
+}
+
+type GetActiveOwnerUnitsForGatheringRow struct {
+	OwnerID             int64
+	OwnerName           string
+	OwnerNormalizedName string
+	OwnerIdentification string
+	OwnerContactEmail   string
+	OwnerContactPhone   string
+	UnitID              int64
+	CadastralNumber     string
+	UnitNumber          string
+	Area                float64
+	VotingWeight        float64
+	UnitType            string
+	Floor               int64
+	Entrance            int64
+	BuildingID          int64
+	BuildingName        string
+	BuildingAddress     string
+	AssociationID       int64
+	OwnershipID         int64
+}
+
+func (q *Queries) GetActiveOwnerUnitsForGathering(ctx context.Context, arg GetActiveOwnerUnitsForGatheringParams) ([]GetActiveOwnerUnitsForGatheringRow, error) {
+	query := getActiveOwnerUnitsForGathering
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AssociationID)
+	queryParams = append(queryParams, arg.Column2)
+	if len(arg.UnitTypes) > 0 {
+		for _, v := range arg.UnitTypes {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:unit_types*/?", strings.Repeat(",?", len(arg.UnitTypes))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:unit_types*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.Column4)
+	if len(arg.UnitFloors) > 0 {
+		for _, v := range arg.UnitFloors {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:unit_floors*/?", strings.Repeat(",?", len(arg.UnitFloors))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:unit_floors*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.Column6)
+	if len(arg.UnitEntrances) > 0 {
+		for _, v := range arg.UnitEntrances {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:unit_entrances*/?", strings.Repeat(",?", len(arg.UnitEntrances))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:unit_entrances*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetActiveOwnerUnitsForGatheringRow
+	for rows.Next() {
+		var i GetActiveOwnerUnitsForGatheringRow
+		if err := rows.Scan(
+			&i.OwnerID,
+			&i.OwnerName,
+			&i.OwnerNormalizedName,
+			&i.OwnerIdentification,
+			&i.OwnerContactEmail,
+			&i.OwnerContactPhone,
+			&i.UnitID,
+			&i.CadastralNumber,
+			&i.UnitNumber,
+			&i.Area,
+			&i.VotingWeight,
+			&i.UnitType,
+			&i.Floor,
+			&i.Entrance,
+			&i.BuildingID,
+			&i.BuildingName,
+			&i.BuildingAddress,
+			&i.AssociationID,
+			&i.OwnershipID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllVoteTallies = `-- name: GetAllVoteTallies :many
+SELECT
+    vt.id, vt.gathering_id, vt.voting_matter_id, vt.tally_data, vt.last_updated,
+    vm.title as matter_title,
+    vm.matter_type,
+    vm.voting_config
+FROM vote_tallies vt
+         JOIN voting_matters vm ON vt.voting_matter_id = vm.id
+WHERE vt.gathering_id = ?
+ORDER BY vm.order_index
+`
+
+type GetAllVoteTalliesRow struct {
+	ID             int64
+	GatheringID    int64
+	VotingMatterID int64
+	TallyData      string
+	LastUpdated    sql.NullTime
+	MatterTitle    string
+	MatterType     string
+	VotingConfig   string
+}
+
+func (q *Queries) GetAllVoteTallies(ctx context.Context, gatheringID int64) ([]GetAllVoteTalliesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllVoteTallies, gatheringID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllVoteTalliesRow
+	for rows.Next() {
+		var i GetAllVoteTalliesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GatheringID,
+			&i.VotingMatterID,
+			&i.TallyData,
+			&i.LastUpdated,
+			&i.MatterTitle,
+			&i.MatterType,
+			&i.VotingConfig,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAuditLogs = `-- name: GetAuditLogs :many
+SELECT id, gathering_id, entity_type, entity_id, "action", performed_by, performed_at, ip_address, details FROM voting_audit_log
+WHERE gathering_id = ?
+ORDER BY performed_at DESC
+    LIMIT ?
+`
+
+type GetAuditLogsParams struct {
+	GatheringID int64
+	Limit       int64
+}
+
+func (q *Queries) GetAuditLogs(ctx context.Context, arg GetAuditLogsParams) ([]VotingAuditLog, error) {
+	rows, err := q.db.QueryContext(ctx, getAuditLogs, arg.GatheringID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VotingAuditLog
+	for rows.Next() {
+		var i VotingAuditLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.GatheringID,
+			&i.EntityType,
+			&i.EntityID,
+			&i.Action,
+			&i.PerformedBy,
+			&i.PerformedAt,
+			&i.IpAddress,
+			&i.Details,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getBallotByParticipant = `-- name: GetBallotByParticipant :one
+SELECT id, gathering_id, participant_id, ballot_content, ballot_hash, submitted_at, submitted_ip, submitted_user_agent, signature, signature_timestamp, signature_certificate, is_valid, invalidated_at, invalidation_reason FROM voting_ballots
+WHERE gathering_id = ? AND participant_id = ?
+`
+
+type GetBallotByParticipantParams struct {
+	GatheringID   int64
+	ParticipantID int64
+}
+
+func (q *Queries) GetBallotByParticipant(ctx context.Context, arg GetBallotByParticipantParams) (VotingBallot, error) {
+	row := q.db.QueryRowContext(ctx, getBallotByParticipant, arg.GatheringID, arg.ParticipantID)
+	var i VotingBallot
 	err := row.Scan(
 		&i.ID,
-		&i.VotingMatterID,
-		&i.OptionText,
-		&i.OrderIndex,
-		&i.CreatedAt,
+		&i.GatheringID,
+		&i.ParticipantID,
+		&i.BallotContent,
+		&i.BallotHash,
+		&i.SubmittedAt,
+		&i.SubmittedIp,
+		&i.SubmittedUserAgent,
+		&i.Signature,
+		&i.SignatureTimestamp,
+		&i.SignatureCertificate,
+		&i.IsValid,
+		&i.InvalidatedAt,
+		&i.InvalidationReason,
 	)
 	return i, err
 }
 
-const deleteVotingOptions = `-- name: DeleteVotingOptions :exec
-
-DELETE  FROM voting_options
-WHERE voting_matter_id = ?
+const getBallotsForGathering = `-- name: GetBallotsForGathering :many
+SELECT
+    vb.id, vb.gathering_id, vb.participant_id, vb.ballot_content, vb.ballot_hash, vb.submitted_at, vb.submitted_ip, vb.submitted_user_agent, vb.signature, vb.signature_timestamp, vb.signature_certificate, vb.is_valid, vb.invalidated_at, vb.invalidation_reason,
+    gp.participant_name,
+    gp.unit_id,
+    gp.unit_info
+FROM voting_ballots vb
+         JOIN gathering_participants gp ON vb.participant_id = gp.id
+WHERE vb.gathering_id = ?
+ORDER BY vb.submitted_at
 `
 
-func (q *Queries) DeleteVotingOptions(ctx context.Context, votingMatterID int64) error {
-	_, err := q.db.ExecContext(ctx, deleteVotingOptions, votingMatterID)
-	return err
+type GetBallotsForGatheringRow struct {
+	ID                   int64
+	GatheringID          int64
+	ParticipantID        int64
+	BallotContent        string
+	BallotHash           string
+	SubmittedAt          sql.NullTime
+	SubmittedIp          sql.NullString
+	SubmittedUserAgent   sql.NullString
+	Signature            sql.NullString
+	SignatureTimestamp   sql.NullTime
+	SignatureCertificate sql.NullString
+	IsValid              sql.NullBool
+	InvalidatedAt        sql.NullTime
+	InvalidationReason   sql.NullString
+	ParticipantName      string
+	UnitID               int64
+	UnitInfo             string
+}
+
+func (q *Queries) GetBallotsForGathering(ctx context.Context, gatheringID int64) ([]GetBallotsForGatheringRow, error) {
+	rows, err := q.db.QueryContext(ctx, getBallotsForGathering, gatheringID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetBallotsForGatheringRow
+	for rows.Next() {
+		var i GetBallotsForGatheringRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GatheringID,
+			&i.ParticipantID,
+			&i.BallotContent,
+			&i.BallotHash,
+			&i.SubmittedAt,
+			&i.SubmittedIp,
+			&i.SubmittedUserAgent,
+			&i.Signature,
+			&i.SignatureTimestamp,
+			&i.SignatureCertificate,
+			&i.IsValid,
+			&i.InvalidatedAt,
+			&i.InvalidationReason,
+			&i.ParticipantName,
+			&i.UnitID,
+			&i.UnitInfo,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getGathering = `-- name: GetGathering :one
-
 SELECT id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, participating_units_count, participating_units_total_part, created_at, updated_at FROM gatherings
 WHERE id = ? AND association_id = ?
 `
@@ -404,9 +699,20 @@ func (q *Queries) GetGathering(ctx context.Context, arg GetGatheringParams) (Gat
 	return i, err
 }
 
-const getGatheringParticipant = `-- name: GetGatheringParticipant :one
+const getGatheringBallotCount = `-- name: GetGatheringBallotCount :one
+SELECT COUNT(*) as count FROM voting_ballots
+WHERE gathering_id = ? AND is_valid = TRUE
+`
 
-SELECT id, gathering_id, unit_id, participant_type, participant_name, participant_identification, owner_id, ownership_id, delegating_owner_id, delegation_document_ref, unit_number, unit_building_name, unit_voting_weight, check_in_time, voting_completed, created_at, updated_at FROM gathering_participants
+func (q *Queries) GetGatheringBallotCount(ctx context.Context, gatheringID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getGatheringBallotCount, gatheringID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getGatheringParticipant = `-- name: GetGatheringParticipant :one
+SELECT id, gathering_id, unit_id, participant_type, participant_name, participant_identification, owner_id, delegating_owner_id, delegation_document_ref, unit_info, check_in_time, created_at, updated_at FROM gathering_participants
 WHERE id = ? AND gathering_id = ?
 `
 
@@ -426,25 +732,31 @@ func (q *Queries) GetGatheringParticipant(ctx context.Context, arg GetGatheringP
 		&i.ParticipantName,
 		&i.ParticipantIdentification,
 		&i.OwnerID,
-		&i.OwnershipID,
 		&i.DelegatingOwnerID,
 		&i.DelegationDocumentRef,
-		&i.UnitNumber,
-		&i.UnitBuildingName,
-		&i.UnitVotingWeight,
+		&i.UnitInfo,
 		&i.CheckInTime,
-		&i.VotingCompleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const getGatheringParticipants = `-- name: GetGatheringParticipants :many
-;
+const getGatheringParticipantCount = `-- name: GetGatheringParticipantCount :one
+SELECT COUNT(*) as count FROM gathering_participants
+WHERE gathering_id = ?
+`
 
+func (q *Queries) GetGatheringParticipantCount(ctx context.Context, gatheringID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getGatheringParticipantCount, gatheringID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getGatheringParticipants = `-- name: GetGatheringParticipants :many
 SELECT
-    gp.id, gp.gathering_id, gp.unit_id, gp.participant_type, gp.participant_name, gp.participant_identification, gp.owner_id, gp.ownership_id, gp.delegating_owner_id, gp.delegation_document_ref, gp.unit_number, gp.unit_building_name, gp.unit_voting_weight, gp.check_in_time, gp.voting_completed, gp.created_at, gp.updated_at,
+    gp.id, gp.gathering_id, gp.unit_id, gp.participant_type, gp.participant_name, gp.participant_identification, gp.owner_id, gp.delegating_owner_id, gp.delegation_document_ref, gp.unit_info, gp.check_in_time, gp.created_at, gp.updated_at,
     o.name as owner_name,
     o.identification_number as owner_identification,
     delo.name as delegating_owner_name,
@@ -469,20 +781,16 @@ type GetGatheringParticipantsRow struct {
 	ParticipantName           string
 	ParticipantIdentification sql.NullString
 	OwnerID                   sql.NullInt64
-	OwnershipID               sql.NullInt64
 	DelegatingOwnerID         sql.NullInt64
 	DelegationDocumentRef     sql.NullString
-	UnitNumber                string
-	UnitBuildingName          string
-	UnitVotingWeight          float64
+	UnitInfo                  string
 	CheckInTime               sql.NullTime
-	VotingCompleted           sql.NullBool
 	CreatedAt                 sql.NullTime
 	UpdatedAt                 sql.NullTime
 	OwnerName                 sql.NullString
 	OwnerIdentification       sql.NullString
 	DelegatingOwnerName       sql.NullString
-	UnitNumber_2              sql.NullString
+	UnitNumber                sql.NullString
 	Floor                     sql.NullInt64
 	Entrance                  sql.NullInt64
 	BuildingName              sql.NullString
@@ -505,20 +813,16 @@ func (q *Queries) GetGatheringParticipants(ctx context.Context, gatheringID int6
 			&i.ParticipantName,
 			&i.ParticipantIdentification,
 			&i.OwnerID,
-			&i.OwnershipID,
 			&i.DelegatingOwnerID,
 			&i.DelegationDocumentRef,
-			&i.UnitNumber,
-			&i.UnitBuildingName,
-			&i.UnitVotingWeight,
+			&i.UnitInfo,
 			&i.CheckInTime,
-			&i.VotingCompleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.OwnerName,
 			&i.OwnerIdentification,
 			&i.DelegatingOwnerName,
-			&i.UnitNumber_2,
+			&i.UnitNumber,
 			&i.Floor,
 			&i.Entrance,
 			&i.BuildingName,
@@ -537,16 +841,8 @@ func (q *Queries) GetGatheringParticipants(ctx context.Context, gatheringID int6
 }
 
 const getGatheringStats = `-- name: GetGatheringStats :one
-
-SELECT
-    g.id, g.association_id, g.title, g.description, g.intent, g.gathering_date, g.gathering_type, g.status, g.qualification_unit_types, g.qualification_floors, g.qualification_entrances, g.qualification_custom_rule, g.qualified_units_count, g.qualified_units_total_part, g.participating_units_count, g.participating_units_total_part, g.created_at, g.updated_at,
-    COUNT(DISTINCT gp.id) as participant_count,
-    COUNT(DISTINCT CASE WHEN gp.voting_completed THEN gp.id END) as completed_count,
-    COALESCE(SUM(gp.unit_voting_weight), 0) as total_participating_weight
-FROM gatherings g
-         LEFT JOIN gathering_participants gp ON g.id = gp.gathering_id
-WHERE g.id = ? AND g.association_id = ?
-GROUP BY g.id
+SELECT id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, participating_units_count, participating_units_total_part, created_at, updated_at FROM gatherings
+WHERE id = ? AND association_id = ?
 `
 
 type GetGatheringStatsParams struct {
@@ -554,33 +850,9 @@ type GetGatheringStatsParams struct {
 	AssociationID int64
 }
 
-type GetGatheringStatsRow struct {
-	ID                          int64
-	AssociationID               int64
-	Title                       string
-	Description                 string
-	Intent                      string
-	GatheringDate               time.Time
-	GatheringType               string
-	Status                      string
-	QualificationUnitTypes      sql.NullString
-	QualificationFloors         sql.NullString
-	QualificationEntrances      sql.NullString
-	QualificationCustomRule     sql.NullString
-	QualifiedUnitsCount         sql.NullInt64
-	QualifiedUnitsTotalPart     sql.NullFloat64
-	ParticipatingUnitsCount     sql.NullInt64
-	ParticipatingUnitsTotalPart sql.NullFloat64
-	CreatedAt                   sql.NullTime
-	UpdatedAt                   sql.NullTime
-	ParticipantCount            int64
-	CompletedCount              int64
-	TotalParticipatingWeight    interface{}
-}
-
-func (q *Queries) GetGatheringStats(ctx context.Context, arg GetGatheringStatsParams) (GetGatheringStatsRow, error) {
+func (q *Queries) GetGatheringStats(ctx context.Context, arg GetGatheringStatsParams) (Gathering, error) {
 	row := q.db.QueryRowContext(ctx, getGatheringStats, arg.ID, arg.AssociationID)
-	var i GetGatheringStatsRow
+	var i Gathering
 	err := row.Scan(
 		&i.ID,
 		&i.AssociationID,
@@ -600,9 +872,6 @@ func (q *Queries) GetGatheringStats(ctx context.Context, arg GetGatheringStatsPa
 		&i.ParticipatingUnitsTotalPart,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.ParticipantCount,
-		&i.CompletedCount,
-		&i.TotalParticipatingWeight,
 	)
 	return i, err
 }
@@ -656,7 +925,6 @@ func (q *Queries) GetGatherings(ctx context.Context, associationID int64) ([]Gat
 }
 
 const getNonParticipatingOwners = `-- name: GetNonParticipatingOwners :many
-
 SELECT DISTINCT
     o.id,
     o.name,
@@ -671,12 +939,12 @@ FROM owners o
 WHERE b.association_id = ?
   AND own.is_active = TRUE
   AND u.id IN (
-    SELECT id FROM units u2
+    SELECT u2.id FROM units u2
                        JOIN buildings b2 ON u2.building_id = b2.id
     WHERE b2.association_id = ?
-      AND (false=? OR u2.unit_type in(/*SLICE:unit_types*/?))
-      AND (false=? OR u2.floor in(/*SLICE:unit_floors*/?))
-      AND (false=? OR u2.entrance in(/*SLICE:unit_entrances*/?))
+      AND (false = ? OR u2.unit_type IN (/*SLICE:unit_types*/?))
+      AND (false = ? OR u2.floor IN (/*SLICE:unit_floors*/?))
+      AND (false = ? OR u2.entrance IN (/*SLICE:unit_entrances*/?))
 )
   AND u.id NOT IN (
     SELECT unit_id FROM gathering_participants
@@ -770,29 +1038,50 @@ func (q *Queries) GetNonParticipatingOwners(ctx context.Context, arg GetNonParti
 }
 
 const getNotifications = `-- name: GetNotifications :many
-
-SELECT id, gathering_id, owner_id, notification_type, sent_at, read_at, response_status FROM gathering_notifications
-WHERE gathering_id = ?
-ORDER BY sent_at DESC
+SELECT
+    vn.id, vn.gathering_id, vn.owner_id, vn.notification_type, vn.sent_at, vn.sent_via, vn.read_at,
+    o.name as owner_name,
+    o.contact_email,
+    o.contact_phone
+FROM voting_notifications vn
+         JOIN owners o ON vn.owner_id = o.id
+WHERE vn.gathering_id = ?
+ORDER BY vn.sent_at DESC
 `
 
-func (q *Queries) GetNotifications(ctx context.Context, gatheringID int64) ([]GatheringNotification, error) {
+type GetNotificationsRow struct {
+	ID               int64
+	GatheringID      int64
+	OwnerID          int64
+	NotificationType string
+	SentAt           sql.NullTime
+	SentVia          sql.NullString
+	ReadAt           sql.NullTime
+	OwnerName        string
+	ContactEmail     string
+	ContactPhone     string
+}
+
+func (q *Queries) GetNotifications(ctx context.Context, gatheringID int64) ([]GetNotificationsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getNotifications, gatheringID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GatheringNotification
+	var items []GetNotificationsRow
 	for rows.Next() {
-		var i GatheringNotification
+		var i GetNotificationsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.GatheringID,
 			&i.OwnerID,
 			&i.NotificationType,
 			&i.SentAt,
+			&i.SentVia,
 			&i.ReadAt,
-			&i.ResponseStatus,
+			&i.OwnerName,
+			&i.ContactEmail,
+			&i.ContactPhone,
 		); err != nil {
 			return nil, err
 		}
@@ -808,8 +1097,7 @@ func (q *Queries) GetNotifications(ctx context.Context, gatheringID int64) ([]Ga
 }
 
 const getParticipantByUnit = `-- name: GetParticipantByUnit :one
-
-SELECT id, gathering_id, unit_id, participant_type, participant_name, participant_identification, owner_id, ownership_id, delegating_owner_id, delegation_document_ref, unit_number, unit_building_name, unit_voting_weight, check_in_time, voting_completed, created_at, updated_at FROM gathering_participants
+SELECT id, gathering_id, unit_id, participant_type, participant_name, participant_identification, owner_id, delegating_owner_id, delegation_document_ref, unit_info, check_in_time, created_at, updated_at FROM gathering_participants
 WHERE gathering_id = ? AND unit_id = ?
 `
 
@@ -829,82 +1117,17 @@ func (q *Queries) GetParticipantByUnit(ctx context.Context, arg GetParticipantBy
 		&i.ParticipantName,
 		&i.ParticipantIdentification,
 		&i.OwnerID,
-		&i.OwnershipID,
 		&i.DelegatingOwnerID,
 		&i.DelegationDocumentRef,
-		&i.UnitNumber,
-		&i.UnitBuildingName,
-		&i.UnitVotingWeight,
+		&i.UnitInfo,
 		&i.CheckInTime,
-		&i.VotingCompleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const getParticipantVotes = `-- name: GetParticipantVotes :many
-
-SELECT
-    v.id, v.gathering_id, v.participant_id, v.voting_matter_id, v.voting_option_id, v.vote_value, v.vote_weight, v.submitted_at,
-    vm.title as matter_title,
-    vo.option_text
-FROM votes v
-         JOIN voting_matters vm ON v.voting_matter_id = vm.id
-         LEFT JOIN voting_options vo ON v.voting_option_id = vo.id
-WHERE v.participant_id = ?
-ORDER BY vm.order_index
-`
-
-type GetParticipantVotesRow struct {
-	ID             int64
-	GatheringID    int64
-	ParticipantID  int64
-	VotingMatterID int64
-	VotingOptionID sql.NullInt64
-	VoteValue      sql.NullString
-	VoteWeight     float64
-	SubmittedAt    sql.NullTime
-	MatterTitle    string
-	OptionText     sql.NullString
-}
-
-func (q *Queries) GetParticipantVotes(ctx context.Context, participantID int64) ([]GetParticipantVotesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getParticipantVotes, participantID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetParticipantVotesRow
-	for rows.Next() {
-		var i GetParticipantVotesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.GatheringID,
-			&i.ParticipantID,
-			&i.VotingMatterID,
-			&i.VotingOptionID,
-			&i.VoteValue,
-			&i.VoteWeight,
-			&i.SubmittedAt,
-			&i.MatterTitle,
-			&i.OptionText,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getQualifiedUnits = `-- name: GetQualifiedUnits :many
-
 SELECT
     u.id,
     u.unit_number,
@@ -919,9 +1142,9 @@ SELECT
 FROM units u
          JOIN buildings b ON u.building_id = b.id
 WHERE b.association_id = ?
-  AND (false=? OR u.unit_type in(/*SLICE:unit_types*/?))
-  AND (false=? OR u.floor in(/*SLICE:unit_floors*/?))
-  AND (false=? OR u.entrance in(/*SLICE:unit_entrances*/?))
+  AND (false = ? OR u.unit_type IN (/*SLICE:unit_types*/?))
+  AND (false = ? OR u.floor IN (/*SLICE:unit_floors*/?))
+  AND (false = ? OR u.entrance IN (/*SLICE:unit_entrances*/?))
 ORDER BY b.name, u.unit_number
 `
 
@@ -1012,208 +1235,31 @@ func (q *Queries) GetQualifiedUnits(ctx context.Context, arg GetQualifiedUnitsPa
 	return items, nil
 }
 
-const getVoteResults = `-- name: GetVoteResults :many
-
-SELECT
-    vm.id as matter_id,
-    vm.title as matter_title,
-    vm.required_majority_type,
-    vm.required_majority_value,
-    vm.is_anonymous,
-    vo.id as option_id,
-    vo.option_text,
-    COALESCE(SUM(v.vote_weight), 0) as total_weight,
-    COUNT(v.id) as vote_count
-FROM voting_matters vm
-         LEFT JOIN voting_options vo ON vm.id = vo.voting_matter_id
-         LEFT JOIN votes v ON vo.id = v.voting_option_id
-WHERE vm.gathering_id = ?
-GROUP BY vm.id, vm.title, vm.required_majority_type,
-         vm.required_majority_value, vm.is_anonymous, vo.id, vo.option_text
-ORDER BY vm.order_index, vo.order_index
+const getVoteTally = `-- name: GetVoteTally :one
+SELECT id, gathering_id, voting_matter_id, tally_data, last_updated FROM vote_tallies
+WHERE gathering_id = ? AND voting_matter_id = ?
 `
 
-type GetVoteResultsRow struct {
-	MatterID              int64
-	MatterTitle           string
-	RequiredMajorityType  string
-	RequiredMajorityValue float64
-	IsAnonymous           sql.NullBool
-	OptionID              sql.NullInt64
-	OptionText            sql.NullString
-	TotalWeight           interface{}
-	VoteCount             int64
+type GetVoteTallyParams struct {
+	GatheringID    int64
+	VotingMatterID int64
 }
 
-func (q *Queries) GetVoteResults(ctx context.Context, gatheringID int64) ([]GetVoteResultsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getVoteResults, gatheringID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetVoteResultsRow
-	for rows.Next() {
-		var i GetVoteResultsRow
-		if err := rows.Scan(
-			&i.MatterID,
-			&i.MatterTitle,
-			&i.RequiredMajorityType,
-			&i.RequiredMajorityValue,
-			&i.IsAnonymous,
-			&i.OptionID,
-			&i.OptionText,
-			&i.TotalWeight,
-			&i.VoteCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getVotes = `-- name: GetVotes :many
-
-SELECT
-    v.id, v.gathering_id, v.participant_id, v.voting_matter_id, v.voting_option_id, v.vote_value, v.vote_weight, v.submitted_at,
-    vm.title as matter_title,
-    vo.option_text,
-    gp.participant_name,
-    gp.unit_number
-FROM votes v
-         JOIN voting_matters vm ON v.voting_matter_id = vm.id
-         LEFT JOIN voting_options vo ON v.voting_option_id = vo.id
-         JOIN gathering_participants gp ON v.participant_id = gp.id
-WHERE v.gathering_id = ?
-ORDER BY vm.order_index, v.submitted_at
-`
-
-type GetVotesRow struct {
-	ID              int64
-	GatheringID     int64
-	ParticipantID   int64
-	VotingMatterID  int64
-	VotingOptionID  sql.NullInt64
-	VoteValue       sql.NullString
-	VoteWeight      float64
-	SubmittedAt     sql.NullTime
-	MatterTitle     string
-	OptionText      string
-	ParticipantName string
-	UnitNumber      string
-}
-
-func (q *Queries) GetVotes(ctx context.Context, gatheringID int64) ([]GetVotesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getVotes, gatheringID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetVotesRow
-	for rows.Next() {
-		var i GetVotesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.GatheringID,
-			&i.ParticipantID,
-			&i.VotingMatterID,
-			&i.VotingOptionID,
-			&i.VoteValue,
-			&i.VoteWeight,
-			&i.SubmittedAt,
-			&i.MatterTitle,
-			&i.OptionText,
-			&i.ParticipantName,
-			&i.UnitNumber,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getVotesByMatter = `-- name: GetVotesByMatter :many
-
-SELECT
-    v.id, v.gathering_id, v.participant_id, v.voting_matter_id, v.voting_option_id, v.vote_value, v.vote_weight, v.submitted_at,
-    vo.option_text,
-    gp.participant_name,
-    gp.unit_number,
-    gp.participant_type
-FROM votes v
-         LEFT JOIN voting_options vo ON v.voting_option_id = vo.id
-         JOIN gathering_participants gp ON v.participant_id = gp.id
-WHERE v.voting_matter_id = ?
-ORDER BY v.submitted_at
-`
-
-type GetVotesByMatterRow struct {
-	ID              int64
-	GatheringID     int64
-	ParticipantID   int64
-	VotingMatterID  int64
-	VotingOptionID  sql.NullInt64
-	VoteValue       sql.NullString
-	VoteWeight      float64
-	SubmittedAt     sql.NullTime
-	OptionText      string
-	ParticipantName string
-	UnitNumber      string
-	ParticipantType string
-}
-
-func (q *Queries) GetVotesByMatter(ctx context.Context, votingMatterID int64) ([]GetVotesByMatterRow, error) {
-	rows, err := q.db.QueryContext(ctx, getVotesByMatter, votingMatterID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetVotesByMatterRow
-	for rows.Next() {
-		var i GetVotesByMatterRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.GatheringID,
-			&i.ParticipantID,
-			&i.VotingMatterID,
-			&i.VotingOptionID,
-			&i.VoteValue,
-			&i.VoteWeight,
-			&i.SubmittedAt,
-			&i.OptionText,
-			&i.ParticipantName,
-			&i.UnitNumber,
-			&i.ParticipantType,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) GetVoteTally(ctx context.Context, arg GetVoteTallyParams) (VoteTally, error) {
+	row := q.db.QueryRowContext(ctx, getVoteTally, arg.GatheringID, arg.VotingMatterID)
+	var i VoteTally
+	err := row.Scan(
+		&i.ID,
+		&i.GatheringID,
+		&i.VotingMatterID,
+		&i.TallyData,
+		&i.LastUpdated,
+	)
+	return i, err
 }
 
 const getVotingMatter = `-- name: GetVotingMatter :one
-
-SELECT id, gathering_id, order_index, title, description, matter_type, voting_type, required_majority_type, required_majority_value, required_quorum, is_anonymous, show_results_during_voting, allow_abstention, is_locked, locked_at, created_at, updated_at FROM voting_matters
+SELECT id, gathering_id, order_index, title, description, matter_type, voting_config, created_at, updated_at FROM voting_matters
 WHERE id = ? AND gathering_id = ?
 `
 
@@ -1232,15 +1278,7 @@ func (q *Queries) GetVotingMatter(ctx context.Context, arg GetVotingMatterParams
 		&i.Title,
 		&i.Description,
 		&i.MatterType,
-		&i.VotingType,
-		&i.RequiredMajorityType,
-		&i.RequiredMajorityValue,
-		&i.RequiredQuorum,
-		&i.IsAnonymous,
-		&i.ShowResultsDuringVoting,
-		&i.AllowAbstention,
-		&i.IsLocked,
-		&i.LockedAt,
+		&i.VotingConfig,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -1248,8 +1286,7 @@ func (q *Queries) GetVotingMatter(ctx context.Context, arg GetVotingMatterParams
 }
 
 const getVotingMatters = `-- name: GetVotingMatters :many
-
-SELECT id, gathering_id, order_index, title, description, matter_type, voting_type, required_majority_type, required_majority_value, required_quorum, is_anonymous, show_results_during_voting, allow_abstention, is_locked, locked_at, created_at, updated_at FROM voting_matters
+SELECT id, gathering_id, order_index, title, description, matter_type, voting_config, created_at, updated_at FROM voting_matters
 WHERE gathering_id = ?
 ORDER BY order_index
 `
@@ -1270,15 +1307,7 @@ func (q *Queries) GetVotingMatters(ctx context.Context, gatheringID int64) ([]Vo
 			&i.Title,
 			&i.Description,
 			&i.MatterType,
-			&i.VotingType,
-			&i.RequiredMajorityType,
-			&i.RequiredMajorityValue,
-			&i.RequiredQuorum,
-			&i.IsAnonymous,
-			&i.ShowResultsDuringVoting,
-			&i.AllowAbstention,
-			&i.IsLocked,
-			&i.LockedAt,
+			&i.VotingConfig,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -1295,70 +1324,25 @@ func (q *Queries) GetVotingMatters(ctx context.Context, gatheringID int64) ([]Vo
 	return items, nil
 }
 
-const getVotingOptions = `-- name: GetVotingOptions :many
-
-SELECT id, voting_matter_id, option_text, order_index, created_at FROM voting_options
-WHERE voting_matter_id = ?
-ORDER BY order_index
-`
-
-func (q *Queries) GetVotingOptions(ctx context.Context, votingMatterID int64) ([]VotingOption, error) {
-	rows, err := q.db.QueryContext(ctx, getVotingOptions, votingMatterID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []VotingOption
-	for rows.Next() {
-		var i VotingOption
-		if err := rows.Scan(
-			&i.ID,
-			&i.VotingMatterID,
-			&i.OptionText,
-			&i.OrderIndex,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const lockVotingMatters = `-- name: LockVotingMatters :exec
-
-UPDATE voting_matters SET
-                          is_locked = TRUE,
-                          locked_at = CURRENT_TIMESTAMP
-WHERE gathering_id = ?
-`
-
-func (q *Queries) LockVotingMatters(ctx context.Context, gatheringID int64) error {
-	_, err := q.db.ExecContext(ctx, lockVotingMatters, gatheringID)
-	return err
-}
-
-const markVotingCompleted = `-- name: MarkVotingCompleted :exec
-
-UPDATE gathering_participants SET
-                                  voting_completed = TRUE,
-                                  updated_at = CURRENT_TIMESTAMP
+const invalidateBallot = `-- name: InvalidateBallot :exec
+UPDATE voting_ballots SET
+                          is_valid = FALSE,
+                          invalidated_at = CURRENT_TIMESTAMP,
+                          invalidation_reason = ?
 WHERE id = ?
 `
 
-func (q *Queries) MarkVotingCompleted(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, markVotingCompleted, id)
+type InvalidateBallotParams struct {
+	InvalidationReason sql.NullString
+	ID                 int64
+}
+
+func (q *Queries) InvalidateBallot(ctx context.Context, arg InvalidateBallotParams) error {
+	_, err := q.db.ExecContext(ctx, invalidateBallot, arg.InvalidationReason, arg.ID)
 	return err
 }
 
 const updateGathering = `-- name: UpdateGathering :one
-
 UPDATE gatherings SET
                       title = ?,
                       description = ?,
@@ -1456,9 +1440,8 @@ func (q *Queries) UpdateGatheringStats(ctx context.Context, arg UpdateGatheringS
 }
 
 const updateGatheringStatus = `-- name: UpdateGatheringStatus :one
-
 UPDATE gatherings SET
-                      status =?,
+                      status = ?,
                       updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND association_id = ?
     RETURNING id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, participating_units_count, participating_units_total_part, created_at, updated_at
@@ -1496,62 +1479,41 @@ func (q *Queries) UpdateGatheringStatus(ctx context.Context, arg UpdateGathering
 	return i, err
 }
 
-const updateNotificationStatus = `-- name: UpdateNotificationStatus :exec
-
-UPDATE gathering_notifications SET
-                                   read_at = CURRENT_TIMESTAMP,
-                                   response_status = ?
+const updateNotificationRead = `-- name: UpdateNotificationRead :exec
+UPDATE voting_notifications SET
+    read_at = CURRENT_TIMESTAMP
 WHERE gathering_id = ? AND owner_id = ? AND notification_type = ?
 `
 
-type UpdateNotificationStatusParams struct {
-	ResponseStatus   sql.NullString
+type UpdateNotificationReadParams struct {
 	GatheringID      int64
 	OwnerID          int64
 	NotificationType string
 }
 
-func (q *Queries) UpdateNotificationStatus(ctx context.Context, arg UpdateNotificationStatusParams) error {
-	_, err := q.db.ExecContext(ctx, updateNotificationStatus,
-		arg.ResponseStatus,
-		arg.GatheringID,
-		arg.OwnerID,
-		arg.NotificationType,
-	)
+func (q *Queries) UpdateNotificationRead(ctx context.Context, arg UpdateNotificationReadParams) error {
+	_, err := q.db.ExecContext(ctx, updateNotificationRead, arg.GatheringID, arg.OwnerID, arg.NotificationType)
 	return err
 }
 
 const updateVotingMatter = `-- name: UpdateVotingMatter :one
-
 UPDATE voting_matters SET
                           title = ?,
                           description = ?,
                           matter_type = ?,
-                          voting_type = ?,
-                          required_majority_type = ?,
-                          required_majority_value = ?,
-                          required_quorum = ?,
-                          is_anonymous = ?,
-                          show_results_during_voting = ?,
-                          allow_abstention = ?,
+                          voting_config = ?,
                           updated_at = CURRENT_TIMESTAMP
-WHERE id = ? AND gathering_id = ? AND is_locked = FALSE
-    RETURNING id, gathering_id, order_index, title, description, matter_type, voting_type, required_majority_type, required_majority_value, required_quorum, is_anonymous, show_results_during_voting, allow_abstention, is_locked, locked_at, created_at, updated_at
+WHERE id = ? AND gathering_id = ?
+    RETURNING id, gathering_id, order_index, title, description, matter_type, voting_config, created_at, updated_at
 `
 
 type UpdateVotingMatterParams struct {
-	Title                   string
-	Description             sql.NullString
-	MatterType              string
-	VotingType              string
-	RequiredMajorityType    string
-	RequiredMajorityValue   float64
-	RequiredQuorum          sql.NullFloat64
-	IsAnonymous             sql.NullBool
-	ShowResultsDuringVoting sql.NullBool
-	AllowAbstention         sql.NullBool
-	ID                      int64
-	GatheringID             int64
+	Title        string
+	Description  sql.NullString
+	MatterType   string
+	VotingConfig string
+	ID           int64
+	GatheringID  int64
 }
 
 func (q *Queries) UpdateVotingMatter(ctx context.Context, arg UpdateVotingMatterParams) (VotingMatter, error) {
@@ -1559,13 +1521,7 @@ func (q *Queries) UpdateVotingMatter(ctx context.Context, arg UpdateVotingMatter
 		arg.Title,
 		arg.Description,
 		arg.MatterType,
-		arg.VotingType,
-		arg.RequiredMajorityType,
-		arg.RequiredMajorityValue,
-		arg.RequiredQuorum,
-		arg.IsAnonymous,
-		arg.ShowResultsDuringVoting,
-		arg.AllowAbstention,
+		arg.VotingConfig,
 		arg.ID,
 		arg.GatheringID,
 	)
@@ -1577,17 +1533,38 @@ func (q *Queries) UpdateVotingMatter(ctx context.Context, arg UpdateVotingMatter
 		&i.Title,
 		&i.Description,
 		&i.MatterType,
-		&i.VotingType,
-		&i.RequiredMajorityType,
-		&i.RequiredMajorityValue,
-		&i.RequiredQuorum,
-		&i.IsAnonymous,
-		&i.ShowResultsDuringVoting,
-		&i.AllowAbstention,
-		&i.IsLocked,
-		&i.LockedAt,
+		&i.VotingConfig,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertVoteTally = `-- name: UpsertVoteTally :one
+INSERT INTO vote_tallies (gathering_id, voting_matter_id, tally_data)
+VALUES (?, ?, ?)
+    ON CONFLICT (gathering_id, voting_matter_id)
+DO UPDATE SET
+    tally_data = ?,
+           last_updated = CURRENT_TIMESTAMP
+           RETURNING id, gathering_id, voting_matter_id, tally_data, last_updated
+`
+
+type UpsertVoteTallyParams struct {
+	GatheringID    int64
+	VotingMatterID int64
+	TallyData      string
+}
+
+func (q *Queries) UpsertVoteTally(ctx context.Context, arg UpsertVoteTallyParams) (VoteTally, error) {
+	row := q.db.QueryRowContext(ctx, upsertVoteTally, arg.GatheringID, arg.VotingMatterID, arg.TallyData)
+	var i VoteTally
+	err := row.Scan(
+		&i.ID,
+		&i.GatheringID,
+		&i.VotingMatterID,
+		&i.TallyData,
+		&i.LastUpdated,
 	)
 	return i, err
 }

@@ -20,6 +20,28 @@ type Account struct {
 	UpdatedAt     sql.NullTime
 }
 
+type ActiveOwnerUnit struct {
+	OwnerID             int64
+	OwnerName           string
+	OwnerNormalizedName string
+	OwnerIdentification string
+	OwnerContactEmail   string
+	OwnerContactPhone   string
+	UnitID              int64
+	CadastralNumber     string
+	UnitNumber          string
+	Area                float64
+	VotingWeight        float64
+	UnitType            string
+	Floor               int64
+	Entrance            int64
+	BuildingID          int64
+	BuildingName        string
+	BuildingAddress     string
+	AssociationID       int64
+	OwnershipID         int64
+}
+
 type Association struct {
 	ID            int64
 	Name          string
@@ -87,16 +109,6 @@ type Gathering struct {
 	UpdatedAt                   sql.NullTime
 }
 
-type GatheringNotification struct {
-	ID               int64
-	GatheringID      int64
-	OwnerID          int64
-	NotificationType string
-	SentAt           sql.NullTime
-	ReadAt           sql.NullTime
-	ResponseStatus   sql.NullString
-}
-
 type GatheringParticipant struct {
 	ID                        int64
 	GatheringID               int64
@@ -105,14 +117,10 @@ type GatheringParticipant struct {
 	ParticipantName           string
 	ParticipantIdentification sql.NullString
 	OwnerID                   sql.NullInt64
-	OwnershipID               sql.NullInt64
 	DelegatingOwnerID         sql.NullInt64
 	DelegationDocumentRef     sql.NullString
-	UnitNumber                string
-	UnitBuildingName          string
-	UnitVotingWeight          float64
+	UnitInfo                  string
 	CheckInTime               sql.NullTime
-	VotingCompleted           sql.NullBool
 	CreatedAt                 sql.NullTime
 	UpdatedAt                 sql.NullTime
 }
@@ -209,52 +217,61 @@ type UsersAssociation struct {
 	UpdatedAt     time.Time
 }
 
-type Vote struct {
+type VoteTally struct {
 	ID             int64
 	GatheringID    int64
-	ParticipantID  int64
 	VotingMatterID int64
-	VotingOptionID sql.NullInt64
-	VoteValue      sql.NullString
-	VoteWeight     float64
-	SubmittedAt    sql.NullTime
+	TallyData      string
+	LastUpdated    sql.NullTime
 }
 
-type VoteAuditLog struct {
+type VotingAuditLog struct {
 	ID          int64
-	VoteID      int64
+	GatheringID int64
+	EntityType  string
+	EntityID    int64
 	Action      string
 	PerformedBy sql.NullString
 	PerformedAt sql.NullTime
 	IpAddress   sql.NullString
-	UserAgent   sql.NullString
 	Details     sql.NullString
 }
 
-type VotingMatter struct {
-	ID                      int64
-	GatheringID             int64
-	OrderIndex              int64
-	Title                   string
-	Description             sql.NullString
-	MatterType              string
-	VotingType              string
-	RequiredMajorityType    string
-	RequiredMajorityValue   float64
-	RequiredQuorum          sql.NullFloat64
-	IsAnonymous             sql.NullBool
-	ShowResultsDuringVoting sql.NullBool
-	AllowAbstention         sql.NullBool
-	IsLocked                sql.NullBool
-	LockedAt                sql.NullTime
-	CreatedAt               sql.NullTime
-	UpdatedAt               sql.NullTime
+type VotingBallot struct {
+	ID                   int64
+	GatheringID          int64
+	ParticipantID        int64
+	BallotContent        string
+	BallotHash           string
+	SubmittedAt          sql.NullTime
+	SubmittedIp          sql.NullString
+	SubmittedUserAgent   sql.NullString
+	Signature            sql.NullString
+	SignatureTimestamp   sql.NullTime
+	SignatureCertificate sql.NullString
+	IsValid              sql.NullBool
+	InvalidatedAt        sql.NullTime
+	InvalidationReason   sql.NullString
 }
 
-type VotingOption struct {
-	ID             int64
-	VotingMatterID int64
-	OptionText     string
-	OrderIndex     int64
-	CreatedAt      sql.NullTime
+type VotingMatter struct {
+	ID           int64
+	GatheringID  int64
+	OrderIndex   int64
+	Title        string
+	Description  sql.NullString
+	MatterType   string
+	VotingConfig string
+	CreatedAt    sql.NullTime
+	UpdatedAt    sql.NullTime
+}
+
+type VotingNotification struct {
+	ID               int64
+	GatheringID      int64
+	OwnerID          int64
+	NotificationType string
+	SentAt           sql.NullTime
+	SentVia          sql.NullString
+	ReadAt           sql.NullTime
 }
