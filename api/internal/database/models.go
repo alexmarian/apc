@@ -103,8 +103,10 @@ type Gathering struct {
 	QualificationCustomRule     sql.NullString
 	QualifiedUnitsCount         sql.NullInt64
 	QualifiedUnitsTotalPart     sql.NullFloat64
+	QualifiedUnitsTotalArea     sql.NullFloat64
 	ParticipatingUnitsCount     sql.NullInt64
 	ParticipatingUnitsTotalPart sql.NullFloat64
+	ParticipatingUnitsTotalArea sql.NullFloat64
 	CreatedAt                   sql.NullTime
 	UpdatedAt                   sql.NullTime
 }
@@ -119,7 +121,9 @@ type GatheringParticipant struct {
 	OwnerID                   sql.NullInt64
 	DelegatingOwnerID         sql.NullInt64
 	DelegationDocumentRef     sql.NullString
-	UnitInfo                  string
+	UnitsInfo                 string
+	UnitsArea                 float64
+	UnitsPart                 float64
 	CheckInTime               sql.NullTime
 	CreatedAt                 sql.NullTime
 	UpdatedAt                 sql.NullTime
@@ -197,6 +201,15 @@ type Unit struct {
 	RoomCount       int64
 	CreatedAt       sql.NullTime
 	UpdatedAt       sql.NullTime
+}
+
+type UnitSlot struct {
+	ID            int64
+	GatheringID   int64
+	UnitID        int64
+	ParticipantID interface{}
+	CreatedAt     sql.NullTime
+	UpdatedAt     sql.NullTime
 }
 
 type User struct {

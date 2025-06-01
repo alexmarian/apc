@@ -23,8 +23,10 @@ CREATE TABLE gatherings
     -- Calculated fields (cached for performance)
     qualified_units_count          INTEGER            DEFAULT 0,
     qualified_units_total_part     NUMERIC            DEFAULT 0,
+    qualified_units_total_area     NUMERIC            DEFAULT 0,
     participating_units_count      INTEGER            DEFAULT 0,
     participating_units_total_part NUMERIC            DEFAULT 0,
+    participating_units_total_area NUMERIC            DEFAULT 0,
 
     created_at                     TIMESTAMP          DEFAULT CURRENT_TIMESTAMP,
     updated_at                     TIMESTAMP          DEFAULT CURRENT_TIMESTAMP
@@ -66,8 +68,10 @@ CREATE TABLE gathering_participants
     delegating_owner_id        INTEGER REFERENCES owners (id),
     delegation_document_ref    TEXT,
 
-    -- Cached unit info (for historical record)
-    unit_info                  TEXT    NOT NULL, -- JSON with: number, building_name, voting_weight
+    -- JSON Array of unit IDs for multi-unit participants
+    units_info                  TEXT    NOT NULL,
+    units_area                  NUMERIC NOT NULL, -- Total area of all units
+    units_part                  NUMERIC NOT NULL, -- Total voting weight of all units
 
     -- Participation tracking
     check_in_time              TIMESTAMP,
@@ -78,6 +82,21 @@ CREATE TABLE gathering_participants
     -- Ensure one participant per unit per gathering
     CONSTRAINT unique_unit_per_gathering UNIQUE (gathering_id, unit_id)
 );
+-- Units slots used till voting state/ deleted and archived in participant on closing the gathering
+CREATE TABLE unit_slots
+(
+    id            INTEGER PRIMARY KEY,
+    gathering_id  INTEGER NOT NULL REFERENCES gatherings (id) ON DELETE CASCADE,
+    unit_id       INTEGER NOT NULL REFERENCES units (id),
+    participant_id INTEGER NULL REFERENCES gathering_participants (id),
+
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE (gathering_id, unit_id, participant_id)
+);
+
+
 -- Voting ballots table - stores complete ballot as JSON
 CREATE TABLE voting_ballots
 (
