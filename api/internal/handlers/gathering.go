@@ -36,8 +36,10 @@ type Gathering struct {
 	QualificationCustomRule     string    `json:"qualification_custom_rule"`
 	QualifiedUnitsCount         int       `json:"qualified_units_count"`
 	QualifiedUnitsTotalPart     float64   `json:"qualified_units_total_part"`
+	QualifiedUnitsTotalArea     float64   `json:"qualified_units_total_area"`
 	ParticipatingUnitsCount     int       `json:"participating_units_count"`
 	ParticipatingUnitsTotalPart float64   `json:"participating_units_total_part"`
+	ParticipatingUnitsTotalArea float64   `json:"participating_units_total_area"`
 	CreatedAt                   time.Time `json:"created_at"`
 	UpdatedAt                   time.Time `json:"updated_at"`
 }
@@ -92,17 +94,13 @@ type GatheringParticipant struct {
 	OwnerID                   *int64     `json:"owner_id"`
 	DelegatingOwnerID         *int64     `json:"delegating_owner_id"`
 	DelegationDocumentRef     string     `json:"delegation_document_ref"`
-	UnitInfo                  UnitInfo   `json:"unit_info"`
+	UnitsInfo                 []string   `json:"units_info"`
+	UnitsPart                 float64    `json:"units_part"`
+	UnitsArea                 float64    `json:"units_area"`
 	CheckInTime               *time.Time `json:"check_in_time"`
 	HasVoted                  bool       `json:"has_voted"`
 	CreatedAt                 time.Time  `json:"created_at"`
 	UpdatedAt                 time.Time  `json:"updated_at"`
-}
-
-type UnitInfo struct {
-	Number       string  `json:"number"`
-	BuildingName string  `json:"building_name"`
-	VotingWeight float64 `json:"voting_weight"`
 }
 
 type Ballot struct {
@@ -143,16 +141,20 @@ type VoteMatterResult struct {
 type TallyResult struct {
 	Count      int     `json:"count"`
 	Weight     float64 `json:"weight"`
+	Area       float64 `json:"area"`
 	Percentage float64 `json:"percentage"`
 }
 
 type GatheringSummary struct {
 	QualifiedUnits       int     `json:"qualified_units"`
 	QualifiedWeight      float64 `json:"qualified_weight"`
+	QualifiedArea        float64 `json:"qualified_area"`
 	ParticipatingUnits   int     `json:"participating_units"`
 	ParticipatingWeight  float64 `json:"participating_weight"`
+	ParticipatingArea    float64 `json:"participating_area"`
 	VotedUnits           int     `json:"voted_units"`
 	VotedWeight          float64 `json:"voted_weight"`
+	VotedArea            float64 `json:"voted_area"`
 	ParticipationRate    float64 `json:"participation_rate"`
 	VotingCompletionRate float64 `json:"voting_completion_rate"`
 }
@@ -245,7 +247,7 @@ func HandleCreateGathering(cfg *ApiConfig) func(http.ResponseWriter, *http.Reque
 		}
 
 		// Calculate qualified units
-		go updateGatheringStats(cfg, gathering.ID, int64(associationId))
+		qualifiedCount, qualifiedPart, qualifiedArea := updateGatheringStats(cfg, gathering.ID, int64(associationId))
 
 		// Log audit
 		cfg.Db.CreateAuditLog(req.Context(), database.CreateAuditLogParams{
@@ -258,7 +260,11 @@ func HandleCreateGathering(cfg *ApiConfig) func(http.ResponseWriter, *http.Reque
 			Details:     sql.NullString{String: "{}", Valid: true},
 		})
 
-		RespondWithJSON(rw, http.StatusCreated, dbGatheringToResponse(gathering))
+		response := dbGatheringToResponse(gathering)
+		response.QualifiedUnitsCount = qualifiedCount
+		response.QualifiedUnitsTotalPart = qualifiedPart
+		response.QualifiedUnitsTotalArea = qualifiedArea
+		RespondWithJSON(rw, http.StatusCreated, response)
 	}
 }
 
@@ -485,28 +491,9 @@ func HandleAddParticipant(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 				continue // Skip already registered units
 			}
 
-			// Get unit details
-			unit, err := cfg.Db.GetBuildingUnit(req.Context(), database.GetBuildingUnitParams{
-				ID:         unitID,
-				BuildingID: 0, // We'll need to adjust this query
-			})
-			if err != nil {
-				continue
-			}
-
 			// Get building info
-			building, _ := cfg.Db.GetAssociationBuilding(req.Context(), database.GetAssociationBuildingParams{
-				ID:            unit.BuildingID,
-				AssociationID: int64(associationId),
-			})
 
 			// Create unit info JSON
-			unitInfo := UnitInfo{
-				Number:       unit.UnitNumber,
-				BuildingName: building.Name,
-				VotingWeight: unit.Part,
-			}
-			unitInfoJSON, _ := json.Marshal(unitInfo)
 
 			participantName := owner.Name
 			participantID := owner.IdentificationNumber
@@ -520,7 +507,6 @@ func HandleAddParticipant(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 				OwnerID:                   sql.NullInt64{Int64: addReq.OwnerID, Valid: true},
 				DelegatingOwnerID:         sql.NullInt64{Int64: *addReq.DelegatingOwnerID, Valid: addReq.DelegatingOwnerID != nil},
 				DelegationDocumentRef:     sql.NullString{String: addReq.DelegationDocumentRef, Valid: addReq.DelegationDocumentRef != ""},
-				UnitInfo:                  string(unitInfoJSON),
 			})
 
 			if err != nil {
@@ -615,7 +601,7 @@ func HandleSubmitBallot(cfg *ApiConfig) func(http.ResponseWriter, *http.Request)
 		}
 
 		// Validate participant exists and hasn't voted
-		participant, err := cfg.Db.GetGatheringParticipant(req.Context(), database.GetGatheringParticipantParams{
+		_, err := cfg.Db.GetGatheringParticipant(req.Context(), database.GetGatheringParticipantParams{
 			ID:          int64(participantId),
 			GatheringID: int64(gatheringId),
 		})
@@ -662,7 +648,7 @@ func HandleSubmitBallot(cfg *ApiConfig) func(http.ResponseWriter, *http.Request)
 		}
 
 		// Update vote tallies asynchronously
-		go updateVoteTallies(cfg, int64(gatheringId), participant.UnitInfo)
+		go updateVoteTallies(cfg, int64(gatheringId), participantId)
 
 		// Log audit
 		cfg.Db.CreateAuditLog(req.Context(), database.CreateAuditLogParams{
@@ -720,7 +706,7 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 		// Calculate participation stats
 		votedParticipants := make(map[int64]bool)
 		totalVotedWeight := 0.0
-
+		totalVotedArea := 0.0
 		for _, ballot := range ballots {
 			if ballot.IsValid.Bool {
 				votedParticipants[ballot.ParticipantID] = true
@@ -728,10 +714,10 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 		}
 
 		for _, participant := range participants {
+
 			if votedParticipants[participant.ID] {
-				var unitInfo UnitInfo
-				json.Unmarshal([]byte(participant.UnitInfo), &unitInfo)
-				totalVotedWeight += unitInfo.VotingWeight
+				totalVotedWeight += participant.UnitsPart
+				totalVotedArea += participant.UnitsArea
 			}
 		}
 
@@ -742,10 +728,13 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			Summary: GatheringSummary{
 				QualifiedUnits:      int(gathering.QualifiedUnitsCount.Int64),
 				QualifiedWeight:     gathering.QualifiedUnitsTotalPart.Float64,
+				QualifiedArea:       gathering.QualifiedUnitsTotalArea.Float64,
 				ParticipatingUnits:  int(gathering.ParticipatingUnitsCount.Int64),
 				ParticipatingWeight: gathering.ParticipatingUnitsTotalPart.Float64,
+				ParticipatingArea:   gathering.ParticipatingUnitsTotalArea.Float64,
 				VotedUnits:          len(votedParticipants),
 				VotedWeight:         totalVotedWeight,
+				VotedArea:           totalVotedArea,
 			},
 		}
 
@@ -783,6 +772,7 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 
 			// Count votes from valid ballots
 			totalWeight := 0.0
+			totalArea := 0.0
 			for _, ballot := range ballots {
 				if !ballot.IsValid.Bool {
 					continue
@@ -790,11 +780,12 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 
 				// Get participant info for weight
 				var participantWeight float64
+				var participantArea float64
 				for _, p := range participants {
 					if p.ID == ballot.ParticipantID {
-						var unitInfo UnitInfo
-						json.Unmarshal([]byte(p.UnitInfo), &unitInfo)
-						participantWeight = unitInfo.VotingWeight
+
+						participantWeight = p.UnitsPart
+						participantArea = p.UnitsArea
 						break
 					}
 				}
@@ -815,9 +806,11 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 						tally[voteKey] = TallyResult{
 							Count:  tally[voteKey].Count + 1,
 							Weight: tally[voteKey].Weight + participantWeight,
+							Area:   tally[voteKey].Area + participantArea,
 						}
 						if voteKey != "abstain" {
 							totalWeight += participantWeight
+							totalArea += participantArea
 						}
 					}
 				}
@@ -826,7 +819,7 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			// Calculate percentages
 			for key, result := range tally {
 				if totalWeight > 0 {
-					result.Percentage = (result.Weight / totalWeight) * 100
+					result.Percentage = (result.Area / totalVotedArea) * 100
 					tally[key] = result
 				}
 			}
@@ -1053,11 +1046,11 @@ func HandleGetGatheringStats(cfg *ApiConfig) func(http.ResponseWriter, *http.Req
 
 		// Calculate total voted weight
 		totalVotedWeight := 0.0
+		totalVotedArea := 0.0
 		for _, participant := range participants {
 			if votedParticipants[participant.ID] {
-				var unitInfo UnitInfo
-				json.Unmarshal([]byte(participant.UnitInfo), &unitInfo)
-				totalVotedWeight += unitInfo.VotingWeight
+				totalVotedWeight += participant.UnitsPart
+				totalVotedArea += participant.UnitsArea
 			}
 		}
 
@@ -1066,6 +1059,7 @@ func HandleGetGatheringStats(cfg *ApiConfig) func(http.ResponseWriter, *http.Req
 			ParticipantCount        int     `json:"participant_count"`
 			VotedCount              int     `json:"voted_count"`
 			TotalVotedWeight        float64 `json:"total_voted_weight"`
+			TotalVotedArea          float64 `json:"total_voted_area"`
 			ParticipationPercentage float64 `json:"participation_percentage"`
 			VotingPercentage        float64 `json:"voting_percentage"`
 		}
@@ -1075,9 +1069,11 @@ func HandleGetGatheringStats(cfg *ApiConfig) func(http.ResponseWriter, *http.Req
 			ParticipantCount: int(participantCount),
 			VotedCount:       int(ballotCount),
 			TotalVotedWeight: totalVotedWeight,
+			TotalVotedArea:   totalVotedArea,
 		}
 
 		// Calculate percentages
+		// review to catter for multiunit participants
 		if gathering.QualifiedUnitsCount.Int64 > 0 {
 			response.ParticipationPercentage = float64(participantCount) / float64(gathering.QualifiedUnitsCount.Int64) * 100
 		}
@@ -1121,8 +1117,10 @@ func dbGatheringToResponse(g database.Gathering) Gathering {
 		QualificationCustomRule:     g.QualificationCustomRule.String,
 		QualifiedUnitsCount:         int(g.QualifiedUnitsCount.Int64),
 		QualifiedUnitsTotalPart:     g.QualifiedUnitsTotalPart.Float64,
+		QualifiedUnitsTotalArea:     g.QualifiedUnitsTotalArea.Float64,
 		ParticipatingUnitsCount:     int(g.ParticipatingUnitsCount.Int64),
 		ParticipatingUnitsTotalPart: g.ParticipatingUnitsTotalPart.Float64,
+		ParticipatingUnitsTotalArea: g.ParticipatingUnitsTotalArea.Float64,
 		CreatedAt:                   g.CreatedAt.Time,
 		UpdatedAt:                   g.UpdatedAt.Time,
 	}
@@ -1146,8 +1144,8 @@ func dbVotingMatterToResponse(m database.VotingMatter) VotingMatter {
 }
 
 func dbParticipantToResponse(p database.GatheringParticipant) GatheringParticipant {
-	var unitInfo UnitInfo
-	json.Unmarshal([]byte(p.UnitInfo), &unitInfo)
+	var unitsInfo []string
+	json.Unmarshal([]byte(p.UnitsInfo), &unitsInfo)
 
 	return GatheringParticipant{
 		ID:                        p.ID,
@@ -1159,7 +1157,9 @@ func dbParticipantToResponse(p database.GatheringParticipant) GatheringParticipa
 		OwnerID:                   nullInt64ToPtr(p.OwnerID),
 		DelegatingOwnerID:         nullInt64ToPtr(p.DelegatingOwnerID),
 		DelegationDocumentRef:     p.DelegationDocumentRef.String,
-		UnitInfo:                  unitInfo,
+		UnitsInfo:                 unitsInfo,
+		UnitsPart:                 p.UnitsPart,
+		UnitsArea:                 p.UnitsArea,
 		CheckInTime:               nullTimeToPtr(p.CheckInTime),
 		CreatedAt:                 p.CreatedAt.Time,
 		UpdatedAt:                 p.UpdatedAt.Time,
@@ -1167,8 +1167,8 @@ func dbParticipantToResponse(p database.GatheringParticipant) GatheringParticipa
 }
 
 func dbParticipantRowToResponse(p database.GetGatheringParticipantsRow) GatheringParticipant {
-	var unitInfo UnitInfo
-	json.Unmarshal([]byte(p.UnitInfo), &unitInfo)
+	var unitsInfo []string
+	json.Unmarshal([]byte(p.UnitsInfo), &unitsInfo)
 
 	return GatheringParticipant{
 		ID:                        p.ID,
@@ -1180,7 +1180,9 @@ func dbParticipantRowToResponse(p database.GetGatheringParticipantsRow) Gatherin
 		OwnerID:                   nullInt64ToPtr(p.OwnerID),
 		DelegatingOwnerID:         nullInt64ToPtr(p.DelegatingOwnerID),
 		DelegationDocumentRef:     p.DelegationDocumentRef.String,
-		UnitInfo:                  unitInfo,
+		UnitsInfo:                 unitsInfo,
+		UnitsPart:                 p.UnitsPart,
+		UnitsArea:                 p.UnitsArea,
 		CheckInTime:               nullTimeToPtr(p.CheckInTime),
 		CreatedAt:                 p.CreatedAt.Time,
 		UpdatedAt:                 p.UpdatedAt.Time,
@@ -1259,7 +1261,7 @@ func calculateIfPassed(result VoteMatterResult, config VotingConfig) bool {
 	return false
 }
 
-func updateGatheringStats(cfg *ApiConfig, gatheringID, associationID int64) {
+func updateGatheringStats(cfg *ApiConfig, gatheringID, associationID int64) (int, float64, float64) {
 	ctx := context.Background()
 
 	// Get gathering details
@@ -1268,7 +1270,7 @@ func updateGatheringStats(cfg *ApiConfig, gatheringID, associationID int64) {
 		AssociationID: associationID,
 	})
 	if err != nil {
-		return
+		return 0, 0.0, 0.0
 	}
 
 	// Parse qualification rules
@@ -1298,37 +1300,74 @@ func updateGatheringStats(cfg *ApiConfig, gatheringID, associationID int64) {
 	})
 
 	if err != nil {
-		return
+		return 0, 0.0, 0.0
 	}
 
 	// Calculate totals
 	qualifiedCount := len(units)
 	qualifiedTotalPart := 0.0
+	qualifiedTotalArea := 0.0
 	for _, u := range units {
 		qualifiedTotalPart += u.Part
-	}
-
-	// Get participants
-	participants, _ := cfg.Db.GetGatheringParticipants(ctx, gatheringID)
-	participatingCount := len(participants)
-	participatingTotalPart := 0.0
-	for _, p := range participants {
-		var unitInfo UnitInfo
-		json.Unmarshal([]byte(p.UnitInfo), &unitInfo)
-		participatingTotalPart += unitInfo.VotingWeight
+		qualifiedTotalArea += u.Area
 	}
 
 	// Update stats
 	cfg.Db.UpdateGatheringStats(ctx, database.UpdateGatheringStatsParams{
-		QualifiedUnitsCount:         sql.NullInt64{Int64: int64(qualifiedCount), Valid: true},
-		QualifiedUnitsTotalPart:     sql.NullFloat64{Float64: qualifiedTotalPart, Valid: true},
+		QualifiedUnitsCount:     sql.NullInt64{Int64: int64(qualifiedCount), Valid: true},
+		QualifiedUnitsTotalPart: sql.NullFloat64{Float64: qualifiedTotalPart, Valid: true},
+		QualifiedUnitsTotalArea: sql.NullFloat64{Float64: qualifiedTotalArea, Valid: true},
+		ID:                      gatheringID,
+	})
+	return qualifiedCount, qualifiedTotalPart, qualifiedTotalArea
+}
+
+func updateGatheringParticipationStats(cfg *ApiConfig, gatheringID, associationID int64) {
+	ctx := context.Background()
+
+	// Get gathering details
+	gathering, err := cfg.Db.GetGathering(ctx, database.GetGatheringParams{
+		ID:            gatheringID,
+		AssociationID: associationID,
+	})
+	if err != nil {
+		return
+	}
+
+	// Parse qualification rules
+	var unitTypes []string
+	var floors []int64
+	var entrances []int64
+
+	if gathering.QualificationUnitTypes.Valid {
+		json.Unmarshal([]byte(gathering.QualificationUnitTypes.String), &unitTypes)
+	}
+	if gathering.QualificationFloors.Valid {
+		json.Unmarshal([]byte(gathering.QualificationFloors.String), &floors)
+	}
+	if gathering.QualificationEntrances.Valid {
+		json.Unmarshal([]byte(gathering.QualificationEntrances.String), &entrances)
+	}
+	// Get participants
+	participants, _ := cfg.Db.GetGatheringParticipants(ctx, gatheringID)
+	participatingCount := len(participants)
+	participatingTotalPart := 0.0
+	participatingTotalArea := 0.0
+	for _, p := range participants {
+		participatingTotalPart += p.UnitsPart
+		participatingTotalArea += p.UnitsArea
+	}
+
+	// Update stats
+	cfg.Db.UpdateParticipationStats(ctx, database.UpdateParticipationStatsParams{
 		ParticipatingUnitsCount:     sql.NullInt64{Int64: int64(participatingCount), Valid: true},
 		ParticipatingUnitsTotalPart: sql.NullFloat64{Float64: participatingTotalPart, Valid: true},
+		ParticipatingUnitsTotalArea: sql.NullFloat64{Float64: participatingTotalArea, Valid: true},
 		ID:                          gatheringID,
 	})
 }
 
-func updateVoteTallies(cfg *ApiConfig, gatheringID int64, unitInfoJSON string) {
+func updateVoteTallies(cfg *ApiConfig, gatheringID int64, participantId int) {
 
 	logging.Logger.Log(zap.InfoLevel, "Vote tallies marked for update",
 		zap.Int64("gathering_id", gatheringID))
@@ -1337,7 +1376,7 @@ func updateVoteTallies(cfg *ApiConfig, gatheringID int64, unitInfoJSON string) {
 func calculateFinalResults(cfg *ApiConfig, gatheringID int64) {
 	// This function would be called when gathering is closed
 	// It would finalize all tallies and potentially generate reports
-	updateVoteTallies(cfg, gatheringID, "{}")
+	updateVoteTallies(cfg, gatheringID, -1)
 }
 
 // Additional handlers for notifications and audit logs

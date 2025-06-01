@@ -102,7 +102,12 @@ UPDATE gatherings
 SET qualified_units_count          = ?,
     qualified_units_total_part     = ?,
     qualified_units_total_area     = ?,
-    participating_units_count      = ?,
+    updated_at                     = CURRENT_TIMESTAMP
+WHERE id = ?;
+
+-- name: UpdateParticipationStats :exec
+UPDATE gatherings
+SET participating_units_count      = ?,
     participating_units_total_part = ?,
     participating_units_total_area = ?,
     updated_at                     = CURRENT_TIMESTAMP

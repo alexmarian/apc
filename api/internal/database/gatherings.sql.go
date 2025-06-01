@@ -1767,21 +1767,15 @@ UPDATE gatherings
 SET qualified_units_count          = ?,
     qualified_units_total_part     = ?,
     qualified_units_total_area     = ?,
-    participating_units_count      = ?,
-    participating_units_total_part = ?,
-    participating_units_total_area = ?,
     updated_at                     = CURRENT_TIMESTAMP
 WHERE id = ?
 `
 
 type UpdateGatheringStatsParams struct {
-	QualifiedUnitsCount         sql.NullInt64
-	QualifiedUnitsTotalPart     sql.NullFloat64
-	QualifiedUnitsTotalArea     sql.NullFloat64
-	ParticipatingUnitsCount     sql.NullInt64
-	ParticipatingUnitsTotalPart sql.NullFloat64
-	ParticipatingUnitsTotalArea sql.NullFloat64
-	ID                          int64
+	QualifiedUnitsCount     sql.NullInt64
+	QualifiedUnitsTotalPart sql.NullFloat64
+	QualifiedUnitsTotalArea sql.NullFloat64
+	ID                      int64
 }
 
 func (q *Queries) UpdateGatheringStats(ctx context.Context, arg UpdateGatheringStatsParams) error {
@@ -1789,9 +1783,6 @@ func (q *Queries) UpdateGatheringStats(ctx context.Context, arg UpdateGatheringS
 		arg.QualifiedUnitsCount,
 		arg.QualifiedUnitsTotalPart,
 		arg.QualifiedUnitsTotalArea,
-		arg.ParticipatingUnitsCount,
-		arg.ParticipatingUnitsTotalPart,
-		arg.ParticipatingUnitsTotalArea,
 		arg.ID,
 	)
 	return err
@@ -1855,6 +1846,32 @@ type UpdateNotificationReadParams struct {
 
 func (q *Queries) UpdateNotificationRead(ctx context.Context, arg UpdateNotificationReadParams) error {
 	_, err := q.db.ExecContext(ctx, updateNotificationRead, arg.GatheringID, arg.OwnerID, arg.NotificationType)
+	return err
+}
+
+const updateParticipationStats = `-- name: UpdateParticipationStats :exec
+UPDATE gatherings
+SET participating_units_count      = ?,
+    participating_units_total_part = ?,
+    participating_units_total_area = ?,
+    updated_at                     = CURRENT_TIMESTAMP
+WHERE id = ?
+`
+
+type UpdateParticipationStatsParams struct {
+	ParticipatingUnitsCount     sql.NullInt64
+	ParticipatingUnitsTotalPart sql.NullFloat64
+	ParticipatingUnitsTotalArea sql.NullFloat64
+	ID                          int64
+}
+
+func (q *Queries) UpdateParticipationStats(ctx context.Context, arg UpdateParticipationStatsParams) error {
+	_, err := q.db.ExecContext(ctx, updateParticipationStats,
+		arg.ParticipatingUnitsCount,
+		arg.ParticipatingUnitsTotalPart,
+		arg.ParticipatingUnitsTotalArea,
+		arg.ID,
+	)
 	return err
 }
 
