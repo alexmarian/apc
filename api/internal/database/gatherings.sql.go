@@ -12,30 +12,6 @@ import (
 	"time"
 )
 
-const addUnitSlot = `-- name: AddUnitSlot :one
-INSERT INTO unit_slots (gathering_id, unit_id)
-VALUES (?, ?) RETURNING id, gathering_id, unit_id, participant_id, created_at, updated_at
-`
-
-type AddUnitSlotParams struct {
-	GatheringID int64
-	UnitID      int64
-}
-
-func (q *Queries) AddUnitSlot(ctx context.Context, arg AddUnitSlotParams) (UnitSlot, error) {
-	row := q.db.QueryRowContext(ctx, addUnitSlot, arg.GatheringID, arg.UnitID)
-	var i UnitSlot
-	err := row.Scan(
-		&i.ID,
-		&i.GatheringID,
-		&i.UnitID,
-		&i.ParticipantID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const assignUnitSlot = `-- name: AssignUnitSlot :one
 UPDATE unit_slots
 SET participant_id = ?,
@@ -314,6 +290,30 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 		&i.SentAt,
 		&i.SentVia,
 		&i.ReadAt,
+	)
+	return i, err
+}
+
+const createUnitSlot = `-- name: CreateUnitSlot :one
+INSERT INTO unit_slots (gathering_id, unit_id)
+VALUES (?, ?) RETURNING id, gathering_id, unit_id, participant_id, created_at, updated_at
+`
+
+type CreateUnitSlotParams struct {
+	GatheringID int64
+	UnitID      int64
+}
+
+func (q *Queries) CreateUnitSlot(ctx context.Context, arg CreateUnitSlotParams) (UnitSlot, error) {
+	row := q.db.QueryRowContext(ctx, createUnitSlot, arg.GatheringID, arg.UnitID)
+	var i UnitSlot
+	err := row.Scan(
+		&i.ID,
+		&i.GatheringID,
+		&i.UnitID,
+		&i.ParticipantID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

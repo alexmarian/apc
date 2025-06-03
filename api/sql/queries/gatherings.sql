@@ -74,7 +74,7 @@ FROM unit_slots us
          JOIN buildings b ON u.building_id = b.id
 WHERE us.gathering_id = ?
   AND us.id = ?;
--- name: AddUnitSlot :one
+-- name: CreateUnitSlot :one
 INSERT INTO unit_slots (gathering_id, unit_id)
 VALUES (?, ?) RETURNING *;
 

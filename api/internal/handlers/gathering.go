@@ -259,13 +259,45 @@ func HandleCreateGathering(cfg *ApiConfig) func(http.ResponseWriter, *http.Reque
 			IpAddress:   sql.NullString{String: req.RemoteAddr, Valid: true},
 			Details:     sql.NullString{String: "{}", Valid: true},
 		})
-
+		err = syncUnitsSlots(req, cfg, int64(associationId), gathering.ID, createReq.QualificationUnitTypes, createReq.QualificationFloors, createReq.QualificationEntrances)
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error syncing units slots", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to sync units slots")
+			return
+		}
 		response := dbGatheringToResponse(gathering)
 		response.QualifiedUnitsCount = qualifiedCount
 		response.QualifiedUnitsTotalPart = qualifiedPart
 		response.QualifiedUnitsTotalArea = qualifiedArea
 		RespondWithJSON(rw, http.StatusCreated, response)
 	}
+}
+
+func syncUnitsSlots(req *http.Request, cfg *ApiConfig, associationId int64, gatheringId int64, unitTypes []string, floors []int64, entrances []int64) error {
+	units, err := cfg.Db.GetQualifiedUnits(req.Context(), database.GetQualifiedUnitsParams{
+		AssociationID: associationId,
+		Column2:       len(unitTypes) > 0,
+		UnitTypes:     unitTypes,
+		Column4:       len(floors) > 0,
+		UnitFloors:    floors,
+		Column6:       len(entrances) > 0,
+		UnitEntrances: entrances,
+	})
+	if err != nil {
+		logging.Logger.Log(zap.WarnLevel, "Error getting qualified units", zap.Error(err))
+		return err
+	}
+	for _, unit := range units {
+		_, err := cfg.Db.CreateUnitSlot(req.Context(), database.CreateUnitSlotParams{
+			GatheringID: gatheringId,
+			UnitID:      unit.ID,
+		})
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error creating unit slot", zap.Error(err))
+			return err
+		}
+	}
+	return nil
 }
 
 func HandleUpdateGatheringStatus(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
@@ -374,7 +406,7 @@ func HandleUpdateVotingMatter(cfg *ApiConfig) func(http.ResponseWriter, *http.Re
 		gatheringId, _ := strconv.Atoi(req.PathValue(GatheringIdPathValue))
 		matterId, _ := strconv.Atoi(req.PathValue(VotingMatterIdPathValue))
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		err, draft := isGatheringDraft(rw, req, cfg, gatheringId, associationId)
+		draft := validateGatheringStateWithFetch(req, cfg, gatheringId, associationId, "draft")
 		if !draft {
 			RespondWithError(rw, http.StatusBadRequest, "Cannot update voting matter in non-draft gathering")
 			return
@@ -418,12 +450,12 @@ func HandleDeleteVotingMatter(cfg *ApiConfig) func(http.ResponseWriter, *http.Re
 		gatheringId, _ := strconv.Atoi(req.PathValue(GatheringIdPathValue))
 		matterId, _ := strconv.Atoi(req.PathValue(VotingMatterIdPathValue))
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		err, draft := isGatheringDraft(rw, req, cfg, gatheringId, associationId)
+		draft := validateGatheringStateWithFetch(req, cfg, gatheringId, associationId, "draft")
 		if !draft {
 			RespondWithError(rw, http.StatusBadRequest, "Cannot delete voting matter in non-draft gathering")
 			return
 		}
-		err = cfg.Db.DeleteVotingMatter(req.Context(), database.DeleteVotingMatterParams{
+		err := cfg.Db.DeleteVotingMatter(req.Context(), database.DeleteVotingMatterParams{
 			GatheringID: int64(gatheringId),
 			ID:          int64(matterId),
 		})
@@ -438,19 +470,20 @@ func HandleDeleteVotingMatter(cfg *ApiConfig) func(http.ResponseWriter, *http.Re
 	}
 }
 
-func isGatheringDraft(rw http.ResponseWriter, req *http.Request, cfg *ApiConfig, gatheringId int, associationId int) (error, bool) {
+func validateGatheringState(gathering database.Gathering, targetStatus string) bool {
+	return gathering.Status == targetStatus
+}
+
+func validateGatheringStateWithFetch(req *http.Request, cfg *ApiConfig, gatheringId int, associationId int, targetStatus string) bool {
 	gathering, err := cfg.Db.GetGathering(req.Context(), database.GetGatheringParams{
 		ID:            int64(gatheringId),
 		AssociationID: int64(associationId),
 	})
 	if err != nil {
 		logging.Logger.Log(zap.WarnLevel, "Error getting gathering", zap.Error(err))
-		return nil, false
+		return false
 	}
-	if gathering.Status != "draft" {
-		return nil, false
-	}
-	return err, true
+	return validateGatheringState(gathering, targetStatus)
 }
 
 func HandleAddParticipant(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
@@ -740,10 +773,10 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 
 		// Calculate rates
 		if results.Summary.QualifiedUnits > 0 {
-			results.Summary.ParticipationRate = float64(results.Summary.ParticipatingUnits) / float64(results.Summary.QualifiedUnits) * 100
+			results.Summary.ParticipationRate = gathering.ParticipatingUnitsTotalArea.Float64 / gathering.QualifiedUnitsTotalArea.Float64 * 100
 		}
 		if results.Summary.ParticipatingUnits > 0 {
-			results.Summary.VotingCompletionRate = float64(results.Summary.VotedUnits) / float64(results.Summary.ParticipatingUnits) * 100
+			results.Summary.VotingCompletionRate = totalVotedArea / gathering.QualifiedUnitsTotalArea.Float64 * 100
 		}
 
 		// Process each voting matter
