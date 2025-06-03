@@ -114,7 +114,6 @@ type Gathering struct {
 type GatheringParticipant struct {
 	ID                        int64
 	GatheringID               int64
-	UnitID                    int64
 	ParticipantType           string
 	ParticipantName           string
 	ParticipantIdentification sql.NullString

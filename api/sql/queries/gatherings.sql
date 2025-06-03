@@ -84,7 +84,7 @@ SET participant_id = ?,
     updated_at     = CURRENT_TIMESTAMP
 WHERE gathering_id = ?
   AND participant_id IS NULL
-  AND id = ? RETURNING *;
+  AND unit_id = ? RETURNING *;
 
 -- name: RemoveUnitSlot :exec
 DELETE
@@ -99,10 +99,10 @@ WHERE id = ?
 
 -- name: UpdateGatheringStats :exec
 UPDATE gatherings
-SET qualified_units_count          = ?,
-    qualified_units_total_part     = ?,
-    qualified_units_total_area     = ?,
-    updated_at                     = CURRENT_TIMESTAMP
+SET qualified_units_count      = ?,
+    qualified_units_total_part = ?,
+    qualified_units_total_area = ?,
+    updated_at                 = CURRENT_TIMESTAMP
 WHERE id = ?;
 
 -- name: UpdateParticipationStats :exec
@@ -149,16 +149,10 @@ WHERE id = ?
 SELECT gp.*,
        o.name                  as owner_name,
        o.identification_number as owner_identification,
-       delo.name               as delegating_owner_name,
-       u.unit_number,
-       u.floor,
-       u.entrance,
-       b.name                  as building_name
+       delo.name               as delegating_owner_name
 FROM gathering_participants gp
          LEFT JOIN owners o ON gp.owner_id = o.id
          LEFT JOIN owners delo ON gp.delegating_owner_id = delo.id
-         LEFT JOIN units u ON gp.unit_id = u.id
-         LEFT JOIN buildings b ON u.building_id = b.id
 WHERE gp.gathering_id = ?
 ORDER BY gp.participant_name;
 
@@ -169,10 +163,10 @@ WHERE id = ?
   AND gathering_id = ?;
 
 -- name: CreateGatheringParticipant :one
-INSERT INTO gathering_participants (gathering_id, unit_id, participant_type, participant_name,
+INSERT INTO gathering_participants (gathering_id, participant_type, participant_name,
                                     participant_identification, owner_id, delegating_owner_id,
                                     delegation_document_ref, units_info, units_area, units_part)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *;
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *;
 
 -- name: UpdateGatheringParticipantsUnits :one
 UPDATE gathering_participants
@@ -195,12 +189,6 @@ SET check_in_time = CURRENT_TIMESTAMP,
     updated_at    = CURRENT_TIMESTAMP
 WHERE id = ?
   AND gathering_id = ?;
-
--- name: GetParticipantByUnit :one
-SELECT *
-FROM gathering_participants
-WHERE gathering_id = ?
-  AND unit_id = ?;
 
 -- name: GetQualifiedUnits :many
 SELECT u.id,
@@ -261,7 +249,6 @@ WHERE gathering_id = ?
 -- name: GetBallotsForGathering :many
 SELECT vb.*,
        gp.participant_name,
-       gp.unit_id,
        gp.units_info,
        gp.units_area,
        gp.units_part

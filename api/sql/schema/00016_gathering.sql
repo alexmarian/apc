@@ -54,8 +54,6 @@ CREATE TABLE gathering_participants
 (
     id                         INTEGER PRIMARY KEY,
     gathering_id               INTEGER NOT NULL REFERENCES gatherings (id) ON DELETE CASCADE,
-    unit_id                    INTEGER NOT NULL REFERENCES units (id),
-
     -- Participant info
     participant_type           TEXT    NOT NULL CHECK (participant_type IN ('owner', 'delegate')),
     participant_name           TEXT    NOT NULL,
@@ -77,10 +75,8 @@ CREATE TABLE gathering_participants
     check_in_time              TIMESTAMP,
 
     created_at                 TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at                 TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at                 TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
-    -- Ensure one participant per unit per gathering
-    CONSTRAINT unique_unit_per_gathering UNIQUE (gathering_id, unit_id)
 );
 -- Units slots used till voting state/ deleted and archived in participant on closing the gathering
 CREATE TABLE unit_slots
@@ -93,7 +89,8 @@ CREATE TABLE unit_slots
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-    UNIQUE (gathering_id, unit_id, participant_id)
+    UNIQUE (gathering_id, unit_id, participant_id),
+    CONSTRAINT unique_unit_per_gathering UNIQUE (gathering_id, unit_id)
 );
 
 

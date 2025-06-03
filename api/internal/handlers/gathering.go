@@ -87,7 +87,6 @@ type VotingOption struct {
 type GatheringParticipant struct {
 	ID                        int64      `json:"id"`
 	GatheringID               int64      `json:"gathering_id"`
-	UnitID                    int64      `json:"unit_id"`
 	ParticipantType           string     `json:"participant_type"`
 	ParticipantName           string     `json:"participant_name"`
 	ParticipantIdentification string     `json:"participant_identification"`
@@ -367,7 +366,12 @@ func HandleGetVotingMatters(cfg *ApiConfig) func(http.ResponseWriter, *http.Requ
 func HandleCreateVotingMatter(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		gatheringId, _ := strconv.Atoi(req.PathValue(GatheringIdPathValue))
-
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		draft := validateGatheringStateWithFetch(req, cfg, gatheringId, associationId, "draft")
+		if !draft {
+			RespondWithError(rw, http.StatusBadRequest, "Cannot create voting matter in non-draft gathering")
+			return
+		}
 		var createReq VotingMatter
 		decoder := json.NewDecoder(req.Body)
 		if err := decoder.Decode(&createReq); err != nil {
@@ -490,6 +494,11 @@ func HandleAddParticipant(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
 		gatheringId, _ := strconv.Atoi(req.PathValue(GatheringIdPathValue))
+		active := validateGatheringStateWithFetch(req, cfg, gatheringId, associationId, "active")
+		if !active {
+			RespondWithError(rw, http.StatusBadRequest, "Cannot add a participant in a  non-active gathering")
+			return
+		}
 
 		var addReq struct {
 			ParticipantType       string  `json:"participant_type"`
@@ -504,56 +513,91 @@ func HandleAddParticipant(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
 			return
 		}
-
-		// Get owner information
-		owner, err := cfg.Db.GetOwnerById(req.Context(), addReq.OwnerID)
+		var effectiveOwnerID int64 = 0
+		var participantID string
+		var delegatingOwnerID int64 = 0
+		if addReq.ParticipantType == "owner" && addReq.OwnerID != 0 {
+			effectiveOwnerID = addReq.OwnerID
+		} else if addReq.ParticipantType == "delegate" && addReq.DelegatingOwnerID != nil {
+			effectiveOwnerID = *addReq.DelegatingOwnerID
+			delegatingOwnerID = *addReq.DelegatingOwnerID
+			participantID = addReq.DelegationDocumentRef
+		} else {
+			RespondWithError(rw, http.StatusBadRequest, "Invalid participant type or owner ID")
+			return
+		}
+		owner, err := cfg.Db.GetOwnerById(req.Context(), effectiveOwnerID)
+		if len(participantID) == 0 {
+			participantID = owner.IdentificationNumber
+		}
 		if err != nil {
 			RespondWithError(rw, http.StatusBadRequest, "Owner not found")
 			return
 		}
 
-		// Add participant for each unit
-		var participants []GatheringParticipant
+		ownerUnitsWithDetails, err := cfg.Db.GetOwnerUnitsWithDetails(req.Context(), database.GetOwnerUnitsWithDetailsParams{
+			OwnerID:       effectiveOwnerID,
+			AssociationID: int64(associationId),
+		})
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error getting owner units", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get owner units")
+			return
+		}
+		ownersUnits := make(map[int64]database.GetOwnerUnitsWithDetailsRow)
+		for _, unit := range ownerUnitsWithDetails {
+			ownersUnits[unit.UnitID] = unit
+		}
+		participationUnits := make([]int64, 0)
+		totalPart := 0.0
+		totalArea := 0.0
 		for _, unitID := range addReq.UnitIDs {
-			// Check if unit already has a participant
-			existing, _ := cfg.Db.GetParticipantByUnit(req.Context(), database.GetParticipantByUnitParams{
-				GatheringID: int64(gatheringId),
-				UnitID:      unitID,
-			})
-			if existing.ID > 0 {
-				continue // Skip already registered units
+			if _, ok := ownersUnits[unitID]; ok {
+				slot, err := cfg.Db.AssignUnitSlot(req.Context(), database.AssignUnitSlotParams{
+					GatheringID:   int64(gatheringId),
+					UnitID:        unitID,
+					ParticipantID: effectiveOwnerID,
+				})
+				if err != nil {
+					logging.Logger.Log(zap.WarnLevel, "Error assigning unit slot", zap.Error(err))
+					continue
+				}
+				if slot.ParticipantID != effectiveOwnerID {
+					logging.Logger.Log(zap.WarnLevel, "Assigned unit slot to different participant", zap.Any("slot_participant_id", slot.ParticipantID), zap.Int64("effective_owner_id", effectiveOwnerID))
+					continue
+				}
+				totalArea += ownersUnits[unitID].Area
+				totalPart += ownersUnits[unitID].Part
+				participationUnits = append(participationUnits, unitID)
 			}
-
-			// Get building info
-
-			// Create unit info JSON
-
-			participantName := owner.Name
-			participantID := owner.IdentificationNumber
-
-			participant, err := cfg.Db.CreateGatheringParticipant(req.Context(), database.CreateGatheringParticipantParams{
-				GatheringID:               int64(gatheringId),
-				UnitID:                    unitID,
-				ParticipantType:           addReq.ParticipantType,
-				ParticipantName:           participantName,
-				ParticipantIdentification: sql.NullString{String: participantID, Valid: true},
-				OwnerID:                   sql.NullInt64{Int64: addReq.OwnerID, Valid: true},
-				DelegatingOwnerID:         sql.NullInt64{Int64: *addReq.DelegatingOwnerID, Valid: addReq.DelegatingOwnerID != nil},
-				DelegationDocumentRef:     sql.NullString{String: addReq.DelegationDocumentRef, Valid: addReq.DelegationDocumentRef != ""},
-			})
-
-			if err != nil {
-				logging.Logger.Log(zap.WarnLevel, "Error creating participant", zap.Error(err))
-				continue
-			}
-
-			participants = append(participants, dbParticipantToResponse(participant))
+		}
+		participationUnitsBStr, err := json.Marshal(participationUnits)
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error marshalling participation units", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to process participation units")
+			return
 		}
 
+		participant, err := cfg.Db.CreateGatheringParticipant(req.Context(), database.CreateGatheringParticipantParams{
+			GatheringID:               int64(gatheringId),
+			ParticipantType:           addReq.ParticipantType,
+			ParticipantName:           owner.Name,
+			ParticipantIdentification: sql.NullString{String: participantID, Valid: true},
+			OwnerID:                   sql.NullInt64{Int64: addReq.OwnerID, Valid: true},
+			DelegatingOwnerID:         sql.NullInt64{Int64: delegatingOwnerID, Valid: addReq.DelegatingOwnerID != nil},
+			DelegationDocumentRef:     sql.NullString{String: addReq.DelegationDocumentRef, Valid: addReq.DelegationDocumentRef != ""},
+			UnitsInfo:                 string(participationUnitsBStr),
+			UnitsPart:                 totalPart,
+			UnitsArea:                 totalArea,
+		})
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error creating gathering participation units", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to create gathering participant")
+		}
 		// Update gathering statistics
 		go updateGatheringStats(cfg, int64(gatheringId), int64(associationId))
 
-		RespondWithJSON(rw, http.StatusCreated, participants)
+		RespondWithJSON(rw, http.StatusCreated, dbParticipantToResponse(participant))
 	}
 }
 
@@ -940,7 +984,11 @@ func HandleGetQualifiedUnits(cfg *ApiConfig) func(http.ResponseWriter, *http.Req
 		participants, _ := cfg.Db.GetGatheringParticipants(req.Context(), int64(gatheringId))
 		participatingUnits := make(map[int64]bool)
 		for _, p := range participants {
-			participatingUnits[p.UnitID] = true
+			partUnits := make([]int64, 0)
+			json.Unmarshal([]byte(p.UnitsInfo), &partUnits)
+			for _, unitID := range partUnits {
+				participatingUnits[unitID] = true
+			}
 		}
 
 		response := make([]QualifiedUnit, len(units))
@@ -1183,7 +1231,6 @@ func dbParticipantToResponse(p database.GatheringParticipant) GatheringParticipa
 	return GatheringParticipant{
 		ID:                        p.ID,
 		GatheringID:               p.GatheringID,
-		UnitID:                    p.UnitID,
 		ParticipantType:           p.ParticipantType,
 		ParticipantName:           p.ParticipantName,
 		ParticipantIdentification: p.ParticipantIdentification.String,
@@ -1206,7 +1253,6 @@ func dbParticipantRowToResponse(p database.GetGatheringParticipantsRow) Gatherin
 	return GatheringParticipant{
 		ID:                        p.ID,
 		GatheringID:               p.GatheringID,
-		UnitID:                    p.UnitID,
 		ParticipantType:           p.ParticipantType,
 		ParticipantName:           p.ParticipantName,
 		ParticipantIdentification: p.ParticipantIdentification.String,
