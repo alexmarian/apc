@@ -93,7 +93,7 @@ type GatheringParticipant struct {
 	OwnerID                   *int64     `json:"owner_id"`
 	DelegatingOwnerID         *int64     `json:"delegating_owner_id"`
 	DelegationDocumentRef     string     `json:"delegation_document_ref"`
-	UnitsInfo                 []string   `json:"units_info"`
+	UnitsInfo                 []int64    `json:"units_info"`
 	UnitsPart                 float64    `json:"units_part"`
 	UnitsArea                 float64    `json:"units_area"`
 	CheckInTime               *time.Time `json:"check_in_time"`
@@ -570,6 +570,11 @@ func HandleAddParticipant(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 				totalPart += ownersUnits[unitID].Part
 				participationUnits = append(participationUnits, unitID)
 			}
+		}
+		if len(participationUnits) == 0 {
+			logging.Logger.Log(zap.WarnLevel, "No valid units found for participation", zap.Int64("owner_id", effectiveOwnerID))
+			RespondWithError(rw, http.StatusBadRequest, "No valid units found for participation")
+			return
 		}
 		participationUnitsBStr, err := json.Marshal(participationUnits)
 		if err != nil {
@@ -1225,7 +1230,7 @@ func dbVotingMatterToResponse(m database.VotingMatter) VotingMatter {
 }
 
 func dbParticipantToResponse(p database.GatheringParticipant) GatheringParticipant {
-	var unitsInfo []string
+	var unitsInfo []int64
 	json.Unmarshal([]byte(p.UnitsInfo), &unitsInfo)
 
 	return GatheringParticipant{
@@ -1247,7 +1252,7 @@ func dbParticipantToResponse(p database.GatheringParticipant) GatheringParticipa
 }
 
 func dbParticipantRowToResponse(p database.GetGatheringParticipantsRow) GatheringParticipant {
-	var unitsInfo []string
+	var unitsInfo []int64
 	json.Unmarshal([]byte(p.UnitsInfo), &unitsInfo)
 
 	return GatheringParticipant{
