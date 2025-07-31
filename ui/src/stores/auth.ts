@@ -4,6 +4,7 @@ import axios from 'axios'
 import config from '@/config'
 import type { LoginRequest, LoginResponse } from '@/types/api'
 import { authApi } from '@/services/api'
+import { onLogout, offLogout, clearAuthTokens, attemptTokenRefresh } from '@/services/auth-service'
 
 // Create the auth store
 export const useAuthStore = defineStore('auth', () => {
@@ -55,14 +56,17 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     try {
-      const response = await authApi.refreshToken(refreshToken.value)
-
-      // Update token
-      token.value = response.data.token
-      localStorage.setItem(config.authTokenKey, token.value)
-
-
-      return true
+      const success = await attemptTokenRefresh()
+      
+      if (success) {
+        // Update token in store
+        token.value = localStorage.getItem(config.authTokenKey)
+        return true
+      } else {
+        // If refresh fails, logout
+        logout()
+        return false
+      }
     } catch (err) {
       console.error('Token refresh failed:', err)
       // If refresh fails, logout
@@ -78,9 +82,23 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
 
     // Clear localStorage
-    localStorage.removeItem(config.authTokenKey)
-    localStorage.removeItem(config.refreshTokenKey)
+    clearAuthTokens()
     localStorage.removeItem('user')
+  }
+
+  // Internal logout handler for auth service
+  function handleLogout() {
+    token.value = null
+    refreshToken.value = null
+    user.value = null
+  }
+
+  // Register logout handler
+  onLogout(handleLogout)
+
+  // Cleanup on store dispose
+  function dispose() {
+    offLogout(handleLogout)
   }
 
   // Return store
@@ -98,6 +116,7 @@ export const useAuthStore = defineStore('auth', () => {
     // Actions
     login,
     refreshAccessToken,
-    logout
+    logout,
+    dispose
   }
 })

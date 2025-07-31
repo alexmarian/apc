@@ -16,10 +16,27 @@ import type {
   LoginResponse,
   Owner,
   Unit, UnitReportDetails, VotingOwner,
-  ResetPasswordResponse, ResetPasswordRequest
+  ResetPasswordResponse, ResetPasswordRequest,
+  Gathering,
+  GatheringCreateRequest,
+  GatheringUpdateRequest,
+  GatheringStatusUpdateRequest,
+  VotingMatter,
+  VotingMatterCreateRequest,
+  VotingMatterUpdateRequest,
+  GatheringParticipant,
+  ParticipantCreateRequest,
+  ParticipantCheckInRequest,
+  BallotSubmissionRequest,
+  VotingResults,
+  QualifiedUnit,
+  NonParticipatingOwner,
+  GatheringStatistics,
+  VotingAuditLog,
+  NotificationCreateRequest
 } from '@/types/api'
 import config from '@/config'
-import { useAuthStore } from '@/stores/auth'
+import { attemptTokenRefresh, performLogout, getAuthToken } from '@/services/auth-service'
 import type { InternalAxiosRequestConfig } from 'axios'
 import '@/types/axios'
 
@@ -41,7 +58,7 @@ api.interceptors.request.use(
     ) {
       return reqConfig
     }
-    const token = localStorage.getItem(config.authTokenKey)
+    const token = getAuthToken()
     if (token && reqConfig.headers) {
       reqConfig.headers.Authorization = `Bearer ${token}`
     }
@@ -51,6 +68,10 @@ api.interceptors.request.use(
     return Promise.reject(error)
   }
 )
+
+// Flag to prevent multiple simultaneous logout attempts
+let isRefreshing = false
+let refreshPromise: Promise<boolean> | null = null
 
 // Response interceptor
 api.interceptors.response.use(
@@ -63,40 +84,57 @@ api.interceptors.response.use(
     if (!originalRequest) {
       return Promise.reject(error)
     }
+
+    // Handle 401 errors (unauthorized)
     if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true // Mark that we've tried refreshing for this request
+      originalRequest._retry = true
 
-      try {
-        const refreshToken = localStorage.getItem(config.refreshTokenKey)
-        if (refreshToken) {
-          const authStore = useAuthStore()
-          const success = await authStore.refreshAccessToken()
-
+      // If we're already refreshing, wait for the existing refresh
+      if (isRefreshing && refreshPromise) {
+        try {
+          const success = await refreshPromise
           if (success) {
-            const newToken = localStorage.getItem(config.authTokenKey)
-            if (originalRequest.headers) {
+            const newToken = getAuthToken()
+            if (originalRequest.headers && newToken) {
               originalRequest.headers.Authorization = `Bearer ${newToken}`
             }
             return api(originalRequest)
           }
+        } catch {
+          // If refresh failed, continue to logout
         }
-        localStorage.removeItem(config.authTokenKey)
-        localStorage.removeItem(config.refreshTokenKey)
-
-        window.location.href = '/login'
-      } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError)
-
-        // Clear auth data and redirect
-        localStorage.removeItem(config.authTokenKey)
-        localStorage.removeItem(config.refreshTokenKey)
-        window.location.href = '/login'
       }
+
+      // Start refresh process
+      if (!isRefreshing) {
+        isRefreshing = true
+        refreshPromise = attemptTokenRefresh()
+        
+        try {
+          const success = await refreshPromise
+          if (success) {
+            const newToken = getAuthToken()
+            if (originalRequest.headers && newToken) {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`
+            }
+            return api(originalRequest)
+          }
+        } catch {
+          // If refresh failed, continue to logout
+        } finally {
+          isRefreshing = false
+          refreshPromise = null
+        }
+      }
+
+      // If we get here, refresh failed or no refresh token available
+      performLogout()
     }
 
     return Promise.reject(error)
   }
 )
+
 
 
 // Auth APIs
@@ -300,6 +338,114 @@ export const expenseApi = {
         include_details: params.include_details ? 'true' : undefined
       }
     })
+}
+
+// Gathering APIs
+export const gatheringApi = {
+  // Get all gatherings for an association
+  getGatherings: (associationId: number) =>
+    api.get<Gathering[]>(`/associations/${associationId}/gatherings`),
+
+  // Get a specific gathering
+  getGathering: (associationId: number, gatheringId: number) =>
+    api.get<Gathering>(`/associations/${associationId}/gatherings/${gatheringId}`),
+
+  // Create a new gathering
+  createGathering: (associationId: number, gatheringData: GatheringCreateRequest) =>
+    api.post<Gathering>(`/associations/${associationId}/gatherings`, gatheringData),
+
+  // Update an existing gathering
+  updateGathering: (associationId: number, gatheringId: number, gatheringData: GatheringUpdateRequest) =>
+    api.put<Gathering>(`/associations/${associationId}/gatherings/${gatheringId}`, gatheringData),
+
+  // Update gathering status
+  updateGatheringStatus: (associationId: number, gatheringId: number, statusData: GatheringStatusUpdateRequest) =>
+    api.put<Gathering>(`/associations/${associationId}/gatherings/${gatheringId}/status`, statusData),
+
+  // Get gathering statistics
+  getGatheringStats: (associationId: number, gatheringId: number) =>
+    api.get<GatheringStatistics>(`/associations/${associationId}/gatherings/${gatheringId}/stats`),
+
+  // Get qualified units for a gathering
+  getQualifiedUnits: (associationId: number, gatheringId: number) =>
+    api.get<QualifiedUnit[]>(`/associations/${associationId}/gatherings/${gatheringId}/qualified-units`),
+
+  // Get non-participating owners
+  getNonParticipatingOwners: (associationId: number, gatheringId: number) =>
+    api.get<NonParticipatingOwner[]>(`/associations/${associationId}/gatherings/${gatheringId}/non-participating-owners`),
+
+  // Get audit logs for a gathering
+  getAuditLogs: (associationId: number, gatheringId: number) =>
+    api.get<VotingAuditLog[]>(`/associations/${associationId}/gatherings/${gatheringId}/audit-logs`),
+
+  // Send notifications
+  sendNotification: (associationId: number, gatheringId: number, notificationData: NotificationCreateRequest) =>
+    api.post<ApiResponse<null>>(`/associations/${associationId}/gatherings/${gatheringId}/notifications`, notificationData)
+}
+
+// Voting Matter APIs
+export const votingMatterApi = {
+  // Get all voting matters for a gathering
+  getVotingMatters: (associationId: number, gatheringId: number) =>
+    api.get<VotingMatter[]>(`/associations/${associationId}/gatherings/${gatheringId}/matters`),
+
+  // Get a specific voting matter
+  getVotingMatter: (associationId: number, gatheringId: number, matterId: number) =>
+    api.get<VotingMatter>(`/associations/${associationId}/gatherings/${gatheringId}/matters/${matterId}`),
+
+  // Create a new voting matter
+  createVotingMatter: (associationId: number, gatheringId: number, matterData: VotingMatterCreateRequest) =>
+    api.post<VotingMatter>(`/associations/${associationId}/gatherings/${gatheringId}/matters`, matterData),
+
+  // Update an existing voting matter
+  updateVotingMatter: (associationId: number, gatheringId: number, matterId: number, matterData: VotingMatterUpdateRequest) =>
+    api.put<VotingMatter>(`/associations/${associationId}/gatherings/${gatheringId}/matters/${matterId}`, matterData),
+
+  // Delete a voting matter
+  deleteVotingMatter: (associationId: number, gatheringId: number, matterId: number) =>
+    api.delete(`/associations/${associationId}/gatherings/${gatheringId}/matters/${matterId}`)
+}
+
+// Participant APIs
+export const participantApi = {
+  // Get all participants for a gathering
+  getParticipants: (associationId: number, gatheringId: number) =>
+    api.get<GatheringParticipant[]>(`/associations/${associationId}/gatherings/${gatheringId}/participants`),
+
+  // Get a specific participant
+  getParticipant: (associationId: number, gatheringId: number, participantId: number) =>
+    api.get<GatheringParticipant>(`/associations/${associationId}/gatherings/${gatheringId}/participants/${participantId}`),
+
+  // Add a new participant
+  addParticipant: (associationId: number, gatheringId: number, participantData: ParticipantCreateRequest) =>
+    api.post<GatheringParticipant>(`/associations/${associationId}/gatherings/${gatheringId}/participants`, participantData),
+
+  // Update a participant
+  updateParticipant: (associationId: number, gatheringId: number, participantId: number, participantData: Partial<ParticipantCreateRequest>) =>
+    api.put<GatheringParticipant>(`/associations/${associationId}/gatherings/${gatheringId}/participants/${participantId}`, participantData),
+
+  // Remove a participant
+  removeParticipant: (associationId: number, gatheringId: number, participantId: number) =>
+    api.delete(`/associations/${associationId}/gatherings/${gatheringId}/participants/${participantId}`),
+
+  // Check in a participant
+  checkInParticipant: (associationId: number, gatheringId: number, participantId: number, checkInData: ParticipantCheckInRequest) =>
+    api.post<GatheringParticipant>(`/associations/${associationId}/gatherings/${gatheringId}/participants/${participantId}/checkin`, checkInData)
+}
+
+// Voting APIs
+export const votingApi = {
+  // Submit a ballot
+  submitBallot: (associationId: number, gatheringId: number, participantId: number, ballotData: BallotSubmissionRequest) =>
+    api.post<ApiResponse<null>>(`/associations/${associationId}/gatherings/${gatheringId}/participants/${participantId}/ballot`, ballotData),
+
+  // Get voting results
+  getResults: (associationId: number, gatheringId: number) =>
+    api.get<VotingResults>(`/associations/${associationId}/gatherings/${gatheringId}/results`),
+
+  // Verify a ballot hash
+  verifyBallot: (ballotHash: string) =>
+    api.post<ApiResponse<{ valid: boolean; details?: any }>>(`/ballot/verify`, { hash: ballotHash })
 }
 
 export default api

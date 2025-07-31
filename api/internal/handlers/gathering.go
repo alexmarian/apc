@@ -48,6 +48,7 @@ type CreateGatheringRequest struct {
 	Title                   string    `json:"title"`
 	Description             string    `json:"description"`
 	Intent                  string    `json:"intent"`
+	Location                string    `json:"location"`
 	GatheringDate           time.Time `json:"gathering_date"`
 	GatheringType           string    `json:"gathering_type"`
 	QualificationUnitTypes  []string  `json:"qualification_unit_types"`
@@ -220,6 +221,11 @@ func HandleCreateGathering(cfg *ApiConfig) func(http.ResponseWriter, *http.Reque
 			return
 		}
 
+		if createReq.Location == "" {
+			RespondWithError(rw, http.StatusBadRequest, "Location is required")
+			return
+		}
+
 		// Convert arrays to JSON strings for storage
 		unitTypesJSON, _ := json.Marshal(createReq.QualificationUnitTypes)
 		floorsJSON, _ := json.Marshal(createReq.QualificationFloors)
@@ -230,6 +236,7 @@ func HandleCreateGathering(cfg *ApiConfig) func(http.ResponseWriter, *http.Reque
 			Title:                   createReq.Title,
 			Description:             createReq.Description,
 			Intent:                  createReq.Intent,
+			Location:                createReq.Location,
 			GatheringDate:           createReq.GatheringDate,
 			GatheringType:           createReq.GatheringType,
 			Status:                  "draft",
@@ -513,6 +520,28 @@ func HandleAddParticipant(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
 			return
 		}
+
+		// Validate that unit IDs are provided and valid
+		if len(addReq.UnitIDs) == 0 {
+			RespondWithError(rw, http.StatusBadRequest, "Unit IDs are required for participation")
+			return
+		}
+
+		// Filter out null or zero unit IDs and validate
+		validUnitIDs := make([]int64, 0)
+		for _, unitID := range addReq.UnitIDs {
+			if unitID > 0 {
+				validUnitIDs = append(validUnitIDs, unitID)
+			}
+		}
+
+		if len(validUnitIDs) == 0 {
+			RespondWithError(rw, http.StatusBadRequest, "At least one valid unit ID is required for participation")
+			return
+		}
+
+		// Use the filtered unit IDs
+		addReq.UnitIDs = validUnitIDs
 		var effectiveOwnerID int64 = 0
 		var participantID string
 		var delegatingOwnerID int64 = 0
@@ -535,18 +564,54 @@ func HandleAddParticipant(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			return
 		}
 
-		ownerUnitsWithDetails, err := cfg.Db.GetOwnerUnitsWithDetails(req.Context(), database.GetOwnerUnitsWithDetailsParams{
-			OwnerID:       effectiveOwnerID,
+		// Get gathering to check qualification rules
+		gathering, err := cfg.Db.GetGathering(req.Context(), database.GetGatheringParams{
+			ID:            int64(gatheringId),
 			AssociationID: int64(associationId),
 		})
 		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "Error getting owner units", zap.Error(err))
-			RespondWithError(rw, http.StatusInternalServerError, "Failed to get owner units")
+			logging.Logger.Log(zap.WarnLevel, "Error getting gathering", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get gathering")
 			return
 		}
-		ownersUnits := make(map[int64]database.GetOwnerUnitsWithDetailsRow)
-		for _, unit := range ownerUnitsWithDetails {
-			ownersUnits[unit.UnitID] = unit
+
+		// Parse qualification rules
+		var unitTypes []string
+		var floors []int64
+		var entrances []int64
+
+		if gathering.QualificationUnitTypes.Valid {
+			json.Unmarshal([]byte(gathering.QualificationUnitTypes.String), &unitTypes)
+		}
+		if gathering.QualificationFloors.Valid {
+			json.Unmarshal([]byte(gathering.QualificationFloors.String), &floors)
+		}
+		if gathering.QualificationEntrances.Valid {
+			json.Unmarshal([]byte(gathering.QualificationEntrances.String), &entrances)
+		}
+
+		// Get owner's units that meet qualification criteria
+		ownerQualifiedUnits, err := cfg.Db.GetActiveOwnerUnitsForGathering(req.Context(), database.GetActiveOwnerUnitsForGatheringParams{
+			AssociationID: int64(associationId),
+			Column2:       len(unitTypes) > 0,
+			UnitTypes:     unitTypes,
+			Column4:       len(floors) > 0,
+			UnitFloors:    floors,
+			Column6:       len(entrances) > 0,
+			UnitEntrances: entrances,
+		})
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error getting owner qualified units", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get owner qualified units")
+			return
+		}
+
+		// Filter units by this specific owner
+		ownersUnits := make(map[int64]database.GetActiveOwnerUnitsForGatheringRow)
+		for _, unit := range ownerQualifiedUnits {
+			if unit.OwnerID == effectiveOwnerID {
+				ownersUnits[unit.UnitID] = unit
+			}
 		}
 		participationUnits := make([]int64, 0)
 		totalPart := 0.0
@@ -567,7 +632,7 @@ func HandleAddParticipant(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 					continue
 				}
 				totalArea += ownersUnits[unitID].Area
-				totalPart += ownersUnits[unitID].Part
+				totalPart += ownersUnits[unitID].VotingWeight
 				participationUnits = append(participationUnits, unitID)
 			}
 		}
@@ -954,8 +1019,8 @@ func HandleGetQualifiedUnits(cfg *ApiConfig) func(http.ResponseWriter, *http.Req
 			json.Unmarshal([]byte(gathering.QualificationEntrances.String), &entrances)
 		}
 
-		// Get qualified units
-		units, err := cfg.Db.GetQualifiedUnits(req.Context(), database.GetQualifiedUnitsParams{
+		// Get qualified units with owner information
+		units, err := cfg.Db.GetActiveOwnerUnitsForGathering(req.Context(), database.GetActiveOwnerUnitsForGatheringParams{
 			AssociationID: int64(associationId),
 			Column2:       len(unitTypes) > 0,
 			UnitTypes:     unitTypes,
@@ -983,6 +1048,8 @@ func HandleGetQualifiedUnits(cfg *ApiConfig) func(http.ResponseWriter, *http.Req
 			BuildingName    string  `json:"building_name"`
 			BuildingAddress string  `json:"building_address"`
 			IsParticipating bool    `json:"is_participating"`
+			OwnerID         int64   `json:"owner_id"`
+			OwnerName       string  `json:"owner_name"`
 		}
 
 		// Get current participants to mark which units are already participating
@@ -999,17 +1066,19 @@ func HandleGetQualifiedUnits(cfg *ApiConfig) func(http.ResponseWriter, *http.Req
 		response := make([]QualifiedUnit, len(units))
 		for i, u := range units {
 			response[i] = QualifiedUnit{
-				ID:              u.ID,
+				ID:              u.UnitID,
 				UnitNumber:      u.UnitNumber,
 				CadastralNumber: u.CadastralNumber,
 				Floor:           int(u.Floor),
 				Entrance:        int(u.Entrance),
 				Area:            u.Area,
-				Part:            u.Part,
+				Part:            u.VotingWeight,
 				UnitType:        u.UnitType,
 				BuildingName:    u.BuildingName,
 				BuildingAddress: u.BuildingAddress,
-				IsParticipating: participatingUnits[u.ID],
+				IsParticipating: participatingUnits[u.UnitID],
+				OwnerID:         u.OwnerID,
+				OwnerName:       u.OwnerName,
 			}
 		}
 

@@ -28,7 +28,7 @@ const userMenuOptions = [
 // Handle logout
 const handleLogout = () => {
   authStore.logout()
-  router.push('/login')
+  // Router navigation is handled by auth service
 }
 </script>
 

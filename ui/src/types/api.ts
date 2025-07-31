@@ -367,4 +367,309 @@ export interface ResetPasswordRequest {
   reset_totp_secret: boolean;
 }
 
+// Gathering Related Types
+export interface Gathering {
+  id: number;
+  association_id: number;
+  title: string;
+  description: string;
+  location: string;
+  scheduled_date: string;
+  status: GatheringStatus;
+  type: GatheringType;
+  qualification_criteria: QualificationCriteria;
+  qualified_units: number;
+  qualified_area: number;
+  qualified_weight: number;
+  participating_units: number;
+  participating_area: number;
+  participating_weight: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export enum GatheringStatus {
+  Draft = 'draft',
+  Published = 'published',
+  Active = 'active',
+  Closed = 'closed',
+  Tallied = 'tallied'
+}
+
+export enum GatheringType {
+  Initial = 'initial',
+  Repeated = 'repeated'
+}
+
+export interface QualificationCriteria {
+  unit_types?: string[];
+  floors?: number[];
+  entrances?: number[];
+}
+
+export interface GatheringCreateRequest {
+  title: string;
+  description: string;
+  intent: string;
+  location: string;
+  gathering_date: string;
+  gathering_type: string;
+  qualification_unit_types: string[];
+  qualification_floors: number[];
+  qualification_entrances: number[];
+  qualification_custom_rule: string;
+}
+
+export interface GatheringUpdateRequest {
+  title?: string;
+  description?: string;
+  intent?: string;
+  location?: string;
+  gathering_date?: string;
+  gathering_type?: string;
+  qualification_unit_types?: string[];
+  qualification_floors?: number[];
+  qualification_entrances?: number[];
+  qualification_custom_rule?: string;
+}
+
+export interface GatheringStatusUpdateRequest {
+  status: GatheringStatus;
+}
+
+// Voting Matter Related Types
+export interface VotingMatter {
+  id: number;
+  gathering_id: number;
+  title: string;
+  description: string;
+  matter_type: VotingMatterType;
+  order_index: number;
+  voting_config: VotingConfig;
+  created_at: string;
+  updated_at: string;
+}
+
+export enum VotingMatterType {
+  Budget = 'budget',
+  Election = 'election',
+  Policy = 'policy',
+  Poll = 'poll',
+  Extraordinary = 'extraordinary'
+}
+
+export interface VotingConfig {
+  type: VotingType;
+  options?: VotingOption[];
+  required_majority: MajorityType;
+  required_majority_value?: number;
+  quorum: number;
+  is_anonymous: boolean;
+  allow_abstention: boolean;
+}
+
+export interface VotingOption {
+  id: string;
+  text: string;
+}
+
+export enum VotingType {
+  YesNo = 'yes_no',
+  MultipleChoice = 'multiple_choice',
+  SingleChoice = 'single_choice',
+  Ranking = 'ranking'
+}
+
+export enum MajorityType {
+  Simple = 'simple',
+  Absolute = 'absolute',
+  Qualified = 'qualified',
+  Unanimous = 'unanimous'
+}
+
+export interface VotingMatterCreateRequest {
+  title: string;
+  description: string;
+  matter_type: VotingMatterType;
+  order_index: number;
+  voting_config: VotingConfig;
+}
+
+export interface VotingMatterUpdateRequest {
+  title?: string;
+  description?: string;
+  matter_type?: VotingMatterType;
+  order_index?: number;
+  voting_config?: VotingConfig;
+}
+
+// Participant Related Types
+export interface GatheringParticipant {
+  id: number;
+  gathering_id: number;
+  type: ParticipantType;
+  owner_id: number;
+  owner_name: string;
+  contact_phone: string;
+  contact_email: string;
+  unit_ids: number[];
+  delegation_document?: string;
+  delegate_name?: string;
+  delegate_contact?: string;
+  checked_in_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export enum ParticipantType {
+  Owner = 'owner',
+  Delegate = 'delegate'
+}
+
+export interface ParticipantCreateRequest {
+  participant_type: ParticipantType;
+  owner_id?: number;
+  unit_ids: number[];
+  delegating_owner_id?: number;
+  delegation_document_ref?: string;
+  delegate_name?: string;
+  delegate_contact?: string;
+}
+
+export interface ParticipantCheckInRequest {
+  checked_in_at: string;
+}
+
+// Ballot and Voting Related Types
+export interface Ballot {
+  gathering_id: number;
+  participant_id: number;
+  votes: Vote[];
+  submitted_at: string;
+  submitted_from_ip: string;
+  submitted_user_agent: string;
+}
+
+export interface Vote {
+  matter_id: number;
+  choice: string | string[];
+  weight: number;
+}
+
+export interface BallotSubmissionRequest {
+  votes: Vote[];
+}
+
+// Results and Statistics Types
+export interface VotingResults {
+  gathering_id: number;
+  results: MatterResult[];
+  statistics: GatheringStatistics;
+  generated_at: string;
+}
+
+export interface MatterResult {
+  matter_id: number;
+  matter_title: string;
+  matter_type: VotingMatterType;
+  voting_config: VotingConfig;
+  votes: VoteResult[];
+  statistics: MatterStatistics;
+  result: string;
+  is_passed: boolean;
+}
+
+export interface VoteResult {
+  choice: string;
+  vote_count: number;
+  weight_sum: number;
+  percentage: number;
+  weight_percentage: number;
+}
+
+export interface MatterStatistics {
+  total_participants: number;
+  total_votes: number;
+  total_weight: number;
+  abstentions: number;
+  abstention_weight: number;
+  participation_rate: number;
+  weight_participation_rate: number;
+}
+
+export interface GatheringStatistics {
+  qualified_units: number;
+  qualified_area: number;
+  qualified_weight: number;
+  participating_units: number;
+  participating_area: number;
+  participating_weight: number;
+  checked_in_participants: number;
+  total_participants: number;
+  participation_rate: number;
+  weight_participation_rate: number;
+}
+
+// Qualified Units Types
+export interface QualifiedUnit {
+  id: number;
+  unit_number: string;
+  cadastral_number: string;
+  floor: number;
+  entrance: number;
+  area: number;
+  part: number;
+  unit_type: string;
+  building_name: string;
+  building_address: string;
+  is_participating: boolean;
+  owner_id: number;
+  owner_name: string;
+}
+
+// Non-participating Owners Types
+export interface NonParticipatingOwner {
+  owner_id: number;
+  owner_name: string;
+  identification_number: string;
+  contact_phone: string;
+  contact_email: string;
+  unit_ids: number[];
+  unit_numbers: string[];
+  total_units: number;
+  total_area: number;
+  total_weight: number;
+}
+
+// Audit and Notification Types
+export interface VotingAuditLog {
+  id: number;
+  gathering_id: number;
+  user_id: number;
+  action: string;
+  entity_type: string;
+  entity_id: number;
+  changes: Record<string, any>;
+  ip_address: string;
+  user_agent: string;
+  created_at: string;
+}
+
+export interface VotingNotification {
+  id: number;
+  gathering_id: number;
+  recipient_type: string;
+  recipient_ids: number[];
+  message: string;
+  sent_at: string;
+  delivery_status: string;
+  created_at: string;
+}
+
+export interface NotificationCreateRequest {
+  recipient_type: string;
+  recipient_ids: number[];
+  message: string;
+}
+
 

@@ -23,6 +23,8 @@ declare module 'vue-router/auto-routes' {
     '/accounts/': RouteRecordInfo<'/accounts/', '/accounts', Record<never, never>, Record<never, never>>,
     '/expenses/': RouteRecordInfo<'/expenses/', '/expenses', Record<never, never>, Record<never, never>>,
     '/expenses/distribution': RouteRecordInfo<'/expenses/distribution', '/expenses/distribution', Record<never, never>, Record<never, never>>,
+    '/gatherings/': RouteRecordInfo<'/gatherings/', '/gatherings', Record<never, never>, Record<never, never>>,
+    '/gatherings/[gatheringId]/': RouteRecordInfo<'/gatherings/[gatheringId]/', '/gatherings/:gatheringId', { gatheringId: ParamValue<true> }, { gatheringId: ParamValue<false> }>,
     '/login': RouteRecordInfo<'/login', '/login', Record<never, never>, Record<never, never>>,
     '/owners/report': RouteRecordInfo<'/owners/report', '/owners/report', Record<never, never>, Record<never, never>>,
     '/owners/voting': RouteRecordInfo<'/owners/voting', '/owners/voting', Record<never, never>, Record<never, never>>,

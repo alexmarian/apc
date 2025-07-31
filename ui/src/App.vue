@@ -13,7 +13,8 @@ import {
   AttachMoneyRound,
   AccountBalanceRound,
   HomeRound,
-  BedroomParentRound
+  BedroomParentRound,
+  PeopleRound
 } from '@vicons/material'
 
 const preferences = usePreferences()
@@ -50,6 +51,11 @@ const menuOptions = computed(() => [
     label: () => h(RouterLink, { to: '/accounts' }, { default: () => t('accounts.title', 'Accounts') }),
     key: 'accounts',
     icon: renderIcon(AccountBalanceRound)
+  },
+  {
+    label: () => h(RouterLink, { to: '/gatherings' }, { default: () => t('gatherings.title', 'Gatherings') }),
+    key: 'gatherings',
+    icon: renderIcon(PeopleRound)
   },
   {
     label: () => t('expenses.title', 'Expenses'),

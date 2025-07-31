@@ -109,6 +109,7 @@ type Gathering struct {
 	ParticipatingUnitsTotalArea sql.NullFloat64
 	CreatedAt                   sql.NullTime
 	UpdatedAt                   sql.NullTime
+	Location                    string
 }
 
 type GatheringParticipant struct {

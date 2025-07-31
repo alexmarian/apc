@@ -87,7 +87,7 @@ const entranceOptions = computed<SelectOption[]>(() => {
 const sortedFilteredData = computed<VotingOwner[]>(() => {
   if (!votingOwners.value) return []
 
-  let data = [...votingOwners.value]
+  const data = [...votingOwners.value]
 
   // Apply sorting only - filtering is done server-side
   data.sort((a, b) => {

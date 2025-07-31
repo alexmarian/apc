@@ -50,6 +50,8 @@ CREATE TABLE voting_matters
 
     UNIQUE (gathering_id, order_index)
 );
+
+-- Gathering participants table
 CREATE TABLE gathering_participants
 (
     id                         INTEGER PRIMARY KEY,
@@ -76,8 +78,8 @@ CREATE TABLE gathering_participants
 
     created_at                 TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at                 TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-
 );
+
 -- Units slots used till voting state/ deleted and archived in participant on closing the gathering
 CREATE TABLE unit_slots
 (
@@ -92,7 +94,6 @@ CREATE TABLE unit_slots
     UNIQUE (gathering_id, unit_id, participant_id),
     CONSTRAINT unique_unit_per_gathering UNIQUE (gathering_id, unit_id)
 );
-
 
 -- Voting ballots table - stores complete ballot as JSON
 CREATE TABLE voting_ballots
@@ -123,6 +124,7 @@ CREATE TABLE voting_ballots
     -- Ensure one ballot per participant
     CONSTRAINT unique_ballot_per_participant UNIQUE (gathering_id, participant_id)
 );
+
 -- Materialized view for vote counting (refreshed after each ballot submission)
 CREATE TABLE vote_tallies
 (

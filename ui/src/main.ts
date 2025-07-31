@@ -15,3 +15,8 @@ app.use(i18n)
 app.use(naive)
 
 app.mount('#app')
+
+// Import auth tests in development mode
+if (import.meta.env.DEV) {
+  import('@/utils/auth-test')
+}
