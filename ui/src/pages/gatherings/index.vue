@@ -185,29 +185,11 @@ const columns: DataTableColumns<Gathering> = [
   {
     title: t('common.actions'),
     key: 'actions',
-    width: 200,
-    render: (row) => h(NSpace, {}, {
-      default: () => [
-        h(NButton, {
-          size: 'small',
-          onClick: () => router.push(`/gatherings/${row.id}`)
-        }, { default: () => t('common.view') }),
-        
-        h(NButton, {
-          size: 'small',
-          type: 'primary',
-          disabled: row.status === 'tallied',
-          onClick: () => router.push(`/gatherings/${row.id}/manage`)
-        }, { default: () => t('common.manage') }),
-        
-        h(NButton, {
-          size: 'small',
-          type: 'info',
-          disabled: row.status === 'draft',
-          onClick: () => router.push(`/gatherings/${row.id}/vote`)
-        }, { default: () => t('gatherings.vote') })
-      ]
-    })
+    width: 100,
+    render: (row) => h(NButton, {
+      size: 'small',
+      onClick: () => router.push(`/gatherings/${row.id}`)
+    }, { default: () => t('common.view') })
   }
 ]
 

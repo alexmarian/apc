@@ -1873,12 +1873,12 @@ func (q *Queries) UpdateVotingMatter(ctx context.Context, arg UpdateVotingMatter
 
 const upsertVoteTally = `-- name: UpsertVoteTally :one
 INSERT INTO vote_tallies (gathering_id, voting_matter_id, tally_data)
-VALUES (?, ?, ?) ON CONFLICT (gathering_id, voting_matter_id)
-DO
-UPDATE SET
-    tally_data = ?,
+VALUES (?, ?, ?)
+ON CONFLICT (gathering_id, voting_matter_id)
+DO UPDATE SET
+    tally_data = EXCLUDED.tally_data,
     last_updated = CURRENT_TIMESTAMP
-    RETURNING id, gathering_id, voting_matter_id, tally_data, last_updated
+RETURNING id, gathering_id, voting_matter_id, tally_data, last_updated
 `
 
 type UpsertVoteTallyParams struct {

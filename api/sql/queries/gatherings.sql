@@ -273,12 +273,12 @@ WHERE gathering_id = ?
 
 -- name: UpsertVoteTally :one
 INSERT INTO vote_tallies (gathering_id, voting_matter_id, tally_data)
-VALUES (?, ?, ?) ON CONFLICT (gathering_id, voting_matter_id)
-DO
-UPDATE SET
-    tally_data = ?,
+VALUES (?, ?, ?)
+ON CONFLICT (gathering_id, voting_matter_id)
+DO UPDATE SET
+    tally_data = EXCLUDED.tally_data,
     last_updated = CURRENT_TIMESTAMP
-    RETURNING *;
+RETURNING *;
 
 -- name: GetAllVoteTallies :many
 SELECT vt.*,

@@ -27,19 +27,20 @@ type Gathering struct {
 	Title                       string    `json:"title"`
 	Description                 string    `json:"description"`
 	Intent                      string    `json:"intent"`
-	GatheringDate               time.Time `json:"gathering_date"`
-	GatheringType               string    `json:"gathering_type"`
+	Location                    string    `json:"location"`
+	GatheringDate               time.Time `json:"scheduled_date"` // Frontend expects scheduled_date
+	GatheringType               string    `json:"type"`           // Frontend expects type
 	Status                      string    `json:"status"`
 	QualificationUnitTypes      []string  `json:"qualification_unit_types"`
 	QualificationFloors         []int64   `json:"qualification_floors"`
 	QualificationEntrances      []int64   `json:"qualification_entrances"`
 	QualificationCustomRule     string    `json:"qualification_custom_rule"`
-	QualifiedUnitsCount         int       `json:"qualified_units_count"`
-	QualifiedUnitsTotalPart     float64   `json:"qualified_units_total_part"`
-	QualifiedUnitsTotalArea     float64   `json:"qualified_units_total_area"`
-	ParticipatingUnitsCount     int       `json:"participating_units_count"`
-	ParticipatingUnitsTotalPart float64   `json:"participating_units_total_part"`
-	ParticipatingUnitsTotalArea float64   `json:"participating_units_total_area"`
+	QualifiedUnitsCount         int       `json:"qualified_units"`
+	QualifiedUnitsTotalPart     float64   `json:"qualified_weight"`
+	QualifiedUnitsTotalArea     float64   `json:"qualified_area"`
+	ParticipatingUnitsCount     int       `json:"participating_units"`
+	ParticipatingUnitsTotalPart float64   `json:"participating_weight"`
+	ParticipatingUnitsTotalArea float64   `json:"participating_area"`
 	CreatedAt                   time.Time `json:"created_at"`
 	UpdatedAt                   time.Time `json:"updated_at"`
 }
@@ -1263,6 +1264,7 @@ func dbGatheringToResponse(g database.Gathering) Gathering {
 		Title:                       g.Title,
 		Description:                 g.Description,
 		Intent:                      g.Intent,
+		Location:                    g.Location,
 		GatheringDate:               g.GatheringDate,
 		GatheringType:               g.GatheringType,
 		Status:                      g.Status,
@@ -1521,9 +1523,129 @@ func updateGatheringParticipationStats(cfg *ApiConfig, gatheringID, associationI
 }
 
 func updateVoteTallies(cfg *ApiConfig, gatheringID int64, participantId int) {
+	ctx := context.Background()
 
-	logging.Logger.Log(zap.InfoLevel, "Vote tallies marked for update",
-		zap.Int64("gathering_id", gatheringID))
+	// Get all voting matters for this gathering
+	matters, err := cfg.Db.GetVotingMatters(ctx, gatheringID)
+	if err != nil {
+		logging.Logger.Log(zap.ErrorLevel, "Failed to get voting matters for tally update",
+			zap.Int64("gathering_id", gatheringID),
+			zap.Error(err))
+		return
+	}
+
+	// Get all ballots
+	ballots, err := cfg.Db.GetBallotsForGathering(ctx, gatheringID)
+	if err != nil {
+		logging.Logger.Log(zap.ErrorLevel, "Failed to get ballots for tally update",
+			zap.Int64("gathering_id", gatheringID),
+			zap.Error(err))
+		return
+	}
+
+	// Get all participants to get voting weights
+	participants, err := cfg.Db.GetGatheringParticipants(ctx, gatheringID)
+	if err != nil {
+		logging.Logger.Log(zap.ErrorLevel, "Failed to get participants for tally update",
+			zap.Int64("gathering_id", gatheringID),
+			zap.Error(err))
+		return
+	}
+
+	// Create participant weight lookup map
+	participantWeights := make(map[int64]float64)
+	for _, p := range participants {
+		participantWeights[p.ID] = p.UnitsPart
+	}
+
+	// Process each voting matter
+	for _, matter := range matters {
+		var votingConfig VotingConfig
+		if err := json.Unmarshal([]byte(matter.VotingConfig), &votingConfig); err != nil {
+			logging.Logger.Log(zap.ErrorLevel, "Failed to unmarshal voting config",
+				zap.Int64("matter_id", matter.ID),
+				zap.Error(err))
+			continue
+		}
+
+		// Initialize tally
+		tally := make(map[string]TallyResult)
+
+		// Initialize based on voting type
+		if votingConfig.Type == "yes_no" {
+			tally["yes"] = TallyResult{Count: 0, Weight: 0}
+			tally["no"] = TallyResult{Count: 0, Weight: 0}
+			if votingConfig.AllowAbstention {
+				tally["abstain"] = TallyResult{Count: 0, Weight: 0}
+			}
+		} else if votingConfig.Type == "single_choice" || votingConfig.Type == "multiple_choice" {
+			for _, option := range votingConfig.Options {
+				tally[option.ID] = TallyResult{Count: 0, Weight: 0}
+			}
+			if votingConfig.AllowAbstention {
+				tally["abstain"] = TallyResult{Count: 0, Weight: 0}
+			}
+		}
+
+		// Count votes from valid ballots
+		for _, ballot := range ballots {
+			if !ballot.IsValid.Bool {
+				continue
+			}
+
+			participantWeight := participantWeights[ballot.ParticipantID]
+
+			// Parse ballot content
+			var ballotContent map[string]BallotVote
+			if err := json.Unmarshal([]byte(ballot.BallotContent), &ballotContent); err != nil {
+				logging.Logger.Log(zap.WarnLevel, "Failed to unmarshal ballot content",
+					zap.Int64("ballot_id", ballot.ID),
+					zap.Error(err))
+				continue
+			}
+
+			// Find vote for this matter
+			matterIDStr := strconv.FormatInt(matter.ID, 10)
+			if vote, ok := ballotContent[matterIDStr]; ok {
+				voteKey := vote.VoteValue
+				if vote.OptionID != "" {
+					voteKey = vote.OptionID
+				}
+
+				if currentTally, exists := tally[voteKey]; exists {
+					tally[voteKey] = TallyResult{
+						Count:  currentTally.Count + 1,
+						Weight: currentTally.Weight + participantWeight,
+					}
+				}
+			}
+		}
+
+		// Store tally in database
+		tallyJSON, err := json.Marshal(tally)
+		if err != nil {
+			logging.Logger.Log(zap.ErrorLevel, "Failed to marshal tally data",
+				zap.Int64("matter_id", matter.ID),
+				zap.Error(err))
+			continue
+		}
+
+		// Upsert tally
+		_, err = cfg.Db.UpsertVoteTally(ctx, database.UpsertVoteTallyParams{
+			GatheringID:     gatheringID,
+			VotingMatterID:  matter.ID,
+			TallyData:       string(tallyJSON),
+		})
+		if err != nil {
+			logging.Logger.Log(zap.ErrorLevel, "Failed to upsert vote tally",
+				zap.Int64("matter_id", matter.ID),
+				zap.Error(err))
+		}
+	}
+
+	logging.Logger.Log(zap.InfoLevel, "Vote tallies updated",
+		zap.Int64("gathering_id", gatheringID),
+		zap.Int("matter_count", len(matters)))
 }
 
 func calculateFinalResults(cfg *ApiConfig, gatheringID int64) {

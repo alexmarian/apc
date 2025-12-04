@@ -107,30 +107,23 @@
           <!-- Tabs for different sections -->
           <NTabs type="line" animated style="margin-top: 16px;">
             <NTabPane name="matters" :tab="$t('gatherings.matters.title')">
-              <VotingMattersManager 
+              <VotingMattersManager
                 :association-id="associationId!"
                 :gathering="gathering!"
                 @updated="loadGathering"
               />
             </NTabPane>
-            
-            <NTabPane name="participants" :tab="$t('gatherings.participants.title')">
-              <ParticipantsManager 
-                :association-id="associationId!"
-                :gathering="gathering!"
-                @updated="loadGathering"
-              />
-            </NTabPane>
-            
+
             <NTabPane name="voting" :tab="$t('gatherings.voting.title')" :disabled="!canVote">
-              <VotingInterface 
+              <VotingWizard
                 :association-id="associationId!"
                 :gathering="gathering!"
+                @completed="loadGathering"
               />
             </NTabPane>
-            
+
             <NTabPane name="results" :tab="$t('gatherings.results.title')" :disabled="!canViewResults">
-              <ResultsDisplay 
+              <ResultsDisplay
                 :association-id="associationId!"
                 :gathering="gathering!"
               />
@@ -188,8 +181,7 @@ import AssociationSelector from '@/components/AssociationSelector.vue'
 import GatheringForm from '@/components/GatheringForm.vue'
 import GatheringStatusForm from '@/components/GatheringStatusForm.vue'
 import VotingMattersManager from '@/components/VotingMattersManager.vue'
-import ParticipantsManager from '@/components/ParticipantsManager.vue'
-import VotingInterface from '@/components/VotingInterface.vue'
+import VotingWizard from '@/components/VotingWizard.vue'
 import ResultsDisplay from '@/components/ResultsDisplay.vue'
 
 const { t } = useI18n()
