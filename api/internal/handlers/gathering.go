@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -19,6 +20,11 @@ import (
 const GatheringIdPathValue = "gatheringId"
 const VotingMatterIdPathValue = "matterId"
 const ParticipantIdPathValue = "participantId"
+
+// Helper function to round float to 3 decimal places
+func roundTo3Decimals(value float64) float64 {
+	return math.Round(value*1000) / 1000
+}
 
 // Gathering types
 type Gathering struct {
@@ -125,18 +131,31 @@ type BallotVote struct {
 type VoteResults struct {
 	GatheringID int64              `json:"gathering_id"`
 	Results     []VoteMatterResult `json:"results"`
-	Summary     GatheringSummary   `json:"summary"`
+	Summary     GatheringSummary   `json:"statistics"` // JSON tag 'statistics' for frontend compatibility
+	GeneratedAt string             `json:"generated_at"`
 }
 
 type VoteMatterResult struct {
-	MatterID       int64                  `json:"matter_id"`
-	MatterTitle    string                 `json:"matter_title"`
-	MatterType     string                 `json:"matter_type"`
-	VotingConfig   VotingConfig           `json:"voting_config"`
-	Tally          map[string]TallyResult `json:"tally"`
-	TotalVoted     float64                `json:"total_voted"`
-	TotalAbstained float64                `json:"total_abstained"`
-	Passed         bool                   `json:"passed"`
+	MatterID     int64            `json:"matter_id"`
+	MatterTitle  string           `json:"matter_title"`
+	MatterType   string           `json:"matter_type"`
+	VotingConfig VotingConfig     `json:"voting_config"`
+	Votes        []VoteResult     `json:"votes"`
+	Statistics   MatterStatistics `json:"statistics"`
+	Result       string           `json:"result"`
+	IsPassed     bool             `json:"is_passed"`
+	// Keep internal fields for calculations
+	Tally          map[string]TallyResult `json:"-"`
+	TotalVoted     float64                `json:"-"`
+	TotalAbstained float64                `json:"-"`
+}
+
+type VoteResult struct {
+	Choice           string  `json:"choice"`
+	VoteCount        int     `json:"vote_count"`
+	WeightSum        float64 `json:"weight_sum"`
+	Percentage       float64 `json:"percentage"`
+	WeightPercentage float64 `json:"weight_percentage"`
 }
 
 type TallyResult struct {
@@ -144,6 +163,14 @@ type TallyResult struct {
 	Weight     float64 `json:"weight"`
 	Area       float64 `json:"area"`
 	Percentage float64 `json:"percentage"`
+}
+
+type MatterStatistics struct {
+	TotalParticipants int     `json:"total_participants"`
+	TotalVotes        int     `json:"total_votes"`
+	TotalWeight       float64 `json:"total_weight"`
+	Abstentions       int     `json:"abstentions"`
+	ParticipationRate float64 `json:"participation_rate"`
 }
 
 type GatheringSummary struct {
@@ -344,7 +371,7 @@ func HandleUpdateGatheringStatus(cfg *ApiConfig) func(http.ResponseWriter, *http
 
 		// If closing the gathering, calculate final results
 		if statusReq.Status == "closed" {
-			go calculateFinalResults(cfg, int64(gatheringId))
+			go calculateFinalResults(cfg, int64(gatheringId), int64(associationId))
 		}
 
 		RespondWithJSON(rw, http.StatusOK, dbGatheringToResponse(gathering))
@@ -444,6 +471,7 @@ func HandleUpdateVotingMatter(cfg *ApiConfig) func(http.ResponseWriter, *http.Re
 			Title:        createReq.Title,
 			Description:  sql.NullString{String: createReq.Description, Valid: createReq.Description != ""},
 			MatterType:   createReq.MatterType,
+			OrderIndex:   int64(createReq.OrderIndex),
 			VotingConfig: string(configJSON),
 		})
 
@@ -947,22 +975,17 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 		// Get all participants to calculate totals
 		participants, _ := cfg.Db.GetGatheringParticipants(req.Context(), int64(gatheringId))
 
-		// Calculate participation stats
-		votedParticipants := make(map[int64]bool)
-		totalVotedWeight := 0.0
-		totalVotedArea := 0.0
-		for _, ballot := range ballots {
-			if ballot.IsValid.Bool {
-				votedParticipants[ballot.ParticipantID] = true
-			}
-		}
-
-		for _, participant := range participants {
-
-			if votedParticipants[participant.ID] {
-				totalVotedWeight += participant.UnitsPart
-				totalVotedArea += participant.UnitsArea
-			}
+		// Get voted units stats (unit-based, not participant-based)
+		votedStats, err := cfg.Db.GetVotedUnitsStats(req.Context(), int64(gatheringId))
+		votedUnitsCount := int64(0)
+		votedUnitsPart := 0.0
+		votedUnitsArea := 0.0
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error getting voted units stats", zap.Error(err))
+		} else {
+			votedUnitsCount = votedStats.VotedUnitsCount
+			votedUnitsPart, _ = votedStats.VotedUnitsTotalPart.(float64)
+			votedUnitsArea, _ = votedStats.VotedUnitsTotalArea.(float64)
 		}
 
 		// Build results
@@ -976,18 +999,19 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 				ParticipatingUnits:  int(gathering.ParticipatingUnitsCount.Int64),
 				ParticipatingWeight: gathering.ParticipatingUnitsTotalPart.Float64,
 				ParticipatingArea:   gathering.ParticipatingUnitsTotalArea.Float64,
-				VotedUnits:          len(votedParticipants),
-				VotedWeight:         totalVotedWeight,
-				VotedArea:           totalVotedArea,
+				VotedUnits:          int(votedUnitsCount),
+				VotedWeight:         votedUnitsPart,
+				VotedArea:           votedUnitsArea,
 			},
+			GeneratedAt: time.Now().Format(time.RFC3339),
 		}
 
 		// Calculate rates
 		if results.Summary.QualifiedUnits > 0 {
-			results.Summary.ParticipationRate = gathering.ParticipatingUnitsTotalArea.Float64 / gathering.QualifiedUnitsTotalArea.Float64 * 100
+			results.Summary.ParticipationRate = roundTo3Decimals((gathering.ParticipatingUnitsTotalPart.Float64 / gathering.QualifiedUnitsTotalPart.Float64) * 100)
 		}
-		if results.Summary.ParticipatingUnits > 0 {
-			results.Summary.VotingCompletionRate = totalVotedArea / gathering.QualifiedUnitsTotalArea.Float64 * 100
+		if results.Summary.QualifiedUnits > 0 {
+			results.Summary.VotingCompletionRate = roundTo3Decimals((votedUnitsPart / gathering.QualifiedUnitsTotalPart.Float64) * 100)
 		}
 
 		// Process each voting matter
@@ -1005,7 +1029,7 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 				if votingConfig.AllowAbstention {
 					tally["abstain"] = TallyResult{Count: 0, Weight: 0}
 				}
-			} else if votingConfig.Type == "multiple_choice" {
+			} else if votingConfig.Type == "multiple_choice" || votingConfig.Type == "single_choice" {
 				for _, option := range votingConfig.Options {
 					tally[option.ID] = TallyResult{Count: 0, Weight: 0}
 				}
@@ -1060,25 +1084,106 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 				}
 			}
 
-			// Calculate percentages
+			// Calculate percentages and prepare vote results
+			totalVotes := 0
+			totalAbstentions := 0
+			voteResults := make([]VoteResult, 0)
+
 			for key, result := range tally {
 				if totalWeight > 0 {
-					result.Percentage = (result.Area / totalVotedArea) * 100
+					result.Percentage = roundTo3Decimals((result.Weight / totalWeight) * 100)
 					tally[key] = result
 				}
+
+				// Track total votes and abstentions
+				totalVotes += result.Count
+				if key == "abstain" {
+					totalAbstentions = result.Count
+				}
+
+				// Build vote result for display
+				choiceLabel := key
+				if votingConfig.Type == "multiple_choice" || votingConfig.Type == "single_choice" {
+					// Find the option text for this ID
+					for _, opt := range votingConfig.Options {
+						if opt.ID == key {
+							choiceLabel = opt.Text
+							break
+						}
+					}
+				}
+
+				voteResults = append(voteResults, VoteResult{
+					Choice:           choiceLabel,
+					VoteCount:        result.Count,
+					WeightSum:        roundTo3Decimals(result.Weight),
+					Percentage:       result.Percentage,
+					WeightPercentage: result.Percentage, // Same as percentage when using weight
+				})
 			}
 
 			matterResult := VoteMatterResult{
-				MatterID:       matter.ID,
-				MatterTitle:    matter.Title,
-				MatterType:     matter.MatterType,
-				VotingConfig:   votingConfig,
+				MatterID:     matter.ID,
+				MatterTitle:  matter.Title,
+				MatterType:   matter.MatterType,
+				VotingConfig: votingConfig,
+				Votes:        voteResults,
+				Statistics: MatterStatistics{
+					TotalParticipants: len(participants),
+					TotalVotes:        totalVotes,
+					TotalWeight:       roundTo3Decimals(totalWeight),
+					Abstentions:       totalAbstentions,
+					ParticipationRate: 0, // Will calculate below
+				},
 				Tally:          tally,
 				TotalVoted:     totalWeight,
 				TotalAbstained: tally["abstain"].Weight,
 			}
 
-			matterResult.Passed = calculateIfPassed(matterResult, votingConfig)
+			// Calculate participation rate for this matter
+			if len(participants) > 0 {
+				matterResult.Statistics.ParticipationRate = roundTo3Decimals((float64(totalVotes) / float64(len(participants))) * 100)
+			}
+
+			// Calculate if passed and determine result text
+			matterResult.IsPassed = calculateIfPassed(matterResult, votingConfig)
+
+			// Set result text based on voting type
+			if votingConfig.Type == "yes_no" {
+				if matterResult.IsPassed {
+					matterResult.Result = "approved"
+				} else {
+					matterResult.Result = "rejected"
+				}
+			} else if votingConfig.Type == "multiple_choice" || votingConfig.Type == "single_choice" {
+				// Find the winning option
+				var maxWeight float64
+				var winningOption string
+				for key, tallyResult := range tally {
+					if key != "abstain" && tallyResult.Weight > maxWeight {
+						maxWeight = tallyResult.Weight
+						winningOption = key
+					}
+				}
+
+				// Find the option text
+				winningText := winningOption
+				for _, opt := range votingConfig.Options {
+					if opt.ID == winningOption {
+						winningText = opt.Text
+						break
+					}
+				}
+
+				if matterResult.IsPassed {
+					matterResult.Result = fmt.Sprintf("approved: %s", winningText)
+				} else {
+					matterResult.Result = fmt.Sprintf("no majority reached (leading: %s)", winningText)
+				}
+			} else {
+				matterResult.Result = "completed"
+			}
+
 			results.Results = append(results.Results, matterResult)
 		}
 
@@ -1550,6 +1655,11 @@ func nullTimeToPtr(n sql.NullTime) *time.Time {
 }
 
 func calculateIfPassed(result VoteMatterResult, config VotingConfig) bool {
+	// Informative votes don't have pass/fail - they always "pass" for reporting purposes
+	if config.RequiredMajority == "informative" {
+		return true
+	}
+
 	if result.TotalVoted == 0 {
 		return false
 	}
@@ -1576,15 +1686,17 @@ func calculateIfPassed(result VoteMatterResult, config VotingConfig) bool {
 		switch config.RequiredMajority {
 		case "simple":
 			return percentage > 50
-		case "supermajority":
+		case "qualified", "supermajority":
 			return percentage >= 66.67
+		case "unanimous":
+			return percentage >= 100
 		case "custom":
 			return percentage >= config.RequiredMajorityValue
 		}
 	}
 
 	// For multiple choice, the option with most votes wins if it meets the threshold
-	if config.Type == "multiple_choice" {
+	if config.Type == "multiple_choice" || config.Type == "single_choice" {
 		var maxWeight float64
 		for _, tally := range result.Tally {
 			if tally.Weight > maxWeight {
@@ -1597,8 +1709,10 @@ func calculateIfPassed(result VoteMatterResult, config VotingConfig) bool {
 		switch config.RequiredMajority {
 		case "simple":
 			return percentage > 50
-		case "supermajority":
+		case "qualified", "supermajority":
 			return percentage >= 66.67
+		case "unanimous":
+			return percentage >= 100
 		case "custom":
 			return percentage >= config.RequiredMajorityValue
 		}
@@ -1671,44 +1785,22 @@ func updateGatheringStats(cfg *ApiConfig, gatheringID, associationID int64) (int
 func updateGatheringParticipationStats(cfg *ApiConfig, gatheringID, associationID int64) {
 	ctx := context.Background()
 
-	// Get gathering details
-	gathering, err := cfg.Db.GetGathering(ctx, database.GetGatheringParams{
-		ID:            gatheringID,
-		AssociationID: associationID,
-	})
+	// Get participating units stats (unit-based, not participant-based)
+	stats, err := cfg.Db.GetParticipatingUnitsStats(ctx, gatheringID)
 	if err != nil {
+		logging.Logger.Log(zap.WarnLevel, "Error getting participating units stats", zap.Error(err))
 		return
 	}
 
-	// Parse qualification rules
-	var unitTypes []string
-	var floors []int64
-	var entrances []int64
-
-	if gathering.QualificationUnitTypes.Valid {
-		json.Unmarshal([]byte(gathering.QualificationUnitTypes.String), &unitTypes)
-	}
-	if gathering.QualificationFloors.Valid {
-		json.Unmarshal([]byte(gathering.QualificationFloors.String), &floors)
-	}
-	if gathering.QualificationEntrances.Valid {
-		json.Unmarshal([]byte(gathering.QualificationEntrances.String), &entrances)
-	}
-	// Get participants
-	participants, _ := cfg.Db.GetGatheringParticipants(ctx, gatheringID)
-	participatingCount := len(participants)
-	participatingTotalPart := 0.0
-	participatingTotalArea := 0.0
-	for _, p := range participants {
-		participatingTotalPart += p.UnitsPart
-		participatingTotalArea += p.UnitsArea
-	}
+	// Type assert interface{} to float64
+	participatingPart, _ := stats.ParticipatingUnitsTotalPart.(float64)
+	participatingArea, _ := stats.ParticipatingUnitsTotalArea.(float64)
 
 	// Update stats
 	cfg.Db.UpdateParticipationStats(ctx, database.UpdateParticipationStatsParams{
-		ParticipatingUnitsCount:     sql.NullInt64{Int64: int64(participatingCount), Valid: true},
-		ParticipatingUnitsTotalPart: sql.NullFloat64{Float64: participatingTotalPart, Valid: true},
-		ParticipatingUnitsTotalArea: sql.NullFloat64{Float64: participatingTotalArea, Valid: true},
+		ParticipatingUnitsCount:     sql.NullInt64{Int64: stats.ParticipatingUnitsCount, Valid: true},
+		ParticipatingUnitsTotalPart: sql.NullFloat64{Float64: participatingPart, Valid: true},
+		ParticipatingUnitsTotalArea: sql.NullFloat64{Float64: participatingArea, Valid: true},
 		ID:                          gatheringID,
 	})
 }
@@ -1839,10 +1931,394 @@ func updateVoteTallies(cfg *ApiConfig, gatheringID int64, participantId int) {
 		zap.Int("matter_count", len(matters)))
 }
 
-func calculateFinalResults(cfg *ApiConfig, gatheringID int64) {
-	// This function would be called when gathering is closed
-	// It would finalize all tallies and potentially generate reports
+func calculateFinalResults(cfg *ApiConfig, gatheringID, associationID int64) {
+	// This function is called when gathering is closed
+	// It finalizes all tallies and participation stats
+
+	// Update participation stats with final unit counts
+	updateGatheringParticipationStats(cfg, gatheringID, associationID)
+
+	// Update vote tallies
 	updateVoteTallies(cfg, gatheringID, -1)
+
+	logging.Logger.Log(zap.InfoLevel, "Final results calculated",
+		zap.Int64("gathering_id", gatheringID),
+		zap.Int64("association_id", associationID))
+}
+
+func HandleGetBallots(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		gatheringId, _ := strconv.Atoi(req.PathValue(GatheringIdPathValue))
+
+		// Get all ballots
+		ballots, err := cfg.Db.GetBallotsForGathering(req.Context(), int64(gatheringId))
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error getting ballots", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get ballots")
+			return
+		}
+
+		// Build response with metadata only (no ballot content)
+		type BallotMetadata struct {
+			ID              int64   `json:"id"`
+			ParticipantName string  `json:"participant_name"`
+			UnitsInfo       string  `json:"units_info"`
+			UnitsArea       float64 `json:"units_area"`
+			UnitsPart       float64 `json:"units_part"`
+			BallotHash      string  `json:"ballot_hash"`
+			SubmittedAt     string  `json:"submitted_at"`
+			IsValid         bool    `json:"is_valid"`
+		}
+
+		response := make([]BallotMetadata, len(ballots))
+		for i, b := range ballots {
+			submittedAt := ""
+			if b.SubmittedAt.Valid {
+				submittedAt = b.SubmittedAt.Time.Format(time.RFC3339)
+			}
+
+			response[i] = BallotMetadata{
+				ID:              b.ID,
+				ParticipantName: b.ParticipantName,
+				UnitsInfo:       b.UnitsInfo,
+				UnitsArea:       b.UnitsArea,
+				UnitsPart:       b.UnitsPart,
+				BallotHash:      b.BallotHash,
+				SubmittedAt:     submittedAt,
+				IsValid:         b.IsValid.Bool,
+			}
+		}
+
+		RespondWithJSON(rw, http.StatusOK, response)
+	}
+}
+
+func HandleDownloadVotingResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		gatheringId, _ := strconv.Atoi(req.PathValue(GatheringIdPathValue))
+
+		// Get gathering details
+		gathering, err := cfg.Db.GetGathering(req.Context(), database.GetGatheringParams{
+			ID:            int64(gatheringId),
+			AssociationID: int64(associationId),
+		})
+		if err != nil {
+			RespondWithError(rw, http.StatusNotFound, "Gathering not found")
+			return
+		}
+
+		// Get all voting matters
+		matters, err := cfg.Db.GetVotingMatters(req.Context(), int64(gatheringId))
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error getting voting matters", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get voting matters")
+			return
+		}
+
+		// Get all ballots
+		ballots, err := cfg.Db.GetBallotsForGathering(req.Context(), int64(gatheringId))
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error getting ballots", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get ballots")
+			return
+		}
+
+		// Get participants
+		participants, _ := cfg.Db.GetGatheringParticipants(req.Context(), int64(gatheringId))
+
+		// Get voted units stats
+		votedStats, _ := cfg.Db.GetVotedUnitsStats(req.Context(), int64(gatheringId))
+		votedUnitsPart, _ := votedStats.VotedUnitsTotalPart.(float64)
+		votedUnitsArea, _ := votedStats.VotedUnitsTotalArea.(float64)
+
+		// Build markdown report
+		var md string
+		md += fmt.Sprintf("# Voting Results: %s\n\n", gathering.Title)
+		md += fmt.Sprintf("**Date:** %s\n\n", gathering.GatheringDate.Format("2006-01-02 15:04"))
+		md += fmt.Sprintf("**Location:** %s\n\n", gathering.Location)
+		md += fmt.Sprintf("**Status:** %s\n\n", gathering.Status)
+		if gathering.Status == "closed" || gathering.Status == "tallied" {
+			md += fmt.Sprintf("**Closed At:** %s\n\n", gathering.UpdatedAt.Time.Format("2006-01-02 15:04"))
+		}
+
+		md += "## Participation Statistics\n\n"
+		md += "| Metric | Count | Weight | Area (m²) |\n"
+		md += "|--------|-------|--------|----------|\n"
+		md += fmt.Sprintf("| **Qualified Units** | %d | %.4f | %.2f |\n",
+			gathering.QualifiedUnitsCount.Int64,
+			gathering.QualifiedUnitsTotalPart.Float64,
+			gathering.QualifiedUnitsTotalArea.Float64)
+		md += fmt.Sprintf("| **Participating Units** | %d | %.4f | %.2f |\n",
+			gathering.ParticipatingUnitsCount.Int64,
+			gathering.ParticipatingUnitsTotalPart.Float64,
+			gathering.ParticipatingUnitsTotalArea.Float64)
+		md += fmt.Sprintf("| **Voted Units** | %d | %.4f | %.2f |\n\n",
+			votedStats.VotedUnitsCount,
+			votedUnitsPart,
+			votedUnitsArea)
+
+		// Calculate rates
+		participationRate := 0.0
+		votingRate := 0.0
+		if gathering.QualifiedUnitsTotalPart.Float64 > 0 {
+			participationRate = (gathering.ParticipatingUnitsTotalPart.Float64 / gathering.QualifiedUnitsTotalPart.Float64) * 100
+			votingRate = (votedUnitsPart / gathering.QualifiedUnitsTotalPart.Float64) * 100
+		}
+
+		md += fmt.Sprintf("**Participation Rate:** %.2f%% (by weight)\n\n", participationRate)
+		md += fmt.Sprintf("**Voting Completion Rate:** %.2f%% (by weight)\n\n", votingRate)
+
+		md += "## Voting Matters and Results\n\n"
+
+		// Process each voting matter
+		for _, matter := range matters {
+			var votingConfig VotingConfig
+			json.Unmarshal([]byte(matter.VotingConfig), &votingConfig)
+
+			md += fmt.Sprintf("### %d. %s\n\n", matter.OrderIndex, matter.Title)
+			if matter.Description.Valid && matter.Description.String != "" {
+				md += fmt.Sprintf("**Description:** %s\n\n", matter.Description.String)
+			}
+			md += fmt.Sprintf("**Type:** %s\n\n", matter.MatterType)
+			md += fmt.Sprintf("**Voting Method:** %s\n\n", votingConfig.Type)
+			md += fmt.Sprintf("**Required Majority:** %s\n\n", votingConfig.RequiredMajority)
+
+			// Calculate tally
+			tally := make(map[string]TallyResult)
+
+			// Initialize options based on voting type
+			if votingConfig.Type == "yes_no" {
+				tally["yes"] = TallyResult{Count: 0, Weight: 0, Area: 0}
+				tally["no"] = TallyResult{Count: 0, Weight: 0, Area: 0}
+				if votingConfig.AllowAbstention {
+					tally["abstain"] = TallyResult{Count: 0, Weight: 0, Area: 0}
+				}
+			} else if votingConfig.Type == "multiple_choice" || votingConfig.Type == "single_choice" {
+				for _, option := range votingConfig.Options {
+					tally[option.ID] = TallyResult{Count: 0, Weight: 0, Area: 0}
+				}
+				if votingConfig.AllowAbstention {
+					tally["abstain"] = TallyResult{Count: 0, Weight: 0, Area: 0}
+				}
+			}
+
+			// Count votes from valid ballots
+			totalWeight := 0.0
+			totalArea := 0.0
+			for _, ballot := range ballots {
+				if !ballot.IsValid.Bool {
+					continue
+				}
+
+				// Get participant info for weight
+				var participantWeight float64
+				var participantArea float64
+				for _, p := range participants {
+					if p.ID == ballot.ParticipantID {
+						participantWeight = p.UnitsPart
+						participantArea = p.UnitsArea
+						break
+					}
+				}
+
+				// Parse ballot content
+				var ballotContent map[string]BallotVote
+				json.Unmarshal([]byte(ballot.BallotContent), &ballotContent)
+
+				// Find vote for this matter
+				matterIDStr := strconv.FormatInt(matter.ID, 10)
+				if vote, ok := ballotContent[matterIDStr]; ok {
+					voteKey := vote.VoteValue
+					if vote.OptionID != "" {
+						voteKey = vote.OptionID
+					}
+
+					if _, exists := tally[voteKey]; exists {
+						tally[voteKey] = TallyResult{
+							Count:  tally[voteKey].Count + 1,
+							Weight: tally[voteKey].Weight + participantWeight,
+							Area:   tally[voteKey].Area + participantArea,
+						}
+						if voteKey != "abstain" {
+							totalWeight += participantWeight
+							totalArea += participantArea
+						}
+					}
+				}
+			}
+
+			// Display results
+			md += "**Results:**\n\n"
+			md += "| Option | Votes | Weight | Area (m²) | Percentage |\n"
+			md += "|--------|-------|--------|-----------|------------|\n"
+
+			for key, result := range tally {
+				percentage := 0.0
+				if totalArea > 0 {
+					percentage = (result.Area / totalArea) * 100
+				}
+
+				displayKey := key
+				if votingConfig.Type == "multiple_choice" || votingConfig.Type == "single_choice" {
+					for _, opt := range votingConfig.Options {
+						if opt.ID == key {
+							displayKey = opt.Text
+							break
+						}
+					}
+				}
+
+				md += fmt.Sprintf("| %s | %d | %.4f | %.2f | %.2f%% |\n",
+					displayKey, result.Count, result.Weight, result.Area, percentage)
+			}
+			md += "\n"
+
+			// Determine if passed
+			matterResult := VoteMatterResult{
+				MatterID:       matter.ID,
+				MatterTitle:    matter.Title,
+				MatterType:     matter.MatterType,
+				VotingConfig:   votingConfig,
+				Tally:          tally,
+				TotalVoted:     totalWeight,
+				TotalAbstained: tally["abstain"].Weight,
+			}
+			passed := calculateIfPassed(matterResult, votingConfig)
+
+			if votingConfig.RequiredMajority == "informative" {
+				md += "**Status:** Informative (no pass/fail)\n\n"
+			} else if passed {
+				md += "**Status:** ✅ PASSED\n\n"
+			} else {
+				md += "**Status:** ❌ FAILED\n\n"
+			}
+
+			md += "---\n\n"
+		}
+
+		md += fmt.Sprintf("*Report generated at: %s*\n", time.Now().Format("2006-01-02 15:04:05"))
+
+		// Set headers for file download
+		filename := fmt.Sprintf("voting-results-%s-%s.md",
+			gathering.Title,
+			time.Now().Format("2006-01-02"))
+		rw.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+		rw.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+		rw.WriteHeader(http.StatusOK)
+		rw.Write([]byte(md))
+	}
+}
+
+func HandleDownloadVotingBallots(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		gatheringId, _ := strconv.Atoi(req.PathValue(GatheringIdPathValue))
+
+		// Get gathering details
+		gathering, err := cfg.Db.GetGathering(req.Context(), database.GetGatheringParams{
+			ID:            int64(gatheringId),
+			AssociationID: int64(associationId),
+		})
+		if err != nil {
+			RespondWithError(rw, http.StatusNotFound, "Gathering not found")
+			return
+		}
+
+		// Get all voting matters
+		matters, err := cfg.Db.GetVotingMatters(req.Context(), int64(gatheringId))
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error getting voting matters", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get voting matters")
+			return
+		}
+
+		// Create matter lookup map
+		matterMap := make(map[int64]database.VotingMatter)
+		for _, m := range matters {
+			matterMap[m.ID] = m
+		}
+
+		// Get all ballots
+		ballots, err := cfg.Db.GetBallotsForGathering(req.Context(), int64(gatheringId))
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error getting ballots", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get ballots")
+			return
+		}
+
+		// Build markdown report
+		var md string
+		md += fmt.Sprintf("# Voting Ballots: %s\n\n", gathering.Title)
+		md += fmt.Sprintf("**Date:** %s\n\n", gathering.GatheringDate.Format("2006-01-02 15:04"))
+		md += fmt.Sprintf("**Total Ballots:** %d\n\n", len(ballots))
+
+		md += "---\n\n"
+
+		// List all ballots
+		for i, ballot := range ballots {
+			md += fmt.Sprintf("## Ballot #%d\n\n", i+1)
+			md += fmt.Sprintf("**Participant:** %s\n\n", ballot.ParticipantName)
+			md += fmt.Sprintf("**Units Weight:** %.4f\n\n", ballot.UnitsPart)
+			md += fmt.Sprintf("**Units Area:** %.2f m²\n\n", ballot.UnitsArea)
+
+			if ballot.SubmittedAt.Valid {
+				md += fmt.Sprintf("**Submitted:** %s\n\n", ballot.SubmittedAt.Time.Format("2006-01-02 15:04:05"))
+			}
+
+			md += fmt.Sprintf("**Ballot Hash:** `%s`\n\n", ballot.BallotHash)
+			md += fmt.Sprintf("**Valid:** %t\n\n", ballot.IsValid.Bool)
+
+			if !ballot.IsValid.Bool {
+				md += fmt.Sprintf("**Invalidation Reason:** %s\n\n", ballot.InvalidationReason.String)
+			}
+
+			// Parse ballot content
+			var ballotContent map[string]BallotVote
+			if err := json.Unmarshal([]byte(ballot.BallotContent), &ballotContent); err == nil {
+				md += "**Votes:**\n\n"
+
+				for matterIDStr, vote := range ballotContent {
+					matterID, _ := strconv.ParseInt(matterIDStr, 10, 64)
+					matter, ok := matterMap[matterID]
+					if !ok {
+						continue
+					}
+
+					md += fmt.Sprintf("- **%s:** ", matter.Title)
+
+					if vote.OptionID != "" {
+						// Find option text
+						var config VotingConfig
+						json.Unmarshal([]byte(matter.VotingConfig), &config)
+						for _, opt := range config.Options {
+							if opt.ID == vote.OptionID {
+								md += opt.Text
+								break
+							}
+						}
+					} else {
+						md += vote.VoteValue
+					}
+					md += "\n"
+				}
+				md += "\n"
+			}
+
+			md += "---\n\n"
+		}
+
+		md += fmt.Sprintf("*Report generated at: %s*\n", time.Now().Format("2006-01-02 15:04:05"))
+
+		// Set headers for file download
+		filename := fmt.Sprintf("voting-ballots-%s-%s.md",
+			gathering.Title,
+			time.Now().Format("2006-01-02"))
+		rw.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+		rw.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+		rw.WriteHeader(http.StatusOK)
+		rw.Write([]byte(md))
+	}
 }
 
 // Additional handlers for notifications and audit logs

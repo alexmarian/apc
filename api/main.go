@@ -193,6 +193,16 @@ func main() {
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/results", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleGetVoteResults(apiCfg)))
 
+	// Ballots
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/ballots", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetBallots(apiCfg)))
+
+	// Download results and ballots as markdown
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/download/results", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleDownloadVotingResults(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/download/ballots", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleDownloadVotingBallots(apiCfg)))
+
 	// Utility endpoints
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/eligible-voters", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleGetEligibleVoters(apiCfg)))

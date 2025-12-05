@@ -173,14 +173,26 @@ const handleMoveUp = async (matter: VotingMatter) => {
       props.associationId,
       props.gathering.id,
       matter.id,
-      { ...matter, order_index: targetMatter.order_index }
+      {
+        title: matter.title,
+        description: matter.description,
+        matter_type: matter.matter_type,
+        order_index: targetMatter.order_index,
+        voting_config: matter.voting_config
+      }
     )
 
     await votingMatterApi.updateVotingMatter(
       props.associationId,
       props.gathering.id,
       targetMatter.id,
-      { ...targetMatter, order_index: matter.order_index }
+      {
+        title: targetMatter.title,
+        description: targetMatter.description,
+        matter_type: targetMatter.matter_type,
+        order_index: matter.order_index,
+        voting_config: targetMatter.voting_config
+      }
     )
 
     await loadMatters()
@@ -202,14 +214,26 @@ const handleMoveDown = async (matter: VotingMatter) => {
       props.associationId,
       props.gathering.id,
       matter.id,
-      { ...matter, order_index: targetMatter.order_index }
+      {
+        title: matter.title,
+        description: matter.description,
+        matter_type: matter.matter_type,
+        order_index: targetMatter.order_index,
+        voting_config: matter.voting_config
+      }
     )
 
     await votingMatterApi.updateVotingMatter(
       props.associationId,
       props.gathering.id,
       targetMatter.id,
-      { ...targetMatter, order_index: matter.order_index }
+      {
+        title: targetMatter.title,
+        description: targetMatter.description,
+        matter_type: targetMatter.matter_type,
+        order_index: matter.order_index,
+        voting_config: targetMatter.voting_config
+      }
     )
 
     await loadMatters()

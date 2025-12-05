@@ -135,6 +135,7 @@ UPDATE voting_matters
 SET title         = ?,
     description   = ?,
     matter_type   = ?,
+    order_index   = ?,
     voting_config = ?,
     updated_at    = CURRENT_TIMESTAMP
 WHERE id = ?
@@ -402,3 +403,23 @@ WHERE own.is_active = TRUE
   AND own.is_voting = TRUE
   AND b.association_id = ?
 ORDER BY o.name, u.unit_number;
+
+-- name: GetParticipatingUnitsStats :one
+SELECT COUNT(DISTINCT us.unit_id)     as participating_units_count,
+       COALESCE(SUM(u.part), 0)       as participating_units_total_part,
+       COALESCE(SUM(u.area), 0)       as participating_units_total_area
+FROM unit_slots us
+         JOIN units u ON us.unit_id = u.id
+WHERE us.gathering_id = ?
+  AND us.participant_id IS NOT NULL;
+
+-- name: GetVotedUnitsStats :one
+SELECT COUNT(DISTINCT us.unit_id)     as voted_units_count,
+       COALESCE(SUM(u.part), 0)       as voted_units_total_part,
+       COALESCE(SUM(u.area), 0)       as voted_units_total_area
+FROM unit_slots us
+         JOIN units u ON us.unit_id = u.id
+         JOIN gathering_participants gp ON us.participant_id = gp.id
+         JOIN voting_ballots vb ON gp.id = vb.participant_id AND vb.gathering_id = us.gathering_id
+WHERE us.gathering_id = ?
+  AND vb.is_valid = TRUE;

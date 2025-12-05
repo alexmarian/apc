@@ -1391,6 +1391,29 @@ func (q *Queries) GetParticipatingUnitSlots(ctx context.Context, arg GetParticip
 	return items, nil
 }
 
+const getParticipatingUnitsStats = `-- name: GetParticipatingUnitsStats :one
+SELECT COUNT(DISTINCT us.unit_id)     as participating_units_count,
+       COALESCE(SUM(u.part), 0)       as participating_units_total_part,
+       COALESCE(SUM(u.area), 0)       as participating_units_total_area
+FROM unit_slots us
+         JOIN units u ON us.unit_id = u.id
+WHERE us.gathering_id = ?
+  AND us.participant_id IS NOT NULL
+`
+
+type GetParticipatingUnitsStatsRow struct {
+	ParticipatingUnitsCount     int64
+	ParticipatingUnitsTotalPart interface{}
+	ParticipatingUnitsTotalArea interface{}
+}
+
+func (q *Queries) GetParticipatingUnitsStats(ctx context.Context, gatheringID int64) (GetParticipatingUnitsStatsRow, error) {
+	row := q.db.QueryRowContext(ctx, getParticipatingUnitsStats, gatheringID)
+	var i GetParticipatingUnitsStatsRow
+	err := row.Scan(&i.ParticipatingUnitsCount, &i.ParticipatingUnitsTotalPart, &i.ParticipatingUnitsTotalArea)
+	return i, err
+}
+
 const getQualifiedUnits = `-- name: GetQualifiedUnits :many
 SELECT u.id,
        u.unit_number,
@@ -1569,6 +1592,31 @@ func (q *Queries) GetVoteTally(ctx context.Context, arg GetVoteTallyParams) (Vot
 		&i.TallyData,
 		&i.LastUpdated,
 	)
+	return i, err
+}
+
+const getVotedUnitsStats = `-- name: GetVotedUnitsStats :one
+SELECT COUNT(DISTINCT us.unit_id)     as voted_units_count,
+       COALESCE(SUM(u.part), 0)       as voted_units_total_part,
+       COALESCE(SUM(u.area), 0)       as voted_units_total_area
+FROM unit_slots us
+         JOIN units u ON us.unit_id = u.id
+         JOIN gathering_participants gp ON us.participant_id = gp.id
+         JOIN voting_ballots vb ON gp.id = vb.participant_id AND vb.gathering_id = us.gathering_id
+WHERE us.gathering_id = ?
+  AND vb.is_valid = TRUE
+`
+
+type GetVotedUnitsStatsRow struct {
+	VotedUnitsCount     int64
+	VotedUnitsTotalPart interface{}
+	VotedUnitsTotalArea interface{}
+}
+
+func (q *Queries) GetVotedUnitsStats(ctx context.Context, gatheringID int64) (GetVotedUnitsStatsRow, error) {
+	row := q.db.QueryRowContext(ctx, getVotedUnitsStats, gatheringID)
+	var i GetVotedUnitsStatsRow
+	err := row.Scan(&i.VotedUnitsCount, &i.VotedUnitsTotalPart, &i.VotedUnitsTotalArea)
 	return i, err
 }
 
@@ -1927,6 +1975,7 @@ UPDATE voting_matters
 SET title         = ?,
     description   = ?,
     matter_type   = ?,
+    order_index   = ?,
     voting_config = ?,
     updated_at    = CURRENT_TIMESTAMP
 WHERE id = ?
@@ -1937,6 +1986,7 @@ type UpdateVotingMatterParams struct {
 	Title        string
 	Description  sql.NullString
 	MatterType   string
+	OrderIndex   int64
 	VotingConfig string
 	ID           int64
 	GatheringID  int64
@@ -1947,6 +1997,7 @@ func (q *Queries) UpdateVotingMatter(ctx context.Context, arg UpdateVotingMatter
 		arg.Title,
 		arg.Description,
 		arg.MatterType,
+		arg.OrderIndex,
 		arg.VotingConfig,
 		arg.ID,
 		arg.GatheringID,

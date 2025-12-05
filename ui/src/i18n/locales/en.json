@@ -672,7 +672,20 @@
       "noResults": "Results are not available yet.",
       "generationInfo": "Generation Information",
       "generatedAt": "Generated at",
-      "choice": "Choice"
+      "choice": "Choice",
+      "downloadResults": "Download Results"
+    },
+    "ballots": {
+      "title": "Ballots",
+      "participant": "Participant",
+      "unitsCount": "Units",
+      "weight": "Weight",
+      "area": "Area",
+      "submittedAt": "Submitted",
+      "status": "Status",
+      "hash": "Hash",
+      "noBallots": "No ballots have been submitted yet.",
+      "download": "Download Ballots"
     },
     "statistics": {
       "title": "Statistics",

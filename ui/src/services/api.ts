@@ -447,6 +447,22 @@ export const votingApi = {
   getResults: (associationId: number, gatheringId: number) =>
     api.get<VotingResults>(`/associations/${associationId}/gatherings/${gatheringId}/results`),
 
+  // Get ballots for a gathering
+  getBallots: (associationId: number, gatheringId: number) =>
+    api.get<any[]>(`/associations/${associationId}/gatherings/${gatheringId}/ballots`),
+
+  // Download voting results as markdown
+  downloadResults: (associationId: number, gatheringId: number) =>
+    api.get(`/associations/${associationId}/gatherings/${gatheringId}/download/results`, {
+      responseType: 'blob'
+    }),
+
+  // Download ballots as markdown
+  downloadBallots: (associationId: number, gatheringId: number) =>
+    api.get(`/associations/${associationId}/gatherings/${gatheringId}/download/ballots`, {
+      responseType: 'blob'
+    }),
+
   // Verify a ballot hash
   verifyBallot: (ballotHash: string) =>
     api.post<ApiResponse<{ valid: boolean; details?: any }>>(`/ballot/verify`, { hash: ballotHash })

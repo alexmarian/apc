@@ -14,6 +14,18 @@
       </div>
 
       <div v-else class="results-content">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+          <NButton
+            type="primary"
+            @click="handleDownloadResults"
+            :loading="downloading"
+          >
+            <template #icon>
+              <NIcon><DownloadOutlined /></NIcon>
+            </template>
+            {{ $t('gatherings.results.downloadResults') }}
+          </NButton>
+        </div>
         <!-- Overall Statistics -->
         <NCard>
           <template #header>
@@ -145,8 +157,10 @@ import {
   NDescriptionsItem,
   NDivider,
   NProgress,
+  NIcon,
   type DataTableColumns
 } from 'naive-ui'
+import { DownloadOutlined } from '@vicons/antd'
 import { votingApi } from '@/services/api'
 import type { Gathering, VotingResults, VoteResult } from '@/types/api'
 
@@ -160,6 +174,7 @@ const props = defineProps<Props>()
 const { t } = useI18n()
 
 const loading = ref(false)
+const downloading = ref(false)
 const error = ref<string | null>(null)
 const results = ref<VotingResults | null>(null)
 
@@ -210,7 +225,7 @@ const formatDate = (dateString: string) => {
 const loadResults = async () => {
   loading.value = true
   error.value = null
-  
+
   try {
     const response = await votingApi.getResults(props.associationId, props.gathering.id)
     results.value = response.data
@@ -218,6 +233,30 @@ const loadResults = async () => {
     error.value = err.response?.data?.message || err.message || t('common.error')
   } finally {
     loading.value = false
+  }
+}
+
+const handleDownloadResults = async () => {
+  downloading.value = true
+  try {
+    const response = await votingApi.downloadResults(props.associationId, props.gathering.id)
+
+    // Create a blob from the response data
+    const blob = new Blob([response.data], { type: 'text/markdown' })
+
+    // Create a download link
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `voting-results-${props.gathering.title}-${new Date().toISOString().split('T')[0]}.md`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (err: any) {
+    error.value = err.response?.data?.message || err.message || t('common.error')
+  } finally {
+    downloading.value = false
   }
 }
 

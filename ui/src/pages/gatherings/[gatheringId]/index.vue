@@ -128,6 +128,13 @@
                 :gathering="gathering!"
               />
             </NTabPane>
+
+            <NTabPane name="ballots" :tab="$t('gatherings.ballots.title')" :disabled="!canViewResults">
+              <BallotsList
+                :association-id="associationId!"
+                :gathering="gathering!"
+              />
+            </NTabPane>
           </NTabs>
         </div>
       </NSpin>
@@ -183,6 +190,7 @@ import GatheringStatusForm from '@/components/GatheringStatusForm.vue'
 import VotingMattersManager from '@/components/VotingMattersManager.vue'
 import VotingWizard from '@/components/VotingWizard.vue'
 import ResultsDisplay from '@/components/ResultsDisplay.vue'
+import BallotsList from '@/components/BallotsList.vue'
 
 const { t } = useI18n()
 const route = useRoute()

@@ -666,7 +666,20 @@
       "noResults": "Rezultatele nu sunt încă disponibile.",
       "generationInfo": "Informații Generare",
       "generatedAt": "Generat la",
-      "choice": "Alegere"
+      "choice": "Alegere",
+      "downloadResults": "Descarcă Rezultate"
+    },
+    "ballots": {
+      "title": "Buletine de Vot",
+      "participant": "Participant",
+      "unitsCount": "Unități",
+      "weight": "Pondere",
+      "area": "Suprafață",
+      "submittedAt": "Trimis",
+      "status": "Status",
+      "hash": "Hash",
+      "noBallots": "Nu au fost trimise buletine de vot încă.",
+      "download": "Descarcă Buletine"
     },
     "statistics": {
       "title": "Statistici",
