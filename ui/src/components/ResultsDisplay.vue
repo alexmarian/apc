@@ -129,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, h } from 'vue'
+import { ref, computed, onMounted, watch, h } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   NCard,
@@ -220,6 +220,21 @@ const loadResults = async () => {
     loading.value = false
   }
 }
+
+// Watch for gathering status changes and reload results
+watch(() => props.gathering.status, (newStatus, oldStatus) => {
+  // Reload results when status changes to closed or tallied
+  if ((newStatus === 'closed' || newStatus === 'tallied') && newStatus !== oldStatus) {
+    loadResults()
+  }
+})
+
+// Watch for gathering ID changes (in case user navigates to different gathering)
+watch(() => props.gathering.id, () => {
+  // Clear current results and reload
+  results.value = null
+  loadResults()
+})
 
 onMounted(() => {
   loadResults()

@@ -374,3 +374,31 @@ WHERE own.is_active = TRUE
   AND (false = ? OR u.floor IN (sqlc.slice('unit_floors')))
   AND (false = ? OR u.entrance IN (sqlc.slice('unit_entrances')))
 ORDER BY o.name, u.unit_number;
+
+-- name: GetEligibleVotersWithUnits :many
+SELECT o.id                    as owner_id,
+       o.name                  as owner_name,
+       o.identification_number as owner_identification,
+       o.contact_email         as owner_contact_email,
+       o.contact_phone         as owner_contact_phone,
+       u.id                    as unit_id,
+       u.unit_number,
+       u.cadastral_number,
+       u.floor,
+       u.entrance,
+       u.area,
+       u.part                  as voting_weight,
+       u.unit_type,
+       b.name                  as building_name,
+       b.address               as building_address,
+       us.participant_id       as assigned_participant_id,
+       CASE WHEN us.participant_id IS NULL THEN 1 ELSE 0 END as is_available
+FROM owners o
+         JOIN ownerships own ON o.id = own.owner_id
+         JOIN units u ON own.unit_id = u.id
+         JOIN buildings b ON u.building_id = b.id
+         JOIN unit_slots us ON us.unit_id = u.id AND us.gathering_id = ?
+WHERE own.is_active = TRUE
+  AND own.is_voting = TRUE
+  AND b.association_id = ?
+ORDER BY o.name, u.unit_number;

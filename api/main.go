@@ -186,7 +186,7 @@ func main() {
 		apiCfg.MiddlewareAssociationResource(handlers.HandleCheckInParticipant(apiCfg)))
 
 	// Voting (Ballot submission)
-	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/gatherings/{%s}/participants/{%s}/ballot", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue, handlers.ParticipantIdPathValue),
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/gatherings/{%s}/ballot", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleSubmitBallot(apiCfg)))
 
 	// Results
@@ -194,6 +194,8 @@ func main() {
 		apiCfg.MiddlewareAssociationResource(handlers.HandleGetVoteResults(apiCfg)))
 
 	// Utility endpoints
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/eligible-voters", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetEligibleVoters(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/qualified-units", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleGetQualifiedUnits(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/non-participating-owners", handlers.AssociationIdPathValue, handlers.GatheringIdPathValue),

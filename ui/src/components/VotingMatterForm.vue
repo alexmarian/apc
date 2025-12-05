@@ -27,24 +27,9 @@
             />
           </NFormItem>
 
-          <NGrid :cols="2" :x-gap="16">
-            <NGridItem>
-              <NFormItem :label="$t('gatherings.matters.type')" path="matter_type">
-                <NSelect v-model:value="formData.matter_type" :options="typeOptions" />
-              </NFormItem>
-            </NGridItem>
-            
-            <NGridItem>
-              <NFormItem :label="$t('gatherings.matters.order')" path="order_index">
-                <NInputNumber
-                  v-model:value="formData.order_index"
-                  :min="1"
-                  :max="100"
-                  style="width: 100%"
-                />
-              </NFormItem>
-            </NGridItem>
-          </NGrid>
+          <NFormItem :label="$t('gatherings.matters.type')" path="matter_type">
+            <NSelect v-model:value="formData.matter_type" :options="typeOptions" />
+          </NFormItem>
 
           <NDivider>{{ $t('gatherings.matters.votingConfig') }}</NDivider>
 
@@ -116,18 +101,6 @@
             </NGridItem>
           </NGrid>
 
-          <NFormItem :label="$t('gatherings.matters.quorumThreshold')" path="voting_config.quorum">
-            <NInputNumber
-              v-model:value="formData.voting_config.quorum"
-              :min="1"
-              :max="100"
-              :precision="1"
-              style="width: 100%"
-            >
-              <template #suffix>%</template>
-            </NInputNumber>
-          </NFormItem>
-
           <NGrid :cols="2" :x-gap="16">
             <NGridItem>
               <NFormItem :label="$t('gatherings.matters.isAnonymous')" path="voting_config.is_anonymous">
@@ -159,7 +132,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   NCard,
@@ -223,7 +196,6 @@ const formData = reactive<{
     options: VotingOption[]
     required_majority: MajorityType
     required_majority_value: number | null
-    quorum: number | null
     is_anonymous: boolean
     allow_abstention: boolean
   }
@@ -237,36 +209,33 @@ const formData = reactive<{
     options: [],
     required_majority: 'simple' as MajorityType,
     required_majority_value: null,
-    quorum: 50,
     is_anonymous: false,
     allow_abstention: true
   }
 })
 
 const typeOptions = computed(() => [
+  { label: t('gatherings.matters.types.policy'), value: 'policy' },
   { label: t('gatherings.matters.types.budget'), value: 'budget' },
   { label: t('gatherings.matters.types.election'), value: 'election' },
-  { label: t('gatherings.matters.types.policy'), value: 'policy' },
-  { label: t('gatherings.matters.types.poll'), value: 'poll' },
-  { label: t('gatherings.matters.types.extraordinary'), value: 'extraordinary' }
+  { label: t('gatherings.matters.types.poll'), value: 'poll' }
 ])
 
 const votingTypeOptions = computed(() => [
   { label: t('gatherings.matters.votingTypes.yes_no'), value: 'yes_no' },
-  { label: t('gatherings.matters.votingTypes.multiple_choice'), value: 'multiple_choice' },
   { label: t('gatherings.matters.votingTypes.single_choice'), value: 'single_choice' },
-  { label: t('gatherings.matters.votingTypes.ranking'), value: 'ranking' }
+  { label: t('gatherings.matters.votingTypes.multiple_choice'), value: 'multiple_choice' }
 ])
 
 const majorityTypeOptions = computed(() => [
   { label: t('gatherings.matters.majorityTypes.simple'), value: 'simple' },
-  { label: t('gatherings.matters.majorityTypes.absolute'), value: 'absolute' },
   { label: t('gatherings.matters.majorityTypes.qualified'), value: 'qualified' },
-  { label: t('gatherings.matters.majorityTypes.unanimous'), value: 'unanimous' }
+  { label: t('gatherings.matters.majorityTypes.unanimous'), value: 'unanimous' },
+  { label: t('gatherings.matters.majorityTypes.informative'), value: 'informative' }
 ])
 
 const needsOptions = computed(() => {
-  return ['multiple_choice', 'single_choice', 'ranking'].includes(formData.voting_config.type)
+  return ['multiple_choice', 'single_choice'].includes(formData.voting_config.type)
 })
 
 const needsMajorityThreshold = computed(() => {
@@ -376,13 +345,25 @@ watch(() => props.matter, (newMatter) => {
         options: newMatter.voting_config.options || [],
         required_majority: newMatter.voting_config.required_majority,
         required_majority_value: newMatter.voting_config.required_majority_value,
-        quorum: newMatter.voting_config.quorum,
         is_anonymous: newMatter.voting_config.is_anonymous,
         allow_abstention: newMatter.voting_config.allow_abstention
       }
     })
   }
 }, { immediate: true })
+
+onMounted(async () => {
+  if (!isEditMode.value) {
+    try {
+      const response = await votingMatterApi.getVotingMatters(props.associationId, props.gathering.id)
+      const matters = response.data
+      const maxOrder = matters.length > 0 ? Math.max(...matters.map(m => m.order_index)) : 0
+      formData.order_index = maxOrder + 1
+    } catch (err) {
+      formData.order_index = 1
+    }
+  }
+})
 </script>
 
 <style scoped>

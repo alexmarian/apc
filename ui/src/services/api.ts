@@ -374,6 +374,10 @@ export const gatheringApi = {
   getNonParticipatingOwners: (associationId: number, gatheringId: number) =>
     api.get<NonParticipatingOwner[]>(`/associations/${associationId}/gatherings/${gatheringId}/non-participating-owners`),
 
+  // Get eligible voters with their available units
+  getEligibleVoters: (associationId: number, gatheringId: number) =>
+    api.get<any[]>(`/associations/${associationId}/gatherings/${gatheringId}/eligible-voters`),
+
   // Get audit logs for a gathering
   getAuditLogs: (associationId: number, gatheringId: number) =>
     api.get<VotingAuditLog[]>(`/associations/${associationId}/gatherings/${gatheringId}/audit-logs`),
@@ -435,9 +439,9 @@ export const participantApi = {
 
 // Voting APIs
 export const votingApi = {
-  // Submit a ballot
-  submitBallot: (associationId: number, gatheringId: number, participantId: number, ballotData: BallotSubmissionRequest) =>
-    api.post<ApiResponse<null>>(`/associations/${associationId}/gatherings/${gatheringId}/participants/${participantId}/ballot`, ballotData),
+  // Submit a ballot (new simplified endpoint)
+  submitBallot: (associationId: number, gatheringId: number, ballotData: any) =>
+    api.post<any>(`/associations/${associationId}/gatherings/${gatheringId}/ballot`, ballotData),
 
   // Get voting results
   getResults: (associationId: number, gatheringId: number) =>

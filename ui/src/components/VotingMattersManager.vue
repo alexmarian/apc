@@ -108,8 +108,10 @@ import {
   NDataTable,
   NEmpty,
   NTag,
+  NIcon,
   type DataTableColumns
 } from 'naive-ui'
+import { ArrowUpOutline, ArrowDownOutline } from '@vicons/ionicons5'
 import { votingMatterApi, gatheringApi } from '@/services/api'
 import { useMessage } from 'naive-ui'
 import type { Gathering, VotingMatter, VotingMatterType } from '@/types/api'
@@ -139,7 +141,7 @@ const deleting = ref(false)
 const closingVoting = ref(false)
 
 const canEdit = computed(() => {
-  return props.gathering.status === 'draft' || props.gathering.status === 'published'
+  return props.gathering.status === 'draft'
 })
 
 const getMatterTypeColor = (type: VotingMatterType) => {
@@ -159,12 +161,97 @@ const getMatterTypeColor = (type: VotingMatterType) => {
   }
 }
 
+const handleMoveUp = async (matter: VotingMatter) => {
+  const index = matters.value.findIndex(m => m.id === matter.id)
+  if (index === 0) return
+
+  const targetMatter = matters.value[index - 1]
+
+  try {
+    // Swap order_index values
+    await votingMatterApi.updateVotingMatter(
+      props.associationId,
+      props.gathering.id,
+      matter.id,
+      { ...matter, order_index: targetMatter.order_index }
+    )
+
+    await votingMatterApi.updateVotingMatter(
+      props.associationId,
+      props.gathering.id,
+      targetMatter.id,
+      { ...targetMatter, order_index: matter.order_index }
+    )
+
+    await loadMatters()
+    emit('updated')
+  } catch (err: any) {
+    error.value = err.response?.data?.message || err.message || t('common.error')
+  }
+}
+
+const handleMoveDown = async (matter: VotingMatter) => {
+  const index = matters.value.findIndex(m => m.id === matter.id)
+  if (index === matters.value.length - 1) return
+
+  const targetMatter = matters.value[index + 1]
+
+  try {
+    // Swap order_index values
+    await votingMatterApi.updateVotingMatter(
+      props.associationId,
+      props.gathering.id,
+      matter.id,
+      { ...matter, order_index: targetMatter.order_index }
+    )
+
+    await votingMatterApi.updateVotingMatter(
+      props.associationId,
+      props.gathering.id,
+      targetMatter.id,
+      { ...targetMatter, order_index: matter.order_index }
+    )
+
+    await loadMatters()
+    emit('updated')
+  } catch (err: any) {
+    error.value = err.response?.data?.message || err.message || t('common.error')
+  }
+}
+
 const columns: DataTableColumns<VotingMatter> = [
   {
     title: t('gatherings.matters.order'),
     key: 'order_index',
-    width: 80,
-    sorter: (a, b) => a.order_index - b.order_index
+    width: 100,
+    render: (row) => {
+      const index = matters.value.findIndex(m => m.id === row.id)
+      return h(NSpace, { align: 'center' }, {
+        default: () => [
+          h(NButton, {
+            size: 'small',
+            circle: true,
+            disabled: !canEdit.value || index === 0,
+            onClick: () => handleMoveUp(row)
+          }, {
+            default: () => h(NIcon, {}, {
+              default: () => h(ArrowUpOutline)
+            })
+          }),
+          h('span', { style: { margin: '0 8px' } }, row.order_index),
+          h(NButton, {
+            size: 'small',
+            circle: true,
+            disabled: !canEdit.value || index === matters.value.length - 1,
+            onClick: () => handleMoveDown(row)
+          }, {
+            default: () => h(NIcon, {}, {
+              default: () => h(ArrowDownOutline)
+            })
+          })
+        ]
+      })
+    }
   },
   {
     title: t('gatherings.matters.title'),
@@ -214,7 +301,7 @@ const columns: DataTableColumns<VotingMatter> = [
           onClick: () => handleEditMatter(row),
           disabled: !canEdit.value
         }, { default: () => t('common.edit') }),
-        
+
         h(NButton, {
           size: 'small',
           type: 'error',

@@ -465,6 +465,7 @@
     "manage": "Manage",
     "view": "View",
     "refresh": "Refresh",
+    "details": "Details",
     "titlePlaceholder": "Enter gathering title",
     "descriptionPlaceholder": "Enter gathering description",
     "locationPlaceholder": "Enter gathering location",
@@ -510,6 +511,7 @@
       }
     },
     "type": {
+      "title": "Type",
       "initial": "Initial",
       "repeated": "Repeated"
     },
@@ -559,7 +561,8 @@
         "simple": "Simple",
         "absolute": "Absolute",
         "qualified": "Qualified",
-        "unanimous": "Unanimous"
+        "unanimous": "Unanimous",
+        "informative": "Informative"
       }
     },
     "participants": {
@@ -609,6 +612,7 @@
       "abstain": "Abstain",
       "weight": "Weight",
       "totalWeight": "Total Weight",
+      "totalArea": "Total Area",
       "ballotSubmitted": "Your ballot has been submitted successfully",
       "ballotHash": "Ballot Hash",
       "verify": "Verify Ballot",
@@ -626,7 +630,24 @@
       "submittedAt": "Submitted At",
       "submittedAtPlaceholder": "Select submission date and time",
       "notes": "Notes",
-      "notesPlaceholder": "Additional notes about this ballot"
+      "notesPlaceholder": "Additional notes about this ballot",
+      "selectOwnerUnits": "Select Owner and Units",
+      "delegateDetails": "Delegate Details",
+      "castBallot": "Cast Ballot",
+      "step1Instructions": "Select the owner and units you want to vote for. Check the delegation box if you are voting on behalf of someone else.",
+      "step2Instructions": "Enter the delegate information for the person voting on behalf of the owner.",
+      "step3Instructions": "Review your selections and cast your vote for each matter.",
+      "voteByDelegation": "Vote by delegation",
+      "availableUnits": "Available Units",
+      "noAvailableUnits": "No units are available for voting. All units may have already voted.",
+      "selectedUnits": "Selected Units",
+      "loadError": "Failed to load eligible voters",
+      "submitError": "Failed to submit ballot",
+      "submitBallot": "Submit Ballot",
+      "selectedUnitsCount": "Selected units",
+      "totalVotingWeight": "Total voting weight",
+      "delegateNameRequired": "Delegate name is required",
+      "delegateIdRequired": "Delegate ID is required"
     },
     "results": {
       "title": "Results",

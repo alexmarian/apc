@@ -736,11 +736,16 @@ func HandleCheckInParticipant(cfg *ApiConfig) func(http.ResponseWriter, *http.Re
 
 func HandleSubmitBallot(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
 		gatheringId, _ := strconv.Atoi(req.PathValue(GatheringIdPathValue))
-		participantId, _ := strconv.Atoi(req.PathValue(ParticipantIdPathValue))
 
 		var ballotReq struct {
-			BallotContent map[string]BallotVote `json:"ballot_content"`
+			VoterType             string                `json:"voter_type"`
+			OwnerID               int64                 `json:"owner_id"`
+			DelegatingOwnerID     *int64                `json:"delegating_owner_id,omitempty"`
+			DelegationDocumentRef string                `json:"delegation_document_ref,omitempty"`
+			UnitIDs               []int64               `json:"unit_ids"`
+			BallotContent         map[string]BallotVote `json:"ballot_content"`
 		}
 		decoder := json.NewDecoder(req.Body)
 		if err := decoder.Decode(&ballotReq); err != nil {
@@ -748,24 +753,111 @@ func HandleSubmitBallot(cfg *ApiConfig) func(http.ResponseWriter, *http.Request)
 			return
 		}
 
-		// Validate participant exists and hasn't voted
-		_, err := cfg.Db.GetGatheringParticipant(req.Context(), database.GetGatheringParticipantParams{
-			ID:          int64(participantId),
-			GatheringID: int64(gatheringId),
-		})
-		if err != nil {
-			RespondWithError(rw, http.StatusNotFound, "Participant not found")
+		// Validate gathering is in active state
+		active := validateGatheringStateWithFetch(req, cfg, gatheringId, associationId, "active")
+		if !active {
+			RespondWithError(rw, http.StatusBadRequest, "Gathering is not active")
 			return
 		}
 
-		// Check if already voted
-		existingBallot, _ := cfg.Db.GetBallotByParticipant(req.Context(), database.GetBallotByParticipantParams{
-			GatheringID:   int64(gatheringId),
-			ParticipantID: int64(participantId),
-		})
-		if existingBallot.ID > 0 && existingBallot.IsValid.Bool {
-			RespondWithError(rw, http.StatusBadRequest, "Participant has already voted")
+		// Validate required fields
+		if len(ballotReq.UnitIDs) == 0 {
+			RespondWithError(rw, http.StatusBadRequest, "At least one unit ID is required")
 			return
+		}
+
+		// Determine the effective owner ID
+		var effectiveOwnerID int64
+		if ballotReq.VoterType == "owner" {
+			effectiveOwnerID = ballotReq.OwnerID
+		} else if ballotReq.VoterType == "delegate" && ballotReq.DelegatingOwnerID != nil {
+			effectiveOwnerID = *ballotReq.DelegatingOwnerID
+		} else {
+			RespondWithError(rw, http.StatusBadRequest, "Invalid voter type or missing owner information")
+			return
+		}
+
+		// Get owner information
+		owner, err := cfg.Db.GetOwnerById(req.Context(), effectiveOwnerID)
+		if err != nil {
+			RespondWithError(rw, http.StatusBadRequest, "Owner not found")
+			return
+		}
+
+		// Get eligible voters to validate units and calculate weights
+		eligibleRows, err := cfg.Db.GetEligibleVotersWithUnits(req.Context(), database.GetEligibleVotersWithUnitsParams{
+			GatheringID:   int64(gatheringId),
+			AssociationID: int64(associationId),
+		})
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error getting eligible voters", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to validate units")
+			return
+		}
+
+		// Build map of units owned by this owner
+		ownerUnits := make(map[int64]database.GetEligibleVotersWithUnitsRow)
+		for _, row := range eligibleRows {
+			if row.OwnerID == effectiveOwnerID {
+				ownerUnits[row.UnitID] = row
+			}
+		}
+
+		// Validate all requested units are owned by this owner and available
+		totalArea := 0.0
+		totalWeight := 0.0
+		validUnitIDs := make([]int64, 0)
+		for _, unitID := range ballotReq.UnitIDs {
+			unit, exists := ownerUnits[unitID]
+			if !exists {
+				RespondWithError(rw, http.StatusBadRequest, fmt.Sprintf("Unit %d is not owned by this owner or not qualified", unitID))
+				return
+			}
+			if unit.IsAvailable == 0 {
+				RespondWithError(rw, http.StatusBadRequest, fmt.Sprintf("Unit %d is not available (already assigned)", unitID))
+				return
+			}
+			validUnitIDs = append(validUnitIDs, unitID)
+			totalArea += unit.Area
+			totalWeight += unit.VotingWeight
+		}
+
+		// Get or create participant
+		participantID := sql.NullString{String: owner.IdentificationNumber, Valid: true}
+		if ballotReq.VoterType == "delegate" {
+			participantID = sql.NullString{String: ballotReq.DelegationDocumentRef, Valid: true}
+		}
+
+		unitsJSON, _ := json.Marshal(validUnitIDs)
+
+		participant, err := cfg.Db.CreateGatheringParticipant(req.Context(), database.CreateGatheringParticipantParams{
+			GatheringID:               int64(gatheringId),
+			ParticipantType:           ballotReq.VoterType,
+			ParticipantName:           owner.Name,
+			ParticipantIdentification: participantID,
+			OwnerID:                   sql.NullInt64{Int64: ballotReq.OwnerID, Valid: ballotReq.VoterType == "owner"},
+			DelegatingOwnerID:         sql.NullInt64{Int64: effectiveOwnerID, Valid: ballotReq.VoterType == "delegate"},
+			DelegationDocumentRef:     sql.NullString{String: ballotReq.DelegationDocumentRef, Valid: ballotReq.VoterType == "delegate"},
+			UnitsInfo:                 string(unitsJSON),
+			UnitsArea:                 totalArea,
+			UnitsPart:                 totalWeight,
+		})
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error creating participant", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to create participant")
+			return
+		}
+
+		// Assign unit slots to this participant
+		for _, unitID := range validUnitIDs {
+			_, err := cfg.Db.AssignUnitSlot(req.Context(), database.AssignUnitSlotParams{
+				ParticipantID: participant.ID,
+				GatheringID:   int64(gatheringId),
+				UnitID:        unitID,
+			})
+			if err != nil {
+				logging.Logger.Log(zap.WarnLevel, "Error assigning unit slot", zap.Error(err), zap.Int64("unit_id", unitID))
+			}
 		}
 
 		// Create ballot JSON
@@ -782,7 +874,7 @@ func HandleSubmitBallot(cfg *ApiConfig) func(http.ResponseWriter, *http.Request)
 		// Submit ballot
 		ballot, err := cfg.Db.CreateBallot(req.Context(), database.CreateBallotParams{
 			GatheringID:        int64(gatheringId),
-			ParticipantID:      int64(participantId),
+			ParticipantID:      participant.ID,
 			BallotContent:      string(ballotJSON),
 			BallotHash:         ballotHash,
 			SubmittedIp:        sql.NullString{String: req.RemoteAddr, Valid: true},
@@ -795,8 +887,11 @@ func HandleSubmitBallot(cfg *ApiConfig) func(http.ResponseWriter, *http.Request)
 			return
 		}
 
+		// Update gathering stats
+		go updateGatheringParticipationStats(cfg, int64(gatheringId), int64(associationId))
+
 		// Update vote tallies asynchronously
-		go updateVoteTallies(cfg, int64(gatheringId), participantId)
+		go updateVoteTallies(cfg, int64(gatheringId), int(participant.ID))
 
 		// Log audit
 		cfg.Db.CreateAuditLog(req.Context(), database.CreateAuditLogParams{
@@ -804,15 +899,16 @@ func HandleSubmitBallot(cfg *ApiConfig) func(http.ResponseWriter, *http.Request)
 			EntityType:  "ballot",
 			EntityID:    ballot.ID,
 			Action:      "submitted",
-			PerformedBy: sql.NullString{String: fmt.Sprintf("participant_%d", participantId), Valid: true},
+			PerformedBy: sql.NullString{String: fmt.Sprintf("participant_%d", participant.ID), Valid: true},
 			IpAddress:   sql.NullString{String: req.RemoteAddr, Valid: true},
-			Details:     sql.NullString{String: fmt.Sprintf(`{"hash":"%s"}`, ballotHash), Valid: true},
+			Details:     sql.NullString{String: fmt.Sprintf(`{"hash":"%s","voter_type":"%s"}`, ballotHash, ballotReq.VoterType), Valid: true},
 		})
 
 		RespondWithJSON(rw, http.StatusCreated, map[string]interface{}{
-			"status":      "ballot_submitted",
-			"ballot_hash": ballotHash,
-			"ballot_id":   ballot.ID,
+			"status":         "ballot_submitted",
+			"ballot_hash":    ballotHash,
+			"ballot_id":      ballot.ID,
+			"participant_id": participant.ID,
 		})
 	}
 }
@@ -987,6 +1083,101 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 		}
 
 		RespondWithJSON(rw, http.StatusOK, results)
+	}
+}
+
+func HandleGetEligibleVoters(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		gatheringId, _ := strconv.Atoi(req.PathValue(GatheringIdPathValue))
+
+		rows, err := cfg.Db.GetEligibleVotersWithUnits(req.Context(), database.GetEligibleVotersWithUnitsParams{
+			GatheringID:   int64(gatheringId),
+			AssociationID: int64(associationId),
+		})
+
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error getting eligible voters", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get eligible voters")
+			return
+		}
+
+		type VoterUnit struct {
+			ID              int64   `json:"id"`
+			UnitNumber      string  `json:"unit_number"`
+			CadastralNumber string  `json:"cadastral_number"`
+			Floor           int64   `json:"floor"`
+			Entrance        int64   `json:"entrance"`
+			Area            float64 `json:"area"`
+			VotingWeight    float64 `json:"voting_weight"`
+			UnitType        string  `json:"unit_type"`
+			BuildingName    string  `json:"building_name"`
+			BuildingAddress string  `json:"building_address"`
+			IsAvailable     bool    `json:"is_available"`
+		}
+
+		type EligibleVoter struct {
+			Owner                database.Owner `json:"owner"`
+			Units                []VoterUnit    `json:"units"`
+			TotalAvailableWeight float64        `json:"total_available_weight"`
+			TotalAvailableArea   float64        `json:"total_available_area"`
+			TotalWeight          float64        `json:"total_weight"`
+			TotalArea            float64        `json:"total_area"`
+			HasAvailableUnits    bool           `json:"has_available_units"`
+			AvailableUnitsCount  int            `json:"available_units_count"`
+		}
+
+		votersMap := make(map[int64]*EligibleVoter)
+
+		for _, row := range rows {
+			voter, exists := votersMap[row.OwnerID]
+			if !exists {
+				voter = &EligibleVoter{
+					Owner: database.Owner{
+						ID:                   row.OwnerID,
+						Name:                 row.OwnerName,
+						IdentificationNumber: row.OwnerIdentification,
+						ContactEmail:         row.OwnerContactEmail,
+						ContactPhone:         row.OwnerContactPhone,
+					},
+					Units: make([]VoterUnit, 0),
+				}
+				votersMap[row.OwnerID] = voter
+			}
+
+			isAvailable := row.IsAvailable == 1
+			unit := VoterUnit{
+				ID:              row.UnitID,
+				UnitNumber:      row.UnitNumber,
+				CadastralNumber: row.CadastralNumber,
+				Floor:           row.Floor,
+				Entrance:        row.Entrance,
+				Area:            row.Area,
+				VotingWeight:    row.VotingWeight,
+				UnitType:        row.UnitType,
+				BuildingName:    row.BuildingName,
+				BuildingAddress: row.BuildingAddress,
+				IsAvailable:     isAvailable,
+			}
+
+			voter.Units = append(voter.Units, unit)
+			voter.TotalWeight += row.VotingWeight
+			voter.TotalArea += row.Area
+
+			if isAvailable {
+				voter.TotalAvailableWeight += row.VotingWeight
+				voter.TotalAvailableArea += row.Area
+				voter.HasAvailableUnits = true
+				voter.AvailableUnitsCount++
+			}
+		}
+
+		response := make([]EligibleVoter, 0, len(votersMap))
+		for _, voter := range votersMap {
+			response = append(response, *voter)
+		}
+
+		RespondWithJSON(rw, http.StatusOK, response)
 	}
 }
 
@@ -1632,9 +1823,9 @@ func updateVoteTallies(cfg *ApiConfig, gatheringID int64, participantId int) {
 
 		// Upsert tally
 		_, err = cfg.Db.UpsertVoteTally(ctx, database.UpsertVoteTallyParams{
-			GatheringID:     gatheringID,
-			VotingMatterID:  matter.ID,
-			TallyData:       string(tallyJSON),
+			GatheringID:    gatheringID,
+			VotingMatterID: matter.ID,
+			TallyData:      string(tallyJSON),
 		})
 		if err != nil {
 			logging.Logger.Log(zap.ErrorLevel, "Failed to upsert vote tally",

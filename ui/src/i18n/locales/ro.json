@@ -459,6 +459,7 @@
     "manage": "Administrează",
     "view": "Vizualizează",
     "refresh": "Actualizează",
+    "details": "Detalii",
     "titlePlaceholder": "Introduceți titlul adunării",
     "descriptionPlaceholder": "Introduceți descrierea adunării",
     "locationPlaceholder": "Introduceți locația adunării",
@@ -504,6 +505,7 @@
       }
     },
     "type": {
+      "title": "Tip",
       "initial": "Inițială",
       "repeated": "Repetată"
     },
@@ -553,7 +555,8 @@
         "simple": "Simplă",
         "absolute": "Absolută",
         "qualified": "Calificată",
-        "unanimous": "Unanimă"
+        "unanimous": "Unanimă",
+        "informative": "Informativă"
       }
     },
     "participants": {
@@ -603,6 +606,7 @@
       "abstain": "Abținere",
       "weight": "Greutate",
       "totalWeight": "Greutate Totală",
+      "totalArea": "Suprafață Totală",
       "ballotSubmitted": "Buletinul dvs. de vot a fost trimis cu succes",
       "ballotHash": "Hash Buletin",
       "verify": "Verifică Buletinul",
@@ -620,7 +624,24 @@
       "submittedAt": "Trimis la",
       "submittedAtPlaceholder": "Selectați data și ora trimiterii",
       "notes": "Notițe",
-      "notesPlaceholder": "Notițe adiționale despre acest buletin"
+      "notesPlaceholder": "Notițe adiționale despre acest buletin",
+      "selectOwnerUnits": "Selectează Proprietarul și Unitățile",
+      "delegateDetails": "Detalii Delegat",
+      "castBallot": "Votează",
+      "step1Instructions": "Selectați proprietarul și unitățile pentru care doriți să votați. Bifați caseta de delegare dacă votați în numele altcuiva.",
+      "step2Instructions": "Introduceți informațiile delegatului care votează în numele proprietarului.",
+      "step3Instructions": "Revizuiți selecțiile și votați pentru fiecare punct.",
+      "voteByDelegation": "Votare prin delegație",
+      "availableUnits": "Unități Disponibile",
+      "noAvailableUnits": "Nu există unități disponibile pentru vot. Toate unitățile au votat deja.",
+      "selectedUnits": "Unități Selectate",
+      "loadError": "Nu s-au putut încărca proprietarii eligibili",
+      "submitError": "Nu s-a putut trimite buletinul",
+      "submitBallot": "Trimite Buletinul",
+      "selectedUnitsCount": "Unități selectate",
+      "totalVotingWeight": "Greutate totală de vot",
+      "delegateNameRequired": "Numele delegatului este obligatoriu",
+      "delegateIdRequired": "ID-ul delegatului este obligatoriu"
     },
     "results": {
       "title": "Rezultate",

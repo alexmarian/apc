@@ -736,6 +736,101 @@ func (q *Queries) GetBallotsForGathering(ctx context.Context, gatheringID int64)
 	return items, nil
 }
 
+const getEligibleVotersWithUnits = `-- name: GetEligibleVotersWithUnits :many
+SELECT o.id                    as owner_id,
+       o.name                  as owner_name,
+       o.identification_number as owner_identification,
+       o.contact_email         as owner_contact_email,
+       o.contact_phone         as owner_contact_phone,
+       u.id                    as unit_id,
+       u.unit_number,
+       u.cadastral_number,
+       u.floor,
+       u.entrance,
+       u.area,
+       u.part                  as voting_weight,
+       u.unit_type,
+       b.name                  as building_name,
+       b.address               as building_address,
+       us.participant_id       as assigned_participant_id,
+       CASE WHEN us.participant_id IS NULL THEN 1 ELSE 0 END as is_available
+FROM owners o
+         JOIN ownerships own ON o.id = own.owner_id
+         JOIN units u ON own.unit_id = u.id
+         JOIN buildings b ON u.building_id = b.id
+         JOIN unit_slots us ON us.unit_id = u.id AND us.gathering_id = ?
+WHERE own.is_active = TRUE
+  AND own.is_voting = TRUE
+  AND b.association_id = ?
+ORDER BY o.name, u.unit_number
+`
+
+type GetEligibleVotersWithUnitsParams struct {
+	GatheringID   int64
+	AssociationID int64
+}
+
+type GetEligibleVotersWithUnitsRow struct {
+	OwnerID               int64
+	OwnerName             string
+	OwnerIdentification   string
+	OwnerContactEmail     string
+	OwnerContactPhone     string
+	UnitID                int64
+	UnitNumber            string
+	CadastralNumber       string
+	Floor                 int64
+	Entrance              int64
+	Area                  float64
+	VotingWeight          float64
+	UnitType              string
+	BuildingName          string
+	BuildingAddress       string
+	AssignedParticipantID interface{}
+	IsAvailable           int64
+}
+
+func (q *Queries) GetEligibleVotersWithUnits(ctx context.Context, arg GetEligibleVotersWithUnitsParams) ([]GetEligibleVotersWithUnitsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getEligibleVotersWithUnits, arg.GatheringID, arg.AssociationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetEligibleVotersWithUnitsRow
+	for rows.Next() {
+		var i GetEligibleVotersWithUnitsRow
+		if err := rows.Scan(
+			&i.OwnerID,
+			&i.OwnerName,
+			&i.OwnerIdentification,
+			&i.OwnerContactEmail,
+			&i.OwnerContactPhone,
+			&i.UnitID,
+			&i.UnitNumber,
+			&i.CadastralNumber,
+			&i.Floor,
+			&i.Entrance,
+			&i.Area,
+			&i.VotingWeight,
+			&i.UnitType,
+			&i.BuildingName,
+			&i.BuildingAddress,
+			&i.AssignedParticipantID,
+			&i.IsAvailable,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGathering = `-- name: GetGathering :one
 SELECT id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location
 FROM gatherings
