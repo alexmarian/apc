@@ -1039,8 +1039,6 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			}
 
 			// Count votes from valid ballots
-			totalWeight := 0.0
-			totalArea := 0.0
 			for _, ballot := range ballots {
 				if !ballot.IsValid.Bool {
 					continue
@@ -1076,24 +1074,21 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 							Weight: tally[voteKey].Weight + participantWeight,
 							Area:   tally[voteKey].Area + participantArea,
 						}
-						if voteKey != "abstain" {
-							totalWeight += participantWeight
-							totalArea += participantArea
-						}
+						//if voteKey != "abstain" {
+						//	totalWeight += participantWeight
+						//	totalArea += participantArea
+						//}
 					}
 				}
 			}
-
 			// Calculate percentages and prepare vote results
 			totalVotes := 0
 			totalAbstentions := 0
 			voteResults := make([]VoteResult, 0)
 
 			for key, result := range tally {
-				if totalWeight > 0 {
-					result.Percentage = roundTo3Decimals((result.Weight / totalWeight) * 100)
-					tally[key] = result
-				}
+				result.Percentage = roundTo3Decimals((result.Weight / gathering.QualifiedUnitsTotalPart.Float64) * 100)
+				tally[key] = result
 
 				// Track total votes and abstentions
 				totalVotes += result.Count
@@ -1131,12 +1126,12 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 				Statistics: MatterStatistics{
 					TotalParticipants: len(participants),
 					TotalVotes:        totalVotes,
-					TotalWeight:       roundTo3Decimals(totalWeight),
+					TotalWeight:       roundTo3Decimals(gathering.QualifiedUnitsTotalPart.Float64),
 					Abstentions:       totalAbstentions,
 					ParticipationRate: 0, // Will calculate below
 				},
 				Tally:          tally,
-				TotalVoted:     totalWeight,
+				TotalVoted:     gathering.QualifiedUnitsTotalPart.Float64,
 				TotalAbstained: tally["abstain"].Weight,
 			}
 
@@ -1146,7 +1141,7 @@ func HandleGetVoteResults(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			}
 
 			// Calculate if passed and determine result text
-			matterResult.IsPassed = calculateIfPassed(matterResult, votingConfig)
+			matterResult.IsPassed = calculateIfPassed(matterResult, votingConfig, gathering)
 
 			// Set result text based on voting type
 			if votingConfig.Type == "yes_no" {
@@ -1654,7 +1649,7 @@ func nullTimeToPtr(n sql.NullTime) *time.Time {
 	return nil
 }
 
-func calculateIfPassed(result VoteMatterResult, config VotingConfig) bool {
+func calculateIfPassed(result VoteMatterResult, config VotingConfig, gathering database.Gathering) bool {
 	// Informative votes don't have pass/fail - they always "pass" for reporting purposes
 	if config.RequiredMajority == "informative" {
 		return true
@@ -1665,7 +1660,7 @@ func calculateIfPassed(result VoteMatterResult, config VotingConfig) bool {
 	}
 
 	// Check quorum first
-	totalPossibleWeight := result.TotalVoted + result.TotalAbstained
+	totalPossibleWeight := gathering.QualifiedUnitsTotalPart.Float64
 	if config.Quorum > 0 && totalPossibleWeight > 0 {
 		quorumPercentage := (result.TotalVoted / totalPossibleWeight) * 100
 		if quorumPercentage < config.Quorum {
@@ -1681,7 +1676,7 @@ func calculateIfPassed(result VoteMatterResult, config VotingConfig) bool {
 			totalValidVotes += result.TotalAbstained
 		}
 
-		percentage := (yesVotes / totalValidVotes) * 100
+		percentage := (yesVotes / totalPossibleWeight) * 100
 
 		switch config.RequiredMajority {
 		case "simple":
@@ -2105,7 +2100,6 @@ func HandleDownloadVotingResults(cfg *ApiConfig) func(http.ResponseWriter, *http
 
 			// Count votes from valid ballots
 			totalWeight := 0.0
-			totalArea := 0.0
 			for _, ballot := range ballots {
 				if !ballot.IsValid.Bool {
 					continue
@@ -2140,10 +2134,8 @@ func HandleDownloadVotingResults(cfg *ApiConfig) func(http.ResponseWriter, *http
 							Weight: tally[voteKey].Weight + participantWeight,
 							Area:   tally[voteKey].Area + participantArea,
 						}
-						if voteKey != "abstain" {
-							totalWeight += participantWeight
-							totalArea += participantArea
-						}
+						totalWeight += participantWeight
+
 					}
 				}
 			}
@@ -2154,10 +2146,7 @@ func HandleDownloadVotingResults(cfg *ApiConfig) func(http.ResponseWriter, *http
 			md += "|--------|-------|--------|-----------|------------|\n"
 
 			for key, result := range tally {
-				percentage := 0.0
-				if totalArea > 0 {
-					percentage = (result.Area / totalArea) * 100
-				}
+				percentage := roundTo3Decimals((result.Area / gathering.QualifiedUnitsTotalArea.Float64) * 100)
 
 				displayKey := key
 				if votingConfig.Type == "multiple_choice" || votingConfig.Type == "single_choice" {
@@ -2184,7 +2173,7 @@ func HandleDownloadVotingResults(cfg *ApiConfig) func(http.ResponseWriter, *http
 				TotalVoted:     totalWeight,
 				TotalAbstained: tally["abstain"].Weight,
 			}
-			passed := calculateIfPassed(matterResult, votingConfig)
+			passed := calculateIfPassed(matterResult, votingConfig, gathering)
 
 			if votingConfig.RequiredMajority == "informative" {
 				md += "**Status:** Informative (no pass/fail)\n\n"

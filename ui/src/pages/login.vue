@@ -58,13 +58,16 @@ const rules: FormRules = {
       len: 6,
       message: t('auth.totpLength', 'TOTP code must be 6 digits'),
       trigger: 'blur'
+    }, {
+      pattern: /^\d{6}$/,
+      message: t('auth.totpNumeric', 'TOTP code must be 6 numeric digits'),
+      trigger: 'blur'
     }
   ]
 }
 
 // State
 const formRef = ref(null)
-const rememberMe = ref(false)
 
 // Handle login
 const handleLogin = async (e: MouseEvent) => {
