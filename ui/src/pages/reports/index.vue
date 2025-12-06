@@ -16,17 +16,22 @@ import {
   NStatistic,
   NTooltip,
   NText,
-  NFlex
+  NFlex,
+  NSkeleton
 } from 'naive-ui'
+import { useRouter, useRoute } from 'vue-router'
 import { expenseApi } from '@/services/api'
 import type { Expense } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
+import { groupExpensesByMonth, calculateMonthlyAverage } from '@/utils/expenseUtils'
 import AssociationSelector from '@/components/AssociationSelector.vue'
 import CategorySelector from '@/components/CategorySelector.vue'
 import ExpenseCharts from '@/components/ExpenseCharts.vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
+const router = useRouter()
+const route = useRoute()
 
 // Association selector
 const associationId = ref<number | null>(null)
@@ -47,22 +52,7 @@ const yearlyTotal = computed(() => {
 })
 
 const monthlyAverage = computed(() => {
-  // Group expenses by month
-  const months: Record<string, number> = {}
-
-  expenses.value.forEach(expense => {
-    const date = new Date(expense.date)
-    const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-
-    if (!months[monthYear]) {
-      months[monthYear] = 0
-    }
-
-    months[monthYear] += expense.amount
-  })
-
-  const monthCount = Object.keys(months).length
-  return monthCount > 0 ? yearlyTotal.value / monthCount : 0
+  return calculateMonthlyAverage(expenses.value)
 })
 
 const expensesByType = computed(() => {
@@ -87,24 +77,7 @@ const expensesByType = computed(() => {
 })
 
 const expensesByMonth = computed(() => {
-  // Group expenses by month
-  const months: Record<string, number> = {}
-
-  expenses.value.forEach(expense => {
-    const date = new Date(expense.date)
-    const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-
-    if (!months[monthYear]) {
-      months[monthYear] = 0
-    }
-
-    months[monthYear] += expense.amount
-  })
-
-  return Object.entries(months).map(([month, value]) => ({
-    month,
-    value
-  })).sort((a, b) => a.month.localeCompare(b.month))
+  return groupExpensesByMonth(expenses.value)
 })
 
 // Fetch expenses
@@ -124,13 +97,8 @@ const fetchExpenses = async () => {
       endDate = new Date(dateRange.value[1]).toISOString().split('T')[0]
     }
 
-    const response = await expenseApi.getExpenses(associationId.value, startDate, endDate)
+    const response = await expenseApi.getExpenses(associationId.value, startDate, endDate, selectedCategory.value || undefined)
     expenses.value = response.data
-
-    // Filter by category if selected
-    if (selectedCategory.value) {
-      expenses.value = expenses.value.filter(expense => expense.category_id === selectedCategory.value)
-    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : t('common.error', 'Unknown error occurred')
     console.error('Error fetching expenses:', err)
@@ -143,10 +111,42 @@ const fetchExpenses = async () => {
 const resetFilters = () => {
   dateRange.value = null
   selectedCategory.value = null
+
+  // Update URL
+  if (associationId.value) {
+    router.replace({
+      query: {
+        associationId: associationId.value.toString()
+      }
+    })
+  }
+}
+
+// Update URL when filters change
+const updateUrlFromFilters = () => {
+  if (!associationId.value) return
+
+  const query: Record<string, string> = {
+    associationId: associationId.value.toString()
+  }
+
+  if (dateRange.value) {
+    query.startDate = dateRange.value[0].toString()
+    query.endDate = dateRange.value[1].toString()
+  }
+
+  if (selectedCategory.value) {
+    query.categoryId = selectedCategory.value.toString()
+  }
+
+  router.replace({ query })
 }
 
 // Watch for changes in filters and refresh data
 watch([associationId, dateRange, selectedCategory], () => {
+  // Clear error when filters change to allow retry
+  error.value = null
+  updateUrlFromFilters()
   fetchExpenses()
 })
 
@@ -160,14 +160,31 @@ const formattedDateRange = computed(() => {
   return `${start} - ${end}`
 })
 
-// Initialize data
+// Initialize from URL query params
 onMounted(() => {
-  // Set default date range to current year
-  const now = new Date()
-  const startOfYear = new Date(now.getFullYear(), 0, 1)
-  const endOfYear = new Date(now.getFullYear(), 11, 31)
+  // Restore association ID from URL
+  if (route.query.associationId) {
+    associationId.value = parseInt(route.query.associationId as string)
+  }
 
-  dateRange.value = [startOfYear.getTime(), endOfYear.getTime()]
+  // Restore date range from URL, or set default to current year
+  if (route.query.startDate && route.query.endDate) {
+    dateRange.value = [
+      parseInt(route.query.startDate as string),
+      parseInt(route.query.endDate as string)
+    ]
+  } else if (associationId.value) {
+    // Only set default date range if association is selected
+    const now = new Date()
+    const startOfYear = new Date(now.getFullYear(), 0, 1)
+    const endOfYear = new Date(now.getFullYear(), 11, 31)
+    dateRange.value = [startOfYear.getTime(), endOfYear.getTime()]
+  }
+
+  // Restore category filter from URL
+  if (route.query.categoryId) {
+    selectedCategory.value = parseInt(route.query.categoryId as string)
+  }
 })
 </script>
 
@@ -253,7 +270,15 @@ onMounted(() => {
 
             <NTabs type="line" animated>
               <NTabPane name="charts" :tab="t('charts.pieChart', 'Visual Reports')">
+                <template v-if="loading">
+                  <div style="padding: 20px;">
+                    <NSkeleton height="300px" style="margin-bottom: 20px;" />
+                    <NSkeleton height="300px" style="margin-bottom: 20px;" />
+                    <NSkeleton height="300px" />
+                  </div>
+                </template>
                 <ExpenseCharts
+                  v-else
                   :expenses="expenses"
                   :dateRange="dateRange"
                 />

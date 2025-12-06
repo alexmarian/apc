@@ -279,7 +279,8 @@ const openStandaloneChartsPage = () => {
         rawName: item.rawName
       })),
       expensesByMonth: monthlyExpensesData.value,
-      typeDetails
+      typeDetails,
+      generatedAt: new Date().toISOString() // Add timestamp
     };
 
     // Store data in localStorage so the new window can access it

@@ -129,6 +129,20 @@
       max-width: 800px;
     }
 
+    @media print {
+      .chart-container {
+        height: 300px !important;
+        max-width: 100%;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      .chart-container.wide {
+        height: 350px !important;
+        max-width: 100%;
+      }
+    }
+
     .chart-toggle {
       display: flex;
       justify-content: center;
@@ -272,10 +286,13 @@
     @media print {
       @page {
         margin: 1cm;
+        size: A4 portrait;
       }
 
       body {
-        font-size: 12pt;
+        font-size: 11pt;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
       }
 
       .print-button,
@@ -285,17 +302,60 @@
         display: none !important;
       }
 
+      /* Remove forced page breaks - let content flow naturally */
       .page-break {
-        page-break-after: always;
-        break-after: page;
+        display: none !important;
         height: 0;
         margin: 0;
+        page-break-after: auto;
+        break-after: auto;
       }
 
       .card {
-        page-break-inside: avoid;
-        border: none;
+        /* Remove page-break-inside: avoid as it causes issues with large content */
+        page-break-inside: auto;
+        break-inside: auto;
+        border: 1px solid #ddd;
         box-shadow: none;
+        margin-bottom: 10px;
+        padding: 10px !important;
+      }
+
+      .standalone-container {
+        padding: 10px !important;
+      }
+
+      /* Prevent charts from being split */
+      .chart-container {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-bottom: 20px;
+      }
+
+      /* Keep tables together when possible */
+      .data-table,
+      .table-wrapper {
+        page-break-inside: auto;
+        break-inside: auto;
+      }
+
+      /* Avoid breaking after headings */
+      h1, h2, h3, h4 {
+        page-break-after: avoid;
+        break-after: avoid;
+      }
+
+      /* Keep summary stats together */
+      .summary-content {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      /* Type details sections */
+      .type-details {
+        page-break-inside: auto;
+        break-inside: auto;
+        margin-bottom: 20px;
       }
 
       * {
@@ -306,10 +366,58 @@
 
       .header {
         border-bottom: 1px solid #000;
+        page-break-after: avoid;
+        break-after: avoid;
       }
 
       .card h2 {
         border-bottom: 1px solid #000;
+      }
+
+      /* Ensure warning banner prints if present */
+      div[style*="background: #fff3cd"] {
+        background: #fff3cd !important;
+        border: 1px solid #ffc107 !important;
+        color: #856404 !important;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      /* Reduce spacing in tables */
+      .data-table th,
+      .data-table td {
+        padding: 6px 8px !important;
+        font-size: 10pt;
+      }
+
+      /* Reduce margins around type details */
+      .type-details h3 {
+        margin-top: 10px !important;
+        margin-bottom: 8px !important;
+        font-size: 14pt;
+      }
+
+      .type-details hr {
+        margin: 15px 0 !important;
+      }
+
+      /* Optimize summary section */
+      .summary-item {
+        margin-bottom: 10px;
+      }
+
+      .summary-value {
+        font-size: 20px !important;
+      }
+
+      /* Reduce heading sizes */
+      .card h2 {
+        font-size: 16pt;
+        margin-bottom: 10px !important;
+      }
+
+      h1 {
+        font-size: 20pt;
       }
     }
 
@@ -343,15 +451,24 @@
 <body>
 <div id="app"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="/chart.min.js"></script>
 
 <script>
   class ExpenseChartsApp {
     constructor() {
       this.currentLanguage = localStorage.getItem('standalone_chart_language') || 'en'
-      this.chartData = JSON.parse(localStorage.getItem('standalone_chart_data') || 'null')
+
+      // Try to load data from localStorage with error handling
+      try {
+        this.chartData = JSON.parse(localStorage.getItem('standalone_chart_data') || 'null')
+      } catch (error) {
+        console.error('Error parsing chart data from localStorage:', error)
+        this.chartData = null
+      }
+
       this.chartTitle = localStorage.getItem('standalone_chart_title') || ''
       this.dateRange = localStorage.getItem('standalone_chart_date_range') || ''
+      this.generatedAt = this.chartData?.generatedAt || null
 
       this.typeChartMode = 'pie'
       this.categoryChartMode = 'pie'
@@ -367,6 +484,21 @@
       }
 
       this.renderUI()
+    }
+
+    // Check if data is stale (older than 1 hour)
+    isDataStale() {
+      if (!this.generatedAt) return false
+      const generatedTime = new Date(this.generatedAt).getTime()
+      const now = new Date().getTime()
+      const oneHour = 60 * 60 * 1000
+      return (now - generatedTime) > oneHour
+    }
+
+    formatGeneratedTime() {
+      if (!this.generatedAt) return ''
+      const info = this.localeInfo[this.currentLanguage]
+      return new Date(this.generatedAt).toLocaleString(info.locale)
     }
 
     get translations() {
@@ -393,7 +525,9 @@
           expenseTypeBreakdown: 'Expense Type Breakdown',
           family: 'Family',
           noChartData: 'No chart data available. Please go back to the main application and open charts view again.',
-          noData: 'No data available'
+          noData: 'No data available',
+          generatedAt: 'Generated at',
+          dataStaleWarning: 'Warning: This data may be outdated. Please regenerate the charts from the main application for the latest information.'
         },
         'ro': {
           title: 'Analiză Cheltuieli',
@@ -417,7 +551,9 @@
           expenseTypeBreakdown: 'Defalcare după Tipul Cheltuielilor',
           family: 'Familie',
           noChartData: 'Nu există date disponibile. Vă rugăm să vă întoarceți la aplicația principală și să deschideți din nou vizualizarea graficelor.',
-          noData: 'Nu există date disponibile'
+          noData: 'Nu există date disponibile',
+          generatedAt: 'Generat la',
+          dataStaleWarning: 'Avertisment: Aceste date pot fi depășite. Vă rugăm să regenerați graficele din aplicația principală pentru informații actualizate.'
         },
         'ru': {
           title: 'Анализ Расходов',
@@ -441,7 +577,9 @@
           expenseTypeBreakdown: 'Разбивка по Типу Расходов',
           family: 'Семейство',
           noChartData: 'Нет доступных данных. Пожалуйста, вернитесь в основное приложение и снова откройте просмотр графиков.',
-          noData: 'Нет доступных данных'
+          noData: 'Нет доступных данных',
+          generatedAt: 'Создано',
+          dataStaleWarning: 'Предупреждение: Эти данные могут быть устаревшими. Пожалуйста, повторно создайте графики из основного приложения для получения актуальной информации.'
         }
       }
     }
@@ -956,6 +1094,7 @@
               <div class="header-info">
                 <h1>${this.chartTitle || t.title}</h1>
                 ${this.dateRange ? `<div class="period">${t.period}: ${this.dateRange}</div>` : ''}
+                ${this.generatedAt ? `<div class="period" style="font-size: 12px; margin-top: 4px;">${t.generatedAt}: ${this.formatGeneratedTime()}</div>` : ''}
               </div>
               <div class="header-controls">
                 <select id="language-selector" class="language-selector">
@@ -973,6 +1112,12 @@
                 </button>
               </div>
             </div>
+
+            ${this.isDataStale() ? `
+              <div style="background: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px;">
+                <strong>⚠️ ${t.dataStaleWarning}</strong>
+              </div>
+            ` : ''}
 
             ${this.createSummarySection()}
             <div class="page-break"></div>

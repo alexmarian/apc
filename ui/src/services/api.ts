@@ -296,11 +296,12 @@ export const categoryApi = {
 
 // Expense APIs
 export const expenseApi = {
-  getExpenses: (associationId: number, startDate?: string, endDate?: string) =>
+  getExpenses: (associationId: number, startDate?: string, endDate?: string, categoryId?: number) =>
     api.get<Expense[]>(`/associations/${associationId}/expenses`, {
       params: {
         start_date: startDate,
-        end_date: endDate
+        end_date: endDate,
+        category_id: categoryId
       }
     }),
 
