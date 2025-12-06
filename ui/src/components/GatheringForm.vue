@@ -116,10 +116,10 @@ import {
   type FormRules
 } from 'naive-ui'
 import { gatheringApi, unitApi, buildingApi } from '@/services/api'
-import type { 
-  GatheringCreateRequest, 
-  GatheringUpdateRequest, 
-  Gathering, 
+import type {
+  GatheringCreateRequest,
+  GatheringUpdateRequest,
+  Gathering,
   GatheringType,
   QualificationCriteria,
   Unit,
@@ -171,7 +171,8 @@ const formData = reactive<{
 
 const typeOptions = computed(() => [
   { label: t('gatherings.type.initial'), value: 'initial' },
-  { label: t('gatherings.type.repeated'), value: 'repeated' }
+  { label: t('gatherings.type.repeated'), value: 'repeated' },
+  { label: t('gatherings.type.remote'), value: 'remote' }
 ])
 
 const unitTypeOptions = computed(() => [

@@ -507,7 +507,8 @@
     "type": {
       "title": "Tip",
       "initial": "Inițială",
-      "repeated": "Repetată"
+      "repeated": "Repetată",
+      "remote": "Corespondență"
     },
     "matters": {
       "title": "Puncte de Vot",

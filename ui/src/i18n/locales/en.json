@@ -513,7 +513,8 @@
     "type": {
       "title": "Type",
       "initial": "Initial",
-      "repeated": "Repeated"
+      "repeated": "Repeated",
+      "remote": "Remote"
     },
     "matters": {
       "title": "Voting Matters",

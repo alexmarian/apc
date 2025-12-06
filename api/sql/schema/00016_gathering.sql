@@ -11,7 +11,7 @@ CREATE TABLE gatherings
     description                    TEXT      NOT NULL,
     intent                         TEXT      NOT NULL,
     gathering_date                 TIMESTAMP NOT NULL,
-    gathering_type                 TEXT      NOT NULL CHECK (gathering_type IN ('initial', 'repeated')),
+    gathering_type                 TEXT      NOT NULL CHECK (gathering_type IN ('initial', 'repeated', 'remote')),
     status                         TEXT      NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'active', 'closed', 'tallied')),
 
     -- Qualification criteria
@@ -219,6 +219,6 @@ DROP TABLE IF EXISTS vote_tallies;
 DROP TABLE IF EXISTS voting_ballots;
 DROP TABLE IF EXISTS gathering_participants;
 DROP TABLE IF EXISTS voting_matters;
+DROP TABLE IF EXISTS unit_slots;
 DROP TABLE IF EXISTS gatherings;
-
 -- +goose StatementEnd
