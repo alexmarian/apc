@@ -33,7 +33,7 @@ const unitsListRef = ref<InstanceType<typeof UnitsList> | null>(null)
 // For storing units loaded by the list component
 const displayedUnits = ref<Unit[] | null>(null)
 
-// Try to get associationId, buildingId, and editUnitId from query parameters
+// Try to get associationId, buildingId, editUnitId, and filters from query parameters
 onMounted(() => {
   if (route.query.associationId) {
     associationId.value = parseInt(route.query.associationId as string)
@@ -44,6 +44,13 @@ onMounted(() => {
   if (route.query.editUnitId) {
     editingUnitId.value = parseInt(route.query.editUnitId as string)
     showUnitEditModal.value = true
+  }
+  // Restore filter state from URL
+  if (route.query.unitTypeFilter) {
+    unitTypeFilter.value = route.query.unitTypeFilter as string
+  }
+  if (route.query.searchQuery) {
+    searchQuery.value = route.query.searchQuery as string
   }
 })
 
@@ -105,11 +112,13 @@ const handleUnitFormCancelled = () => {
 const handleBuildingIdUpdate = (newBuildingId: number) => {
   buildingId.value = newBuildingId
 
-  // Update URL query parameters
+  // Update URL query parameters, preserving filters
   router.replace({
     query: {
       ...route.query,
-      buildingId: newBuildingId.toString()
+      buildingId: newBuildingId.toString(),
+      unitTypeFilter: unitTypeFilter.value || undefined,
+      searchQuery: searchQuery.value || undefined
     }
   })
 }
@@ -118,12 +127,14 @@ const handleAssociationIdUpdate = (newAssociationId: number) => {
   associationId.value = newAssociationId
   buildingId.value = null
 
-  // Update URL query parameters
+  // Update URL query parameters, preserving filters
   router.replace({
     query: {
       ...route.query,
       associationId: newAssociationId.toString(),
-      buildingId: undefined
+      buildingId: undefined,
+      unitTypeFilter: unitTypeFilter.value || undefined,
+      searchQuery: searchQuery.value || undefined
     }
   })
 }
@@ -139,6 +150,20 @@ watch(associationId, () => {
 watch(buildingId, () => {
   showUnitEditModal.value = false
   editingUnitId.value = undefined
+})
+
+// Watch filter changes and update URL
+watch([unitTypeFilter, searchQuery], ([newUnitType, newSearch]) => {
+  // Only update URL if we have a building selected (to avoid unnecessary updates)
+  if (buildingId.value) {
+    router.replace({
+      query: {
+        ...route.query,
+        unitTypeFilter: newUnitType || undefined,
+        searchQuery: newSearch || undefined
+      }
+    })
+  }
 })
 </script>
 

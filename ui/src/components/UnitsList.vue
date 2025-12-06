@@ -164,7 +164,9 @@ const columns = computed<DataTableColumns<Unit>>(() => [
                   path: `/units/${row.id}`,
                   query: {
                     associationId: props.associationId.toString(),
-                    buildingId: props.buildingId.toString()
+                    buildingId: props.buildingId.toString(),
+                    unitTypeFilter: unitTypeFilter.value || undefined,
+                    searchQuery: searchQuery.value || undefined
                   }
                 })
               },

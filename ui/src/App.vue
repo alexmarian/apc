@@ -88,10 +88,6 @@ const menuOptions = computed(() => [
       {
         label: () => h(RouterLink, { to: '/owners/report' }, { default: () => t('owners.report', 'Owners Report') }),
         key: 'owners-report'
-      },
-      {
-        label: () => h(RouterLink, { to: '/owners/voting' }, { default: () => t('owners.votingReport', 'Voting Report') }),
-        key: 'owners-voting-report'
       }
     ]
   }

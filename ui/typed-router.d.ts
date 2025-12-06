@@ -27,7 +27,6 @@ declare module 'vue-router/auto-routes' {
     '/gatherings/[gatheringId]/': RouteRecordInfo<'/gatherings/[gatheringId]/', '/gatherings/:gatheringId', { gatheringId: ParamValue<true> }, { gatheringId: ParamValue<false> }>,
     '/login': RouteRecordInfo<'/login', '/login', Record<never, never>, Record<never, never>>,
     '/owners/report': RouteRecordInfo<'/owners/report', '/owners/report', Record<never, never>, Record<never, never>>,
-    '/owners/voting': RouteRecordInfo<'/owners/voting', '/owners/voting', Record<never, never>, Record<never, never>>,
     '/register': RouteRecordInfo<'/register', '/register', Record<never, never>, Record<never, never>>,
     '/reports/': RouteRecordInfo<'/reports/', '/reports', Record<never, never>, Record<never, never>>,
     '/reset': RouteRecordInfo<'/reset', '/reset', Record<never, never>, Record<never, never>>,
