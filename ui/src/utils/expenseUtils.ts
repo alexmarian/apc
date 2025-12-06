@@ -43,3 +43,28 @@ export function calculateMonthlyAverage(expenses: Expense[]): number {
 
   return monthlyData.length > 0 ? totalAmount / monthlyData.length : 0
 }
+
+/**
+ * Get default date range for last month
+ * @returns Tuple of [startTimestamp, endTimestamp]
+ */
+export function getDefaultLastMonthRange(): [number, number] {
+  const now = new Date()
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const endOfToday = new Date()
+
+  return [startOfLastMonth.getTime(), endOfToday.getTime()]
+}
+
+/**
+ * Format a date range to display string
+ * @param startTimestamp - Start date timestamp
+ * @param endTimestamp - End date timestamp
+ * @param locale - Optional locale for formatting
+ * @returns Formatted date range string
+ */
+export function formatDateRange(startTimestamp: number, endTimestamp: number, locale?: string): string {
+  const start = new Date(startTimestamp).toLocaleDateString(locale)
+  const end = new Date(endTimestamp).toLocaleDateString(locale)
+  return `${start} - ${end}`
+}

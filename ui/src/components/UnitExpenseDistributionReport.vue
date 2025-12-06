@@ -13,19 +13,27 @@ import {
   NDataTable,
   NDivider,
   NEmpty,
+  NFlex,
+  NText,
+  NSkeleton,
   useMessage
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
+import { useRouter, useRoute } from 'vue-router'
 import { expenseApi, categoryApi } from '@/services/api'
 import AssociationSelector from '@/components/AssociationSelector.vue'
 import BuildingSelector from '@/components/BuildingSelector.vue'
 import CategorySelector from '@/components/CategorySelector.vue'
 import { formatCurrency } from '@/utils/formatters'
+import { arrayToCsv, downloadCsv } from '@/utils/csvUtils'
+import { getDefaultLastMonthRange, formatDateRange } from '@/utils/expenseUtils'
 import type { ExpenseDistributionResponse, Category, UnitDistribution } from '@/types/api'
 import { UnitType } from '@/types/api'
 import { useI18n } from 'vue-i18n'
 // Message provider
 const message = useMessage()
+const router = useRouter()
+const route = useRoute()
 
 // Props
 const props = defineProps<{
@@ -43,10 +51,7 @@ const { t } = useI18n()
 const loading = ref<boolean>(false)
 const metadataLoading = ref<boolean>(false)
 const error = ref<string | null>(null)
-const dateRange = ref<[number, number] | null>([
-  new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getTime(),
-  new Date().getTime()
-])
+const dateRange = ref<[number, number] | null>(getDefaultLastMonthRange())
 const selectedCategoryId = ref<number | null>(null)
 const selectedCategoryType = ref<string | null>(null)
 const selectedCategoryFamily = ref<string | null>(null)
@@ -87,10 +92,8 @@ const endDate = computed<Date | null>(() => {
 })
 
 const formattedDateRange = computed<string>(() => {
-  if (!dateRange.value) return 'All time'
-  const start = new Date(dateRange.value[0]).toLocaleDateString()
-  const end = new Date(dateRange.value[1]).toLocaleDateString()
-  return `${start} - ${end}`
+  if (!dateRange.value) return t('expenses.allTime', 'All time')
+  return formatDateRange(dateRange.value[0], dateRange.value[1])
 })
 
 const totalExpenses = computed<number>(() => {
@@ -189,28 +192,7 @@ const fetchCategoryMetadata = async (): Promise<void> => {
     const response = await categoryApi.getCategories(associationId.value)
     categories.value = response.data
 
-    const types = new Set<string>()
-    const families = new Set<string>()
-
-    categories.value.forEach((category) => {
-      if (category.type) types.add(category.type)
-      if (category.family) families.add(category.family)
-    })
-
-    categoryOptions.value = categories.value.map((cat) => ({
-      label: cat.name,
-      value: cat.id.toString()
-    }))
-
-    categoryTypeOptions.value = Array.from(types).map((type) => ({
-      label: t(`categories.types.${type}`),
-      value: type
-    }))
-
-    categoryFamilyOptions.value = Array.from(families).map((family) => ({
-      label: t(`categories.families.${family}`),
-      value: family
-    }))
+    updateCategoryOptions()
   } catch (err) {
     console.error('Error fetching category metadata:', err)
   } finally {
@@ -218,109 +200,135 @@ const fetchCategoryMetadata = async (): Promise<void> => {
   }
 }
 
-const updateCategoryFamilies = (): void => {
-  if (!associationId.value) return
+// Consolidated function to update all category options
+const updateCategoryOptions = (): void => {
+  if (!categories.value) return
 
-  metadataLoading.value = true
+  const types = new Set<string>()
+  const families = new Set<string>()
 
-  categoryApi.getCategories(associationId.value).then((response) => {
-    const categories = response.data
-    const families = new Set<string>()
+  categories.value.forEach((category) => {
+    if (category.type) types.add(category.type)
 
-    categories.forEach((category) => {
-      if (selectedCategoryType.value && category.type !== selectedCategoryType.value) {
-        return
-      }
-
+    // Only include families that match the selected type (or all if no type selected)
+    if (!selectedCategoryType.value || category.type === selectedCategoryType.value) {
       if (category.family) {
         families.add(category.family)
       }
-    })
-
-    categoryFamilyOptions.value = Array.from(families).map((family) => ({
-      label: t(`categories.families.${family}`),
-      value: family
-    }))
-
-    metadataLoading.value = false
+    }
   })
+
+  categoryOptions.value = categories.value.map((cat) => ({
+    label: cat.name,
+    value: cat.id.toString()
+  }))
+
+  categoryTypeOptions.value = Array.from(types).map((type) => ({
+    label: t(`categories.types.${type}`),
+    value: type
+  }))
+
+  categoryFamilyOptions.value = Array.from(families).map((family) => ({
+    label: t(`categories.families.${family}`),
+    value: family
+  }))
 }
 
 const resetFilters = (): void => {
-  dateRange.value = [
-    new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getTime(),
-    new Date().getTime()
-  ]
+  dateRange.value = getDefaultLastMonthRange()
   selectedCategoryId.value = null
   selectedCategoryType.value = null
   selectedCategoryFamily.value = null
   unitType.value = null
   distributionMethod.value = 'area'
+
+  // Update URL to reflect reset state
+  updateUrlFromFilters()
 }
 
 const exportToCSV = (): void => {
   if (!distributionData.value) {
-    message.error('No data to export')
+    message.error(t('distribution.no_data_to_export', 'No data to export'))
     return
   }
 
   try {
-    const headers = [t('units.unit'), t('units.type'), t('units.area')+' (m²)', t('units.part'), t('distribution.total_share')]
-    const categoryHeaders = distributionData.value.category_totals
-      ? Object.keys(distributionData.value.category_totals).map(category=> t(`categories.names.${category}`))
+    // Build all rows for the CSV
+    const allRows: (string | number)[][] = []
+
+    // Header row
+    const headers: (string | number)[] = [
+      t('units.unit'),
+      t('units.type'),
+      t('units.area') + ' (m²)',
+      t('units.part'),
+      t('distribution.total_share')
+    ]
+
+    // Get category names (keys from category_totals)
+    const categoryKeys = distributionData.value.category_totals
+      ? Object.keys(distributionData.value.category_totals)
       : []
 
-    headers.push(...categoryHeaders)
-    console.log(distributionData.value)
-    const rows = distributionData.value.unit_distributions.map((unit: UnitDistribution) => {
-      const row = [
+    // Add translated category headers
+    categoryKeys.forEach(categoryKey => {
+      headers.push(t(`categories.names.${categoryKey}`))
+    })
+
+    allRows.push(headers)
+
+    // Data rows
+    distributionData.value.unit_distributions.forEach((unit: UnitDistribution) => {
+      const row: (string | number)[] = [
         unit.unit_number,
         unit.unit_type,
-        unit.area,
+        unit.area.toFixed(2),
         (unit.distribution_factor * 100).toFixed(2) + '%',
         unit.total_share.toFixed(2)
       ]
 
-      categoryHeaders.forEach((category) => {
-        row.push((unit.expenses_share[category] || 0).toFixed(2))
+      // Add expense shares for each category
+      categoryKeys.forEach(categoryKey => {
+        row.push((unit.expenses_share[categoryKey] || 0).toFixed(2))
       })
 
-      return row
+      allRows.push(row)
     })
 
-    let csvContent = headers.join(',') + '\n'
-    rows.forEach((row) => {
-      csvContent += row.join(',') + '\n'
-    })
+    // Add empty row
+    allRows.push([])
 
-    csvContent += '\n'
-    csvContent += `${t('distribution.report_period')},` + formattedDateRange.value + '\n'
-    csvContent += `${t('distribution.distribution_method')}:,` + t(`distribution.method.${distributionMethod.value}`) + '\n'
-    csvContent += `${t('distribution.total_units')}:,` + totalUnits.value + '\n'
-    csvContent += `${t('distribution.total_expenses')}:,` + totalExpenses.value.toFixed(2) + '\n'
+    // Add summary section
+    allRows.push([t('distribution.report_period'), formattedDateRange.value])
+    allRows.push([t('distribution.distribution_method'), t(`distribution.method.${distributionMethod.value}`)])
+    allRows.push([t('distribution.total_units'), totalUnits.value])
+    allRows.push([t('distribution.total_expenses'), totalExpenses.value.toFixed(2)])
 
+    // Add category totals section
     if (distributionData.value.category_totals) {
-      csvContent += `\n${t('distribution.category_totals')}:\n`
-      csvContent += `${t('distribution.category_totals_headers')}\n`
-      Object.entries(distributionData.value.category_totals).forEach(([category, data]: [string, any]) => {
-        csvContent += `${category},${data.amount.toFixed(2)}\n`
+      allRows.push([])
+      allRows.push([t('distribution.category_totals')])
+      allRows.push([t('categories.names.title'), t('charts.amount')])
+
+      Object.entries(distributionData.value.category_totals).forEach(([categoryKey, data]: [string, any]) => {
+        allRows.push([
+          t(`categories.names.${categoryKey}`),
+          data.amount.toFixed(2)
+        ])
       })
     }
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', `expense_distribution_${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    // Convert to CSV with proper escaping
+    const csvContent = arrayToCsv(allRows)
+
+    // Download
+    const filename = `expense_distribution_${new Date().toISOString().split('T')[0]}.csv`
+    downloadCsv(csvContent, filename)
 
     message.success(t('distribution.export_success'))
   } catch (err) {
     console.error('Error exporting to CSV:', err)
-    message.error('Failed to export CSV')
+    message.error(t('distribution.export_error', 'Failed to export CSV'))
   }
 }
 
@@ -329,21 +337,78 @@ watch([associationId], () => {
   if (associationId.value) {
     fetchCategoryMetadata()
     initialLoadComplete.value = true
+    updateUrlFromFilters()
   }
 })
 
 watch([selectedCategoryType], () => {
   if (associationId.value) {
+    // Clear family when type changes
     if (selectedCategoryType.value !== null) {
       selectedCategoryFamily.value = null
     }
 
-    updateCategoryFamilies()
+    // Update family options based on new type
+    updateCategoryOptions()
+    updateUrlFromFilters()
   }
 })
 
+// Watch all filter changes for URL sync and error recovery
+watch([buildingId, dateRange, selectedCategoryId, selectedCategoryFamily, unitType, distributionMethod], () => {
+  // Clear error when filters change
+  error.value = null
+  updateUrlFromFilters()
+})
+
+// Update URL with current filter state
+const updateUrlFromFilters = (): void => {
+  const query: Record<string, string> = {}
+
+  if (associationId.value) query.associationId = associationId.value.toString()
+  if (buildingId.value) query.buildingId = buildingId.value.toString()
+  if (dateRange.value) {
+    query.startDate = dateRange.value[0].toString()
+    query.endDate = dateRange.value[1].toString()
+  }
+  if (selectedCategoryId.value) query.categoryId = selectedCategoryId.value.toString()
+  if (selectedCategoryType.value) query.categoryType = selectedCategoryType.value
+  if (selectedCategoryFamily.value) query.categoryFamily = selectedCategoryFamily.value
+  if (unitType.value) query.unitType = unitType.value
+  if (distributionMethod.value !== 'area') query.distributionMethod = distributionMethod.value
+
+  router.replace({ query })
+}
+
+// Restore state from URL
+const restoreFromUrl = (): void => {
+  if (route.query.startDate && route.query.endDate) {
+    dateRange.value = [
+      parseInt(route.query.startDate as string),
+      parseInt(route.query.endDate as string)
+    ]
+  }
+  if (route.query.categoryId) {
+    selectedCategoryId.value = parseInt(route.query.categoryId as string)
+  }
+  if (route.query.categoryType) {
+    selectedCategoryType.value = route.query.categoryType as string
+  }
+  if (route.query.categoryFamily) {
+    selectedCategoryFamily.value = route.query.categoryFamily as string
+  }
+  if (route.query.unitType) {
+    unitType.value = route.query.unitType as string
+  }
+  if (route.query.distributionMethod) {
+    distributionMethod.value = route.query.distributionMethod as 'area' | 'count' | 'equal'
+  }
+}
+
 // Lifecycle
 onMounted(() => {
+  restoreFromUrl()
+
   if (associationId.value) {
     fetchCategoryMetadata()
     initialLoadComplete.value = true
@@ -460,7 +525,13 @@ onMounted(() => {
           {{ error }}
         </NAlert>
 
-        <div v-if="distributionData" class="report-content">
+        <!-- Loading Skeleton -->
+        <div v-if="loading && !distributionData" style="margin-top: 20px;">
+          <NSkeleton height="100px" style="margin-bottom: 20px;" />
+          <NSkeleton height="400px" />
+        </div>
+
+        <div v-else-if="distributionData" class="report-content">
           <div class="report-summary">
             <div class="summary-item">
               <div class="summary-label">{{ t('distribution.report_period') }}:</div>
