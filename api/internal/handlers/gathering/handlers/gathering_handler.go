@@ -16,21 +16,26 @@ import (
 
 // GatheringHandler handles gathering CRUD operations
 type GatheringHandler struct {
-	cfg             *handlers.ApiConfig
-	statsService    *services.StatsService
-	unitSlotService *services.UnitSlotService
-	quorumService   *services.QuorumService
-	tallyService    *services.TallyService
+	cfg                  *handlers.ApiConfig
+	statsService         *services.StatsService
+	unitSlotService      *services.UnitSlotService
+	quorumService        *services.QuorumService
+	tallyService         *services.TallyService
+	votingResultsService *services.VotingResultsService
 }
 
 // NewGatheringHandler creates a new GatheringHandler
 func NewGatheringHandler(cfg *handlers.ApiConfig) *GatheringHandler {
+	quorumService := services.NewQuorumService(cfg.Db)
+	tallyService := services.NewTallyService(cfg.Db)
+
 	return &GatheringHandler{
-		cfg:             cfg,
-		statsService:    services.NewStatsService(cfg.Db),
-		unitSlotService: services.NewUnitSlotService(cfg.Db),
-		quorumService:   services.NewQuorumService(cfg.Db),
-		tallyService:    services.NewTallyService(cfg.Db),
+		cfg:                  cfg,
+		statsService:         services.NewStatsService(cfg.Db),
+		unitSlotService:      services.NewUnitSlotService(cfg.Db),
+		quorumService:        quorumService,
+		tallyService:         tallyService,
+		votingResultsService: services.NewVotingResultsService(cfg.Db, quorumService, tallyService),
 	}
 }
 
@@ -102,6 +107,16 @@ func (h *GatheringHandler) HandleCreateGathering() func(http.ResponseWriter, *ht
 			return
 		}
 
+		// Validate and default voting_mode
+		votingMode := createReq.VotingMode
+		if votingMode == "" {
+			votingMode = "by_weight" // Default for backward compatibility
+		}
+		if votingMode != "by_weight" && votingMode != "by_unit" {
+			handlers.RespondWithError(rw, http.StatusBadRequest, "voting_mode must be 'by_weight' or 'by_unit'")
+			return
+		}
+
 		// Convert arrays to JSON strings for storage
 		unitTypesJSON, _ := json.Marshal(createReq.QualificationUnitTypes)
 		floorsJSON, _ := json.Marshal(createReq.QualificationFloors)
@@ -115,6 +130,7 @@ func (h *GatheringHandler) HandleCreateGathering() func(http.ResponseWriter, *ht
 			Location:                createReq.Location,
 			GatheringDate:           createReq.GatheringDate,
 			GatheringType:           createReq.GatheringType,
+			VotingMode:              votingMode,
 			Status:                  "draft",
 			QualificationUnitTypes:  sql.NullString{String: string(unitTypesJSON), Valid: len(unitTypesJSON) > 2},
 			QualificationFloors:     sql.NullString{String: string(floorsJSON), Valid: len(floorsJSON) > 2},
@@ -193,9 +209,31 @@ func (h *GatheringHandler) HandleUpdateGatheringStatus() func(http.ResponseWrite
 			return
 		}
 
-		// If closing the gathering, calculate final results
+		// If closing the gathering, calculate and cache final results
 		if statusReq.Status == "closed" {
-			go h.statsService.CalculateFinalResults(int64(gatheringID), int64(associationID), h.tallyService)
+			go func() {
+				_, err := h.votingResultsService.ComputeAndStoreResults(req.Context(), int64(gatheringID), int64(associationID))
+				if err != nil {
+					logging.Logger.Log(zap.ErrorLevel, "Error computing final results",
+						zap.Int64("gathering_id", int64(gatheringID)),
+						zap.Error(err))
+				} else {
+					logging.Logger.Log(zap.InfoLevel, "Successfully computed and cached voting results",
+						zap.Int64("gathering_id", int64(gatheringID)))
+				}
+			}()
+		}
+
+		// If reopening gathering, invalidate cached results
+		if gathering.Status == "closed" && statusReq.Status != "closed" {
+			go func() {
+				err := h.votingResultsService.InvalidateResults(req.Context(), int64(gatheringID))
+				if err != nil {
+					logging.Logger.Log(zap.WarnLevel, "Error invalidating cached results",
+						zap.Int64("gathering_id", int64(gatheringID)),
+						zap.Error(err))
+				}
+			}()
 		}
 
 		handlers.RespondWithJSON(rw, http.StatusOK, domain.DBGatheringToResponse(gathering))

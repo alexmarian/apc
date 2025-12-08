@@ -12,11 +12,11 @@ WHERE id = ?
 
 -- name: CreateGathering :one
 INSERT INTO gatherings (association_id, title, description, intent, location, gathering_date,
-                        gathering_type, status, qualification_unit_types,
+                        gathering_type, voting_mode, status, qualification_unit_types,
                         qualification_floors, qualification_entrances,
                         qualification_custom_rule, qualified_units_count, qualified_units_total_part,
                         qualified_units_total_area)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *;
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *;
 
 -- name: UpdateGathering :one
 UPDATE gatherings
@@ -26,6 +26,7 @@ SET title                          = ?,
     location                       = ?,
     gathering_date                 = ?,
     gathering_type                 = ?,
+    voting_mode                    = ?,
     qualification_unit_types       = ?,
     qualification_floors           = ?,
     qualification_entrances        = ?,

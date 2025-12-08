@@ -25,6 +25,7 @@ type Gathering struct {
 	Location                    string    `json:"location"`
 	GatheringDate               time.Time `json:"scheduled_date"` // Frontend expects scheduled_date
 	GatheringType               string    `json:"type"`           // Frontend expects type
+	VotingMode                  string    `json:"voting_mode"`    // by_weight or by_unit
 	Status                      string    `json:"status"`
 	QualificationUnitTypes      []string  `json:"qualification_unit_types"`
 	QualificationFloors         []int64   `json:"qualification_floors"`
@@ -48,10 +49,36 @@ type CreateGatheringRequest struct {
 	Location                string    `json:"location"`
 	GatheringDate           time.Time `json:"gathering_date"`
 	GatheringType           string    `json:"gathering_type"`
+	VotingMode              string    `json:"voting_mode"` // by_weight or by_unit
 	QualificationUnitTypes  []string  `json:"qualification_unit_types"`
 	QualificationFloors     []int64   `json:"qualification_floors"`
 	QualificationEntrances  []int64   `json:"qualification_entrances"`
 	QualificationCustomRule string    `json:"qualification_custom_rule"`
+}
+
+// QuorumInfo contains detailed information about quorum calculation
+type QuorumInfo struct {
+	Required           float64 `json:"required"`            // Required threshold (weight or count)
+	Achieved           float64 `json:"achieved"`            // Achieved participation (weight or count)
+	RequiredPercentage float64 `json:"required_percentage"` // Threshold percentage (25, 50, 100)
+	AchievedPercentage float64 `json:"achieved_percentage"` // Actual participation percentage
+	Met                bool    `json:"met"`                 // Whether quorum is met
+	VotingMode         string  `json:"voting_mode"`         // by_weight or by_unit
+	GatheringType      string  `json:"gathering_type"`      // initial, repeated, remote
+}
+
+// VotingResultsCached represents cached voting results in the database
+type VotingResultsCached struct {
+	ID                        int64       `json:"id"`
+	GatheringID               int64       `json:"gathering_id"`
+	ResultsData               VoteResults `json:"results_data"`
+	VotingMode                string      `json:"voting_mode"`
+	GatheringType             string      `json:"gathering_type"`
+	TotalPossibleVotesWeight  float64     `json:"total_possible_votes_weight"`
+	TotalPossibleVotesCount   int         `json:"total_possible_votes_count"`
+	QuorumThresholdPercentage float64     `json:"quorum_threshold_percentage"`
+	QuorumMet                 bool        `json:"quorum_met"`
+	ComputedAt                time.Time   `json:"computed_at"`
 }
 
 // VotingMatter represents a matter to be voted on
@@ -140,6 +167,7 @@ type VoteMatterResult struct {
 	VotingConfig VotingConfig     `json:"voting_config"`
 	Votes        []VoteResult     `json:"votes"`
 	Statistics   MatterStatistics `json:"statistics"`
+	QuorumInfo   *QuorumInfo      `json:"quorum_info,omitempty"` // Detailed quorum information
 	Result       string           `json:"result"`
 	IsPassed     bool             `json:"is_passed"`
 	// Keep internal fields for calculations
@@ -187,6 +215,7 @@ type GatheringSummary struct {
 	VotedArea            float64 `json:"voted_area"`
 	ParticipationRate    float64 `json:"participation_rate"`
 	VotingCompletionRate float64 `json:"voting_completion_rate"`
+	VotingMode           string  `json:"voting_mode,omitempty"` // by_weight or by_unit
 }
 
 // Mapper functions from database models to domain models
@@ -216,6 +245,7 @@ func DBGatheringToResponse(g database.Gathering) Gathering {
 		Location:                    g.Location,
 		GatheringDate:               g.GatheringDate,
 		GatheringType:               g.GatheringType,
+		VotingMode:                  g.VotingMode,
 		Status:                      g.Status,
 		QualificationUnitTypes:      unitTypes,
 		QualificationFloors:         floors,

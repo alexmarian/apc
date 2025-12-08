@@ -110,6 +110,7 @@ type Gathering struct {
 	CreatedAt                   sql.NullTime
 	UpdatedAt                   sql.NullTime
 	Location                    string
+	VotingMode                  string
 }
 
 type GatheringParticipant struct {
@@ -287,4 +288,17 @@ type VotingNotification struct {
 	SentAt           sql.NullTime
 	SentVia          sql.NullString
 	ReadAt           sql.NullTime
+}
+
+type VotingResult struct {
+	ID                        int64
+	GatheringID               int64
+	ResultsData               string
+	VotingMode                string
+	GatheringType             string
+	TotalPossibleVotesWeight  float64
+	TotalPossibleVotesCount   int64
+	QuorumThresholdPercentage float64
+	QuorumMet                 bool
+	ComputedAt                time.Time
 }

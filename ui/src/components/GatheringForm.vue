@@ -41,6 +41,10 @@
             <NSelect v-model:value="formData.type" :options="typeOptions" />
           </NFormItem>
 
+          <NFormItem :label="$t('gatherings.votingMode.title')" path="voting_mode">
+            <NSelect v-model:value="formData.voting_mode" :options="votingModeOptions" />
+          </NFormItem>
+
           <NFormItem :label="$t('gatherings.qualificationCriteria')" path="qualification_criteria">
             <NCard size="small">
               <template #header>
@@ -155,6 +159,7 @@ const formData = reactive<{
   location: string
   scheduled_date: number | null
   type: GatheringType
+  voting_mode: 'by_weight' | 'by_unit'
   qualification_criteria: QualificationCriteria
 }>({
   title: '',
@@ -162,6 +167,7 @@ const formData = reactive<{
   location: '',
   scheduled_date: null,
   type: 'initial' as GatheringType,
+  voting_mode: 'by_weight',
   qualification_criteria: {
     unit_types: [],
     floors: [],
@@ -173,6 +179,11 @@ const typeOptions = computed(() => [
   { label: t('gatherings.type.initial'), value: 'initial' },
   { label: t('gatherings.type.repeated'), value: 'repeated' },
   { label: t('gatherings.type.remote'), value: 'remote' }
+])
+
+const votingModeOptions = computed(() => [
+  { label: t('gatherings.votingMode.byWeight'), value: 'by_weight' },
+  { label: t('gatherings.votingMode.byUnit'), value: 'by_unit' }
 ])
 
 const unitTypeOptions = computed(() => [
@@ -280,6 +291,7 @@ const handleSubmit = async () => {
       location: formData.location,
       gathering_date: new Date(formData.scheduled_date!).toISOString(),
       gathering_type: formData.type,
+      voting_mode: formData.voting_mode,
       qualification_unit_types: qualificationCriteria.unit_types || [],
       qualification_floors: qualificationCriteria.floors || [],
       qualification_entrances: qualificationCriteria.entrances || [],
@@ -313,6 +325,7 @@ watch(() => props.gathering, (newGathering) => {
       location: newGathering.location,
       scheduled_date: new Date(newGathering.scheduled_date).getTime(),
       type: newGathering.type,
+      voting_mode: newGathering.voting_mode || 'by_weight',
       qualification_criteria: {
         unit_types: newGathering.qualification_criteria?.unit_types || [],
         floors: newGathering.qualification_criteria?.floors || [],
