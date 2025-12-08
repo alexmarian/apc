@@ -19,7 +19,7 @@
                 <p>{{ matter.description }}</p>
               </template>
 
-              <NFormItem 
+              <NFormItem
                 :label="$t('gatherings.voting.choice')"
                 :path="`votes.${matter.id}`"
               >
@@ -38,8 +38,8 @@
                 <div v-else-if="matter.voting_config.type === 'single_choice'" class="vote-options">
                   <NRadioGroup v-model:value="formData.votes[matter.id] as string">
                     <NSpace vertical>
-                      <NRadio 
-                        v-for="option in matter.voting_config.options" 
+                      <NRadio
+                        v-for="option in matter.voting_config.options"
                         :key="option.id"
                         :value="option.id"
                       >
@@ -55,8 +55,8 @@
                 <div v-else-if="matter.voting_config.type === 'multiple_choice'" class="vote-options">
                   <NCheckboxGroup v-model:value="formData.votes[matter.id] as string[]">
                     <NSpace vertical>
-                      <NCheckbox 
-                        v-for="option in matter.voting_config.options" 
+                      <NCheckbox
+                        v-for="option in matter.voting_config.options"
                         :key="option.id"
                         :value="option.id"
                       >
@@ -82,10 +82,10 @@
               <template #header>
                 <h4>{{ $t('gatherings.voting.offlineInfo') }}</h4>
               </template>
-              
+
               <NFormItem :label="$t('gatherings.voting.ballotNumber')" path="ballot_number">
-                <NInput 
-                  v-model:value="formData.ballot_number" 
+                <NInput
+                  v-model:value="formData.ballot_number"
                   :placeholder="$t('gatherings.voting.ballotNumberPlaceholder')"
                 />
               </NFormItem>
@@ -117,9 +117,9 @@
             <NButton @click="handleCancel">
               {{ $t('common.cancel') }}
             </NButton>
-            <NButton 
-              type="primary" 
-              @click="handleSubmit" 
+            <NButton
+              type="primary"
+              @click="handleSubmit"
               :loading="submitting"
               :disabled="!canSubmit"
             >
@@ -154,9 +154,9 @@ import {
   type FormRules
 } from 'naive-ui'
 import { votingMatterApi, votingApi } from '@/services/api'
-import type { 
-  Gathering, 
-  VotingMatter, 
+import type {
+  Gathering,
+  VotingMatter,
   GatheringParticipant,
   Vote
 } from '@/types/api'
@@ -202,14 +202,14 @@ const totalWeight = computed(() => {
 })
 
 const canSubmit = computed(() => {
-  const allMattersAnswered = matters.value.every(matter => 
+  const allMattersAnswered = matters.value.every(matter =>
     formData.votes[matter.id] !== undefined
   )
-  
+
   if (props.isOfflineMode) {
     return allMattersAnswered && formData.ballot_number.trim() !== ''
   }
-  
+
   return allMattersAnswered
 })
 
@@ -224,30 +224,30 @@ const getMatterOptions = (matter: VotingMatter) => {
     label: option.text,
     value: option.id
   })) || []
-  
+
   if (matter.voting_config.allow_abstention) {
     options.push({
       label: t('gatherings.voting.abstain'),
       value: 'abstain'
     })
   }
-  
+
   return options
 }
 
 const loadMatters = async () => {
   loading.value = true
   error.value = null
-  
+
   try {
     const response = await votingMatterApi.getVotingMatters(props.associationId, props.gathering.id)
     matters.value = response.data.sort((a, b) => a.order_index - b.order_index)
-    
+
     // Initialize form data
     matters.value.forEach(matter => {
       formData.votes[matter.id] = matter.voting_config.type === 'multiple_choice' ? [] : undefined
     })
-    
+
   } catch (err: unknown) {
     error.value = (err as Error).message || t('common.error')
   } finally {
@@ -270,12 +270,12 @@ const handleCancel = () => {
 
 const handleSubmit = async () => {
   if (!formRef.value) return
-  
+
   try {
     await formRef.value.validate()
     submitting.value = true
     error.value = null
-    
+
     const votes: Vote[] = matters.value
       .filter(matter => formData.votes[matter.id] !== undefined)
       .map(matter => ({
@@ -283,7 +283,7 @@ const handleSubmit = async () => {
         choice: formData.votes[matter.id]!,
         weight: totalWeight.value
       }))
-    
+
     const ballotData = {
       votes,
       ...(props.isOfflineMode && {
@@ -293,11 +293,11 @@ const handleSubmit = async () => {
         is_offline: true
       })
     }
-    
-    await votingApi.submitBallot(props.associationId, props.gathering.id, props.participant.id, ballotData)
-    
+
+    await votingApi.submitBallot(props.associationId, props.gathering.id, { participantId: props.participant.id, ...ballotData })
+
     emit('saved')
-    
+
   } catch (err: unknown) {
     error.value = (err as Error).message || t('common.error')
   } finally {

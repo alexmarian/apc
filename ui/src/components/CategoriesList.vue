@@ -454,7 +454,7 @@ onMounted(() => {
           <NSelect
             v-model:value="typeFilter"
             :options="[
-              { label: t('categories.allTypes'), value: null },
+              { label: t('categories.allTypes'), value: undefined, type:'ignored' },
               ...uniqueTypes.map(type => ({ label: type, value: type }))
             ]"
             :placeholder="t('categories.filterByType')"
@@ -464,7 +464,7 @@ onMounted(() => {
           <NSelect
             v-model:value="familyFilter"
             :options="[
-              { label: t('categories.allFamilies'), value: null },
+              { label: t('categories.allFamilies'), value: undefined, type:'ignored' },
               ...uniqueFamilies.map(family => ({ label: family, value: family }))
             ]"
             :placeholder="t('categories.filterByFamily')"

@@ -32,9 +32,9 @@
         <div v-if="matters.length === 0" class="no-matters">
           <NEmpty :description="$t('gatherings.matters.noMatters')">
             <template #extra>
-              <NButton 
-                v-if="canEdit" 
-                type="primary" 
+              <NButton
+                v-if="canEdit"
+                type="primary"
                 @click="showCreateModal = true"
               >
                 {{ $t('gatherings.matters.create') }}
@@ -72,17 +72,17 @@
         <template #header>
           <h3>{{ $t('gatherings.matters.deleteConfirm') }}</h3>
         </template>
-        
+
         <p>{{ $t('gatherings.matters.deleteWarning') }}</p>
         <p v-if="selectedMatter"><strong>{{ selectedMatter.title }}</strong></p>
-        
+
         <div class="modal-actions">
           <NSpace justify="end">
             <NButton @click="showDeleteModal = false">
               {{ $t('common.cancel') }}
             </NButton>
-            <NButton 
-              type="error" 
+            <NButton
+              type="error"
               @click="handleDeleteMatter"
               :loading="deleting"
             >
@@ -115,6 +115,7 @@ import { ArrowUpOutline, ArrowDownOutline } from '@vicons/ionicons5'
 import { votingMatterApi, gatheringApi } from '@/services/api'
 import { useMessage } from 'naive-ui'
 import type { Gathering, VotingMatter, VotingMatterType } from '@/types/api'
+import { GatheringStatus } from '@/types/api'
 import VotingMatterForm from '@/components/VotingMatterForm.vue'
 
 interface Props {
@@ -340,7 +341,7 @@ const columns: DataTableColumns<VotingMatter> = [
 const loadMatters = async () => {
   loading.value = true
   error.value = null
-  
+
   try {
     const response = await votingMatterApi.getVotingMatters(props.associationId, props.gathering.id)
     matters.value = response.data.sort((a, b) => a.order_index - b.order_index)
@@ -363,16 +364,16 @@ const handleDeleteConfirm = (matter: VotingMatter) => {
 
 const handleDeleteMatter = async () => {
   if (!selectedMatter.value) return
-  
+
   deleting.value = true
-  
+
   try {
     await votingMatterApi.deleteVotingMatter(
-      props.associationId, 
-      props.gathering.id, 
+      props.associationId,
+      props.gathering.id,
       selectedMatter.value.id
     )
-    
+
     showDeleteModal.value = false
     selectedMatter.value = undefined
     await loadMatters()
@@ -404,7 +405,7 @@ const handleCloseVoting = async () => {
     await gatheringApi.updateGatheringStatus(
       props.associationId,
       props.gathering.id,
-      { status: 'closed' }
+      { status: GatheringStatus.Closed }
     )
 
     message.success(t('gatherings.voting.closed', 'Voting has been closed'))

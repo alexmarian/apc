@@ -433,7 +433,7 @@ const loadEligibleVoters = async () => {
     eligibleVoters.value = response.data || []
   } catch (err: any) {
     error.value = err.response?.data?.error || err.message || t('gatherings.voting.loadError')
-    message.error(error.value)
+    message.error(error.value ?? 'An error occurred')
   } finally {
     loading.value = false
   }
@@ -454,7 +454,7 @@ const loadVotingMatters = async () => {
     })
   } catch (err: any) {
     error.value = err.response?.data?.error || err.message || t('gatherings.matters.loadError')
-    message.error(error.value)
+    message.error(error.value ?? 'An error occurred')
   }
 }
 
@@ -550,7 +550,7 @@ const submitBallot = async () => {
     resetWizard()
   } catch (err: any) {
     error.value = err.response?.data?.error || err.message || t('gatherings.voting.submitError')
-    message.error(error.value)
+    message.error(error.value ?? 'An error occurred')
   } finally {
     submitting.value = false
   }

@@ -36,7 +36,7 @@
                   <p>{{ matter.description }}</p>
                 </template>
 
-                <NFormItem 
+                <NFormItem
                   :label="$t('gatherings.voting.choice')"
                   :path="`votes.${matter.id}`"
                 >
@@ -52,11 +52,12 @@
                     </NRadioGroup>
                   </div>
 
-                  <div v-else-if="matter.voting_config.type === 'single_choice'" class="vote-options">
+                  <div v-else-if="matter.voting_config.type === 'single_choice'"
+                       class="vote-options">
                     <NRadioGroup v-model:value="formData.votes[matter.id]">
                       <NSpace vertical>
-                        <NRadio 
-                          v-for="option in matter.voting_config.options" 
+                        <NRadio
+                          v-for="option in matter.voting_config.options"
                           :key="option.id"
                           :value="option.id"
                         >
@@ -69,11 +70,12 @@
                     </NRadioGroup>
                   </div>
 
-                  <div v-else-if="matter.voting_config.type === 'multiple_choice'" class="vote-options">
+                  <div v-else-if="matter.voting_config.type === 'multiple_choice'"
+                       class="vote-options">
                     <NCheckboxGroup v-model:value="formData.votes[matter.id]">
                       <NSpace vertical>
-                        <NCheckbox 
-                          v-for="option in matter.voting_config.options" 
+                        <NCheckbox
+                          v-for="option in matter.voting_config.options"
                           :key="option.id"
                           :value="option.id"
                         >
@@ -99,7 +101,7 @@
                 <template #header>
                   <h4>{{ $t('gatherings.voting.summary') }}</h4>
                 </template>
-                
+
                 <NDescriptions :column="1">
                   <NDescriptionsItem :label="$t('gatherings.participants.owner')">
                     {{ participant.owner_name }}
@@ -120,9 +122,9 @@
               <NButton @click="resetForm">
                 {{ $t('common.reset') }}
               </NButton>
-              <NButton 
-                type="primary" 
-                @click="handleSubmit" 
+              <NButton
+                type="primary"
+                @click="handleSubmit"
                 :loading="submitting"
                 :disabled="!canSubmit"
               >
@@ -158,9 +160,9 @@ import {
   type FormRules
 } from 'naive-ui'
 import { votingMatterApi, participantApi, votingApi } from '@/services/api'
-import type { 
-  Gathering, 
-  VotingMatter, 
+import type {
+  Gathering,
+  VotingMatter,
   GatheringParticipant,
   Vote
 } from '@/types/api'
@@ -192,7 +194,7 @@ const totalWeight = computed(() => {
 })
 
 const canSubmit = computed(() => {
-  return matters.value.every(matter => 
+  return matters.value.every(matter =>
     formData.votes[matter.id] !== undefined && formData.votes[matter.id] !== null
   )
 })
@@ -206,36 +208,36 @@ const getMatterOptions = (matter: VotingMatter) => {
     label: option.text,
     value: option.id
   })) || []
-  
+
   if (matter.voting_config.allow_abstention) {
     options.push({
       label: t('gatherings.voting.abstain'),
       value: 'abstain'
     })
   }
-  
+
   return options
 }
 
 const loadData = async () => {
   loading.value = true
   error.value = null
-  
+
   try {
     // Load matters
     const mattersResponse = await votingMatterApi.getVotingMatters(props.associationId, props.gathering.id)
     matters.value = mattersResponse.data.sort((a, b) => a.order_index - b.order_index)
-    
+
     // Load participants to find current user's participant record
     const participantsResponse = await participantApi.getParticipants(props.associationId, props.gathering.id)
     // In a real app, you would filter by current user
     participant.value = participantsResponse.data[0] || null
-    
+
     // Initialize form data
     matters.value.forEach(matter => {
       formData.votes[matter.id] = matter.voting_config.type === 'multiple_choice' ? [] : null
     })
-    
+
   } catch (err: any) {
     error.value = err.response?.data?.message || err.message || t('common.error')
   } finally {
@@ -251,25 +253,26 @@ const resetForm = () => {
 
 const handleSubmit = async () => {
   if (!formRef.value || !participant.value) return
-  
+
   try {
     submitting.value = true
     error.value = null
-    
+
     const votes: Vote[] = matters.value.map(matter => ({
       matter_id: matter.id,
       choice: formData.votes[matter.id],
       weight: totalWeight.value
     }))
-    
-    await votingApi.submitBallot(props.associationId, props.gathering.id, participant.value.id, {
+
+    await votingApi.submitBallot(props.associationId, props.gathering.id, {
+      participantId: participant.value.id,
       votes
     })
-    
+
     // Show success message
     error.value = null
     // In a real app, you might redirect or show a success modal
-    
+
   } catch (err: any) {
     error.value = err.response?.data?.message || err.message || t('common.error')
   } finally {
