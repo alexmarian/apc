@@ -172,6 +172,12 @@ onMounted(() => {
         {{ error }}
       </NAlert>
 
+      <!-- Live Preview -->
+      <NAlert v-if="formData.type && formData.family && formData.name" type="info" style="margin-bottom: 16px;">
+        <template #header>{{ t('categories.preview') }}</template>
+        {{ formData.type }} → {{ formData.family }} → {{ formData.name }}
+      </NAlert>
+
       <NForm
         ref="formRef"
         :model="formData"

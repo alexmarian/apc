@@ -28,7 +28,7 @@ const options = computed(() => {
   const categoryOptions = categories.value
   .filter(category => !category.is_deleted)
   .map(category => ({
-    label: `${t(`categories.types.${category.type}`)} - ${t(`categories.families.${category.family}`)} - ${t(`categories.names.${category.name}`)}`,
+    label: `${category.type} → ${category.family} → ${category.name}`,
     value: category.id
   }))
 

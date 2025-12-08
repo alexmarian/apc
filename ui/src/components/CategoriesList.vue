@@ -2,7 +2,7 @@
 import { ref, onMounted, h, watch, computed } from 'vue'
 import {
   NDataTable, NButton, NSpace, NTag, NEmpty, NSpin, NAlert, NInput,
-  NCheckbox, NCard, useMessage, useDialog
+  NCheckbox, NCard, NSelect, useMessage, useDialog
 } from 'naive-ui'
 import type { DataTableColumns, DataTableRowKey } from 'naive-ui'
 import { categoryApi } from '@/services/api'
@@ -35,19 +35,49 @@ const hasInitialized = ref(false)
 const searchQuery = ref('')
 const includeInactive = ref(false)
 const selectedRowKeys = ref<DataTableRowKey[]>([])
+const typeFilter = ref<string | null>(null)
+const familyFilter = ref<string | null>(null)
 
-// Filtered categories based on search
+// Get unique types for filter dropdown
+const uniqueTypes = computed(() => {
+  const types = [...new Set(categories.value.map(c => c.type))]
+  return types.sort()
+})
+
+// Get unique families for filter dropdown (filtered by selected type if applicable)
+const uniqueFamilies = computed(() => {
+  const cats = typeFilter.value
+    ? categories.value.filter(c => c.type === typeFilter.value)
+    : categories.value
+  const families = [...new Set(cats.map(c => c.family))]
+  return families.sort()
+})
+
+// Filtered categories based on search and filters
 const filteredCategories = computed(() => {
-  if (!searchQuery.value) {
-    return categories.value
+  let result = categories.value
+
+  // Apply type filter
+  if (typeFilter.value) {
+    result = result.filter(category => category.type === typeFilter.value)
   }
 
-  const query = searchQuery.value.toLowerCase()
-  return categories.value.filter(category =>
-    category.type.toLowerCase().includes(query) ||
-    category.family.toLowerCase().includes(query) ||
-    category.name.toLowerCase().includes(query)
-  )
+  // Apply family filter
+  if (familyFilter.value) {
+    result = result.filter(category => category.family === familyFilter.value)
+  }
+
+  // Apply search query
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(category =>
+      category.type.toLowerCase().includes(query) ||
+      category.family.toLowerCase().includes(query) ||
+      category.name.toLowerCase().includes(query)
+    )
+  }
+
+  return result
 })
 
 // Check if any selected categories are active or inactive
@@ -77,27 +107,42 @@ const columns = computed<DataTableColumns<Category>>(() => [
     sorter: (a, b) => a.id - b.id
   },
   {
+    title: t('categories.fullPath'),
+    key: 'fullPath',
+    sorter: (a, b) => {
+      const pathA = `${a.type} → ${a.family} → ${a.name}`
+      const pathB = `${b.type} → ${b.family} → ${b.name}`
+      return pathA.localeCompare(pathB)
+    },
+    render(row) {
+      return `${row.type} → ${row.family} → ${row.name}`
+    }
+  },
+  {
     title: t('categories.type'),
     key: 'type',
+    width: 150,
     sorter: 'default',
     render(row) {
-      return t(`categories.types.${row.type}`) || row.type
+      return row.type
     }
   },
   {
     title: t('categories.family'),
     key: 'family',
+    width: 150,
     sorter: 'default',
     render(row) {
-      return t(`categories.families.${row.family}`) || row.family
+      return row.family
     }
   },
   {
     title: t('categories.name'),
     key: 'name',
+    width: 150,
     sorter: 'default',
     render(row) {
-      return t(`categories.names.${row.name}`) || row.name
+      return row.name
     }
   },
   {
@@ -405,6 +450,27 @@ onMounted(() => {
             :placeholder="t('categories.searchPlaceholder')"
             clearable
             style="width: 300px;"
+          />
+          <NSelect
+            v-model:value="typeFilter"
+            :options="[
+              { label: t('categories.allTypes'), value: null },
+              ...uniqueTypes.map(type => ({ label: type, value: type }))
+            ]"
+            :placeholder="t('categories.filterByType')"
+            clearable
+            style="width: 200px;"
+          />
+          <NSelect
+            v-model:value="familyFilter"
+            :options="[
+              { label: t('categories.allFamilies'), value: null },
+              ...uniqueFamilies.map(family => ({ label: family, value: family }))
+            ]"
+            :placeholder="t('categories.filterByFamily')"
+            clearable
+            style="width: 200px;"
+            :disabled="!typeFilter && uniqueFamilies.length === 0"
           />
           <NCheckbox v-model:checked="includeInactive">
             {{ t('categories.includeInactive') }}
