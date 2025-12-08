@@ -125,12 +125,24 @@ func main() {
 	// Categories
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/categories", handlers.AssociationIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleGetActiveCategories(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/categories/all", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetAllCategories(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/categories/{%s}", handlers.AssociationIdPathValue, handlers.CategoryIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleGetCategory(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/categories/{%s}/usage", handlers.AssociationIdPathValue, handlers.CategoryIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetCategoryUsage(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/categories", handlers.AssociationIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleCreateCategory(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/categories/{%s}", handlers.AssociationIdPathValue, handlers.CategoryIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleUpdateCategory(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/categories/{%s}/deactivate", handlers.AssociationIdPathValue, handlers.CategoryIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleDeactivateCategory(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/categories/{%s}/reactivate", handlers.AssociationIdPathValue, handlers.CategoryIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleReactivateCategory(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/categories/bulk-deactivate", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleBulkDeactivateCategories(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/categories/bulk-reactivate", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleBulkReactivateCategories(apiCfg)))
 
 	// Expenses
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/expenses", handlers.AssociationIdPathValue),

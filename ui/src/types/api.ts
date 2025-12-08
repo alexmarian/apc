@@ -180,6 +180,24 @@ export interface CategoryCreateRequest {
   name: string;
 }
 
+export interface CategoryUpdateRequest {
+  type: string;
+  family: string;
+  name: string;
+}
+
+export interface CategoryUsageResponse {
+  category_id: number;
+  usage_count: number;
+  last_used_at: string | null;
+  recent_expenses: Array<{
+    id: number;
+    description: string;
+    amount: number;
+    date: string;
+  }>;
+}
+
 // Auth Related Types
 export interface LoginRequest {
   login: string;
@@ -377,6 +395,7 @@ export interface Gathering {
   scheduled_date: string;
   status: GatheringStatus;
   type: GatheringType;
+  voting_mode: 'by_weight' | 'by_unit';
   qualification_criteria: QualificationCriteria;
   qualified_units: number;
   qualified_area: number;
@@ -414,6 +433,7 @@ export interface GatheringCreateRequest {
   location: string;
   gathering_date: string;
   gathering_type: string;
+  voting_mode?: 'by_weight' | 'by_unit';
   qualification_unit_types: string[];
   qualification_floors: number[];
   qualification_entrances: number[];
@@ -427,6 +447,7 @@ export interface GatheringUpdateRequest {
   location?: string;
   gathering_date?: string;
   gathering_type?: string;
+  voting_mode?: 'by_weight' | 'by_unit';
   qualification_unit_types?: string[];
   qualification_floors?: number[];
   qualification_entrances?: number[];

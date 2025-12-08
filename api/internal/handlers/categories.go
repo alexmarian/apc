@@ -174,3 +174,326 @@ func HandleDeactivateCategory(cfg *ApiConfig) func(http.ResponseWriter, *http.Re
 		})
 	}
 }
+
+// Get all categories (with optional inactive filter)
+func HandleGetAllCategories(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		includeInactive := req.URL.Query().Get("include_inactive") == "true"
+
+		dbCategories, err := cfg.Db.GetAllCategories(req.Context(), database.GetAllCategoriesParams{
+			AssociationID: int64(associationId),
+			Column2:       includeInactive,
+		})
+
+		if err != nil {
+			log.Printf("Error getting categories: %s", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get categories")
+			return
+		}
+
+		categories := make([]Category, len(dbCategories))
+		for i, category := range dbCategories {
+			categories[i] = Category{
+				ID:            category.ID,
+				Type:          category.Type,
+				Family:        category.Family,
+				Name:          category.Name,
+				IsDeleted:     category.IsDeleted,
+				AssociationID: category.AssociationID,
+				CreatedAt:     category.CreatedAt.Time,
+				UpdatedAt:     category.UpdatedAt.Time,
+			}
+		}
+
+		RespondWithJSON(rw, http.StatusOK, categories)
+	}
+}
+
+// Update a category
+func HandleUpdateCategory(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		categoryId, _ := strconv.Atoi(req.PathValue(CategoryIdPathValue))
+
+		// Parse request
+		var category struct {
+			Type   string `json:"type"`
+			Family string `json:"family"`
+			Name   string `json:"name"`
+		}
+
+		decoder := json.NewDecoder(req.Body)
+		if err := decoder.Decode(&category); err != nil {
+			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
+			return
+		}
+
+		// Validate required fields
+		if category.Type == "" || category.Family == "" || category.Name == "" {
+			RespondWithError(rw, http.StatusBadRequest, "Type, family, and name are required")
+			return
+		}
+
+		// Check for uniqueness
+		count, err := cfg.Db.CheckCategoryUniqueness(req.Context(), database.CheckCategoryUniquenessParams{
+			AssociationID: int64(associationId),
+			Type:          category.Type,
+			Family:        category.Family,
+			Name:          category.Name,
+			Column5:       int64(categoryId),
+			ID:            int64(categoryId),
+		})
+		if err != nil {
+			log.Printf("Error checking category uniqueness: %s", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to validate category")
+			return
+		}
+		if count > 0 {
+			RespondWithError(rw, http.StatusConflict, "A category with these values already exists")
+			return
+		}
+
+		// Update category
+		updatedCategory, err := cfg.Db.UpdateCategory(req.Context(), database.UpdateCategoryParams{
+			Type:          category.Type,
+			Family:        category.Family,
+			Name:          category.Name,
+			ID:            int64(categoryId),
+			AssociationID: int64(associationId),
+		})
+
+		if err != nil {
+			log.Printf("Error updating category: %s", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to update category")
+			return
+		}
+
+		RespondWithJSON(rw, http.StatusOK, Category{
+			ID:            updatedCategory.ID,
+			Type:          updatedCategory.Type,
+			Family:        updatedCategory.Family,
+			Name:          updatedCategory.Name,
+			IsDeleted:     updatedCategory.IsDeleted,
+			AssociationID: updatedCategory.AssociationID,
+			CreatedAt:     updatedCategory.CreatedAt.Time,
+			UpdatedAt:     updatedCategory.UpdatedAt.Time,
+		})
+	}
+}
+
+// Reactivate a category
+func HandleReactivateCategory(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		categoryId, _ := strconv.Atoi(req.PathValue(CategoryIdPathValue))
+
+		// Check if category exists and belongs to association
+		category, err := cfg.Db.GetCategory(req.Context(), int64(categoryId))
+		if err != nil {
+			if err == sql.ErrNoRows {
+				RespondWithError(rw, http.StatusNotFound, "Category not found")
+			} else {
+				log.Printf("Error retrieving category: %s", err)
+				RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve category")
+			}
+			return
+		}
+
+		if category.AssociationID != int64(associationId) {
+			RespondWithError(rw, http.StatusForbidden, "Category does not belong to this association")
+			return
+		}
+
+		// Check for uniqueness before reactivating
+		count, err := cfg.Db.CheckCategoryUniqueness(req.Context(), database.CheckCategoryUniquenessParams{
+			AssociationID: int64(associationId),
+			Type:          category.Type,
+			Family:        category.Family,
+			Name:          category.Name,
+			Column5:       0,
+			ID:            0,
+		})
+		if err != nil {
+			log.Printf("Error checking category uniqueness: %s", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to validate category")
+			return
+		}
+		if count > 0 {
+			RespondWithError(rw, http.StatusConflict, "Cannot reactivate: a category with these values already exists")
+			return
+		}
+
+		// Reactivate category
+		err = cfg.Db.ReactivateCategory(req.Context(), database.ReactivateCategoryParams{
+			ID:            int64(categoryId),
+			AssociationID: int64(associationId),
+		})
+
+		if err != nil {
+			log.Printf("Error reactivating category: %s", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to reactivate category")
+			return
+		}
+
+		RespondWithJSON(rw, http.StatusOK, map[string]string{
+			"message": "Category has been reactivated successfully",
+		})
+	}
+}
+
+// Get category usage statistics
+func HandleGetCategoryUsage(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		categoryId, _ := strconv.Atoi(req.PathValue(CategoryIdPathValue))
+
+		// Check if category exists and belongs to association
+		category, err := cfg.Db.GetCategory(req.Context(), int64(categoryId))
+		if err != nil {
+			if err == sql.ErrNoRows {
+				RespondWithError(rw, http.StatusNotFound, "Category not found")
+			} else {
+				log.Printf("Error retrieving category: %s", err)
+				RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve category")
+			}
+			return
+		}
+
+		if category.AssociationID != int64(associationId) {
+			RespondWithError(rw, http.StatusForbidden, "Category does not belong to this association")
+			return
+		}
+
+		// Get usage count
+		usageCount, err := cfg.Db.GetCategoryUsageCount(req.Context(), int64(categoryId))
+		if err != nil {
+			log.Printf("Error getting category usage count: %s", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get usage statistics")
+			return
+		}
+
+		// Get usage details
+		usageDetails, err := cfg.Db.GetCategoryUsageDetails(req.Context(), int64(categoryId))
+		if err != nil {
+			log.Printf("Error getting category usage details: %s", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to get usage details")
+			return
+		}
+
+		type ExpenseDetail struct {
+			ID          int64     `json:"id"`
+			Description string    `json:"description"`
+			Amount      float64   `json:"amount"`
+			Date        time.Time `json:"date"`
+			CreatedAt   time.Time `json:"created_at"`
+		}
+
+		expenses := make([]ExpenseDetail, len(usageDetails))
+		for i, expense := range usageDetails {
+			createdAt := time.Time{}
+			if expense.CreatedAt.Valid {
+				createdAt = expense.CreatedAt.Time
+			}
+			expenses[i] = ExpenseDetail{
+				ID:          expense.ID,
+				Description: expense.Description,
+				Amount:      expense.Amount,
+				Date:        expense.Date,
+				CreatedAt:   createdAt,
+			}
+		}
+
+		response := struct {
+			CategoryID     int64           `json:"category_id"`
+			UsageCount     int64           `json:"usage_count"`
+			RecentExpenses []ExpenseDetail `json:"recent_expenses"`
+		}{
+			CategoryID:     int64(categoryId),
+			UsageCount:     usageCount,
+			RecentExpenses: expenses,
+		}
+
+		RespondWithJSON(rw, http.StatusOK, response)
+	}
+}
+
+// Bulk deactivate categories
+func HandleBulkDeactivateCategories(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+
+		// Parse request
+		var requestBody struct {
+			IDs []int64 `json:"ids"`
+		}
+
+		decoder := json.NewDecoder(req.Body)
+		if err := decoder.Decode(&requestBody); err != nil {
+			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
+			return
+		}
+
+		if len(requestBody.IDs) == 0 {
+			RespondWithError(rw, http.StatusBadRequest, "No category IDs provided")
+			return
+		}
+
+		// Bulk deactivate
+		err := cfg.Db.BulkDeactivateCategories(req.Context(), database.BulkDeactivateCategoriesParams{
+			CategoryIds:   requestBody.IDs,
+			AssociationID: int64(associationId),
+		})
+
+		if err != nil {
+			log.Printf("Error bulk deactivating categories: %s", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to deactivate categories")
+			return
+		}
+
+		RespondWithJSON(rw, http.StatusOK, map[string]interface{}{
+			"message": "Categories deactivated successfully",
+			"count":   len(requestBody.IDs),
+		})
+	}
+}
+
+// Bulk reactivate categories
+func HandleBulkReactivateCategories(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+
+		// Parse request
+		var requestBody struct {
+			IDs []int64 `json:"ids"`
+		}
+
+		decoder := json.NewDecoder(req.Body)
+		if err := decoder.Decode(&requestBody); err != nil {
+			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
+			return
+		}
+
+		if len(requestBody.IDs) == 0 {
+			RespondWithError(rw, http.StatusBadRequest, "No category IDs provided")
+			return
+		}
+
+		// Bulk reactivate
+		err := cfg.Db.BulkReactivateCategories(req.Context(), database.BulkReactivateCategoriesParams{
+			CategoryIds:   requestBody.IDs,
+			AssociationID: int64(associationId),
+		})
+
+		if err != nil {
+			log.Printf("Error bulk reactivating categories: %s", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to reactivate categories")
+			return
+		}
+
+		RespondWithJSON(rw, http.StatusOK, map[string]interface{}{
+			"message": "Categories reactivated successfully",
+			"count":   len(requestBody.IDs),
+		})
+	}
+}

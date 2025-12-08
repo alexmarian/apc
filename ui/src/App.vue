@@ -67,6 +67,10 @@ const menuOptions = computed(() => [
         key: 'expenses-management'
       },
       {
+        label: () => h(RouterLink, { to: '/categories' }, { default: () => t('categories.title', 'Categories') }),
+        key: 'categories'
+      },
+      {
         label: () => h(RouterLink, { to: '/reports' }, { default: () => t('reports.title', 'Reports') }),
         key: 'expenses-reports'
       },

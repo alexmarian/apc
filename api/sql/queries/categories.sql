@@ -40,3 +40,63 @@ SELECT EXISTS(SELECT 1
 -- name: CreateCategory :one
 INSERT INTO categories (type, family, name, association_id)
 VALUES (?, ?, ?, ?) RETURNING *;
+
+-- name: GetAllCategories :many
+SELECT *
+FROM categories
+WHERE association_id = ?
+  AND (? = TRUE OR is_deleted = FALSE)
+ORDER BY is_deleted ASC, type, family, name;
+
+-- name: UpdateCategory :one
+UPDATE categories
+SET type = ?,
+    family = ?,
+    name = ?,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = ?
+  AND association_id = ?
+RETURNING *;
+
+-- name: ReactivateCategory :exec
+UPDATE categories
+SET is_deleted = FALSE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = ?
+  AND association_id = ?;
+
+-- name: GetCategoryUsageCount :one
+SELECT COUNT(*) as usage_count
+FROM expenses
+WHERE category_id = ?;
+
+-- name: GetCategoryUsageDetails :many
+SELECT id, description, amount, date, created_at
+FROM expenses
+WHERE category_id = ?
+ORDER BY date DESC
+LIMIT 10;
+
+-- name: BulkDeactivateCategories :exec
+UPDATE categories
+SET is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id IN (sqlc.slice('category_ids'))
+  AND association_id = ?;
+
+-- name: BulkReactivateCategories :exec
+UPDATE categories
+SET is_deleted = FALSE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id IN (sqlc.slice('category_ids'))
+  AND association_id = ?;
+
+-- name: CheckCategoryUniqueness :one
+SELECT COUNT(*) as count
+FROM categories
+WHERE association_id = ?
+  AND type = ?
+  AND family = ?
+  AND name = ?
+  AND is_deleted = FALSE
+  AND (? = 0 OR id != ?);

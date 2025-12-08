@@ -7,7 +7,102 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"strings"
+	"time"
 )
+
+const bulkDeactivateCategories = `-- name: BulkDeactivateCategories :exec
+UPDATE categories
+SET is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id IN (/*SLICE:category_ids*/?)
+  AND association_id = ?
+`
+
+type BulkDeactivateCategoriesParams struct {
+	CategoryIds   []int64
+	AssociationID int64
+}
+
+func (q *Queries) BulkDeactivateCategories(ctx context.Context, arg BulkDeactivateCategoriesParams) error {
+	query := bulkDeactivateCategories
+	var queryParams []interface{}
+	if len(arg.CategoryIds) > 0 {
+		for _, v := range arg.CategoryIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", strings.Repeat(",?", len(arg.CategoryIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AssociationID)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
+const bulkReactivateCategories = `-- name: BulkReactivateCategories :exec
+UPDATE categories
+SET is_deleted = FALSE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id IN (/*SLICE:category_ids*/?)
+  AND association_id = ?
+`
+
+type BulkReactivateCategoriesParams struct {
+	CategoryIds   []int64
+	AssociationID int64
+}
+
+func (q *Queries) BulkReactivateCategories(ctx context.Context, arg BulkReactivateCategoriesParams) error {
+	query := bulkReactivateCategories
+	var queryParams []interface{}
+	if len(arg.CategoryIds) > 0 {
+		for _, v := range arg.CategoryIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", strings.Repeat(",?", len(arg.CategoryIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.AssociationID)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
+const checkCategoryUniqueness = `-- name: CheckCategoryUniqueness :one
+SELECT COUNT(*) as count
+FROM categories
+WHERE association_id = ?
+  AND type = ?
+  AND family = ?
+  AND name = ?
+  AND is_deleted = FALSE
+  AND (? = 0 OR id != ?)
+`
+
+type CheckCategoryUniquenessParams struct {
+	AssociationID int64
+	Type          string
+	Family        string
+	Name          string
+	Column5       interface{}
+	ID            int64
+}
+
+func (q *Queries) CheckCategoryUniqueness(ctx context.Context, arg CheckCategoryUniquenessParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkCategoryUniqueness,
+		arg.AssociationID,
+		arg.Type,
+		arg.Family,
+		arg.Name,
+		arg.Column5,
+		arg.ID,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
 
 const createCategory = `-- name: CreateCategory :one
 INSERT INTO categories (type, family, name, association_id)
@@ -65,6 +160,51 @@ ORDER BY type, family, name
 // When retrieving categories, filter out deleted ones
 func (q *Queries) GetActiveCategories(ctx context.Context, associationID int64) ([]Category, error) {
 	rows, err := q.db.QueryContext(ctx, getActiveCategories, associationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Category
+	for rows.Next() {
+		var i Category
+		if err := rows.Scan(
+			&i.ID,
+			&i.Type,
+			&i.Family,
+			&i.Name,
+			&i.IsDeleted,
+			&i.AssociationID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllCategories = `-- name: GetAllCategories :many
+SELECT id, type, family, name, is_deleted, association_id, created_at, updated_at
+FROM categories
+WHERE association_id = ?
+  AND (? = TRUE OR is_deleted = FALSE)
+ORDER BY is_deleted ASC, type, family, name
+`
+
+type GetAllCategoriesParams struct {
+	AssociationID int64
+	Column2       interface{}
+}
+
+func (q *Queries) GetAllCategories(ctx context.Context, arg GetAllCategoriesParams) ([]Category, error) {
+	rows, err := q.db.QueryContext(ctx, getAllCategories, arg.AssociationID, arg.Column2)
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +321,64 @@ func (q *Queries) GetCategory(ctx context.Context, id int64) (Category, error) {
 	return i, err
 }
 
+const getCategoryUsageCount = `-- name: GetCategoryUsageCount :one
+SELECT COUNT(*) as usage_count
+FROM expenses
+WHERE category_id = ?
+`
+
+func (q *Queries) GetCategoryUsageCount(ctx context.Context, categoryID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getCategoryUsageCount, categoryID)
+	var usage_count int64
+	err := row.Scan(&usage_count)
+	return usage_count, err
+}
+
+const getCategoryUsageDetails = `-- name: GetCategoryUsageDetails :many
+SELECT id, description, amount, date, created_at
+FROM expenses
+WHERE category_id = ?
+ORDER BY date DESC
+LIMIT 10
+`
+
+type GetCategoryUsageDetailsRow struct {
+	ID          int64
+	Description string
+	Amount      float64
+	Date        time.Time
+	CreatedAt   sql.NullTime
+}
+
+func (q *Queries) GetCategoryUsageDetails(ctx context.Context, categoryID int64) ([]GetCategoryUsageDetailsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getCategoryUsageDetails, categoryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCategoryUsageDetailsRow
+	for rows.Next() {
+		var i GetCategoryUsageDetailsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Description,
+			&i.Amount,
+			&i.Date,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const isCategoryActive = `-- name: IsCategoryActive :one
 SELECT EXISTS(SELECT 1
               FROM categories
@@ -194,4 +392,63 @@ func (q *Queries) IsCategoryActive(ctx context.Context, id int64) (int64, error)
 	var is_active int64
 	err := row.Scan(&is_active)
 	return is_active, err
+}
+
+const reactivateCategory = `-- name: ReactivateCategory :exec
+UPDATE categories
+SET is_deleted = FALSE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = ?
+  AND association_id = ?
+`
+
+type ReactivateCategoryParams struct {
+	ID            int64
+	AssociationID int64
+}
+
+func (q *Queries) ReactivateCategory(ctx context.Context, arg ReactivateCategoryParams) error {
+	_, err := q.db.ExecContext(ctx, reactivateCategory, arg.ID, arg.AssociationID)
+	return err
+}
+
+const updateCategory = `-- name: UpdateCategory :one
+UPDATE categories
+SET type = ?,
+    family = ?,
+    name = ?,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = ?
+  AND association_id = ?
+RETURNING id, type, family, name, is_deleted, association_id, created_at, updated_at
+`
+
+type UpdateCategoryParams struct {
+	Type          string
+	Family        string
+	Name          string
+	ID            int64
+	AssociationID int64
+}
+
+func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
+	row := q.db.QueryRowContext(ctx, updateCategory,
+		arg.Type,
+		arg.Family,
+		arg.Name,
+		arg.ID,
+		arg.AssociationID,
+	)
+	var i Category
+	err := row.Scan(
+		&i.ID,
+		&i.Type,
+		&i.Family,
+		&i.Name,
+		&i.IsDeleted,
+		&i.AssociationID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

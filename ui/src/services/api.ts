@@ -9,6 +9,8 @@ import type {
   Building,
   Category,
   CategoryCreateRequest,
+  CategoryUpdateRequest,
+  CategoryUsageResponse,
   Expense,
   ExpenseCreateRequest,
   ExpenseDistributionResponse,
@@ -281,17 +283,51 @@ export const ownershipApi = {
 
 // Category APIs
 export const categoryApi = {
+  // Get active categories only (existing endpoint)
   getCategories: (associationId: number) =>
     api.get<Category[]>(`/associations/${associationId}/categories`),
 
+  // Get all categories with optional inactive filter
+  getAllCategories: (associationId: number, includeInactive: boolean = false) =>
+    api.get<Category[]>(`/associations/${associationId}/categories/all`, {
+      params: { include_inactive: includeInactive }
+    }),
+
+  // Get single category
   getCategory: (associationId: number, categoryId: number) =>
     api.get<Category>(`/associations/${associationId}/categories/${categoryId}`),
 
+  // Create new category
   createCategory: (associationId: number, categoryData: CategoryCreateRequest) =>
     api.post<Category>(`/associations/${associationId}/categories`, categoryData),
 
+  // Update existing category
+  updateCategory: (associationId: number, categoryId: number, categoryData: CategoryUpdateRequest) =>
+    api.put<Category>(`/associations/${associationId}/categories/${categoryId}`, categoryData),
+
+  // Deactivate category (soft delete)
   deactivateCategory: (associationId: number, categoryId: number) =>
-    api.put<ApiResponse<null>>(`/associations/${associationId}/categories/${categoryId}/deactivate`)
+    api.put<ApiResponse<null>>(`/associations/${associationId}/categories/${categoryId}/deactivate`),
+
+  // Reactivate category
+  reactivateCategory: (associationId: number, categoryId: number) =>
+    api.put<ApiResponse<null>>(`/associations/${associationId}/categories/${categoryId}/reactivate`),
+
+  // Get category usage statistics
+  getCategoryUsage: (associationId: number, categoryId: number) =>
+    api.get<CategoryUsageResponse>(`/associations/${associationId}/categories/${categoryId}/usage`),
+
+  // Bulk deactivate categories
+  bulkDeactivate: (associationId: number, categoryIds: number[]) =>
+    api.post<ApiResponse<null>>(`/associations/${associationId}/categories/bulk-deactivate`, {
+      ids: categoryIds
+    }),
+
+  // Bulk reactivate categories
+  bulkReactivate: (associationId: number, categoryIds: number[]) =>
+    api.post<ApiResponse<null>>(`/associations/${associationId}/categories/bulk-reactivate`, {
+      ids: categoryIds
+    })
 }
 
 // Expense APIs
