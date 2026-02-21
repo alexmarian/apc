@@ -121,6 +121,31 @@ func (s *TallyService) UpdateVoteTallies(gatheringID int64, participantID int) {
 			}
 		}
 
+		// Calculate percentages for each option
+		totalCount := 0
+		totalWeight := 0.0
+		for _, t := range tally {
+			totalCount += t.Count
+			totalWeight += t.Weight
+		}
+		for key, t := range tally {
+			countPct := 0.0
+			weightPct := 0.0
+			if totalCount > 0 {
+				countPct = float64(t.Count) / float64(totalCount) * 100
+			}
+			if totalWeight > 0 {
+				weightPct = t.Weight / totalWeight * 100
+			}
+			tally[key] = domain.TallyResult{
+				Count:           t.Count,
+				Weight:          t.Weight,
+				Area:            t.Area,
+				Percentage:      countPct,
+				WeightPercentage: weightPct,
+			}
+		}
+
 		// Store tally in database
 		tallyJSON, err := json.Marshal(tally)
 		if err != nil {

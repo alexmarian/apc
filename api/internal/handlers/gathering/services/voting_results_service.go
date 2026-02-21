@@ -125,7 +125,7 @@ func (s *VotingResultsService) ComputeAndStoreResults(ctx context.Context, gathe
 				VoteCount:        tally.Count,
 				WeightSum:        tally.Weight,
 				Percentage:       tally.Percentage,
-				WeightPercentage: tally.Percentage,
+				WeightPercentage: tally.WeightPercentage,
 			})
 		}
 
@@ -158,12 +158,18 @@ func (s *VotingResultsService) ComputeAndStoreResults(ctx context.Context, gathe
 			totalVotes += tally.Count
 		}
 
+		// ParticipationRate for a matter = weight voted on matter / qualified weight
+		matterParticipationRate := 0.0
+		if gathering.QualifiedUnitsTotalPart > 0 {
+			matterParticipationRate = (totalVoted + totalAbstained) / gathering.QualifiedUnitsTotalPart * 100
+		}
+
 		matterResult.Statistics = domain.MatterStatistics{
 			TotalParticipants: participantCount,
 			TotalVotes:        totalVotes,
 			TotalWeight:       totalVoted + totalAbstained,
 			Abstentions:       int(totalAbstained),
-			ParticipationRate: 0, // Will be calculated based on gathering stats
+			ParticipationRate: matterParticipationRate,
 		}
 
 		results = append(results, matterResult)

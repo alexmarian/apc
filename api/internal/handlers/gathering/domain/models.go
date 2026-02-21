@@ -187,10 +187,11 @@ type VoteResult struct {
 
 // TallyResult holds the tallied votes for an option
 type TallyResult struct {
-	Count      int     `json:"count"`
-	Weight     float64 `json:"weight"`
-	Area       float64 `json:"area"`
-	Percentage float64 `json:"percentage"`
+	Count            int     `json:"count"`
+	Weight           float64 `json:"weight"`
+	Area             float64 `json:"area"`
+	Percentage       float64 `json:"percentage"`        // count-based percentage among votes cast
+	WeightPercentage float64 `json:"weight_percentage"` // weight-based percentage among votes cast
 }
 
 // MatterStatistics holds statistics for a voting matter

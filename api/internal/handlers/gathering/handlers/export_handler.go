@@ -183,11 +183,29 @@ func (h *ExportHandler) HandleDownloadVotingResults() func(http.ResponseWriter, 
 
 			// Display results
 			md += "**Results:**\n\n"
-			md += "| Option | Votes | Weight | Area (m²) | Percentage |\n"
-			md += "|--------|-------|--------|-----------|------------|\n"
+			md += "| Option | Votes | % Votes | Weight | % Weight (of cast) | % Weight (of qualified) |\n"
+			md += "|--------|-------|---------|--------|--------------------|------------------------|\n"
+
+			totalTallyCount := 0
+			totalTallyWeight := 0.0
+			for _, r := range tally {
+				totalTallyCount += r.Count
+				totalTallyWeight += r.Weight
+			}
 
 			for key, result := range tally {
-				percentage := services.RoundTo3Decimals((result.Area / gathering.QualifiedUnitsTotalArea.Float64) * 100)
+				countPct := 0.0
+				weightPctOfCast := 0.0
+				weightPctOfQualified := 0.0
+				if totalTallyCount > 0 {
+					countPct = float64(result.Count) / float64(totalTallyCount) * 100
+				}
+				if totalTallyWeight > 0 {
+					weightPctOfCast = result.Weight / totalTallyWeight * 100
+				}
+				if gathering.QualifiedUnitsTotalPart.Float64 > 0 {
+					weightPctOfQualified = services.RoundTo3Decimals(result.Weight / gathering.QualifiedUnitsTotalPart.Float64 * 100)
+				}
 
 				displayKey := key
 				if votingConfig.Type == "multiple_choice" || votingConfig.Type == "single_choice" {
@@ -199,8 +217,8 @@ func (h *ExportHandler) HandleDownloadVotingResults() func(http.ResponseWriter, 
 					}
 				}
 
-				md += fmt.Sprintf("| %s | %d | %.4f | %.2f | %.2f%% |\n",
-					displayKey, result.Count, result.Weight, result.Area, percentage)
+				md += fmt.Sprintf("| %s | %d | %.2f%% | %.4f | %.2f%% | %.3f%% |\n",
+					displayKey, result.Count, countPct, result.Weight, weightPctOfCast, weightPctOfQualified)
 			}
 			md += "\n"
 

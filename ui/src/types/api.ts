@@ -596,6 +596,7 @@ export interface MatterResult {
   voting_config: VotingConfig;
   votes: VoteResult[];
   statistics: MatterStatistics;
+  quorum_info?: QuorumInfo;
   result: string;
   is_passed: boolean;
 }
@@ -625,10 +626,22 @@ export interface GatheringStatistics {
   participating_units: number;
   participating_area: number;
   participating_weight: number;
-  checked_in_participants: number;
-  total_participants: number;
-  participation_rate: number;
-  weight_participation_rate: number;
+  voted_units: number;
+  voted_weight: number;
+  voted_area: number;
+  participation_rate: number;        // participating / qualified (by count)
+  voting_completion_rate: number;    // voted / participating (by count)
+  voting_mode: string;
+}
+
+export interface QuorumInfo {
+  required: number;
+  achieved: number;
+  required_percentage: number;
+  achieved_percentage: number;
+  met: boolean;
+  voting_mode: string;
+  gathering_type: string;
 }
 
 // Qualified Units Types
