@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { NSelect, NSpin } from 'naive-ui'
+import type { SelectInst } from 'naive-ui'
 import { categoryApi } from '@/services/api'
 import type { Category } from '@/types/api'
 import { useI18n } from 'vue-i18n'
@@ -54,10 +55,6 @@ const fetchCategories = async () => {
     const response = await categoryApi.getCategories(props.associationId)
     categories.value = response.data
 
-    // If no category is selected and we have categories, select the first one
-    if (!props.includeAllOption && !props.modelValue && categories.value.length > 0 && !props.disabled) {
-      emit('update:modelValue', categories.value[0].id)
-    }
   } catch (err) {
     console.error('Error fetching categories:', err)
     error.value = 'Failed to load categories'
@@ -66,8 +63,42 @@ const fetchCategories = async () => {
   }
 }
 
+const normalize = (s: string) =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+const filterOption = (pattern: string, option: { label: string; value: number | null }) => {
+  return normalize(option.label).includes(normalize(pattern))
+}
+
+const selectRef = ref<SelectInst | null>(null)
+const currentFilter = ref('')
+
+const handleFocus = () => {
+  // When tabbing into the select, immediately move focus to the search input
+  // so the user can start typing without an extra click
+  selectRef.value?.focusInput()
+}
+
+const handleSearch = (value: string) => {
+  currentFilter.value = value
+}
+
+const handleTabKey = (e: KeyboardEvent) => {
+  if (e.key !== 'Tab') return
+  const query = currentFilter.value.trim()
+  if (!query) return
+  const matched = options.value.find(o =>
+    o.value !== null && normalize(o.label).includes(normalize(query))
+  )
+  if (matched) {
+    emit('update:modelValue', matched.value)
+    currentFilter.value = ''
+  }
+}
+
 // Handle selection change
 const handleChange = (value: number | null) => {
+  currentFilter.value = ''
   emit('update:modelValue', value)
 }
 watch(
@@ -83,12 +114,17 @@ watch(
   <div class="category-selector">
     <NSpin :show="loading">
       <NSelect
+        ref="selectRef"
         filterable
+        :filter="filterOption"
         :value="props.modelValue"
         :options="options"
         :placeholder="placeholder || t('common.select','Select a category')"
         @update:value="handleChange"
+        @search="handleSearch"
+        @focus="handleFocus"
         :disabled="loading || categories.length === 0 || props.disabled"
+        :input-props="{ onKeydown: handleTabKey }"
       />
     </NSpin>
     <p v-if="error" class="error">{{ error }}</p>

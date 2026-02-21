@@ -334,9 +334,6 @@ onMounted(() => {
     <NCard style="margin-top: 16px;">
       <div class="expenses-header">
         <h2>{{ t('expenses.list') }}</h2>
-        <NButton type="primary" @click="emit('create')">
-          {{ t('expenses.createNew') }}
-        </NButton>
       </div>
     </NCard>
 

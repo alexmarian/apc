@@ -182,7 +182,10 @@
     "current": "Current theme: {theme}"
   },
   "reports": {
-    "title": "Reports"
+    "title": "Reports",
+    "previousMonth": "Previous Month",
+    "currentMonth": "Current Month",
+    "currentYear": "Current Year"
   },
   "owners": {
     "title": "Owners",

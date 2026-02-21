@@ -4,6 +4,7 @@ import {
   NForm,
   NFormItem,
   NInput,
+  NAutoComplete,
   NButton,
   NSpace,
   NSpin,
@@ -12,7 +13,7 @@ import {
   NInputNumber,
   useMessage
 } from 'naive-ui'
-import type { FormInst, FormRules } from 'naive-ui'
+import type { FormInst, FormItemInst, FormRules } from 'naive-ui'
 import { expenseApi } from '@/services/api'
 import type { ExpenseCreateRequest, Expense } from '@/types/api'
 import CategorySelector from '@/components/CategorySelector.vue'
@@ -32,12 +33,14 @@ const emit = defineEmits<{
   cancelled: []
 }>()
 
-const formData = reactive<ExpenseCreateRequest>({
+type FormData = Omit<ExpenseCreateRequest, 'category_id'> & { category_id: number | null }
+
+const formData = reactive<FormData>({
   amount: 0.01,
   description: '',
   destination: '',
   date: new Date().toISOString().split('T')[0],
-  category_id: 0,
+  category_id: null,
   account_id: 0,
   document_ref: ''
 })
@@ -74,9 +77,13 @@ const rules: FormRules = {
   ],
   category_id: [
     {
-      type: 'number',
-      min: 1,
-      message: t('validation.required', { field: t('expenses.category') }),
+      required: true,
+      validator: (_rule, value) => {
+        if (!value || value < 1) {
+          return new Error(t('validation.required', { field: t('expenses.category') }))
+        }
+        return true
+      },
       trigger: ['blur', 'change']
     }
   ],
@@ -94,7 +101,25 @@ const loading = ref(false)
 const submitting = ref(false)
 const error = ref<string | null>(null)
 const formRef = ref<FormInst | null>(null)
+const categoryFormItemRef = ref<FormItemInst | null>(null)
 const originalExpense = ref<Expense | null>(null)
+
+const handleCategoryChange = (value: number | null) => {
+  formData.category_id = value
+  nextTick(() => categoryFormItemRef.value?.validate())
+}
+const allDestinations = ref<string[]>([])
+const destinationOptions = computed(() => {
+  const input = formData.destination?.trim().toLowerCase() ?? ''
+  if (!input) return allDestinations.value
+  return allDestinations.value.filter(d => d.toLowerCase().includes(input))
+})
+
+const handleDestinationKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Tab' && destinationOptions.value.length > 0) {
+    formData.destination = destinationOptions.value[0]
+  }
+}
 
 const isEditMode = computed(() => !!props.expenseId)
 
@@ -118,7 +143,7 @@ const resetForm = () => {
     description: '',
     destination: '',
     date: new Date().toISOString().split('T')[0],
-    category_id: 0,
+    category_id: null,
     account_id: 0,
     document_ref: ''
   })
@@ -141,7 +166,7 @@ const fetchExpenseDetails = async () => {
       description: expenseData.description || '',
       destination: expenseData.destination || '',
       date: expenseData.date ? formatDateForInput(expenseData.date) : new Date().toISOString().split('T')[0],
-      category_id: Number(expenseData.category_id) || 0,
+      category_id: Number(expenseData.category_id) || null,
       account_id: Number(expenseData.account_id) || 0,
       document_ref: expenseData.document_ref || ''
     })
@@ -182,7 +207,7 @@ const handleSubmit = async () => {
       description: formData.description.trim(),
       destination: formData.destination?.trim() || '',
       date: formData.date + 'T00:00:00Z',
-      category_id: Number(formData.category_id),
+      category_id: Number(formData.category_id!),
       account_id: Number(formData.account_id),
       document_ref: formData.document_ref?.trim() || ''
     }
@@ -213,7 +238,17 @@ const handleCancel = () => {
   emit('cancelled')
 }
 
+const fetchDestinations = async () => {
+  try {
+    const response = await expenseApi.getDestinations(props.associationId)
+    allDestinations.value = response.data
+  } catch {
+    // Non-critical, ignore errors
+  }
+}
+
 onMounted(() => {
+  fetchDestinations()
   if (isEditMode.value) {
     fetchExpenseDetails()
   } else {
@@ -224,10 +259,6 @@ onMounted(() => {
 
 <template>
   <div class="expense-form">
-    <h2 class="expense-form__title">
-      {{ isEditMode ? t('expenses.editExpense') : t('expenses.createNew') }}
-    </h2>
-
     <NSpin :show="loading">
       <NAlert
         v-if="error"
@@ -291,19 +322,23 @@ onMounted(() => {
         </NFormItem>
 
         <NFormItem :label="t('expenses.destination')" path="destination">
-          <NInput
+          <NAutoComplete
             v-model:value="formData.destination"
+            :options="destinationOptions"
             :placeholder="t('expenses.enterDestination')"
             clearable
+            :get-show="() => destinationOptions.length > 0"
+            :input-props="{ onKeydown: handleDestinationKeydown }"
           />
         </NFormItem>
 
-        <NFormItem :label="t('expenses.category')" path="category_id">
+        <NFormItem ref="categoryFormItemRef" :label="t('expenses.category')" path="category_id">
           <CategorySelector
-            v-model:modelValue="formData.category_id"
+            :model-value="formData.category_id"
             :association-id="props.associationId"
             :placeholder="t('expenses.selectCategory')"
             :disabled="submitting"
+            @update:model-value="handleCategoryChange"
           />
         </NFormItem>
 
@@ -322,24 +357,25 @@ onMounted(() => {
             v-model:value="formData.document_ref"
             :placeholder="t('expenses.enterDocumentRef')"
             clearable
+            @keydown.enter="handleSubmit"
           />
         </NFormItem>
 
         <div class="expense-form__actions">
           <NSpace justify="end">
             <NButton
-              @click="handleCancel"
-              :disabled="submitting"
-            >
-              {{ t('common.cancel') }}
-            </NButton>
-
-            <NButton
               type="primary"
               @click="handleSubmit"
               :loading="submitting"
             >
               {{ isEditMode ? t('common.update') : t('common.create') }}
+            </NButton>
+
+            <NButton
+              @click="handleCancel"
+              :disabled="submitting"
+            >
+              {{ t('common.cancel') }}
             </NButton>
           </NSpace>
         </div>
@@ -354,13 +390,6 @@ onMounted(() => {
   margin: 0 auto;
   padding: 1.5rem;
   border-radius: 8px;
-}
-
-.expense-form__title {
-  margin-bottom: 1.5rem;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text-color-1);
 }
 
 .expense-form__error {

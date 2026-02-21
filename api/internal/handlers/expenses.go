@@ -102,20 +102,33 @@ func HandleCreateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 			return
 		}
 
-		// Return created expense
+		// Re-fetch with joins so the response includes category and account names
+		fullExpense, err := cfg.Db.GetExpenseWithJoins(req.Context(), database.GetExpenseWithJoinsParams{
+			ID:            newExpense.ID,
+			AssociationID: int64(associationId),
+		})
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error fetching created expense with joins", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to fetch created expense")
+			return
+		}
+
 		RespondWithJSON(rw, http.StatusCreated, ExpenseItem{
-			ID:          newExpense.ID,
-			Amount:      newExpense.Amount,
-			Description: newExpense.Description,
-			Destination: newExpense.Destination,
-			DocumentRef: newExpense.DocumentRef.String,
-			Date:        newExpense.Date,
-			Month:       newExpense.Month,
-			Year:        newExpense.Year,
-			CategoryID:  newExpense.CategoryID,
-			AccountID:   newExpense.AccountID,
-			CreatedAt:   newExpense.CreatedAt.Time,
-			UpdatedAt:   newExpense.CreatedAt.Time,
+			ID:             fullExpense.ID,
+			Amount:         fullExpense.Amount,
+			Description:    fullExpense.Description,
+			Destination:    fullExpense.Destination,
+			DocumentRef:    fullExpense.DocumentRef.String,
+			Date:           fullExpense.Date,
+			Month:          fullExpense.Month,
+			Year:           fullExpense.Year,
+			CategoryID:     fullExpense.CategoryID,
+			CategoryType:   fullExpense.CategoryType,
+			CategoryFamily: fullExpense.CategoryFamily,
+			CategoryName:   fullExpense.CategoryName,
+			AccountID:      fullExpense.AccountID,
+			AccountNumber:  fullExpense.AccountNumber,
+			AccountName:    fullExpense.AccountName,
 		})
 	}
 }
@@ -323,6 +336,25 @@ func HandleGetExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 		})
 	}
 }
+func HandleGetExpenseDestinations(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+
+		destinations, err := cfg.Db.GetDistinctDestinations(req.Context(), int64(associationId))
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error fetching destinations", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to fetch destinations")
+			return
+		}
+
+		if destinations == nil {
+			destinations = []string{}
+		}
+
+		RespondWithJSON(rw, http.StatusOK, destinations)
+	}
+}
+
 func HandleGetExpenses(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))

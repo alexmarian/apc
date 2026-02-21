@@ -176,7 +176,10 @@
     "current": "Tema curentă: {theme}"
   },
   "reports": {
-    "title": "Rapoarte"
+    "title": "Rapoarte",
+    "previousMonth": "Luna Anterioară",
+    "currentMonth": "Luna Curentă",
+    "currentYear": "Anul Curent"
   },
   "owners": {
     "title": "Proprietari",

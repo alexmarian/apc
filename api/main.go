@@ -156,6 +156,9 @@ func main() {
 	mux.HandleFunc(fmt.Sprintf("DELETE /v1/api/associations/{%s}/expenses/{%s}", handlers.AssociationIdPathValue, handlers.ExpensesIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleDeleteExpense(apiCfg)))
 
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/expenses/destinations", handlers.AssociationIdPathValue),
+		apiCfg.MiddlewareAssociationResource(handlers.HandleGetExpenseDestinations(apiCfg)))
+
 	// Expense Reports
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/expenses/report", handlers.AssociationIdPathValue),
 		apiCfg.MiddlewareAssociationResource(handlers.HandleGetExpenseReport(apiCfg)))

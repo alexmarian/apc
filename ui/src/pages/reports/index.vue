@@ -107,6 +107,28 @@ const fetchExpenses = async () => {
   }
 }
 
+// Date preset helpers
+const selectPreviousMonth = () => {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const end = new Date(now.getFullYear(), now.getMonth(), 0)
+  dateRange.value = [start.getTime(), end.getTime()]
+}
+
+const selectCurrentMonth = () => {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth(), 1)
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  dateRange.value = [start.getTime(), end.getTime()]
+}
+
+const selectCurrentYear = () => {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), 0, 1)
+  const end = new Date(now.getFullYear(), 11, 31)
+  dateRange.value = [start.getTime(), end.getTime()]
+}
+
 // Reset filters
 const resetFilters = () => {
   dateRange.value = null
@@ -221,6 +243,9 @@ onMounted(() => {
             clearable
             style="width: 240px"
           />
+          <NButton size="small" @click="selectPreviousMonth">{{ t('reports.previousMonth', 'Previous Month') }}</NButton>
+          <NButton size="small" @click="selectCurrentMonth">{{ t('reports.currentMonth', 'Current Month') }}</NButton>
+          <NButton size="small" @click="selectCurrentYear">{{ t('reports.currentYear', 'Current Year') }}</NButton>
           <NText>{{ t('expenses.category', 'Category') }}:</NText>
           <CategorySelector
             v-model:modelValue="selectedCategory"

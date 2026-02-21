@@ -353,6 +353,9 @@ export const expenseApi = {
   deleteExpense: (associationId: number, expenseId: number) =>
     api.delete(`/associations/${associationId}/expenses/${expenseId}`),
 
+  getDestinations: (associationId: number) =>
+    api.get<string[]>(`/associations/${associationId}/expenses/destinations`),
+
   getExpenseDistribution: (associationId: number, params: {
     start_date?: string;
     end_date?: string;

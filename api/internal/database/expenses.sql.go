@@ -70,6 +70,38 @@ func (q *Queries) DeleteExpense(ctx context.Context, id int64) error {
 	return err
 }
 
+const getDistinctDestinations = `-- name: GetDistinctDestinations :many
+SELECT DISTINCT e.destination
+FROM expenses e
+         JOIN categories c ON e.category_id = c.id
+WHERE c.association_id = ?
+  AND e.destination != ''
+ORDER BY e.destination
+`
+
+func (q *Queries) GetDistinctDestinations(ctx context.Context, associationID int64) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getDistinctDestinations, associationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var destination string
+		if err := rows.Scan(&destination); err != nil {
+			return nil, err
+		}
+		items = append(items, destination)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getExpenseWithAssociation = `-- name: GetExpenseWithAssociation :one
 SELECT e.id, e.amount, e.description, e.destination, e.date, e.month, e.year, e.category_id, e.account_id, e.created_at, e.updated_at, e.document_ref
 FROM expenses e
@@ -99,6 +131,75 @@ func (q *Queries) GetExpenseWithAssociation(ctx context.Context, arg GetExpenseW
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DocumentRef,
+	)
+	return i, err
+}
+
+const getExpenseWithJoins = `-- name: GetExpenseWithJoins :one
+SELECT e.id,
+       e.amount,
+       e.description,
+       e.destination,
+       e.date,
+       e.month,
+       e.year,
+       e.document_ref,
+       e.category_id,
+       e.account_id,
+       c.type        as category_type,
+       c.family      as category_family,
+       c.name        as category_name,
+       a.number      as account_number,
+       a.description as account_name
+FROM expenses e
+         JOIN categories c ON e.category_id = c.id
+         JOIN accounts a ON e.account_id = a.id
+WHERE e.id = ?
+  AND c.association_id = ? LIMIT 1
+`
+
+type GetExpenseWithJoinsParams struct {
+	ID            int64
+	AssociationID int64
+}
+
+type GetExpenseWithJoinsRow struct {
+	ID             int64
+	Amount         float64
+	Description    string
+	Destination    string
+	Date           time.Time
+	Month          int64
+	Year           int64
+	DocumentRef    sql.NullString
+	CategoryID     int64
+	AccountID      int64
+	CategoryType   string
+	CategoryFamily string
+	CategoryName   string
+	AccountNumber  string
+	AccountName    string
+}
+
+func (q *Queries) GetExpenseWithJoins(ctx context.Context, arg GetExpenseWithJoinsParams) (GetExpenseWithJoinsRow, error) {
+	row := q.db.QueryRowContext(ctx, getExpenseWithJoins, arg.ID, arg.AssociationID)
+	var i GetExpenseWithJoinsRow
+	err := row.Scan(
+		&i.ID,
+		&i.Amount,
+		&i.Description,
+		&i.Destination,
+		&i.Date,
+		&i.Month,
+		&i.Year,
+		&i.DocumentRef,
+		&i.CategoryID,
+		&i.AccountID,
+		&i.CategoryType,
+		&i.CategoryFamily,
+		&i.CategoryName,
+		&i.AccountNumber,
+		&i.AccountName,
 	)
 	return i, err
 }
