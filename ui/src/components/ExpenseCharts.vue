@@ -55,7 +55,7 @@ const expensesByType = computed<ChartDataItem[]>(() => {
 
     if (!acc[type]) {
       acc[type] = {
-        name: t(`categories.types.${type}`),
+        name: t(`categories.types.${type}`, type),
         rawName: type, // Store original value for lookup
         value: 0,
         count: 0
@@ -92,7 +92,7 @@ const expensesByTypeAndFamily = computed<Record<string, Record<string, ChartData
 
     if (!typeAndFamily[type][family]) {
       typeAndFamily[type][family] = {
-        name: t(`categories.families.${family}`),
+        name: t(`categories.families.${family}`, family),
         rawName: family, // Store original value for lookup
         value: 0,
         count: 0
@@ -145,7 +145,7 @@ const getCategoriesForTypeAndFamily = (type: string, family: string): ChartDataI
 
     if (!acc[category]) {
       acc[category] = {
-        name: t(`categories.names.${category}`),
+        name: t(`categories.names.${category}`, category),
         rawName: category,
         value: 0,
         count: 0

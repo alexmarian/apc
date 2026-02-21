@@ -139,7 +139,7 @@ const distributionColumns = computed<DataTableColumns<any>>(() => {
 
     for (const category of categoryKeys) {
       columns.push({
-        title: t(`categories.names.${category}`),
+        title: t(`categories.names.${category}`, category),
         key: category,
         render: (row) => formatCurrency(row.expenses_share[category] || 0)
       })
@@ -224,12 +224,12 @@ const updateCategoryOptions = (): void => {
   }))
 
   categoryTypeOptions.value = Array.from(types).map((type) => ({
-    label: t(`categories.types.${type}`),
+    label: t(`categories.types.${type}`, type),
     value: type
   }))
 
   categoryFamilyOptions.value = Array.from(families).map((family) => ({
-    label: t(`categories.families.${family}`),
+    label: t(`categories.families.${family}`, family),
     value: family
   }))
 }
@@ -270,9 +270,9 @@ const exportToCSV = (): void => {
       ? Object.keys(distributionData.value.category_totals)
       : []
 
-    // Add translated category headers
+    // Add category headers
     categoryKeys.forEach(categoryKey => {
-      headers.push(t(`categories.names.${categoryKey}`))
+      headers.push(t(`categories.names.${categoryKey}`, categoryKey))
     })
 
     allRows.push(headers)
@@ -308,11 +308,11 @@ const exportToCSV = (): void => {
     if (distributionData.value.category_totals) {
       allRows.push([])
       allRows.push([t('distribution.category_totals')])
-      allRows.push([t('categories.names.title'), t('charts.amount')])
+      allRows.push([t('categories.name'), t('charts.amount')])
 
       Object.entries(distributionData.value.category_totals).forEach(([categoryKey, data]: [string, any]) => {
         allRows.push([
-          t(`categories.names.${categoryKey}`),
+          t(`categories.names.${categoryKey}`, categoryKey),
           data.amount.toFixed(2)
         ])
       })
@@ -453,18 +453,18 @@ onMounted(() => {
             <NSelect
               v-model:value="unitType"
               :options="unitTypeOptions"
-              placeholder="All Types"
+              :placeholder="t('units.allTypes')"
               clearable
               style="width: 100%"
             />
           </NFlex>
 
           <NFlex vertical>
-            <NText>{{ t('categories.types.title') }}</NText>
+            <NText>{{ t('categories.type') }}</NText>
             <NSelect
               v-model:value="selectedCategoryType"
               :options="categoryTypeOptions"
-              placeholder="All Types"
+              :placeholder="t('categories.allTypes')"
               clearable
               :loading="metadataLoading"
               style="width: 100%"
@@ -472,11 +472,11 @@ onMounted(() => {
           </NFlex>
 
           <NFlex vertical>
-            <NText>{{ t('categories.families.title') }}: </NText>
+            <NText>{{ t('categories.family') }}</NText>
             <NSelect
               v-model:value="selectedCategoryFamily"
               :options="categoryFamilyOptions"
-              placeholder="All Families"
+              :placeholder="t('categories.allFamilies')"
               clearable
               :loading="metadataLoading"
               style="width: 100%"
@@ -484,11 +484,11 @@ onMounted(() => {
           </NFlex>
 
           <NFlex vertical>
-            <NText>{{ t('categories.names.title') }}</NText>
+            <NText>{{ t('categories.name') }}</NText>
             <CategorySelector
               v-model:modelValue="selectedCategoryId"
               :association-id="associationId || 0"
-              placeholder="All Categories"
+              :placeholder="t('categories.allCategories')"
               :options="categoryOptions"
               include-all-option
               :disabled="!associationId"
@@ -564,7 +564,7 @@ onMounted(() => {
                 :key="name"
                 class="category-total-item"
               >
-                <div class="summary-label">{{ t(`categories.names.${name}`) }}</div>
+                <div class="summary-label">{{ t(`categories.names.${name}`, name) }}</div>
                 <div class="summary-value">{{ formatCurrency(category.amount) }}</div>
               </div>
             </div>

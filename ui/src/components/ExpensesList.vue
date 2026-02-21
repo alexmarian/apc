@@ -174,21 +174,21 @@ const columns = ref<DataTableColumns<Expense>>([
     key: 'destination'
   },
   {
-    title: t('categories.types.title', 'Type'),
+    title: t('categories.type'),
     key: 'category_type',
     render(row: Expense) {
       return row.category_type ? t(`categories.types.${row.category_type}`, row.category_type) : '-'
     }
   },
   {
-    title: t('categories.families.title', 'Family'),
+    title: t('categories.family'),
     key: 'category_family',
     render(row: Expense) {
       return row.category_family ? t(`categories.families.${row.category_family}`, row.category_family) : '-'
     }
   },
   {
-    title: t('categories.names.title', 'Category'),
+    title: t('categories.name'),
     key: 'category_name',
     render(row: Expense) {
       return row.category_name ? t(`categories.names.${row.category_name}`, row.category_name) : '-'

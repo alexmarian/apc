@@ -160,7 +160,11 @@
     "month": "Month",
     "noChartData": "No chart data available. Please go back to the main application and open charts view again.",
     "documentRef": "Document Reference",
-    "enterDocumentRef": "Enter document reference"
+    "enterDocumentRef": "Enter document reference",
+    "enterDescription": "Enter expense description",
+    "enterDestination": "Enter destination",
+    "selectCategory": "Select a category",
+    "selectAccount": "Select an account"
   },
   "validation": {
     "required": "{field} is required",
@@ -437,13 +441,11 @@
       "maxLength": "Maximum {max} characters allowed"
     },
     "types": {
-      "title": "Type",
       "Budgeted": "Budgeted",
       "Maintenance": "Maintenance",
       "Improvement": "Improvement"
     },
     "families": {
-      "title": "Family",
       "personnel": "Personnel Expenses",
       "security": "Security and Safety",
       "building_repairs": "Building Repairs",
@@ -458,7 +460,6 @@
       "miscellaneous": "Miscellaneous"
     },
     "names": {
-      "title": "Category",
       "janitor_salary": "Janitor Salary",
       "cleaner_salary": "Cleaner Salary",
       "building_admin_salary": "Building Administrator Salary",

@@ -110,12 +110,12 @@ const columns = computed<DataTableColumns<Category>>(() => [
     title: t('categories.fullPath'),
     key: 'fullPath',
     sorter: (a, b) => {
-      const pathA = `${a.type} → ${a.family} → ${a.name}`
-      const pathB = `${b.type} → ${b.family} → ${b.name}`
+      const pathA = `${t(`categories.types.${a.type}`, a.type)} → ${t(`categories.families.${a.family}`, a.family)} → ${t(`categories.names.${a.name}`, a.name)}`
+      const pathB = `${t(`categories.types.${b.type}`, b.type)} → ${t(`categories.families.${b.family}`, b.family)} → ${t(`categories.names.${b.name}`, b.name)}`
       return pathA.localeCompare(pathB)
     },
     render(row) {
-      return `${row.type} → ${row.family} → ${row.name}`
+      return `${t(`categories.types.${row.type}`, row.type)} → ${t(`categories.families.${row.family}`, row.family)} → ${t(`categories.names.${row.name}`, row.name)}`
     }
   },
   {
@@ -124,7 +124,7 @@ const columns = computed<DataTableColumns<Category>>(() => [
     width: 150,
     sorter: 'default',
     render(row) {
-      return row.type
+      return t(`categories.types.${row.type}`, row.type)
     }
   },
   {
@@ -133,7 +133,7 @@ const columns = computed<DataTableColumns<Category>>(() => [
     width: 150,
     sorter: 'default',
     render(row) {
-      return row.family
+      return t(`categories.families.${row.family}`, row.family)
     }
   },
   {
@@ -142,7 +142,7 @@ const columns = computed<DataTableColumns<Category>>(() => [
     width: 150,
     sorter: 'default',
     render(row) {
-      return row.name
+      return t(`categories.names.${row.name}`, row.name)
     }
   },
   {

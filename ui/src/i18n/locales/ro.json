@@ -154,7 +154,11 @@
     "month": "Lună",
     "noChartData": "Nu există date pentru grafice. Vă rugăm să vă întoarceți la aplicația principală și să deschideți din nou vizualizarea graficelor.",
     "documentRef": "Referință Document",
-    "enterDocumentRef": "Introduceți referința documentului"
+    "enterDocumentRef": "Introduceți referința documentului",
+    "enterDescription": "Introduceți descrierea cheltuielii",
+    "enterDestination": "Introduceți destinatarul",
+    "selectCategory": "Selectați o categorie",
+    "selectAccount": "Selectați un cont"
   },
   "validation": {
     "required": "{field} este obligatoriu",
@@ -403,7 +407,7 @@
     "noCategories": "Nu s-au găsit categorii",
     "searchPlaceholder": "Caută categorii...",
     "filterByStatus": "Filtrează după Status",
-    "includeInactive": "Include Inactive",
+    "includeInactive": "Includeți Inactive",
     "selectAssociation": "Vă rugăm selectați o asociație pentru a administra categoriile",
     "confirmDeactivate": "Sigur doriți să dezactivați această categorie?",
     "deactivateWarning": "Această categorie va fi ascunsă pentru cheltuielile noi, dar cheltuielile existente își vor păstra referința.",
@@ -431,13 +435,11 @@
       "maxLength": "Maxim {max} caractere permise"
     },
     "types": {
-      "title": "Tip",
       "Budgeted": "Bugetat",
       "Maintenance": "Întreținere",
       "Improvement": "Îmbunătățire"
     },
     "families": {
-      "title": "Familie",
       "personnel": "Cheltuieli de Personal",
       "security": "Securitate și Siguranță",
       "building_repairs": "Reparații Clădire",
@@ -452,7 +454,6 @@
       "miscellaneous": "Diverse"
     },
     "names": {
-      "title": "Categorie",
       "janitor_salary": "Salariu Maturator",
       "cleaner_salary": "Salariu Diridicatoare",
       "building_admin_salary": "Salariu Administrator Bloc",

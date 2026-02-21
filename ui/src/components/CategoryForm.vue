@@ -1,96 +1,118 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
-import { NForm, NFormItem, NInput, NButton, NSpace, NSpin, NAlert, useMessage } from 'naive-ui'
+import { NForm, NFormItem, NButton, NSpace, NSpin, NAlert, NAutoComplete, useMessage } from 'naive-ui'
 import { categoryApi } from '@/services/api'
 import type { Category, CategoryCreateRequest, CategoryUpdateRequest } from '@/types/api'
 import type { FormRules } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 
-// Props
 const props = defineProps<{
   associationId: number
-  categoryId?: number // If provided, we're editing an existing category
+  categoryId?: number
 }>()
 
-// Emits
 const emit = defineEmits<{
-  (e: 'saved', category: Category): void  // Pass the updated/created category data
+  (e: 'saved', category: Category): void
   (e: 'cancelled'): void
 }>()
 
-// I18n
 const { t } = useI18n()
 const message = useMessage()
 
-// Form data
 const formData = reactive<CategoryCreateRequest>({
   type: '',
   family: '',
   name: ''
 })
 
-// Form validation rules
 const rules: FormRules = {
   type: [
-    {
-      required: true,
-      message: t('categories.validation.typeRequired'),
-      trigger: 'blur'
-    },
-    {
-      max: 100,
-      message: t('categories.validation.maxLength', { max: 100 }),
-      trigger: 'blur'
-    }
+    { required: true, message: t('categories.validation.typeRequired'), trigger: 'blur' },
+    { max: 100, message: t('categories.validation.maxLength', { max: 100 }), trigger: 'blur' }
   ],
   family: [
-    {
-      required: true,
-      message: t('categories.validation.familyRequired'),
-      trigger: 'blur'
-    },
-    {
-      max: 100,
-      message: t('categories.validation.maxLength', { max: 100 }),
-      trigger: 'blur'
-    }
+    { required: true, message: t('categories.validation.familyRequired'), trigger: 'blur' },
+    { max: 100, message: t('categories.validation.maxLength', { max: 100 }), trigger: 'blur' }
   ],
   name: [
-    {
-      required: true,
-      message: t('categories.validation.nameRequired'),
-      trigger: 'blur'
-    },
-    {
-      max: 100,
-      message: t('categories.validation.maxLength', { max: 100 }),
-      trigger: 'blur'
-    }
+    { required: true, message: t('categories.validation.nameRequired'), trigger: 'blur' },
+    { max: 100, message: t('categories.validation.maxLength', { max: 100 }), trigger: 'blur' }
   ]
 }
 
-// State
-const loading = ref<boolean>(false)
-const submitting = ref<boolean>(false)
+const loading = ref(false)
+const submitting = ref(false)
 const error = ref<string | null>(null)
 const formRef = ref(null)
 const originalCategory = ref<Category | null>(null)
+const allCategories = ref<Category[]>([])
 
 const isEditMode = computed(() => !!props.categoryId)
 
-// Fetch category details if editing
+// Build unique string list preserving insertion order
+function uniqueStrings(values: string[]): string[] {
+  const seen = new Set<string>()
+  return values.filter(v => v && !seen.has(v) && seen.add(v))
+}
+
+// Suggestions derived from existing DB categories, with localized labels
+const typeOptions = computed(() =>
+  uniqueStrings(allCategories.value.map(c => c.type)).map(v => ({
+    value: v,
+    label: t(`categories.types.${v}`, v)
+  }))
+)
+
+const familyOptions = computed(() => {
+  const source = formData.type
+    ? allCategories.value.filter(c => c.type === formData.type)
+    : allCategories.value
+  return uniqueStrings(source.map(c => c.family)).map(v => ({
+    value: v,
+    label: t(`categories.families.${v}`, v)
+  }))
+})
+
+const nameOptions = computed(() => {
+  let source = allCategories.value
+  if (formData.type) source = source.filter(c => c.type === formData.type)
+  if (formData.family) source = source.filter(c => c.family === formData.family)
+  return uniqueStrings(source.map(c => c.name)).map(v => ({
+    value: v,
+    label: t(`categories.names.${v}`, v)
+  }))
+})
+
+// Filter against localized label so user can type in their current language
+function filterOptions(input: string, options: { value: string; label: string }[]) {
+  if (!input) return options
+  const lower = input.toLowerCase()
+  return options.filter(o =>
+    o.label.toLowerCase().includes(lower) || o.value.toLowerCase().includes(lower)
+  )
+}
+
+const filteredTypeOptions = computed(() => filterOptions(formData.type, typeOptions.value))
+const filteredFamilyOptions = computed(() => filterOptions(formData.family, familyOptions.value))
+const filteredNameOptions = computed(() => filterOptions(formData.name, nameOptions.value))
+
+const fetchAllCategories = async () => {
+  try {
+    const response = await categoryApi.getAllCategories(props.associationId, true)
+    allCategories.value = response.data
+  } catch (err) {
+    console.warn('Could not fetch categories for suggestions:', err)
+  }
+}
+
 const fetchCategoryDetails = async () => {
   if (!props.categoryId) return
-
   try {
     loading.value = true
     error.value = null
-
     const response = await categoryApi.getCategory(props.associationId, props.categoryId)
     const categoryData = response.data
     originalCategory.value = categoryData
-
-    // Update form data
     formData.type = categoryData.type
     formData.family = categoryData.family
     formData.name = categoryData.name
@@ -102,22 +124,18 @@ const fetchCategoryDetails = async () => {
   }
 }
 
-// Submit form
 const submitForm = async (e: MouseEvent) => {
   e.preventDefault()
-
   if (!formRef.value) return
 
   try {
-    // @ts-ignore - Naive UI types issue with form ref
+    // @ts-ignore
     await formRef.value.validate()
-
     submitting.value = true
     error.value = null
 
     let response: { data: Category }
 
-    // Determine if creating or updating
     if (isEditMode.value && props.categoryId) {
       const updateData: CategoryUpdateRequest = {
         type: formData.type,
@@ -131,14 +149,12 @@ const submitForm = async (e: MouseEvent) => {
       message.success(t('categories.categoryCreated'))
     }
 
-    // Emit the updated/created category data so parent can update the list without reloading
     emit('saved', response.data)
   } catch (err) {
     let errorMessage: string
     if (err instanceof Error) {
       errorMessage = err.message
     } else if (typeof err === 'object' && err !== null && 'response' in err) {
-      // Axios error
       const axiosError = err as any
       errorMessage = axiosError.response?.data?.msg || t('common.error')
     } else {
@@ -152,13 +168,10 @@ const submitForm = async (e: MouseEvent) => {
   }
 }
 
-// Cancel form
-const cancelForm = () => {
-  emit('cancelled')
-}
+const cancelForm = () => emit('cancelled')
 
-// On component mount
-onMounted(() => {
+onMounted(async () => {
+  await fetchAllCategories()
   if (props.categoryId) {
     fetchCategoryDetails()
   }
@@ -175,7 +188,7 @@ onMounted(() => {
       <!-- Live Preview -->
       <NAlert v-if="formData.type && formData.family && formData.name" type="info" style="margin-bottom: 16px;">
         <template #header>{{ t('categories.preview') }}</template>
-        {{ formData.type }} → {{ formData.family }} → {{ formData.name }}
+        {{ t(`categories.types.${formData.type}`, formData.type) }} → {{ t(`categories.families.${formData.family}`, formData.family) }} → {{ t(`categories.names.${formData.name}`, formData.name) }}
       </NAlert>
 
       <NForm
@@ -186,56 +199,48 @@ onMounted(() => {
         label-width="120px"
         require-mark-placement="right-hanging"
       >
-        <!-- Readonly Category ID for edit mode -->
         <NFormItem v-if="isEditMode && originalCategory" label="Category ID">
-          <NInput
+          <NAutoComplete
             :value="originalCategory.id.toString()"
-            readonly
+            :options="[]"
+            :disabled="true"
             class="category-form__readonly-input"
           />
         </NFormItem>
 
         <NFormItem :label="t('categories.type')" path="type">
-          <NInput
+          <NAutoComplete
             v-model:value="formData.type"
+            :options="filteredTypeOptions"
             :placeholder="t('categories.typePlaceholder')"
-            maxlength="100"
-            show-count
+            clearable
           />
         </NFormItem>
 
         <NFormItem :label="t('categories.family')" path="family">
-          <NInput
+          <NAutoComplete
             v-model:value="formData.family"
+            :options="filteredFamilyOptions"
             :placeholder="t('categories.familyPlaceholder')"
-            maxlength="100"
-            show-count
+            clearable
           />
         </NFormItem>
 
         <NFormItem :label="t('categories.name')" path="name">
-          <NInput
+          <NAutoComplete
             v-model:value="formData.name"
+            :options="filteredNameOptions"
             :placeholder="t('categories.namePlaceholder')"
-            maxlength="100"
-            show-count
+            clearable
           />
         </NFormItem>
 
         <div style="margin-top: 24px;">
           <NSpace justify="end">
-            <NButton
-              @click="cancelForm"
-              :disabled="submitting"
-            >
+            <NButton @click="cancelForm" :disabled="submitting">
               {{ t('common.cancel') }}
             </NButton>
-
-            <NButton
-              type="primary"
-              @click="submitForm"
-              :loading="submitting"
-            >
+            <NButton type="primary" @click="submitForm" :loading="submitting">
               {{ isEditMode ? t('common.update') : t('common.create') }}
             </NButton>
           </NSpace>

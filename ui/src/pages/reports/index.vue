@@ -291,7 +291,7 @@ onMounted(() => {
                     <table>
                       <thead>
                       <tr>
-                        <th>{{ t('categories.types.title', 'Type') }}</th>
+                        <th>{{ t('categories.type') }}</th>
                         <th>{{ t('charts.amount', 'Amount') }}</th>
                         <th>{{ t('charts.percentage', 'Percentage') }}</th>
                       </tr>
