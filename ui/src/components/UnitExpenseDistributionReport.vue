@@ -21,8 +21,6 @@ import {
 import type { DataTableColumns } from 'naive-ui'
 import { useRouter, useRoute } from 'vue-router'
 import { expenseApi, categoryApi } from '@/services/api'
-import AssociationSelector from '@/components/AssociationSelector.vue'
-import BuildingSelector from '@/components/BuildingSelector.vue'
 import CategorySelector from '@/components/CategorySelector.vue'
 import { formatCurrency } from '@/utils/formatters'
 import { arrayToCsv, downloadCsv } from '@/utils/csvUtils'
@@ -41,12 +39,8 @@ const props = defineProps<{
   buildingId: number | null;
 }>()
 
-// Emits
-const emit = defineEmits<{
-  (e: 'update:associationId', id: number): void;
-  (e: 'update:buildingId', id: number): void;
-}>()
 const { t } = useI18n()
+
 // State
 const loading = ref<boolean>(false)
 const metadataLoading = ref<boolean>(false)
@@ -73,15 +67,8 @@ const unitTypeOptions = computed(() =>
 
 
 // Computed properties
-const associationId = computed<number | null>({
-  get: () => props.associationId || null,
-  set: (value) => emit('update:associationId', value as number)
-})
-
-const buildingId = computed<number | null>({
-  get: () => props.buildingId || null,
-  set: (value) => emit('update:buildingId', value as number)
-})
+const associationId = computed(() => props.associationId)
+const buildingId = computed(() => props.buildingId)
 
 const startDate = computed<Date | null>(() => {
   return dateRange.value ? new Date(dateRange.value[0]) : null
@@ -244,6 +231,34 @@ const resetFilters = (): void => {
 
   // Update URL to reflect reset state
   updateUrlFromFilters()
+}
+
+const selectPreviousMonth = () => {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const end = new Date(now.getFullYear(), now.getMonth(), 0)
+  dateRange.value = [start.getTime(), end.getTime()]
+}
+
+const selectCurrentMonth = () => {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth(), 1)
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  dateRange.value = [start.getTime(), end.getTime()]
+}
+
+const selectCurrentYear = () => {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), 0, 1)
+  const end = new Date(now.getFullYear(), 11, 31)
+  dateRange.value = [start.getTime(), end.getTime()]
+}
+
+const selectLastYear = () => {
+  const now = new Date()
+  const start = new Date(now.getFullYear() - 1, 0, 1)
+  const end = new Date(now.getFullYear() - 1, 11, 31)
+  dateRange.value = [start.getTime(), end.getTime()]
 }
 
 const exportToCSV = (): void => {
@@ -420,23 +435,6 @@ onMounted(() => {
   <div class="expense-distribution-report">
     <NCard :loading="loading">
       <div class="filters-section">
-        <div class="selectors">
-          <NSpace justify-center="center" align="center">
-            <NText>{{t('associations.one')}}:</NText>
-            <AssociationSelector v-model:associationId="associationId" />
-          </NSpace>
-
-          <NSpace justify-center="center" align="center">
-            <NText>{{ t('units.building') }}:</NText>
-            <BuildingSelector
-              v-model:building-id="buildingId"
-              v-model:association-id="associationId"
-            />
-          </NSpace>
-        </div>
-
-        <NDivider />
-
         <div class="filter-grid">
           <NFlex vertical>
             <NText>{{ t('common.dateRange') }}:</NText>
@@ -446,6 +444,12 @@ onMounted(() => {
               clearable
               style="width: 100%"
             />
+            <NSpace>
+              <NButton size="small" @click="selectPreviousMonth">{{ t('reports.previousMonth', 'Previous Month') }}</NButton>
+              <NButton size="small" @click="selectCurrentMonth">{{ t('reports.currentMonth', 'Current Month') }}</NButton>
+              <NButton size="small" @click="selectCurrentYear">{{ t('reports.currentYear', 'Current Year') }}</NButton>
+              <NButton size="small" @click="selectLastYear">{{ t('reports.lastYear', 'Last Year') }}</NButton>
+            </NSpace>
           </NFlex>
 
           <NFlex vertical>
@@ -605,19 +609,6 @@ onMounted(() => {
 
 .filters-section {
   margin-bottom: 20px;
-}
-
-.selectors {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 16px;
-}
-
-.selector-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 200px;
 }
 
 .filter-grid {

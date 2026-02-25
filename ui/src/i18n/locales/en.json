@@ -185,7 +185,8 @@
     "title": "Reports",
     "previousMonth": "Previous Month",
     "currentMonth": "Current Month",
-    "currentYear": "Current Year"
+    "currentYear": "Current Year",
+    "lastYear": "Last Year"
   },
   "owners": {
     "title": "Owners",

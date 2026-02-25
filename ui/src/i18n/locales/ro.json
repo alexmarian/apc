@@ -179,7 +179,8 @@
     "title": "Rapoarte",
     "previousMonth": "Luna Anterioară",
     "currentMonth": "Luna Curentă",
-    "currentYear": "Anul Curent"
+    "currentYear": "Anul Curent",
+    "lastYear": "Anul Trecut"
   },
   "owners": {
     "title": "Proprietari",
