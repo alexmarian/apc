@@ -439,6 +439,12 @@
     "typePlaceholder": "Enter category type (e.g., Budgeted, Maintenance)",
     "familyPlaceholder": "Enter category family (e.g., Personnel, Utilities)",
     "namePlaceholder": "Enter category name (e.g., Janitor Salary)",
+    "createNewOption": "Create New",
+    "selectExisting": "Select Existing",
+    "friendlyLabel": "Friendly Label",
+    "i18nKey": "i18n Key",
+    "labelPlaceholder": "Enter a friendly label (e.g., Home Supplies)",
+    "keyPlaceholder": "Auto-generated key",
     "validation": {
       "typeRequired": "Type is required",
       "familyRequired": "Family is required",

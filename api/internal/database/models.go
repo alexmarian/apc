@@ -63,14 +63,15 @@ type Building struct {
 }
 
 type Category struct {
-	ID            int64
-	Type          string
-	Family        string
-	Name          string
-	IsDeleted     bool
-	AssociationID int64
-	CreatedAt     sql.NullTime
-	UpdatedAt     sql.NullTime
+	ID             int64
+	Type           string
+	Family         string
+	Name           string
+	IsDeleted      bool
+	AssociationID  int64
+	CreatedAt      sql.NullTime
+	UpdatedAt      sql.NullTime
+	OriginalLabels sql.NullString
 }
 
 type Expense struct {

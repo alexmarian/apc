@@ -170,6 +170,7 @@ export interface Category {
   name: string;
   is_deleted: boolean;
   association_id: number;
+  original_labels?: Record<string, string>;
   created_at: string;
   updated_at: string;
 }
@@ -178,12 +179,14 @@ export interface CategoryCreateRequest {
   type: string;
   family: string;
   name: string;
+  original_labels?: Record<string, string>;
 }
 
 export interface CategoryUpdateRequest {
   type: string;
   family: string;
   name: string;
+  original_labels?: Record<string, string>;
 }
 
 export interface CategoryUsageResponse {

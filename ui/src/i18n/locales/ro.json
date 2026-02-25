@@ -433,6 +433,12 @@
     "typePlaceholder": "Introduceți tipul categoriei (de ex., Bugetat, Întreținere)",
     "familyPlaceholder": "Introduceți familia categoriei (de ex., Personal, Utilități)",
     "namePlaceholder": "Introduceți numele categoriei (de ex., Salariu Maturator)",
+    "createNewOption": "Creează Nou",
+    "selectExisting": "Selectează Existent",
+    "friendlyLabel": "Etichetă Prietenoasă",
+    "i18nKey": "Cheie i18n",
+    "labelPlaceholder": "Introduceți o etichetă (de ex., Produse de Curățenie)",
+    "keyPlaceholder": "Cheie auto-generată",
     "validation": {
       "typeRequired": "Tipul este obligatoriu",
       "familyRequired": "Familia este obligatorie",

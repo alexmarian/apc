@@ -38,8 +38,8 @@ SELECT EXISTS(SELECT 1
                 AND is_deleted = FALSE) as is_active;
 
 -- name: CreateCategory :one
-INSERT INTO categories (type, family, name, association_id)
-VALUES (?, ?, ?, ?) RETURNING *;
+INSERT INTO categories (type, family, name, association_id, original_labels)
+VALUES (?, ?, ?, ?, ?) RETURNING *;
 
 -- name: GetAllCategories :many
 SELECT *
@@ -53,6 +53,7 @@ UPDATE categories
 SET type = ?,
     family = ?,
     name = ?,
+    original_labels = ?,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
   AND association_id = ?

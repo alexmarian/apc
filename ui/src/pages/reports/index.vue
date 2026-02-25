@@ -172,6 +172,7 @@ watch([associationId, dateRange, selectedCategory], () => {
   fetchExpenses()
 })
 
+
 // Format date range for display
 const formattedDateRange = computed(() => {
   if (!dateRange.value) return t('expenses.allTime', 'All time')

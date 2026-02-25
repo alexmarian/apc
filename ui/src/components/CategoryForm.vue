@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
-import { NForm, NFormItem, NButton, NSpace, NSpin, NAlert, NAutoComplete, useMessage } from 'naive-ui'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
+import {
+  NForm, NFormItem, NButton, NSpace, NSpin, NAlert,
+  NSelect, NInput, NRadioGroup, NRadioButton, useMessage
+} from 'naive-ui'
 import { categoryApi } from '@/services/api'
 import type { Category, CategoryCreateRequest, CategoryUpdateRequest } from '@/types/api'
 import type { FormRules } from 'naive-ui'
@@ -19,26 +22,24 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const message = useMessage()
 
-const formData = reactive<CategoryCreateRequest>({
-  type: '',
-  family: '',
-  name: ''
-})
+type FieldMode = 'existing' | 'new'
 
-const rules: FormRules = {
-  type: [
-    { required: true, message: t('categories.validation.typeRequired'), trigger: 'blur' },
-    { max: 100, message: t('categories.validation.maxLength', { max: 100 }), trigger: 'blur' }
-  ],
-  family: [
-    { required: true, message: t('categories.validation.familyRequired'), trigger: 'blur' },
-    { max: 100, message: t('categories.validation.maxLength', { max: 100 }), trigger: 'blur' }
-  ],
-  name: [
-    { required: true, message: t('categories.validation.nameRequired'), trigger: 'blur' },
-    { max: 100, message: t('categories.validation.maxLength', { max: 100 }), trigger: 'blur' }
-  ]
-}
+const typeMode = ref<FieldMode>('existing')
+const familyMode = ref<FieldMode>('existing')
+
+const typeExisting = ref<string | null>(null)
+const typeLabel = ref('')
+const typeKey = ref('')
+const typeKeyManuallyEdited = ref(false)
+
+const familyExisting = ref<string | null>(null)
+const familyLabel = ref('')
+const familyKey = ref('')
+const familyKeyManuallyEdited = ref(false)
+
+const nameLabel = ref('')
+const nameKey = ref('')
+const nameKeyManuallyEdited = ref(false)
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -49,23 +50,55 @@ const allCategories = ref<Category[]>([])
 
 const isEditMode = computed(() => !!props.categoryId)
 
-// Build unique string list preserving insertion order
+function generateI18nKey(label: string): string {
+  return label
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_]/g, '')
+}
+
+function ensureUniqueKey(baseKey: string, field: 'type' | 'family' | 'name'): string {
+  const existingKeys = new Set(allCategories.value.map(c => c[field]))
+  if (!existingKeys.has(baseKey)) return baseKey
+  let i = 1
+  while (existingKeys.has(`${baseKey}_${i}`)) i++
+  return `${baseKey}_${i}`
+}
+
+// Auto-generate keys from labels
+watch(typeLabel, (val) => {
+  if (!typeKeyManuallyEdited.value) {
+    typeKey.value = val ? ensureUniqueKey(generateI18nKey(val), 'type') : ''
+  }
+})
+watch(familyLabel, (val) => {
+  if (!familyKeyManuallyEdited.value) {
+    familyKey.value = val ? ensureUniqueKey(generateI18nKey(val), 'family') : ''
+  }
+})
+watch(nameLabel, (val) => {
+  if (!nameKeyManuallyEdited.value) {
+    nameKey.value = val ? ensureUniqueKey(generateI18nKey(val), 'name') : ''
+  }
+})
+
 function uniqueStrings(values: string[]): string[] {
   const seen = new Set<string>()
   return values.filter(v => v && !seen.has(v) && seen.add(v))
 }
 
-// Suggestions derived from existing DB categories, with localized labels
-const typeOptions = computed(() =>
+const typeSelectOptions = computed(() =>
   uniqueStrings(allCategories.value.map(c => c.type)).map(v => ({
     value: v,
     label: t(`categories.types.${v}`, v)
   }))
 )
 
-const familyOptions = computed(() => {
-  const source = formData.type
-    ? allCategories.value.filter(c => c.type === formData.type)
+const familySelectOptions = computed(() => {
+  const resolvedType = typeMode.value === 'existing' ? typeExisting.value : typeKey.value
+  const source = resolvedType
+    ? allCategories.value.filter(c => c.type === resolvedType)
     : allCategories.value
   return uniqueStrings(source.map(c => c.family)).map(v => ({
     value: v,
@@ -73,28 +106,40 @@ const familyOptions = computed(() => {
   }))
 })
 
-const nameOptions = computed(() => {
-  let source = allCategories.value
-  if (formData.type) source = source.filter(c => c.type === formData.type)
-  if (formData.family) source = source.filter(c => c.family === formData.family)
-  return uniqueStrings(source.map(c => c.name)).map(v => ({
-    value: v,
-    label: t(`categories.names.${v}`, v)
-  }))
-})
+const resolvedType = computed(() =>
+  typeMode.value === 'existing' ? (typeExisting.value || '') : typeKey.value
+)
+const resolvedFamily = computed(() =>
+  familyMode.value === 'existing' ? (familyExisting.value || '') : familyKey.value
+)
+const resolvedName = computed(() => nameKey.value)
 
-// Filter against localized label so user can type in their current language
-function filterOptions(input: string, options: { value: string; label: string }[]) {
-  if (!input) return options
-  const lower = input.toLowerCase()
-  return options.filter(o =>
-    o.label.toLowerCase().includes(lower) || o.value.toLowerCase().includes(lower)
-  )
+const rules: FormRules = {
+  type: [{ required: true, message: t('categories.validation.typeRequired'), trigger: 'blur' }],
+  family: [{ required: true, message: t('categories.validation.familyRequired'), trigger: 'blur' }],
+  name: [{ required: true, message: t('categories.validation.nameRequired'), trigger: 'blur' }]
 }
 
-const filteredTypeOptions = computed(() => filterOptions(formData.type, typeOptions.value))
-const filteredFamilyOptions = computed(() => filterOptions(formData.family, familyOptions.value))
-const filteredNameOptions = computed(() => filterOptions(formData.name, nameOptions.value))
+const formModel = computed(() => ({
+  type: resolvedType.value,
+  family: resolvedFamily.value,
+  name: resolvedName.value
+}))
+
+const previewType = computed(() => {
+  if (typeMode.value === 'new' && typeLabel.value) return typeLabel.value
+  if (typeMode.value === 'existing' && typeExisting.value) return t(`categories.types.${typeExisting.value}`, typeExisting.value)
+  return ''
+})
+const previewFamily = computed(() => {
+  if (familyMode.value === 'new' && familyLabel.value) return familyLabel.value
+  if (familyMode.value === 'existing' && familyExisting.value) return t(`categories.families.${familyExisting.value}`, familyExisting.value)
+  return ''
+})
+const previewName = computed(() => {
+  if (nameLabel.value) return nameLabel.value
+  return ''
+})
 
 const fetchAllCategories = async () => {
   try {
@@ -111,11 +156,38 @@ const fetchCategoryDetails = async () => {
     loading.value = true
     error.value = null
     const response = await categoryApi.getCategory(props.associationId, props.categoryId)
-    const categoryData = response.data
-    originalCategory.value = categoryData
-    formData.type = categoryData.type
-    formData.family = categoryData.family
-    formData.name = categoryData.name
+    const cat = response.data
+    originalCategory.value = cat
+
+    if (cat.original_labels?.type) {
+      typeMode.value = 'new'
+      typeLabel.value = cat.original_labels.type
+      typeKey.value = cat.type
+      typeKeyManuallyEdited.value = true
+    } else {
+      typeMode.value = 'existing'
+      typeExisting.value = cat.type
+    }
+
+    if (cat.original_labels?.family) {
+      familyMode.value = 'new'
+      familyLabel.value = cat.original_labels.family
+      familyKey.value = cat.family
+      familyKeyManuallyEdited.value = true
+    } else {
+      familyMode.value = 'existing'
+      familyExisting.value = cat.family
+    }
+
+    if (cat.original_labels?.name) {
+      nameLabel.value = cat.original_labels.name
+      nameKey.value = cat.name
+      nameKeyManuallyEdited.value = true
+    } else {
+      nameLabel.value = ''
+      nameKey.value = cat.name
+      nameKeyManuallyEdited.value = true
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : t('common.error')
     console.error('Error fetching category details:', err)
@@ -134,18 +206,30 @@ const submitForm = async (e: MouseEvent) => {
     submitting.value = true
     error.value = null
 
+    const originalLabels: Record<string, string> = {}
+    if (typeMode.value === 'new' && typeLabel.value) originalLabels.type = typeLabel.value
+    if (familyMode.value === 'new' && familyLabel.value) originalLabels.family = familyLabel.value
+    if (nameLabel.value) originalLabels.name = nameLabel.value
+
     let response: { data: Category }
 
     if (isEditMode.value && props.categoryId) {
       const updateData: CategoryUpdateRequest = {
-        type: formData.type,
-        family: formData.family,
-        name: formData.name
+        type: resolvedType.value,
+        family: resolvedFamily.value,
+        name: resolvedName.value,
+        original_labels: Object.keys(originalLabels).length > 0 ? originalLabels : undefined
       }
       response = await categoryApi.updateCategory(props.associationId, props.categoryId, updateData)
       message.success(t('categories.categoryUpdated'))
     } else {
-      response = await categoryApi.createCategory(props.associationId, formData)
+      const createData: CategoryCreateRequest = {
+        type: resolvedType.value,
+        family: resolvedFamily.value,
+        name: resolvedName.value,
+        original_labels: Object.keys(originalLabels).length > 0 ? originalLabels : undefined
+      }
+      response = await categoryApi.createCategory(props.associationId, createData)
       message.success(t('categories.categoryCreated'))
     }
 
@@ -185,54 +269,115 @@ onMounted(async () => {
         {{ error }}
       </NAlert>
 
-      <!-- Live Preview -->
-      <NAlert v-if="formData.type && formData.family && formData.name" type="info" style="margin-bottom: 16px;">
+      <NAlert v-if="previewType && previewFamily && previewName" type="info" style="margin-bottom: 16px;">
         <template #header>{{ t('categories.preview') }}</template>
-        {{ t(`categories.types.${formData.type}`, formData.type) }} → {{ t(`categories.families.${formData.family}`, formData.family) }} → {{ t(`categories.names.${formData.name}`, formData.name) }}
+        {{ previewType }} → {{ previewFamily }} → {{ previewName }}
       </NAlert>
 
       <NForm
         ref="formRef"
-        :model="formData"
+        :model="formModel"
         :rules="rules"
         label-placement="left"
         label-width="120px"
         require-mark-placement="right-hanging"
       >
         <NFormItem v-if="isEditMode && originalCategory" label="Category ID">
-          <NAutoComplete
-            :value="originalCategory.id.toString()"
-            :options="[]"
-            :disabled="true"
-            class="category-form__readonly-input"
-          />
+          <NInput :value="originalCategory.id.toString()" disabled />
         </NFormItem>
 
+        <!-- Type -->
         <NFormItem :label="t('categories.type')" path="type">
-          <NAutoComplete
-            v-model:value="formData.type"
-            :options="filteredTypeOptions"
-            :placeholder="t('categories.typePlaceholder')"
-            clearable
-          />
+          <div style="width: 100%">
+            <NRadioGroup v-model:value="typeMode" size="small" style="margin-bottom: 8px;">
+              <NRadioButton value="existing">{{ t('categories.selectExisting') }}</NRadioButton>
+              <NRadioButton value="new">{{ t('categories.createNewOption') }}</NRadioButton>
+            </NRadioGroup>
+            <NSelect
+              v-if="typeMode === 'existing'"
+              v-model:value="typeExisting"
+              :options="typeSelectOptions"
+              :placeholder="t('categories.typePlaceholder')"
+              filterable
+              clearable
+            />
+            <div v-else>
+              <NInput
+                v-model:value="typeLabel"
+                :placeholder="t('categories.labelPlaceholder')"
+                style="margin-bottom: 4px;"
+              />
+              <NInput
+                v-model:value="typeKey"
+                :placeholder="t('categories.keyPlaceholder')"
+                :readonly="!typeKeyManuallyEdited"
+                size="small"
+                @click="typeKeyManuallyEdited = true"
+              >
+                <template #prefix>
+                  <span style="color: #999; font-size: 12px;">{{ t('categories.i18nKey') }}:</span>
+                </template>
+              </NInput>
+            </div>
+          </div>
         </NFormItem>
 
+        <!-- Family -->
         <NFormItem :label="t('categories.family')" path="family">
-          <NAutoComplete
-            v-model:value="formData.family"
-            :options="filteredFamilyOptions"
-            :placeholder="t('categories.familyPlaceholder')"
-            clearable
-          />
+          <div style="width: 100%">
+            <NRadioGroup v-model:value="familyMode" size="small" style="margin-bottom: 8px;">
+              <NRadioButton value="existing">{{ t('categories.selectExisting') }}</NRadioButton>
+              <NRadioButton value="new">{{ t('categories.createNewOption') }}</NRadioButton>
+            </NRadioGroup>
+            <NSelect
+              v-if="familyMode === 'existing'"
+              v-model:value="familyExisting"
+              :options="familySelectOptions"
+              :placeholder="t('categories.familyPlaceholder')"
+              filterable
+              clearable
+            />
+            <div v-else>
+              <NInput
+                v-model:value="familyLabel"
+                :placeholder="t('categories.labelPlaceholder')"
+                style="margin-bottom: 4px;"
+              />
+              <NInput
+                v-model:value="familyKey"
+                :placeholder="t('categories.keyPlaceholder')"
+                :readonly="!familyKeyManuallyEdited"
+                size="small"
+                @click="familyKeyManuallyEdited = true"
+              >
+                <template #prefix>
+                  <span style="color: #999; font-size: 12px;">{{ t('categories.i18nKey') }}:</span>
+                </template>
+              </NInput>
+            </div>
+          </div>
         </NFormItem>
 
+        <!-- Name (always create new) -->
         <NFormItem :label="t('categories.name')" path="name">
-          <NAutoComplete
-            v-model:value="formData.name"
-            :options="filteredNameOptions"
-            :placeholder="t('categories.namePlaceholder')"
-            clearable
-          />
+          <div style="width: 100%">
+            <NInput
+              v-model:value="nameLabel"
+              :placeholder="t('categories.labelPlaceholder')"
+              style="margin-bottom: 4px;"
+            />
+            <NInput
+              v-model:value="nameKey"
+              :placeholder="t('categories.keyPlaceholder')"
+              :readonly="!nameKeyManuallyEdited"
+              size="small"
+              @click="nameKeyManuallyEdited = true"
+            >
+              <template #prefix>
+                <span style="color: #999; font-size: 12px;">{{ t('categories.i18nKey') }}:</span>
+              </template>
+            </NInput>
+          </div>
         </NFormItem>
 
         <div style="margin-top: 24px;">
@@ -253,9 +398,5 @@ onMounted(async () => {
 <style scoped>
 .category-form {
   width: 100%;
-}
-
-.category-form__readonly-input {
-  background-color: #f5f5f5;
 }
 </style>

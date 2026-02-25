@@ -4,6 +4,7 @@ import { NSelect, NSpin } from 'naive-ui'
 import config from '@/config'
 import type { Association } from '@/types/api'
 import { associationApi } from '@/services/api.ts'
+import { syncCategoryLabels } from '@/utils/categoryLabels'
 import { useI18n } from 'vue-i18n'
 
 // Props
@@ -38,7 +39,9 @@ const fetchAssociations = async () => {
 
     // If we have associations but no selection, select the first one
     if (associations.value.length > 0 && !props.associationId) {
-      emit('update:associationId', associations.value[0].id)
+      const id = associations.value[0].id
+      emit('update:associationId', id)
+      syncCategoryLabels(id)
     }
   } catch (err) {
     console.error('Error fetching associations:', err)
@@ -59,6 +62,7 @@ const options = computed(() => {
 // Handle selection change
 const handleChange = (value: number) => {
   emit('update:associationId', value)
+  syncCategoryLabels(value)
 }
 
 // Load associations on mount

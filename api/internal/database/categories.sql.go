@@ -105,15 +105,16 @@ func (q *Queries) CheckCategoryUniqueness(ctx context.Context, arg CheckCategory
 }
 
 const createCategory = `-- name: CreateCategory :one
-INSERT INTO categories (type, family, name, association_id)
-VALUES (?, ?, ?, ?) RETURNING id, type, family, name, is_deleted, association_id, created_at, updated_at
+INSERT INTO categories (type, family, name, association_id, original_labels)
+VALUES (?, ?, ?, ?, ?) RETURNING id, type, family, name, is_deleted, association_id, created_at, updated_at, original_labels
 `
 
 type CreateCategoryParams struct {
-	Type          string
-	Family        string
-	Name          string
-	AssociationID int64
+	Type           string
+	Family         string
+	Name           string
+	AssociationID  int64
+	OriginalLabels sql.NullString
 }
 
 func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
@@ -122,6 +123,7 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 		arg.Family,
 		arg.Name,
 		arg.AssociationID,
+		arg.OriginalLabels,
 	)
 	var i Category
 	err := row.Scan(
@@ -133,6 +135,7 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 		&i.AssociationID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OriginalLabels,
 	)
 	return i, err
 }
@@ -150,7 +153,7 @@ func (q *Queries) DeactivateCategory(ctx context.Context, id int64) error {
 }
 
 const getActiveCategories = `-- name: GetActiveCategories :many
-SELECT id, type, family, name, is_deleted, association_id, created_at, updated_at
+SELECT id, type, family, name, is_deleted, association_id, created_at, updated_at, original_labels
 FROM categories
 WHERE association_id = ?
   AND is_deleted = FALSE
@@ -176,6 +179,7 @@ func (q *Queries) GetActiveCategories(ctx context.Context, associationID int64) 
 			&i.AssociationID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OriginalLabels,
 		); err != nil {
 			return nil, err
 		}
@@ -191,7 +195,7 @@ func (q *Queries) GetActiveCategories(ctx context.Context, associationID int64) 
 }
 
 const getAllCategories = `-- name: GetAllCategories :many
-SELECT id, type, family, name, is_deleted, association_id, created_at, updated_at
+SELECT id, type, family, name, is_deleted, association_id, created_at, updated_at, original_labels
 FROM categories
 WHERE association_id = ?
   AND (? = TRUE OR is_deleted = FALSE)
@@ -221,6 +225,7 @@ func (q *Queries) GetAllCategories(ctx context.Context, arg GetAllCategoriesPara
 			&i.AssociationID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OriginalLabels,
 		); err != nil {
 			return nil, err
 		}
@@ -236,7 +241,7 @@ func (q *Queries) GetAllCategories(ctx context.Context, arg GetAllCategoriesPara
 }
 
 const getAssociationCategory = `-- name: GetAssociationCategory :one
-SELECT id, type, family, name, is_deleted, association_id, created_at, updated_at
+SELECT id, type, family, name, is_deleted, association_id, created_at, updated_at, original_labels
 FROM categories
 WHERE id = ? and association_id = ? LIMIT 1
 `
@@ -258,6 +263,7 @@ func (q *Queries) GetAssociationCategory(ctx context.Context, arg GetAssociation
 		&i.AssociationID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OriginalLabels,
 	)
 	return i, err
 }
@@ -300,7 +306,7 @@ func (q *Queries) GetCategoriesForDropdown(ctx context.Context, associationID in
 }
 
 const getCategory = `-- name: GetCategory :one
-SELECT id, type, family, name, is_deleted, association_id, created_at, updated_at
+SELECT id, type, family, name, is_deleted, association_id, created_at, updated_at, original_labels
 FROM categories
 WHERE id = ? LIMIT 1
 `
@@ -317,6 +323,7 @@ func (q *Queries) GetCategory(ctx context.Context, id int64) (Category, error) {
 		&i.AssociationID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OriginalLabels,
 	)
 	return i, err
 }
@@ -417,18 +424,20 @@ UPDATE categories
 SET type = ?,
     family = ?,
     name = ?,
+    original_labels = ?,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
   AND association_id = ?
-RETURNING id, type, family, name, is_deleted, association_id, created_at, updated_at
+RETURNING id, type, family, name, is_deleted, association_id, created_at, updated_at, original_labels
 `
 
 type UpdateCategoryParams struct {
-	Type          string
-	Family        string
-	Name          string
-	ID            int64
-	AssociationID int64
+	Type           string
+	Family         string
+	Name           string
+	OriginalLabels sql.NullString
+	ID             int64
+	AssociationID  int64
 }
 
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
@@ -436,6 +445,7 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 		arg.Type,
 		arg.Family,
 		arg.Name,
+		arg.OriginalLabels,
 		arg.ID,
 		arg.AssociationID,
 	)
@@ -449,6 +459,7 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 		&i.AssociationID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OriginalLabels,
 	)
 	return i, err
 }

@@ -13,14 +13,51 @@ import (
 const CategoryIdPathValue = "categoryId"
 
 type Category struct {
-	ID            int64     `json:"id"`
-	Type          string    `json:"type"`
-	Family        string    `json:"family"`
-	Name          string    `json:"name"`
-	IsDeleted     bool      `json:"is_deleted"`
-	AssociationID int64     `json:"association_id"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID             int64              `json:"id"`
+	Type           string             `json:"type"`
+	Family         string             `json:"family"`
+	Name           string             `json:"name"`
+	IsDeleted      bool               `json:"is_deleted"`
+	AssociationID  int64              `json:"association_id"`
+	OriginalLabels map[string]string  `json:"original_labels,omitempty"`
+	CreatedAt      time.Time          `json:"created_at"`
+	UpdatedAt      time.Time          `json:"updated_at"`
+}
+
+func parseOriginalLabels(ns sql.NullString) map[string]string {
+	if !ns.Valid || ns.String == "" {
+		return nil
+	}
+	var m map[string]string
+	if err := json.Unmarshal([]byte(ns.String), &m); err != nil {
+		return nil
+	}
+	return m
+}
+
+func serializeOriginalLabels(m map[string]string) sql.NullString {
+	if len(m) == 0 {
+		return sql.NullString{}
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: string(b), Valid: true}
+}
+
+func dbCategoryToResponse(c database.Category) Category {
+	return Category{
+		ID:             c.ID,
+		Type:           c.Type,
+		Family:         c.Family,
+		Name:           c.Name,
+		IsDeleted:      c.IsDeleted,
+		AssociationID:  c.AssociationID,
+		OriginalLabels: parseOriginalLabels(c.OriginalLabels),
+		CreatedAt:      c.CreatedAt.Time,
+		UpdatedAt:      c.UpdatedAt.Time,
+	}
 }
 
 func HandleGetCategory(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
@@ -41,18 +78,7 @@ func HandleGetCategory(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) 
 			return
 		}
 
-		category := Category{
-			ID:            dbCategory.ID,
-			Type:          dbCategory.Type,
-			Family:        dbCategory.Family,
-			Name:          dbCategory.Name,
-			IsDeleted:     dbCategory.IsDeleted,
-			AssociationID: dbCategory.AssociationID,
-			CreatedAt:     dbCategory.CreatedAt.Time,
-			UpdatedAt:     dbCategory.UpdatedAt.Time,
-		}
-
-		RespondWithJSON(rw, http.StatusOK, category)
+		RespondWithJSON(rw, http.StatusOK, dbCategoryToResponse(dbCategory))
 	}
 }
 
@@ -70,16 +96,7 @@ func HandleGetActiveCategories(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 		categories := make([]Category, len(dbCategories))
 
 		for i, category := range dbCategories {
-			categories[i] = Category{
-				ID:            category.ID,
-				Type:          category.Type,
-				Family:        category.Family,
-				Name:          category.Name,
-				IsDeleted:     category.IsDeleted,
-				AssociationID: category.AssociationID,
-				CreatedAt:     category.CreatedAt.Time,
-				UpdatedAt:     category.UpdatedAt.Time,
-			}
+			categories[i] = dbCategoryToResponse(category)
 		}
 
 		RespondWithJSON(rw, http.StatusOK, categories)
@@ -91,11 +108,11 @@ func HandleCreateCategory(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
 
-		// Parse request
 		var category struct {
-			Type   string `json:"type"`
-			Family string `json:"family"`
-			Name   string `json:"name"`
+			Type           string            `json:"type"`
+			Family         string            `json:"family"`
+			Name           string            `json:"name"`
+			OriginalLabels map[string]string `json:"original_labels"`
 		}
 
 		decoder := json.NewDecoder(req.Body)
@@ -104,18 +121,17 @@ func HandleCreateCategory(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			return
 		}
 
-		// Validate required fields
 		if category.Type == "" || category.Family == "" || category.Name == "" {
 			RespondWithError(rw, http.StatusBadRequest, "Type, family, and name are required")
 			return
 		}
 
-		// Create category
 		newCategory, err := cfg.Db.CreateCategory(req.Context(), database.CreateCategoryParams{
-			Type:          category.Type,
-			Family:        category.Family,
-			Name:          category.Name,
-			AssociationID: int64(associationId),
+			Type:           category.Type,
+			Family:         category.Family,
+			Name:           category.Name,
+			AssociationID:  int64(associationId),
+			OriginalLabels: serializeOriginalLabels(category.OriginalLabels),
 		})
 
 		if err != nil {
@@ -124,16 +140,7 @@ func HandleCreateCategory(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			return
 		}
 
-		// Return created category
-		RespondWithJSON(rw, http.StatusCreated, Category{
-			ID:            newCategory.ID,
-			Type:          newCategory.Type,
-			Family:        newCategory.Family,
-			Name:          newCategory.Name,
-			AssociationID: newCategory.AssociationID,
-			CreatedAt:     newCategory.CreatedAt.Time,
-			UpdatedAt:     newCategory.UpdatedAt.Time,
-		})
+		RespondWithJSON(rw, http.StatusCreated, dbCategoryToResponse(newCategory))
 	}
 }
 
@@ -194,16 +201,7 @@ func HandleGetAllCategories(cfg *ApiConfig) func(http.ResponseWriter, *http.Requ
 
 		categories := make([]Category, len(dbCategories))
 		for i, category := range dbCategories {
-			categories[i] = Category{
-				ID:            category.ID,
-				Type:          category.Type,
-				Family:        category.Family,
-				Name:          category.Name,
-				IsDeleted:     category.IsDeleted,
-				AssociationID: category.AssociationID,
-				CreatedAt:     category.CreatedAt.Time,
-				UpdatedAt:     category.UpdatedAt.Time,
-			}
+			categories[i] = dbCategoryToResponse(category)
 		}
 
 		RespondWithJSON(rw, http.StatusOK, categories)
@@ -216,11 +214,11 @@ func HandleUpdateCategory(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
 		categoryId, _ := strconv.Atoi(req.PathValue(CategoryIdPathValue))
 
-		// Parse request
 		var category struct {
-			Type   string `json:"type"`
-			Family string `json:"family"`
-			Name   string `json:"name"`
+			Type           string            `json:"type"`
+			Family         string            `json:"family"`
+			Name           string            `json:"name"`
+			OriginalLabels map[string]string `json:"original_labels"`
 		}
 
 		decoder := json.NewDecoder(req.Body)
@@ -229,13 +227,11 @@ func HandleUpdateCategory(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			return
 		}
 
-		// Validate required fields
 		if category.Type == "" || category.Family == "" || category.Name == "" {
 			RespondWithError(rw, http.StatusBadRequest, "Type, family, and name are required")
 			return
 		}
 
-		// Check for uniqueness
 		count, err := cfg.Db.CheckCategoryUniqueness(req.Context(), database.CheckCategoryUniquenessParams{
 			AssociationID: int64(associationId),
 			Type:          category.Type,
@@ -254,13 +250,13 @@ func HandleUpdateCategory(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			return
 		}
 
-		// Update category
 		updatedCategory, err := cfg.Db.UpdateCategory(req.Context(), database.UpdateCategoryParams{
-			Type:          category.Type,
-			Family:        category.Family,
-			Name:          category.Name,
-			ID:            int64(categoryId),
-			AssociationID: int64(associationId),
+			Type:           category.Type,
+			Family:         category.Family,
+			Name:           category.Name,
+			OriginalLabels: serializeOriginalLabels(category.OriginalLabels),
+			ID:             int64(categoryId),
+			AssociationID:  int64(associationId),
 		})
 
 		if err != nil {
@@ -269,16 +265,7 @@ func HandleUpdateCategory(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 			return
 		}
 
-		RespondWithJSON(rw, http.StatusOK, Category{
-			ID:            updatedCategory.ID,
-			Type:          updatedCategory.Type,
-			Family:        updatedCategory.Family,
-			Name:          updatedCategory.Name,
-			IsDeleted:     updatedCategory.IsDeleted,
-			AssociationID: updatedCategory.AssociationID,
-			CreatedAt:     updatedCategory.CreatedAt.Time,
-			UpdatedAt:     updatedCategory.UpdatedAt.Time,
-		})
+		RespondWithJSON(rw, http.StatusOK, dbCategoryToResponse(updatedCategory))
 	}
 }
 

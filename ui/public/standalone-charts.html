@@ -458,6 +458,13 @@
     constructor() {
       this.currentLanguage = localStorage.getItem('standalone_chart_language') || 'en'
 
+      // Load original_labels overrides for newly created categories
+      try {
+        this.categoryOverrides = JSON.parse(localStorage.getItem('standalone_category_overrides') || 'null')
+      } catch (e) {
+        this.categoryOverrides = null
+      }
+
       // Try to load data from localStorage with error handling
       try {
         this.chartData = JSON.parse(localStorage.getItem('standalone_chart_data') || 'null')
@@ -691,7 +698,10 @@
       const category = type === 'type' ? 'types' : 'families'
       try {
         const translation = this.categoryTranslations[this.currentLanguage]?.[category]?.[key]
-        return translation || defaultValue
+        if (translation) return translation
+        // Fall back to original_labels from newly created categories
+        const override = this.categoryOverrides?.[category]?.[key]
+        return override || defaultValue
       } catch (e) {
         return defaultValue
       }
