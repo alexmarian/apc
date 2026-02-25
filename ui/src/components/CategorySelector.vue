@@ -66,8 +66,8 @@ const fetchCategories = async () => {
 const normalize = (s: string) =>
   s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
-const filterOption = (pattern: string, option: { label: string; value: number | null }) => {
-  return normalize(option.label).includes(normalize(pattern))
+const filterOption: import('naive-ui').SelectFilter = (pattern, option) => {
+  return typeof option.label === 'string' && normalize(option.label).includes(normalize(pattern))
 }
 
 const selectRef = ref<SelectInst | null>(null)

@@ -31,6 +31,9 @@ const message = useMessage()
 const dialog = useDialog()
 const hasInitialized = ref(false)
 
+const normalize = (s: string) =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
 // Filter state
 const searchQuery = ref('')
 const includeInactive = ref(false)
@@ -69,11 +72,11 @@ const filteredCategories = computed(() => {
 
   // Apply search query
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
+    const query = normalize(searchQuery.value)
     result = result.filter(category =>
-      category.type.toLowerCase().includes(query) ||
-      category.family.toLowerCase().includes(query) ||
-      category.name.toLowerCase().includes(query)
+      normalize(t(`categories.types.${category.type}`, category.type)).includes(query) ||
+      normalize(t(`categories.families.${category.family}`, category.family)).includes(query) ||
+      normalize(t(`categories.names.${category.name}`, category.name)).includes(query)
     )
   }
 
@@ -455,7 +458,7 @@ onMounted(() => {
             v-model:value="typeFilter"
             :options="[
               { label: t('categories.allTypes'), value: undefined, type:'ignored' },
-              ...uniqueTypes.map(type => ({ label: type, value: type }))
+              ...uniqueTypes.map(type => ({ label: t(`categories.types.${type}`, type), value: type }))
             ]"
             :placeholder="t('categories.filterByType')"
             clearable
@@ -465,7 +468,7 @@ onMounted(() => {
             v-model:value="familyFilter"
             :options="[
               { label: t('categories.allFamilies'), value: undefined, type:'ignored' },
-              ...uniqueFamilies.map(family => ({ label: family, value: family }))
+              ...uniqueFamilies.map(family => ({ label: t(`categories.families.${family}`, family), value: family }))
             ]"
             :placeholder="t('categories.filterByFamily')"
             clearable
