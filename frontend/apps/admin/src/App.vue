@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { NIcon, NLayout, NLayoutHeader, NLayoutContent, NMenu, NButton, NDropdown, NSwitch } from 'naive-ui'
-import { h, ref, computed, watch, nextTick } from 'vue'
+import { h, ref, computed, watch } from 'vue'
 import type { Component } from 'vue';
 import ThemeProvider from '@/providers/ThemeProvider.vue'
 import LanguageSelector from '@/components/LanguageSelector.vue'
@@ -20,11 +20,12 @@ import {
 const preferences = usePreferences()
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 
-// Use visibility class to prevent flickering
+// Wait for the initial navigation (including auth guard redirect) to complete
 const appReady = ref(false)
-nextTick(() => {
+router.isReady().then(() => {
   appReady.value = true
 })
 

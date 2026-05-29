@@ -72,7 +72,7 @@
                       {{ $t(`gatherings.status.${gathering.status}`) }}
                     </NTag>
                   </NDescriptionsItem>
-                  <NDescriptionsItem :label="$t('gatherings.type')">
+                  <NDescriptionsItem :label="$t('gatherings.type.title')">
                     {{ $t(`gatherings.type.${gathering.type}`) }}
                   </NDescriptionsItem>
                 </NDescriptions>

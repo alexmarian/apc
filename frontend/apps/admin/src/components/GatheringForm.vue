@@ -37,7 +37,7 @@
             />
           </NFormItem>
 
-          <NFormItem :label="$t('gatherings.type')" path="type">
+          <NFormItem :label="$t('gatherings.type.title')" path="type">
             <NSelect v-model:value="formData.type" :options="typeOptions" />
           </NFormItem>
 

@@ -74,13 +74,18 @@ func (h *VotingMatterHandler) HandleCreateVotingMatter() func(http.ResponseWrite
 			return
 		}
 
+		isInformative := int64(0)
+		if createReq.IsInformative {
+			isInformative = 1
+		}
 		matter, err := h.cfg.Db.CreateVotingMatter(req.Context(), database.CreateVotingMatterParams{
-			GatheringID:  int64(gatheringID),
-			OrderIndex:   int64(createReq.OrderIndex),
-			Title:        createReq.Title,
-			Description:  sql.NullString{String: createReq.Description, Valid: createReq.Description != ""},
-			MatterType:   createReq.MatterType,
-			VotingConfig: string(configJSON),
+			GatheringID:   int64(gatheringID),
+			OrderIndex:    int64(createReq.OrderIndex),
+			Title:         createReq.Title,
+			Description:   sql.NullString{String: createReq.Description, Valid: createReq.Description != ""},
+			MatterType:    createReq.MatterType,
+			VotingConfig:  string(configJSON),
+			IsInformative: isInformative,
 		})
 
 		if err != nil {
@@ -120,14 +125,19 @@ func (h *VotingMatterHandler) HandleUpdateVotingMatter() func(http.ResponseWrite
 			return
 		}
 
+		isInformative := int64(0)
+		if createReq.IsInformative {
+			isInformative = 1
+		}
 		matter, err := h.cfg.Db.UpdateVotingMatter(req.Context(), database.UpdateVotingMatterParams{
-			GatheringID:  int64(gatheringID),
-			ID:           int64(matterID),
-			Title:        createReq.Title,
-			Description:  sql.NullString{String: createReq.Description, Valid: createReq.Description != ""},
-			MatterType:   createReq.MatterType,
-			OrderIndex:   int64(createReq.OrderIndex),
-			VotingConfig: string(configJSON),
+			GatheringID:   int64(gatheringID),
+			ID:            int64(matterID),
+			Title:         createReq.Title,
+			Description:   sql.NullString{String: createReq.Description, Valid: createReq.Description != ""},
+			MatterType:    createReq.MatterType,
+			OrderIndex:    int64(createReq.OrderIndex),
+			VotingConfig:  string(configJSON),
+			IsInformative: isInformative,
 		})
 
 		if err != nil {

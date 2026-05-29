@@ -470,6 +470,7 @@ export interface VotingMatter {
   matter_type: VotingMatterType;
   order_index: number;
   voting_config: VotingConfig;
+  is_informative: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -517,6 +518,7 @@ export interface VotingMatterCreateRequest {
   matter_type: VotingMatterType;
   order_index: number;
   voting_config: VotingConfig;
+  is_informative: boolean;
 }
 
 export interface VotingMatterUpdateRequest {
@@ -525,22 +527,23 @@ export interface VotingMatterUpdateRequest {
   matter_type?: VotingMatterType;
   order_index?: number;
   voting_config?: VotingConfig;
+  is_informative?: boolean;
 }
 
 // Participant Related Types
 export interface GatheringParticipant {
   id: number;
   gathering_id: number;
-  type: ParticipantType;
-  owner_id: number;
-  owner_name: string;
-  contact_phone: string;
-  contact_email: string;
-  unit_ids: number[];
-  delegation_document?: string;
-  delegate_name?: string;
-  delegate_contact?: string;
-  checked_in_at?: string;
+  participant_type: ParticipantType;
+  owner_id?: number;
+  delegating_owner_id?: number;
+  participant_name: string;
+  units_info: number[];
+  units_part: number;
+  units_area: number;
+  delegation_document_ref?: string;
+  check_in_time?: string;
+  has_voted: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -568,20 +571,24 @@ export interface ParticipantCheckInRequest {
 export interface Ballot {
   gathering_id: number;
   participant_id: number;
-  votes: Vote[];
+  ballot_content: Record<string, BallotVote>;
   submitted_at: string;
   submitted_from_ip: string;
   submitted_user_agent: string;
 }
 
-export interface Vote {
+export interface BallotVote {
   matter_id: number;
-  choice: string | string[];
-  weight: number;
+  values: string[];
 }
 
 export interface BallotSubmissionRequest {
-  votes: Vote[];
+  voter_type: 'owner' | 'delegate';
+  owner_id: number;
+  delegating_owner_id?: number;
+  delegation_document_ref?: string;
+  unit_ids: number[];
+  ballot_content: Record<string, BallotVote>;
 }
 
 // Results and Statistics Types

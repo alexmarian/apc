@@ -165,17 +165,16 @@ func (h *ExportHandler) HandleDownloadVotingResults() func(http.ResponseWriter, 
 				// Find vote for this matter
 				matterIDStr := strconv.FormatInt(matter.ID, 10)
 				if vote, ok := ballotContent[matterIDStr]; ok {
-					voteKey := vote.VoteValue
-					if vote.OptionID != "" {
-						voteKey = vote.OptionID
-					}
-
-					if _, exists := tally[voteKey]; exists {
-						tally[voteKey] = domain.TallyResult{
-							Count:  tally[voteKey].Count + 1,
-							Weight: tally[voteKey].Weight + participantWeight,
-							Area:   tally[voteKey].Area + participantArea,
+					for _, key := range vote.Values {
+						if _, exists := tally[key]; exists {
+							tally[key] = domain.TallyResult{
+								Count:  tally[key].Count + 1,
+								Weight: tally[key].Weight + participantWeight,
+								Area:   tally[key].Area + participantArea,
+							}
 						}
+					}
+					if len(vote.Values) > 0 {
 						totalWeight += participantWeight
 					}
 				}
@@ -234,7 +233,7 @@ func (h *ExportHandler) HandleDownloadVotingResults() func(http.ResponseWriter, 
 			}
 			passed := h.quorumService.CalculateIfPassed(matterResult, votingConfig, gathering)
 
-			if votingConfig.RequiredMajority == "informative" {
+			if matter.IsInformative != 0 {
 				md += "**Status:** Informative (no pass/fail)\n\n"
 			} else if passed {
 				md += "**Status:** ✅ PASSED\n\n"
@@ -336,18 +335,21 @@ func (h *ExportHandler) HandleDownloadVotingBallots() func(http.ResponseWriter, 
 
 					md += fmt.Sprintf("- **%s:** ", matter.Title)
 
-					if vote.OptionID != "" {
-						// Find option text
-						var config domain.VotingConfig
-						json.Unmarshal([]byte(matter.VotingConfig), &config)
-						for _, opt := range config.Options {
-							if opt.ID == vote.OptionID {
-								md += opt.Text
-								break
-							}
+					var config domain.VotingConfig
+					json.Unmarshal([]byte(matter.VotingConfig), &config)
+					optText := make(map[string]string, len(config.Options))
+					for _, opt := range config.Options {
+						optText[opt.ID] = opt.Text
+					}
+					for i, v := range vote.Values {
+						if i > 0 {
+							md += ", "
 						}
-					} else {
-						md += vote.VoteValue
+						if text, ok := optText[v]; ok {
+							md += text
+						} else {
+							md += v
+						}
 					}
 					md += "\n"
 				}

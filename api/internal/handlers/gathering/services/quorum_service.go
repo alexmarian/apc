@@ -15,9 +15,11 @@ func NewQuorumService(db *database.Queries) *QuorumService {
 	return &QuorumService{db: db}
 }
 
-// CalculateQuorum calculates quorum information based on gathering type and voting mode
-func (s *QuorumService) CalculateQuorum(gathering domain.Gathering, participatedWeight float64, participatedCount int, votedWeight float64, votedCount int, strategy VotingStrategy) domain.QuorumInfo {
-	// Step 1: Determine threshold percentage based on gathering type
+// CalculateQuorum calculates quorum information based on gathering type and voting mode.
+// Quorum is always expressed as a fraction of qualified units (by count or by part),
+// never of checked-in participants.
+func (s *QuorumService) CalculateQuorum(gathering domain.Gathering, _ float64, _ int, votedWeight float64, votedCount int, _ VotingStrategy) domain.QuorumInfo {
+	// Threshold percentage by gathering type
 	var thresholdPercent float64
 	switch gathering.GatheringType {
 	case "initial":
@@ -27,127 +29,109 @@ func (s *QuorumService) CalculateQuorum(gathering domain.Gathering, participated
 	case "remote":
 		thresholdPercent = 100.0
 	default:
-		thresholdPercent = 50.0 // Default to initial
+		thresholdPercent = 50.0
 	}
 
-	// Step 2: Calculate total possible votes based on gathering type and voting mode
-	var totalPossibleWeight float64
-	var totalPossibleCount int
-	var achieved float64
+	// Denominator is always total qualified units
+	totalPossibleWeight := gathering.QualifiedUnitsTotalPart
+	totalPossibleCount := gathering.QualifiedUnitsCount
 
-	if gathering.GatheringType == "remote" {
-		// Remote gatherings: total possible = all qualified units
-		totalPossibleWeight = gathering.QualifiedUnitsTotalPart
-		totalPossibleCount = gathering.QualifiedUnitsCount
-	} else {
-		// Initial/Repeated gatherings: total possible = participated units
-		totalPossibleWeight = participatedWeight
-		totalPossibleCount = participatedCount
-	}
-
-	// Step 3: Calculate achieved participation based on voting mode
-	if gathering.VotingMode == "by_unit" {
-		achieved = float64(votedCount)
-	} else {
-		// by_weight (default)
-		achieved = votedWeight
-	}
-
-	// Step 4: Calculate required amount based on voting mode
-	var required float64
-	var totalPossible float64
+	var achieved, required, totalPossible float64
 	if gathering.VotingMode == "by_unit" {
 		totalPossible = float64(totalPossibleCount)
-		required = (totalPossible * thresholdPercent) / 100
+		achieved = float64(votedCount)
 	} else {
-		// by_weight (default)
 		totalPossible = totalPossibleWeight
-		required = (totalPossible * thresholdPercent) / 100
+		achieved = votedWeight
 	}
+	required = totalPossible * thresholdPercent / 100
 
-	// Step 5: Calculate achieved percentage
 	var achievedPercentage float64
 	if totalPossible > 0 {
-		achievedPercentage = (achieved / totalPossible) * 100
+		achievedPercentage = achieved / totalPossible * 100
 	}
-
-	// Step 6: Determine if quorum is met
-	met := achieved >= required
 
 	return domain.QuorumInfo{
 		Required:           required,
 		Achieved:           achieved,
 		RequiredPercentage: thresholdPercent,
 		AchievedPercentage: achievedPercentage,
-		Met:                met,
+		Met:                achieved >= required,
 		VotingMode:         gathering.VotingMode,
 		GatheringType:      gathering.GatheringType,
 	}
 }
 
-// CalculateIfPassed determines if a voting matter has passed based on its results
+// CalculateIfPassed determines if a voting matter has passed based on its results.
+// Informative matters are handled by the caller via VotingMatter.IsInformative.
 func (s *QuorumService) CalculateIfPassed(result domain.VoteMatterResult, config domain.VotingConfig, gathering database.Gathering) bool {
-	// Informative votes don't have pass/fail - they always "pass" for reporting purposes
-	if config.RequiredMajority == "informative" {
-		return true
-	}
-
 	if result.TotalVoted == 0 {
 		return false
 	}
 
-	// Check quorum first
-	totalPossibleWeight := gathering.QualifiedUnitsTotalPart.Float64
-	if config.Quorum > 0 && totalPossibleWeight > 0 {
-		quorumPercentage := (result.TotalVoted / totalPossibleWeight) * 100
-		if quorumPercentage < config.Quorum {
-			return false
+	qualifiedWeight := gathering.QualifiedUnitsTotalPart.Float64
+	qualifiedCount := float64(gathering.QualifiedUnitsCount.Int64)
+
+	// Quorum check: votes cast vs qualified units (respects voting_mode)
+	if config.Quorum > 0 {
+		var quorumDenominator float64
+		if gathering.VotingMode == "by_unit" {
+			quorumDenominator = qualifiedCount
+		} else {
+			quorumDenominator = qualifiedWeight
 		}
-	}
-
-	// For yes/no votes
-	if config.Type == "yes_no" {
-		yesVotes := result.Tally["yes"].Weight
-		totalValidVotes := result.TotalVoted
-		if !config.AllowAbstention && result.TotalAbstained > 0 {
-			totalValidVotes += result.TotalAbstained
-		}
-
-		percentage := (yesVotes / totalPossibleWeight) * 100
-
-		switch config.RequiredMajority {
-		case "simple":
-			return percentage > 50
-		case "qualified", "supermajority":
-			return percentage >= 66.67
-		case "unanimous":
-			return percentage >= 100
-		case "custom":
-			return percentage >= config.RequiredMajorityValue
-		}
-	}
-
-	// For multiple choice, the option with most votes wins if it meets the threshold
-	if config.Type == "multiple_choice" || config.Type == "single_choice" {
-		var maxWeight float64
-		for _, tally := range result.Tally {
-			if tally.Weight > maxWeight {
-				maxWeight = tally.Weight
+		if quorumDenominator > 0 {
+			quorumPct := result.TotalVoted / quorumDenominator * 100
+			if quorumPct < config.Quorum {
+				return false
 			}
 		}
+	}
 
-		percentage := (maxWeight / result.TotalVoted) * 100
-
-		switch config.RequiredMajority {
-		case "simple":
-			return percentage > 50
-		case "qualified", "supermajority":
-			return percentage >= 66.67
-		case "unanimous":
-			return percentage >= 100
-		case "custom":
-			return percentage >= config.RequiredMajorityValue
+	// Determine the winning vote weight and the denominator for majority calculation
+	var winningWeight float64
+	if config.Type == "yes_no" {
+		winningWeight = result.Tally["yes"].Weight
+	} else {
+		for _, tally := range result.Tally {
+			if tally.Weight > winningWeight {
+				winningWeight = tally.Weight
+			}
 		}
+	}
+
+	// simple: majority of votes cast; absolute: majority of all qualified voters
+	var denominator float64
+	switch config.RequiredMajority {
+	case "absolute":
+		if gathering.VotingMode == "by_unit" {
+			denominator = qualifiedCount
+		} else {
+			denominator = qualifiedWeight
+		}
+	default:
+		// simple, qualified, unanimous: denominator is votes cast (excluding abstentions)
+		denominator = result.TotalVoted
+	}
+
+	if denominator == 0 {
+		return false
+	}
+	percentage := winningWeight / denominator * 100
+
+	switch config.RequiredMajority {
+	case "simple":
+		return percentage > 50
+	case "absolute":
+		return percentage > 50
+	case "qualified":
+		threshold := config.RequiredMajorityValue
+		if threshold == 0 {
+			threshold = 66.67
+		}
+		return percentage >= threshold
+	case "unanimous":
+		return percentage >= 100
 	}
 
 	return false

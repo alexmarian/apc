@@ -162,7 +162,7 @@ const columns: DataTableColumns<Gathering> = [
     })
   },
   {
-    title: t('gatherings.type'),
+    title: t('gatherings.type.title'),
     key: 'type',
     width: 100,
     render: (row) => t(`gatherings.type.${row.type}`)

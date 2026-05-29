@@ -270,15 +270,16 @@ type VotingBallot struct {
 }
 
 type VotingMatter struct {
-	ID           int64
-	GatheringID  int64
-	OrderIndex   int64
-	Title        string
-	Description  sql.NullString
-	MatterType   string
-	VotingConfig string
-	CreatedAt    sql.NullTime
-	UpdatedAt    sql.NullTime
+	ID            int64
+	GatheringID   int64
+	OrderIndex    int64
+	Title         string
+	Description   sql.NullString
+	MatterType    string
+	VotingConfig  string
+	IsInformative int64
+	CreatedAt     sql.NullTime
+	UpdatedAt     sql.NullTime
 }
 
 type VotingNotification struct {

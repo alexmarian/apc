@@ -83,22 +83,23 @@ type VotingResultsCached struct {
 
 // VotingMatter represents a matter to be voted on
 type VotingMatter struct {
-	ID           int64        `json:"id"`
-	GatheringID  int64        `json:"gathering_id"`
-	OrderIndex   int          `json:"order_index"`
-	Title        string       `json:"title"`
-	Description  string       `json:"description"`
-	MatterType   string       `json:"matter_type"`
-	VotingConfig VotingConfig `json:"voting_config"`
-	CreatedAt    time.Time    `json:"created_at"`
-	UpdatedAt    time.Time    `json:"updated_at"`
+	ID            int64        `json:"id"`
+	GatheringID   int64        `json:"gathering_id"`
+	OrderIndex    int          `json:"order_index"`
+	Title         string       `json:"title"`
+	Description   string       `json:"description"`
+	MatterType    string       `json:"matter_type"`
+	VotingConfig  VotingConfig `json:"voting_config"`
+	IsInformative bool         `json:"is_informative"`
+	CreatedAt     time.Time    `json:"created_at"`
+	UpdatedAt     time.Time    `json:"updated_at"`
 }
 
 // VotingConfig contains the configuration for a voting matter
 type VotingConfig struct {
 	Type                    string         `json:"type"` // yes_no, multiple_choice, ranking
 	Options                 []VotingOption `json:"options,omitempty"`
-	RequiredMajority        string         `json:"required_majority"` // simple, supermajority, custom
+	RequiredMajority        string         `json:"required_majority"` // simple, absolute, qualified, unanimous
 	RequiredMajorityValue   float64        `json:"required_majority_value,omitempty"`
 	Quorum                  float64        `json:"quorum"`
 	AllowAbstention         bool           `json:"allow_abstention"`
@@ -144,11 +145,16 @@ type Ballot struct {
 	IsValid            bool                  `json:"is_valid"`
 }
 
-// BallotVote represents a vote on a single matter
+// BallotVote represents a vote on a single matter.
+// Values holds the selection(s) for the matter:
+//   - yes_no: ["yes"], ["no"], or ["abstain"]
+//   - single_choice: ["<option_id>"]
+//   - multiple_choice: ["<opt1>", "<opt2>", ...]
+//   - ranking: option IDs ordered by preference (Borda count scoring; IRV and
+//     first-choice plurality are alternative methods not currently used)
 type BallotVote struct {
-	MatterID  int64  `json:"matter_id"`
-	OptionID  string `json:"option_id,omitempty"`
-	VoteValue string `json:"vote_value"` // yes, no, abstain, or option ID
+	MatterID int64    `json:"matter_id"`
+	Values   []string `json:"values"`
 }
 
 // VoteResults represents the results of all voting matters
@@ -269,15 +275,16 @@ func DBVotingMatterToResponse(m database.VotingMatter) VotingMatter {
 	json.Unmarshal([]byte(m.VotingConfig), &config)
 
 	return VotingMatter{
-		ID:           m.ID,
-		GatheringID:  m.GatheringID,
-		OrderIndex:   int(m.OrderIndex),
-		Title:        m.Title,
-		Description:  m.Description.String,
-		MatterType:   m.MatterType,
-		VotingConfig: config,
-		CreatedAt:    m.CreatedAt.Time,
-		UpdatedAt:    m.UpdatedAt.Time,
+		ID:            m.ID,
+		GatheringID:   m.GatheringID,
+		OrderIndex:    int(m.OrderIndex),
+		Title:         m.Title,
+		Description:   m.Description.String,
+		MatterType:    m.MatterType,
+		VotingConfig:  config,
+		IsInformative: m.IsInformative != 0,
+		CreatedAt:     m.CreatedAt.Time,
+		UpdatedAt:     m.UpdatedAt.Time,
 	}
 }
 
