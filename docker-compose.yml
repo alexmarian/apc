@@ -1,0 +1,46 @@
+services:
+
+  backend:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    volumes:
+      - db_data:/app/data
+      - ./api/.env:/app/.env:ro
+    env_file: ./api/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  admin:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        APP: admin
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  member:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        APP: member
+    ports:
+      - "3001:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  db_data:

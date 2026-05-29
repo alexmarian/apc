@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/alexmarian/apc/api/internal/auth"
 	"github.com/alexmarian/apc/api/internal/database"
 	"github.com/alexmarian/apc/api/internal/logging"
 	"go.uber.org/zap"
@@ -12,7 +13,7 @@ import (
 )
 
 const userContextKey = "userID"
-const assoctiationsContextKey = "associations"
+const claimsContextKey = "claims"
 const startDateQueryKey = "start_date"
 const endDateQueryKey = "end_date"
 
@@ -57,12 +58,13 @@ func GetUserIdFromContext(req *http.Request) string {
 	return req.Context().Value(userContextKey).(string)
 }
 
-func AddAssotiationIdsToContext(req *http.Request, associations []int64) *http.Request {
-	return req.WithContext(context.WithValue(req.Context(), assoctiationsContextKey, associations))
+func AddClaimsToContext(req *http.Request, claims *auth.ApcClaims) *http.Request {
+	return req.WithContext(context.WithValue(req.Context(), claimsContextKey, claims))
 }
 
-func GetAssotiationIdsToContext(req *http.Request) []int64 {
-	return req.Context().Value(assoctiationsContextKey).([]int64)
+func GetClaimsFromContext(req *http.Request) *auth.ApcClaims {
+	c, _ := req.Context().Value(claimsContextKey).(*auth.ApcClaims)
+	return c
 }
 
 func GetRequestDateRange(req *http.Request, rw *http.ResponseWriter) (startDate, endDate time.Time, err error) {

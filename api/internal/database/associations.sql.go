@@ -74,3 +74,34 @@ func (q *Queries) GetAssociationsFromList(ctx context.Context, associationIds []
 	}
 	return items, nil
 }
+
+const listAssociations = `-- name: ListAssociations :many
+SELECT id, name, address, administrator, created_at, updated_at FROM associations ORDER BY id
+`
+
+func (q *Queries) ListAssociations(ctx context.Context) ([]Association, error) {
+	rows, err := q.db.QueryContext(ctx, listAssociations)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Association
+	for rows.Next() {
+		var i Association
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Address,
+			&i.Administrator,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	return items, rows.Err()
+}

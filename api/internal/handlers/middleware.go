@@ -1,9 +1,10 @@
 package handlers
 
 import (
-	"github.com/alexmarian/apc/api/internal/auth"
 	"net/http"
 	"strconv"
+
+	"github.com/alexmarian/apc/api/internal/auth"
 )
 
 func (cfg *ApiConfig) MiddlewareAuth(next http.HandlerFunc) http.HandlerFunc {
@@ -13,50 +14,46 @@ func (cfg *ApiConfig) MiddlewareAuth(next http.HandlerFunc) http.HandlerFunc {
 			RespondWithError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
-		userLogin, associations, err := auth.ValidateJWT(token, cfg.Secret)
+		claims, err := auth.ValidateJWT(token, cfg.Secret)
 		if err != nil {
 			RespondWithError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
-		reqWithAssoction := AddAssotiationIdsToContext(r, associations)
-		reqWithUserId := AddUserIdToContext(reqWithAssoction, userLogin)
-		next.ServeHTTP(w, reqWithUserId)
+		if cfg.Db != nil {
+			revoked, err := cfg.Db.IsTokenRevoked(r.Context(), claims.ID)
+			if err != nil || revoked {
+				RespondWithError(w, http.StatusUnauthorized, "token has been revoked")
+				return
+			}
+		}
+		userLogin, _ := claims.GetSubject()
+		r = AddUserIdToContext(r, userLogin)
+		r = AddClaimsToContext(r, claims)
+		next.ServeHTTP(w, r)
 	}
 }
 
+// MiddlewareAssociationResource validates the association ID path value.
+// With single-association deployments every authenticated user has access;
+// the check is kept so route definitions stay unchanged.
 func (cfg *ApiConfig) MiddlewareAssociationResource(next http.HandlerFunc) http.HandlerFunc {
 	return cfg.MiddlewareAuth(func(w http.ResponseWriter, r *http.Request) {
-		associationId, _ := strconv.Atoi(r.PathValue(AssociationIdPathValue))
-		userAssociationsIds := GetAssotiationIdsToContext(r)
-		found := false
-		for _, id := range userAssociationsIds {
-			if id == int64(associationId) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			RespondWithError(w, http.StatusForbidden, "You don't have access to this association")
+		associationId, err := strconv.Atoi(r.PathValue(AssociationIdPathValue))
+		if err != nil || associationId <= 0 {
+			RespondWithError(w, http.StatusBadRequest, "invalid association id")
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
 }
+
 func (cfg *ApiConfig) MiddlewareAdminOnly(next http.HandlerFunc) http.HandlerFunc {
 	return cfg.MiddlewareAuth(func(w http.ResponseWriter, r *http.Request) {
-		userLogin := GetUserIdFromContext(r)
-
-		user, err := cfg.Db.GetUserByLogin(r.Context(), userLogin)
-		if err != nil {
-			RespondWithError(w, http.StatusInternalServerError, "Failed to verify user privileges")
+		claims := GetClaimsFromContext(r)
+		if claims == nil || !claims.IsAdmin {
+			RespondWithError(w, http.StatusForbidden, "admin privileges required")
 			return
 		}
-
-		if !user.IsAdmin {
-			RespondWithError(w, http.StatusForbidden, "Admin privileges required")
-			return
-		}
-
 		next.ServeHTTP(w, r)
 	})
 }

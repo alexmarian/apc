@@ -88,6 +88,7 @@ func main() {
 	mux.Handle("POST /v1/api/password-reset/reset", handlers.HandleResetPassword(apiCfg))
 
 	mux.Handle("POST /v1/api/refresh", logging.LoggingMiddleware(handlers.HandleRefresh(apiCfg)))
+	mux.HandleFunc("POST /v1/api/logout", apiCfg.MiddlewareAuth(handlers.HandleLogout(apiCfg)))
 
 	mux.HandleFunc("GET /v1/api/associations", apiCfg.MiddlewareAuth(handlers.HandleGetUserAssociations(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}", handlers.AssociationIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetUserAssociation(apiCfg)))

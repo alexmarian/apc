@@ -1,0 +1,14 @@
+{
+  "name": "apc-frontend",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "admin": "npm run dev --workspace=apps/admin",
+    "build:admin": "npm run build --workspace=apps/admin",
+    "member": "npm run dev --workspace=apps/member",
+    "build:member": "npm run build --workspace=apps/member"
+  }
+}

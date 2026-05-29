@@ -3,13 +3,14 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/alexmarian/apc/api/internal/auth"
 	"github.com/alexmarian/apc/api/internal/database"
 	"github.com/alexmarian/apc/api/internal/logging"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"net/http"
-	"time"
 )
 
 func HandleLogin(cfg *ApiConfig) http.HandlerFunc {
@@ -28,11 +29,9 @@ func HandleLogin(cfg *ApiConfig) http.HandlerFunc {
 		decoder := json.NewDecoder(req.Body)
 		defer req.Body.Close()
 		request := parameters{}
-		err := decoder.Decode(&request)
-		if err != nil {
-			var errors = fmt.Sprintf("Error decoding login user request: %s", err)
-			logging.Logger.Log(zapcore.WarnLevel, "Error decoding login user request", zap.String("error", err.Error()))
-			RespondWithError(rw, http.StatusBadRequest, errors)
+		if err := decoder.Decode(&request); err != nil {
+			logging.Logger.Log(zapcore.WarnLevel, "Error decoding login request", zap.String("error", err.Error()))
+			RespondWithError(rw, http.StatusBadRequest, fmt.Sprintf("Error decoding login request: %s", err))
 			return
 		}
 		user, err := cfg.Db.GetUserByLogin(req.Context(), request.Login)
@@ -41,14 +40,13 @@ func HandleLogin(cfg *ApiConfig) http.HandlerFunc {
 			RespondWithError(rw, http.StatusUnauthorized, "Login failure")
 			return
 		}
-		err = auth.CheckPasswordHash(request.Password, user.PasswordHash)
-		if err != nil {
+		if err := auth.CheckPasswordHash(request.Password, user.PasswordHash); err != nil {
 			logging.Logger.Log(zapcore.WarnLevel, "Incorrect password", zap.String("user", request.Login))
 			RespondWithError(rw, http.StatusUnauthorized, "Login failure")
 			return
 		}
-		if success, err := auth.VerifyTOTPCode(user.ToptSecret, request.TOTP); err != nil || !success {
-			logging.Logger.Log(zapcore.WarnLevel, "Incorrect topt", zap.String("user", request.Login))
+		if ok, err := auth.VerifyTOTPCode(user.ToptSecret, request.TOTP); err != nil || !ok {
+			logging.Logger.Log(zapcore.WarnLevel, "Incorrect totp", zap.String("user", request.Login))
 			RespondWithError(rw, http.StatusUnauthorized, "Login failure")
 			return
 		}
@@ -61,30 +59,23 @@ func HandleLogin(cfg *ApiConfig) http.HandlerFunc {
 			RespondWithError(rw, http.StatusInternalServerError, "Error creating refresh token")
 			return
 		}
-		err = cfg.Db.CreateRefreshToken(req.Context(), database.CreateRefreshTokenParams{
+		if err := cfg.Db.CreateRefreshToken(req.Context(), database.CreateRefreshTokenParams{
 			Token: refreshToken,
 			Login: user.Login,
-		})
-		if err != nil {
+		}); err != nil {
 			RespondWithError(rw, http.StatusInternalServerError, "Error creating refresh token")
-		}
-		associations, err := cfg.Db.GetUserAssociationsByLogin(req.Context(), user.Login)
-		if err != nil {
-			logging.Logger.Log(zapcore.WarnLevel, "No associations", zap.String("user", user.Login))
-			RespondWithError(rw, http.StatusInternalServerError, "Error getting user associations")
 			return
 		}
-		token, err := auth.MakeJWT(user.Login, cfg.Secret, time.Duration(seconds)*time.Second, associations)
+		token, _, err := auth.MakeJWT(user.Login, cfg.Secret, time.Duration(seconds)*time.Second, user.IsAdmin)
 		if err != nil {
 			RespondWithError(rw, http.StatusInternalServerError, "Error creating token")
 			return
 		}
-		usr := response{
+		RespondWithJSON(rw, http.StatusOK, response{
 			Login:        user.Login,
 			Token:        token,
 			RefreshToken: refreshToken,
-		}
-		RespondWithJSON(rw, http.StatusOK, usr)
+		})
 	}
 }
 
@@ -105,21 +96,32 @@ func HandleRefresh(cfg *ApiConfig) http.HandlerFunc {
 			RespondWithError(rw, http.StatusUnauthorized, "Invalid token")
 			return
 		}
-		associations, err := cfg.Db.GetUserAssociationsByLogin(req.Context(), rt.Login)
+		user, err := cfg.Db.GetUserByLogin(req.Context(), rt.Login)
 		if err != nil {
-			logging.Logger.Log(zapcore.WarnLevel, "No associations", zap.String("user", rt.Login))
-			RespondWithError(rw, http.StatusInternalServerError, "Error getting user associations")
+			RespondWithError(rw, http.StatusInternalServerError, "Error fetching user")
 			return
 		}
-		token, err := auth.MakeJWT(rt.Login, cfg.Secret, 3600*time.Second, associations)
+		token, _, err := auth.MakeJWT(rt.Login, cfg.Secret, 3600*time.Second, user.IsAdmin)
 		if err != nil {
 			RespondWithError(rw, http.StatusInternalServerError, "Error creating token")
 			return
 		}
-		resp := response{
-			Token: token,
+		RespondWithJSON(rw, http.StatusOK, response{Token: token})
+	}
+}
+
+func HandleLogout(cfg *ApiConfig) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		claims := GetClaimsFromContext(req)
+		if claims == nil {
+			RespondWithError(rw, http.StatusUnauthorized, "unauthorized")
+			return
 		}
-		//rw.Header().Set("Set-Cookie", fmt.Sprintf("id=a3fWa; Expires=%s; Secure; HttpOnly", time.Now().Add(3600*time.Second).UTC().Format(time.RFC1123)))
-		RespondWithJSON(rw, http.StatusOK, resp)
+		expiresAt, _ := claims.GetExpirationTime()
+		if err := cfg.Db.RevokeToken(req.Context(), claims.ID, expiresAt.Time); err != nil {
+			RespondWithError(rw, http.StatusInternalServerError, "Error revoking token")
+			return
+		}
+		rw.WriteHeader(http.StatusNoContent)
 	}
 }

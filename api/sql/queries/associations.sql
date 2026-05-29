@@ -9,3 +9,9 @@ SELECT * from associations where id = ?;
 SELECT * from associations where id in (sqlc.slice('association_ids'));
 
 --
+
+-- name: ListAssociations :many
+
+SELECT * from associations ORDER BY id;
+
+--
