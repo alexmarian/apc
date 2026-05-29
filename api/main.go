@@ -2,7 +2,14 @@ package main
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
+	"io/fs"
+	"log"
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/alexmarian/apc/api/internal/database"
 	"github.com/alexmarian/apc/api/internal/handlers"
 	"github.com/alexmarian/apc/api/internal/handlers/gathering"
@@ -11,11 +18,10 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
-	"log"
-	"net/http"
-	"os"
-	"time"
 )
+
+//go:embed sql/schema
+var schemaFS embed.FS
 
 func main() {
 	logLevel := os.Getenv("LOG_LEVEL")
@@ -60,8 +66,15 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		dbQueries := database.New(db)
-		apiCfg.Db = dbQueries
+		migFS, err := fs.Sub(schemaFS, "sql/schema")
+		if err != nil {
+			log.Fatalf("migrations fs: %v", err)
+		}
+		if err := database.RunMigrations(db, migFS); err != nil {
+			log.Fatalf("migrations: %v", err)
+		}
+		logging.Logger.Log(zap.InfoLevel, "Migrations applied")
+		apiCfg.Db = database.New(db)
 		logging.Logger.Log(zap.InfoLevel, "Connected to database!")
 	}
 
