@@ -233,6 +233,23 @@
                 </NCheckboxGroup>
               </div>
 
+              <!-- Ranking -->
+              <div v-else-if="matter.voting_config.type === 'ranking'">
+                <p style="font-size: 12px; color: #999; margin-bottom: 8px;">{{ $t('gatherings.voting.rankingHint') }}</p>
+                <div
+                  v-for="(optId, idx) in votes[matter.id]"
+                  :key="optId"
+                  style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--n-border-color);"
+                >
+                  <span style="font-weight: bold; min-width: 24px;">{{ idx + 1 }}.</span>
+                  <span style="flex: 1; font-size: 16px;">{{ getOptionText(matter, optId) }}</span>
+                  <NSpace size="small">
+                    <NButton size="tiny" :disabled="idx === 0" @click="moveRankUp(matter.id, idx)">↑</NButton>
+                    <NButton size="tiny" :disabled="idx === votes[matter.id].length - 1" @click="moveRankDown(matter.id, idx)">↓</NButton>
+                  </NSpace>
+                </div>
+              </div>
+
               <!-- Voting Config Info -->
               <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--n-border-color);">
                 <NSpace size="small">
@@ -391,10 +408,8 @@ const ownerOptions = computed(() => {
 })
 
 const totalSelectedWeight = computed(() => {
-  if (!selectedOwner.value) return 0
-  return selectedOwner.value.units
-    .filter(u => selectedUnitIds.value.includes(u.id))
-    .reduce((sum, u) => sum + u.voting_weight, 0) * 100
+  if (!selectedOwner.value || !props.gathering.qualified_area) return 0
+  return (totalSelectedArea.value / props.gathering.qualified_area) * 100
 })
 
 const totalSelectedArea = computed(() => {
@@ -418,7 +433,7 @@ const canSubmitBallot = computed(() => {
     if (matter.voting_config.allow_abstention && vote === 'abstain') {
       return true
     }
-    if (matter.voting_config.type === 'multiple_choice') {
+    if (matter.voting_config.type === 'multiple_choice' || matter.voting_config.type === 'ranking') {
       return Array.isArray(vote) && vote.length > 0
     }
     return vote !== undefined && vote !== null && vote !== ''
@@ -448,6 +463,8 @@ const loadVotingMatters = async () => {
     votingMatters.value.forEach(matter => {
       if (matter.voting_config.type === 'multiple_choice') {
         votes.value[matter.id] = []
+      } else if (matter.voting_config.type === 'ranking') {
+        votes.value[matter.id] = matter.voting_config.options?.map(o => o.id) ?? []
       } else {
         votes.value[matter.id] = null
       }
@@ -456,6 +473,22 @@ const loadVotingMatters = async () => {
     error.value = err.response?.data?.error || err.message || t('gatherings.matters.loadError')
     message.error(error.value ?? 'An error occurred')
   }
+}
+
+const getOptionText = (matter: VotingMatter, optId: string): string => {
+  return matter.voting_config.options?.find(o => o.id === optId)?.text ?? optId
+}
+
+const moveRankUp = (matterId: number, idx: number) => {
+  const arr = [...votes.value[matterId]]
+  ;[arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]]
+  votes.value[matterId] = arr
+}
+
+const moveRankDown = (matterId: number, idx: number) => {
+  const arr = [...votes.value[matterId]]
+  ;[arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]]
+  votes.value[matterId] = arr
 }
 
 const handleOwnerChange = () => {
@@ -513,20 +546,15 @@ const submitBallot = async () => {
     const ballotContent: Record<string, any> = {}
     votingMatters.value.forEach(matter => {
       const voteValue = votes.value[matter.id]
+      let values: string[]
 
-      if (matter.voting_config.type === 'yes_no') {
-        ballotContent[matter.id.toString()] = { vote_value: voteValue }
-      } else if (matter.voting_config.type === 'single_choice') {
-        ballotContent[matter.id.toString()] = {
-          vote_value: voteValue === 'abstain' ? 'abstain' : voteValue,
-          option_id: voteValue === 'abstain' ? null : voteValue
-        }
-      } else if (matter.voting_config.type === 'multiple_choice') {
-        ballotContent[matter.id.toString()] = {
-          vote_value: 'multiple',
-          option_ids: Array.isArray(voteValue) ? voteValue : []
-        }
+      if (matter.voting_config.type === 'multiple_choice' || matter.voting_config.type === 'ranking') {
+        values = Array.isArray(voteValue) ? voteValue : []
+      } else {
+        values = voteValue !== null && voteValue !== undefined ? [String(voteValue)] : []
       }
+
+      ballotContent[matter.id.toString()] = { matter_id: matter.id, values }
     })
 
     // Build request payload

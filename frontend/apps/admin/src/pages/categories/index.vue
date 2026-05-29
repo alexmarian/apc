@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { NCard, NPageHeader, NModal } from 'naive-ui'
 import CategoriesList from '@/components/CategoriesList.vue'
 import CategoryForm from '@/components/CategoryForm.vue'
-import AssociationSelector from '@/components/AssociationSelector.vue'
+import { useAssociationStore } from '@/stores/association'
 import type { Category } from '@/types/api'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
-// State
-const associationId = ref<number | null>(null)
+const { associationId } = storeToRefs(useAssociationStore())
 const showCategoryModal = ref(false)
 const editingCategoryId = ref<number | undefined>(undefined)
 
@@ -61,12 +61,6 @@ const handleCategoryFormCancelled = () => {
   editingCategoryId.value = undefined
 }
 
-const handleAssociationChanged = (newAssociationId: number | null) => {
-  associationId.value = newAssociationId
-  // Close any open modals when association changes
-  showCategoryModal.value = false
-  editingCategoryId.value = undefined
-}
 </script>
 
 <template>
@@ -76,25 +70,9 @@ const handleAssociationChanged = (newAssociationId: number | null) => {
         {{ t('categories.title') }}
       </template>
 
-      <template #header>
-        <div style="margin-bottom: 12px;">
-          <AssociationSelector
-            v-model:associationId="associationId"
-            @update:associationId="handleAssociationChanged"
-          />
-        </div>
-      </template>
     </NPageHeader>
 
-    <div v-if="!associationId">
-      <NCard style="margin-top: 16px;">
-        <div style="text-align: center; padding: 32px;">
-          <p>{{ t('categories.selectAssociation') }}</p>
-        </div>
-      </NCard>
-    </div>
-
-    <div v-else-if="canShowCategories">
+    <div v-if="canShowCategories">
       <!-- Categories List -->
       <CategoriesList
         ref="categoriesListRef"

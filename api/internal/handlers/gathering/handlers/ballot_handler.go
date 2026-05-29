@@ -20,19 +20,23 @@ import (
 
 // BallotHandler handles ballot and voting operations
 type BallotHandler struct {
-	cfg              *handlers.ApiConfig
-	gatheringHandler *GatheringHandler
-	statsService     *services.StatsService
-	tallyService     *services.TallyService
+	cfg                  *handlers.ApiConfig
+	gatheringHandler     *GatheringHandler
+	statsService         *services.StatsService
+	tallyService         *services.TallyService
+	votingResultsService *services.VotingResultsService
 }
 
 // NewBallotHandler creates a new BallotHandler
 func NewBallotHandler(cfg *handlers.ApiConfig, gatheringHandler *GatheringHandler) *BallotHandler {
+	tallyService := services.NewTallyService(cfg.Db)
+	quorumService := services.NewQuorumService(cfg.Db)
 	return &BallotHandler{
-		cfg:              cfg,
-		gatheringHandler: gatheringHandler,
-		statsService:     services.NewStatsService(cfg.Db),
-		tallyService:     services.NewTallyService(cfg.Db),
+		cfg:                  cfg,
+		gatheringHandler:     gatheringHandler,
+		statsService:         services.NewStatsService(cfg.Db),
+		tallyService:         tallyService,
+		votingResultsService: services.NewVotingResultsService(cfg.Db, quorumService, tallyService),
 	}
 }
 
@@ -196,6 +200,9 @@ func (h *BallotHandler) HandleSubmitBallot() func(http.ResponseWriter, *http.Req
 		// Update vote tallies asynchronously
 		go h.tallyService.UpdateVoteTallies(int64(gatheringID), int(participant.ID))
 
+		// Invalidate cached results so next fetch recomputes from fresh tallies
+		h.votingResultsService.InvalidateResults(req.Context(), int64(gatheringID))
+
 		// Log audit
 		h.cfg.Db.CreateAuditLog(req.Context(), database.CreateAuditLogParams{
 			GatheringID: int64(gatheringID),
@@ -233,7 +240,7 @@ func (h *BallotHandler) HandleGetBallots() func(http.ResponseWriter, *http.Reque
 		type BallotMetadata struct {
 			ID              int64   `json:"id"`
 			ParticipantName string  `json:"participant_name"`
-			UnitsInfo       string  `json:"units_info"`
+			UnitsInfo       []int64 `json:"units_info"`
 			UnitsArea       float64 `json:"units_area"`
 			UnitsPart       float64 `json:"units_part"`
 			BallotHash      string  `json:"ballot_hash"`
@@ -248,10 +255,13 @@ func (h *BallotHandler) HandleGetBallots() func(http.ResponseWriter, *http.Reque
 				submittedAt = b.SubmittedAt.Time.Format(time.RFC3339)
 			}
 
+			var unitIDs []int64
+			json.Unmarshal([]byte(b.UnitsInfo), &unitIDs)
+
 			response[i] = BallotMetadata{
 				ID:              b.ID,
 				ParticipantName: b.ParticipantName,
-				UnitsInfo:       b.UnitsInfo,
+				UnitsInfo:       unitIDs,
 				UnitsArea:       b.UnitsArea,
 				UnitsPart:       b.UnitsPart,
 				BallotHash:      b.BallotHash,

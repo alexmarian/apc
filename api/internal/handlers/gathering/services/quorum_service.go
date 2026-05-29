@@ -65,7 +65,17 @@ func (s *QuorumService) CalculateQuorum(gathering domain.Gathering, _ float64, _
 // CalculateIfPassed determines if a voting matter has passed based on its results.
 // Informative matters are handled by the caller via VotingMatter.IsInformative.
 func (s *QuorumService) CalculateIfPassed(result domain.VoteMatterResult, config domain.VotingConfig, gathering database.Gathering) bool {
+	// Poll (sondaj) matters are always accepted regardless of participation or quorum
+	if result.MatterType == "poll" {
+		return true
+	}
+
 	if result.TotalVoted == 0 {
+		return false
+	}
+
+	// Gathering-level quorum must be met before any matter can pass
+	if result.QuorumInfo != nil && !result.QuorumInfo.Met {
 		return false
 	}
 

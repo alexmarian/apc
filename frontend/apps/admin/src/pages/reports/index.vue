@@ -24,7 +24,8 @@ import { expenseApi } from '@/services/api'
 import type { Expense } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
 import { groupExpensesByMonth, calculateMonthlyAverage } from '@/utils/expenseUtils'
-import AssociationSelector from '@/components/AssociationSelector.vue'
+import { storeToRefs } from 'pinia'
+import { useAssociationStore } from '@/stores/association'
 import CategorySelector from '@/components/CategorySelector.vue'
 import ExpenseCharts from '@/components/ExpenseCharts.vue'
 import { useI18n } from 'vue-i18n'
@@ -33,8 +34,7 @@ const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 
-// Association selector
-const associationId = ref<number | null>(null)
+const { associationId } = storeToRefs(useAssociationStore())
 
 // Data states
 const expenses = ref<Expense[]>([])
@@ -183,28 +183,21 @@ const formattedDateRange = computed(() => {
   return `${start} - ${end}`
 })
 
-// Initialize from URL query params
+// Initialize filters from URL query params or set defaults
 onMounted(() => {
-  // Restore association ID from URL
-  if (route.query.associationId) {
-    associationId.value = parseInt(route.query.associationId as string)
-  }
-
-  // Restore date range from URL, or set default to current year
   if (route.query.startDate && route.query.endDate) {
     dateRange.value = [
       parseInt(route.query.startDate as string),
       parseInt(route.query.endDate as string)
     ]
-  } else if (associationId.value) {
-    // Only set default date range if association is selected
+  } else {
     const now = new Date()
-    const startOfYear = new Date(now.getFullYear(), 0, 1)
-    const endOfYear = new Date(now.getFullYear(), 11, 31)
-    dateRange.value = [startOfYear.getTime(), endOfYear.getTime()]
+    dateRange.value = [
+      new Date(now.getFullYear(), 0, 1).getTime(),
+      new Date(now.getFullYear(), 11, 31).getTime()
+    ]
   }
 
-  // Restore category filter from URL
   if (route.query.categoryId) {
     selectedCategory.value = parseInt(route.query.categoryId as string)
   }
@@ -218,22 +211,9 @@ onMounted(() => {
         {{ t('reports.title', 'Expense Reports') }}
       </template>
 
-      <template #header>
-        <div style="margin-bottom: 12px;">
-          <AssociationSelector v-model:associationId="associationId" />
-        </div>
-      </template>
     </NPageHeader>
 
-    <div v-if="!associationId">
-      <NCard style="margin-top: 16px;">
-        <div style="text-align: center; padding: 32px;">
-          <p>{{ t('expenses.selectAssociation', 'Please select an association to view expense reports') }}</p>
-        </div>
-      </NCard>
-    </div>
-
-    <div v-else>
+    <div>
       <!-- Filters -->
       <NCard style="margin-top: 16px;">
         <NFlex align="center" justify="start">

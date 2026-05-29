@@ -16,8 +16,7 @@ const isDarkTheme = computed(() => {
   <div class="auth-layout" :class="{ 'dark-theme': isDarkTheme, 'light-theme': !isDarkTheme }">
     <div class="auth-container">
       <div class="auth-logo">
-        <img src="@/assets/logo.svg" alt="APC Logo" class="logo-img" />
-        <h1 class="app-title">APC</h1>
+        <img src="/logo_128.png" alt="APC Logo" class="logo-img" width="128" height="128" />
       </div>
       <slot></slot>
     </div>
@@ -69,15 +68,8 @@ const isDarkTheme = computed(() => {
 }
 
 .logo-img {
-  width: 80px;
-  height: 80px;
+  width: 128px;
+  height: 128px;
   margin-bottom: 1rem;
-}
-
-.app-title {
-  font-size: 1.75rem;
-  font-weight: bold;
-  color: #41b883; /* Vue green color - consistent across themes */
-  margin: 0;
 }
 </style>

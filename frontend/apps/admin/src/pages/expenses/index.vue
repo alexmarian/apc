@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import { NButton, NCard, NPageHeader, NSpace, useMessage, NModal } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import ExpensesList from '@/components/ExpensesList.vue'
 import ExpenseForm from '@/components/ExpenseForm.vue'
 import ExpensesSummary from '@/components/ExpensesSummary.vue'
-import AssociationSelector from '@/components/AssociationSelector.vue'
+import { useAssociationStore } from '@/stores/association'
 import type { Expense } from '@/types/api.ts'
 
 // Setup i18n
@@ -14,8 +15,7 @@ const { t } = useI18n()
 // Setup Naive UI message system
 const message = useMessage()
 
-// Association selector
-const associationId = ref<number | null>(null)
+const { associationId } = storeToRefs(useAssociationStore())
 
 // UI state
 const showExpenseModal = ref(false)
@@ -86,16 +86,6 @@ const handleExpenseFormCancelled = () => {
   editingExpenseId.value = undefined
 }
 
-const handleAssociationChanged = (newAssociationId: number | null) => {
-  associationId.value = newAssociationId
-  // Close any open modals when association changes
-  showExpenseModal.value = false
-  editingExpenseId.value = undefined
-  // Reset filters
-  dateRange.value = null
-  selectedCategory.value = null
-}
-
 const toggleSummary = () => {
   showSummary.value = !showSummary.value
 }
@@ -106,15 +96,6 @@ const toggleSummary = () => {
     <NPageHeader>
       <template #title>
         {{ t('expenses.title', 'Expense Management') }}
-      </template>
-
-      <template #header>
-        <div style="margin-bottom: 12px;">
-          <AssociationSelector
-            v-model:associationId="associationId"
-            @update:associationId="handleAssociationChanged"
-          />
-        </div>
       </template>
 
       <template #extra>
@@ -137,15 +118,7 @@ const toggleSummary = () => {
       </template>
     </NPageHeader>
 
-    <div v-if="!associationId">
-      <NCard style="margin-top: 16px;">
-        <div style="text-align: center; padding: 32px;">
-          <p>{{ t('expenses.selectAssociation', 'Please select an association to manage expenses') }}</p>
-        </div>
-      </NCard>
-    </div>
-
-    <div v-else-if="canShowExpenses">
+    <div v-if="canShowExpenses">
       <!-- Expenses List -->
       <ExpensesList
         ref="expensesListRef"

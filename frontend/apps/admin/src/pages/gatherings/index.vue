@@ -2,9 +2,6 @@
   <div class="gatherings-page">
     <NPageHeader>
       <template #title>{{ $t('gatherings.title') }}</template>
-      <template #header>
-        <AssociationSelector v-model:associationId="associationId" />
-      </template>
       <template #extra>
         <NButton v-if="associationId" type="primary" @click="showCreateModal = true">
           {{ $t('gatherings.create') }}
@@ -12,15 +9,7 @@
       </template>
     </NPageHeader>
 
-    <div v-if="!associationId" class="no-association">
-      <NCard>
-        <div style="text-align: center; padding: 32px;">
-          <p>{{ $t('common.selectAssociation') }}</p>
-        </div>
-      </NCard>
-    </div>
-
-    <div v-else class="gatherings-content">
+    <div class="gatherings-content">
       <NSpin :show="loading">
         <NAlert v-if="error" type="error" closable @close="error = null">
           {{ error }}
@@ -84,15 +73,16 @@ import {
   NTag,
   type DataTableColumns
 } from 'naive-ui'
+import { storeToRefs } from 'pinia'
 import { gatheringApi } from '@/services/api'
 import type { Gathering, GatheringStatus } from '@/types/api'
-import AssociationSelector from '@/components/AssociationSelector.vue'
+import { useAssociationStore } from '@/stores/association'
 import GatheringForm from '@/components/GatheringForm.vue'
 
 const { t } = useI18n()
 const router = useRouter()
 
-const associationId = ref<number | null>(null)
+const { associationId } = storeToRefs(useAssociationStore())
 const gatherings = ref<Gathering[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -214,19 +204,10 @@ const handleGatheringSaved = () => {
   loadGatherings()
 }
 
-watch(associationId, (newValue) => {
-  if (newValue) {
-    loadGatherings()
-  } else {
-    gatherings.value = []
-  }
-})
-
-onMounted(() => {
-  if (associationId.value) {
-    loadGatherings()
-  }
-})
+watch(associationId, (val) => {
+  if (val) loadGatherings()
+  else gatherings.value = []
+}, { immediate: true })
 </script>
 
 <style scoped>

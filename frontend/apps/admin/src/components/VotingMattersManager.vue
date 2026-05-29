@@ -6,14 +6,6 @@
           <h3>{{ $t('gatherings.matters.title') }}</h3>
           <NSpace>
             <NButton
-              v-if="gathering.status === 'active'"
-              type="warning"
-              @click="handleCloseVoting"
-              :loading="closingVoting"
-            >
-              {{ $t('gatherings.voting.closeAndViewResults', 'Close Voting & View Results') }}
-            </NButton>
-            <NButton
               v-if="canEdit"
               type="primary"
               @click="showCreateModal = true"
@@ -112,10 +104,8 @@ import {
   type DataTableColumns
 } from 'naive-ui'
 import { ArrowUpOutline, ArrowDownOutline } from '@vicons/ionicons5'
-import { votingMatterApi, gatheringApi } from '@/services/api'
-import { useMessage } from 'naive-ui'
+import { votingMatterApi } from '@/services/api'
 import type { Gathering, VotingMatter, VotingMatterType } from '@/types/api'
-import { GatheringStatus } from '@/types/api'
 import VotingMatterForm from '@/components/VotingMatterForm.vue'
 
 interface Props {
@@ -130,7 +120,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const message = useMessage()
 
 const matters = ref<VotingMatter[]>([])
 const loading = ref(false)
@@ -139,7 +128,6 @@ const showCreateModal = ref(false)
 const showDeleteModal = ref(false)
 const selectedMatter = ref<VotingMatter | undefined>(undefined)
 const deleting = ref(false)
-const closingVoting = ref(false)
 
 const canEdit = computed(() => {
   return props.gathering.status === 'draft'
@@ -395,30 +383,6 @@ const handleMatterSaved = () => {
 const handleModalCancelled = () => {
   showCreateModal.value = false
   selectedMatter.value = undefined
-}
-
-const handleCloseVoting = async () => {
-  closingVoting.value = true
-
-  try {
-    // Close the gathering by updating status to 'closed'
-    await gatheringApi.updateGatheringStatus(
-      props.associationId,
-      props.gathering.id,
-      { status: GatheringStatus.Closed }
-    )
-
-    message.success(t('gatherings.voting.closed', 'Voting has been closed'))
-    emit('updated')
-
-    // The parent component will refresh and the results tab will become available
-  } catch (err: any) {
-    const errorMessage = err.response?.data?.error || err.message || t('gatherings.voting.closeError', 'Failed to close voting')
-    error.value = errorMessage
-    message.error(errorMessage)
-  } finally {
-    closingVoting.value = false
-  }
 }
 
 onMounted(() => {

@@ -69,16 +69,9 @@ func (s *VotingResultsService) ComputeAndStoreResults(ctx context.Context, gathe
 		return nil, fmt.Errorf("failed to get voted stats: %w", err)
 	}
 
-	// Extract and convert stats (SQLite returns interface{})
-	participatingWeight := float64(0)
-	if participatingStats.ParticipatingUnitsTotalPart != nil {
-		participatingWeight = participatingStats.ParticipatingUnitsTotalPart.(float64)
-	}
-
-	votedWeight := float64(0)
-	if votedStats.VotedUnitsTotalPart != nil {
-		votedWeight = votedStats.VotedUnitsTotalPart.(float64)
-	}
+	// Extract and convert stats (SQLite returns int64 for integer aggregates, float64 otherwise)
+	participatingWeight := sqliteFloat(participatingStats.ParticipatingUnitsTotalPart)
+	votedWeight := sqliteFloat(votedStats.VotedUnitsTotalPart)
 
 	// Calculate quorum
 	quorumInfo := s.quorumService.CalculateQuorum(
@@ -176,15 +169,8 @@ func (s *VotingResultsService) ComputeAndStoreResults(ctx context.Context, gathe
 	}
 
 	// Extract area stats
-	participatingArea := float64(0)
-	if participatingStats.ParticipatingUnitsTotalArea != nil {
-		participatingArea = participatingStats.ParticipatingUnitsTotalArea.(float64)
-	}
-
-	votedArea := float64(0)
-	if votedStats.VotedUnitsTotalArea != nil {
-		votedArea = votedStats.VotedUnitsTotalArea.(float64)
-	}
+	participatingArea := sqliteFloat(participatingStats.ParticipatingUnitsTotalArea)
+	votedArea := sqliteFloat(votedStats.VotedUnitsTotalArea)
 
 	// Build summary
 	summary := domain.GatheringSummary{
@@ -238,6 +224,13 @@ func (s *VotingResultsService) GetCachedResults(ctx context.Context, gatheringID
 		log.Printf("[VotingResultsService] Cache hit for gathering %d", gatheringID)
 		var results domain.VoteResults
 		if err := json.Unmarshal([]byte(cachedResults.ResultsData), &results); err == nil {
+			// Fix up any stale is_passed values: if gathering quorum wasn't met, no matter can pass
+			for i, r := range results.Results {
+				if r.QuorumInfo != nil && !r.QuorumInfo.Met && r.IsPassed {
+					results.Results[i].IsPassed = false
+					results.Results[i].Result = "failed"
+				}
+			}
 			return &results, nil
 		}
 		log.Printf("[VotingResultsService] Warning: Failed to parse cached results: %v", err)
@@ -261,6 +254,23 @@ func (s *VotingResultsService) InvalidateResults(ctx context.Context, gatheringI
 	}
 	log.Printf("[VotingResultsService] Successfully invalidated results for gathering %d", gatheringID)
 	return nil
+}
+
+// sqliteFloat safely converts SQLite aggregate results to float64.
+// SQLite returns int64 for SUM/AVG when all values are integers, float64 otherwise.
+func sqliteFloat(v interface{}) float64 {
+	if v == nil {
+		return 0
+	}
+	switch val := v.(type) {
+	case float64:
+		return val
+	case int64:
+		return float64(val)
+	case int:
+		return float64(val)
+	}
+	return 0
 }
 
 // storeResults stores computed results in the cache table

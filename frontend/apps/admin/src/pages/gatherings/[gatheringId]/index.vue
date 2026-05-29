@@ -5,9 +5,6 @@
         <span v-if="gathering">{{ gathering.title }}</span>
         <span v-else>{{ $t('gatherings.title') }}</span>
       </template>
-      <template #header>
-        <AssociationSelector v-model:associationId="associationId" />
-      </template>
       <template #extra>
         <NSpace v-if="gathering && associationId">
           <NButton @click="$router.push('/gatherings')">
@@ -20,26 +17,20 @@
           >
             {{ $t('common.edit') }}
           </NButton>
-          <NButton 
-            v-if="canChangeStatus"
-            type="info"
-            @click="showStatusModal = true"
+          <NButton
+            v-for="targetStatus in availableTransitions"
+            :key="targetStatus"
+            :type="getTransitionButtonType(targetStatus)"
+            :loading="transitionSubmitting"
+            @click="handleTransition(targetStatus)"
           >
-            {{ $t('gatherings.status.title') }}
+            {{ $t(`gatherings.status.transitions.${gathering.status}_to_${targetStatus}`) }}
           </NButton>
         </NSpace>
       </template>
     </NPageHeader>
 
-    <div v-if="!associationId" class="no-association">
-      <NCard>
-        <div style="text-align: center; padding: 32px;">
-          <p>{{ $t('common.selectAssociation') }}</p>
-        </div>
-      </NCard>
-    </div>
-
-    <div v-else class="gathering-content">
+    <div class="gathering-content">
       <NSpin :show="loading">
         <NAlert v-if="error" type="error" closable @close="error = null">
           {{ error }}
@@ -150,15 +141,6 @@
       />
     </NModal>
 
-    <!-- Status Change Modal -->
-    <NModal v-model:show="showStatusModal" v-if="associationId && gathering">
-      <GatheringStatusForm
-        :association-id="associationId"
-        :gathering="gathering"
-        @saved="handleStatusChanged"
-        @cancelled="showStatusModal = false"
-      />
-    </NModal>
   </div>
 </template>
 
@@ -180,13 +162,14 @@ import {
   NDescriptionsItem,
   NTag,
   NTabs,
-  NTabPane
+  NTabPane,
+  useDialog
 } from 'naive-ui'
+import { storeToRefs } from 'pinia'
 import { gatheringApi } from '@/services/api'
 import type { Gathering, GatheringStatus } from '@/types/api'
-import AssociationSelector from '@/components/AssociationSelector.vue'
+import { useAssociationStore } from '@/stores/association'
 import GatheringForm from '@/components/GatheringForm.vue'
-import GatheringStatusForm from '@/components/GatheringStatusForm.vue'
 import VotingMattersManager from '@/components/VotingMattersManager.vue'
 import VotingWizard from '@/components/VotingWizard.vue'
 import ResultsDisplay from '@/components/ResultsDisplay.vue'
@@ -195,13 +178,14 @@ import BallotsList from '@/components/BallotsList.vue'
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const dialog = useDialog()
 
-const associationId = ref<number | null>(null)
+const { associationId } = storeToRefs(useAssociationStore())
 const gathering = ref<Gathering | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 const showEditModal = ref(false)
-const showStatusModal = ref(false)
+const transitionSubmitting = ref(false)
 
 const gatheringId = computed(() => {
   const id = route.params.gatheringId
@@ -212,16 +196,63 @@ const canEdit = computed(() => {
   return gathering.value?.status === 'draft' || gathering.value?.status === 'published'
 })
 
-const canChangeStatus = computed(() => {
-  return gathering.value?.status !== 'tallied'
+const statusTransitions: Record<GatheringStatus, GatheringStatus[]> = {
+  draft: ['published' as GatheringStatus],
+  published: ['active' as GatheringStatus, 'draft' as GatheringStatus],
+  active: ['closed' as GatheringStatus],
+  closed: ['tallied' as GatheringStatus, 'active' as GatheringStatus],
+  tallied: []
+}
+
+const availableTransitions = computed<GatheringStatus[]>(() => {
+  if (!gathering.value) return []
+  return statusTransitions[gathering.value.status] || []
 })
+
+const getTransitionButtonType = (targetStatus: GatheringStatus) => {
+  switch (targetStatus) {
+    case 'published': return 'info'
+    case 'active': return gathering.value?.status === 'closed' ? 'error' : 'success'
+    case 'closed': return 'warning'
+    case 'tallied': return 'primary'
+    case 'draft': return 'warning'
+    default: return 'default'
+  }
+}
+
+const handleTransition = (targetStatus: GatheringStatus) => {
+  if (!gathering.value || !associationId.value) return
+  const isDestructive = targetStatus === 'draft' || (targetStatus === 'active' && gathering.value.status === 'closed')
+  const gatheringId = gathering.value.id
+
+  dialog[isDestructive ? 'warning' : 'info']({
+    title: t('gatherings.status.confirmTitle'),
+    content: t(`gatherings.status.descriptions.${targetStatus}`),
+    positiveText: t('common.confirm'),
+    negativeText: t('common.cancel'),
+    onPositiveClick: async () => {
+      transitionSubmitting.value = true
+      error.value = null
+      try {
+        await gatheringApi.updateGatheringStatus(associationId.value!, gatheringId, { status: targetStatus })
+        loadGathering()
+      } catch (err: any) {
+        error.value = err.response?.data?.message || err.message || t('common.error')
+      } finally {
+        transitionSubmitting.value = false
+      }
+    }
+  })
+}
 
 const canVote = computed(() => {
   return gathering.value?.status === 'active'
 })
 
 const canViewResults = computed(() => {
-  return gathering.value?.status === 'closed' || gathering.value?.status === 'tallied'
+  return gathering.value?.status === 'active'
+    || gathering.value?.status === 'closed'
+    || gathering.value?.status === 'tallied'
 })
 
 const participationRate = computed(() => {
@@ -276,22 +307,9 @@ const handleGatheringSaved = () => {
   loadGathering()
 }
 
-const handleStatusChanged = () => {
-  showStatusModal.value = false
-  loadGathering()
-}
-
-watch(associationId, (newValue) => {
-  if (newValue && gatheringId.value) {
-    loadGathering()
-  }
-})
-
-onMounted(() => {
-  if (associationId.value && gatheringId.value) {
-    loadGathering()
-  }
-})
+watch([associationId, gatheringId], ([assocId, gId]) => {
+  if (assocId && gId) loadGathering()
+}, { immediate: true })
 </script>
 
 <style scoped>

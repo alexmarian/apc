@@ -105,13 +105,19 @@ const columns: DataTableColumns<Ballot> = [
     title: t('gatherings.ballots.weight'),
     key: 'units_part',
     width: 120,
-    render: (row) => row.units_part.toFixed(4)
+    render: (row) => {
+      if (!props.gathering.qualified_weight) return row.units_part.toFixed(4)
+      return `${(row.units_part / props.gathering.qualified_weight * 100).toFixed(2)}%`
+    }
   },
   {
     title: t('gatherings.ballots.area'),
     key: 'units_area',
     width: 120,
-    render: (row) => `${row.units_area.toFixed(2)} m²`
+    render: (row) => {
+      if (!props.gathering.qualified_area) return `${row.units_area.toFixed(2)} m²`
+      return `${row.units_area.toFixed(2)} m² (${(row.units_area / props.gathering.qualified_area * 100).toFixed(2)}%)`
+    }
   },
   {
     title: t('gatherings.ballots.submittedAt'),

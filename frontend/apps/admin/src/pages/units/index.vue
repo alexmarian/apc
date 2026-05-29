@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { NCard, NButton, NSpace, NPageHeader, NDivider, useMessage, NModal } from 'naive-ui'
 import UnitsList from '@/components/UnitsList.vue'
 import UnitForm from '@/components/UnitForm.vue'
-import AssociationSelector from '@/components/AssociationSelector.vue'
 import BuildingSelector from '@/components/BuildingSelector.vue'
+import { useAssociationStore } from '@/stores/association'
 import { useRouter, useRoute } from 'vue-router'
 import type { Unit } from '@/types/api'
 import { useI18n } from 'vue-i18n'
@@ -17,8 +18,7 @@ const message = useMessage()
 const router = useRouter()
 const route = useRoute()
 
-// Selectors
-const associationId = ref<number | null>(null)
+const { associationId } = storeToRefs(useAssociationStore())
 const buildingId = ref<number | null>(null)
 
 // UI state
@@ -33,11 +33,8 @@ const unitsListRef = ref<InstanceType<typeof UnitsList> | null>(null)
 // For storing units loaded by the list component
 const displayedUnits = ref<Unit[] | null>(null)
 
-// Try to get associationId, buildingId, editUnitId, and filters from query parameters
+// Restore buildingId, editUnitId, and filters from query parameters
 onMounted(() => {
-  if (route.query.associationId) {
-    associationId.value = parseInt(route.query.associationId as string)
-  }
   if (route.query.buildingId) {
     buildingId.value = parseInt(route.query.buildingId as string)
   }
@@ -123,29 +120,6 @@ const handleBuildingIdUpdate = (newBuildingId: number) => {
   })
 }
 
-const handleAssociationIdUpdate = (newAssociationId: number) => {
-  associationId.value = newAssociationId
-  buildingId.value = null
-
-  // Update URL query parameters, preserving filters
-  router.replace({
-    query: {
-      ...route.query,
-      associationId: newAssociationId.toString(),
-      buildingId: undefined,
-      unitTypeFilter: unitTypeFilter.value || undefined,
-      searchQuery: searchQuery.value || undefined
-    }
-  })
-}
-
-// Clear buildingId when associationId changes
-watch(associationId, () => {
-  buildingId.value = null
-  showUnitEditModal.value = false
-  editingUnitId.value = undefined
-})
-
 // Watch for buildingId changes to close modal
 watch(buildingId, () => {
   showUnitEditModal.value = false
@@ -176,25 +150,19 @@ watch([unitTypeFilter, searchQuery], ([newUnitType, newSearch]) => {
 
       <template #header>
         <div style="margin-bottom: 12px;">
-          <NSpace align="center">
-            <AssociationSelector
-              v-model:associationId="associationId"
-              @update:associationId="handleAssociationIdUpdate"
-            />
-            <BuildingSelector
-              v-model:building-id="buildingId"
-              v-model:association-id="associationId"
-              @update:building-id="handleBuildingIdUpdate"
-            />
-          </NSpace>
+          <BuildingSelector
+            v-model:building-id="buildingId"
+            v-model:association-id="associationId"
+            @update:building-id="handleBuildingIdUpdate"
+          />
         </div>
       </template>
     </NPageHeader>
 
-    <div v-if="!associationId || !buildingId">
+    <div v-if="!buildingId">
       <NCard style="margin-top: 16px;">
         <div style="text-align: center; padding: 32px;">
-          <p>{{ t('units.selectAssociationAndBuilding', 'Please select an association and building to manage units') }}</p>
+          <p>{{ t('units.selectBuilding', 'Please select a building to manage units') }}</p>
         </div>
       </NCard>
     </div>

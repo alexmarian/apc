@@ -9,6 +9,7 @@ import UserProfileButton from '@/components/UserProfileButton.vue'
 import { useI18n } from 'vue-i18n'
 import { usePreferences } from '@/stores/preferences.ts'
 import { useAuthStore } from '@/stores/auth'
+import { useAssociationStore } from '@/stores/association'
 import {
   AttachMoneyRound,
   AccountBalanceRound,
@@ -22,11 +23,13 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const associationStore = useAssociationStore()
 
 // Wait for the initial navigation (including auth guard redirect) to complete
 const appReady = ref(false)
 router.isReady().then(() => {
   appReady.value = true
+  associationStore.init()
 })
 
 // Check if current route is an auth page (login, register, etc.)
@@ -130,10 +133,10 @@ watch(isDark, () => {
         <NLayout class="main-layout">
           <NLayoutHeader bordered class="header">
             <div class="logo">
-              <img alt="App logo" class="logo-img" src="@/assets/logo.svg" width="32" height="32" />
+              <img alt="App logo" class="logo-img" src="/logo_48.png" width="32" height="32" />
               <h1 class="app-title">APC</h1>
             </div>
-            <NMenu mode="horizontal" :options="menuOptions" />
+            <NMenu mode="horizontal" :options="menuOptions" style="flex: 1" />
             <div class="header-right">
               <LanguageSelector />
               <NSwitch v-model:value="isDark" />
@@ -177,6 +180,7 @@ watch(isDark, () => {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
+  height: 64px;
 }
 
 .logo {

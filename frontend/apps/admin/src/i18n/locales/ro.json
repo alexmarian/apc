@@ -564,7 +564,16 @@
         "active": "Adunarea este activă și participanții pot vota.",
         "closed": "Adunarea este închisă. Nu se mai pot trimite voturi.",
         "tallied": "Adunarea este centralizată și rezultatele sunt finale."
-      }
+      },
+      "transitions": {
+        "draft_to_published": "Publică",
+        "published_to_draft": "Revenire la Ciornă",
+        "published_to_active": "Activează",
+        "active_to_closed": "Închide Votarea",
+        "closed_to_active": "Redeschide Votarea",
+        "closed_to_tallied": "Calculează Rezultatele"
+      },
+      "confirmTitle": "Confirmare Schimbare Status"
     },
     "type": {
       "title": "Tip",
@@ -755,6 +764,7 @@
       "quorumNotMet": "neîndeplinit",
       "checkedInParticipants": "Participanți Prezenți",
       "noResults": "Rezultatele nu sunt încă disponibile.",
+      "preliminary": "Acestea sunt rezultate preliminare în timp real. Adunarea este încă activă și voturile se colectează. Rezultatele se pot schimba.",
       "generationInfo": "Informații Generare",
       "generatedAt": "Generat la",
       "choice": "Alegere",

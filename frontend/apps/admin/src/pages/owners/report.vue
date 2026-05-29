@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import { NPageHeader, NCard, NModal } from 'naive-ui'
 import OwnersReport from '@/components/OwnersReport.vue'
 import OwnerForm from '@/components/OwnerForm.vue'
-import AssociationSelector from '@/components/AssociationSelector.vue'
+import { useAssociationStore } from '@/stores/association'
 import { useI18n } from 'vue-i18n'
 
-// State
-const associationId = ref<number | null>(null)
 const { t } = useI18n()
+const { associationId } = storeToRefs(useAssociationStore())
 
 // Owner editing state
 const showOwnerForm = ref(false)
@@ -44,23 +44,10 @@ const handleOwnerFormCancelled = () => {
         {{ t('owners.report', 'Owners Report') }}
       </template>
 
-      <template #header>
-        <div style="margin-bottom: 12px;">
-          <AssociationSelector v-model:associationId="associationId" />
-        </div>
-      </template>
     </NPageHeader>
 
     <div class="content">
-      <div v-if="!associationId">
-        <NCard style="margin-top: 16px;">
-          <div style="text-align: center; padding: 32px;">
-            <p>{{ t('owners.selectAssociation', 'Please select an association to view the owners report') }}</p>
-          </div>
-        </NCard>
-      </div>
-
-      <div v-else>
+      <div>
         <OwnersReport
           :key="refreshKey"
           :association-id="associationId"

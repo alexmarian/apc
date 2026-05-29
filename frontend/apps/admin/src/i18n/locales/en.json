@@ -570,7 +570,16 @@
         "active": "Gathering is active and participants can vote.",
         "closed": "Gathering is closed. No more votes can be submitted.",
         "tallied": "Gathering is tallied and results are final."
-      }
+      },
+      "transitions": {
+        "draft_to_published": "Publish",
+        "published_to_draft": "Revert to Draft",
+        "published_to_active": "Activate",
+        "active_to_closed": "Close Voting",
+        "closed_to_active": "Reopen Voting",
+        "closed_to_tallied": "Tally Results"
+      },
+      "confirmTitle": "Confirm Status Change"
     },
     "type": {
       "title": "Type",
@@ -761,6 +770,7 @@
       "quorumNotMet": "not met",
       "checkedInParticipants": "Checked-in Participants",
       "noResults": "Results are not available yet.",
+      "preliminary": "These are live preliminary results. The gathering is still active and votes are being collected. Results may change.",
       "generationInfo": "Generation Information",
       "generatedAt": "Generated at",
       "choice": "Choice",

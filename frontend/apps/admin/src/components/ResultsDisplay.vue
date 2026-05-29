@@ -5,6 +5,10 @@
         {{ error }}
       </NAlert>
 
+      <NAlert v-if="props.gathering.status === 'active'" type="warning" style="margin-bottom: 16px;">
+        {{ $t('gatherings.results.preliminary') }}
+      </NAlert>
+
       <div v-if="!results" class="no-results">
         <NCard>
           <NAlert type="info">
