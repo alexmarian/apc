@@ -167,15 +167,8 @@
                     {{ result.statistics.total_votes }}
                   </NDescriptionsItem>
                   <NDescriptionsItem :label="$t('gatherings.results.totalWeight')">
-                    {{ formatWeight(result.statistics.total_weight) }}
-                    <NTooltip>
-                      <template #trigger>
-                        <span style="cursor: help; font-size: 11px; color: #888;">
-                          &nbsp;({{ formatPercent(result.statistics.participation_rate) }}% {{ $t('gatherings.results.ofQualified') }})
-                        </span>
-                      </template>
-                      {{ $t('gatherings.results.weightOfQualifiedTooltip') }}
-                    </NTooltip>
+                    {{ formatPercent(result.statistics.participation_rate) }}%
+                    <span style="font-size: 11px; color: #888;">&nbsp;{{ $t('gatherings.results.ofQualified') }}</span>
                   </NDescriptionsItem>
                   <NDescriptionsItem :label="$t('gatherings.results.abstentions')">
                     {{ result.statistics.abstentions }}
