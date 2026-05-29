@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { NCard, NPageHeader, NModal } from 'naive-ui'
+import { NCard, NModal } from 'naive-ui'
 import AccountsList from '@/components/AccountsList.vue'
 import AccountForm from '@/components/AccountForm.vue'
 import { useAssociationStore } from '@/stores/association'
@@ -65,13 +65,6 @@ const handleAccountFormCancelled = () => {
 
 <template>
   <div class="accounts-page">
-    <NPageHeader>
-      <template #title>
-        {{ t('accounts.title') }}
-      </template>
-
-    </NPageHeader>
-
     <div v-if="canShowAccounts">
       <!-- Accounts List -->
       <AccountsList

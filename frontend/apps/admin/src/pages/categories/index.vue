@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { NCard, NPageHeader, NModal } from 'naive-ui'
+import { NCard, NModal } from 'naive-ui'
 import CategoriesList from '@/components/CategoriesList.vue'
 import CategoryForm from '@/components/CategoryForm.vue'
 import { useAssociationStore } from '@/stores/association'
@@ -65,13 +65,6 @@ const handleCategoryFormCancelled = () => {
 
 <template>
   <div class="categories-page">
-    <NPageHeader>
-      <template #title>
-        {{ t('categories.title') }}
-      </template>
-
-    </NPageHeader>
-
     <div v-if="canShowCategories">
       <!-- Categories List -->
       <CategoriesList

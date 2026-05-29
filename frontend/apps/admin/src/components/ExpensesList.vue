@@ -332,12 +332,6 @@ onMounted(() => {
 <template>
   <div class="expenses-list">
     <NCard style="margin-top: 16px;">
-      <div class="expenses-header">
-        <h2>{{ t('expenses.list') }}</h2>
-      </div>
-    </NCard>
-
-    <NCard style="margin-top: 16px;">
       <NFlex align="center" justify="start">
         <NText>{{ t('expenses.dateRange') }}:</NText>
         <NDatePicker
@@ -399,16 +393,6 @@ onMounted(() => {
   margin: 1rem 0;
 }
 
-.expenses-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0;
-}
-
-.expenses-header h2 {
-  margin: 0;
-}
 
 .summary {
   margin: 1rem 0;

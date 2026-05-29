@@ -18,7 +18,6 @@
         <NCard>
           <template #header>
             <div class="gatherings-header">
-              <h3>{{ $t('gatherings.list') }}</h3>
               <NSpace>
                 <NSelect
                   v-model:value="statusFilter"
