@@ -9,7 +9,7 @@
         {{ $t('gatherings.results.preliminary') }}
       </NAlert>
 
-      <div v-if="!results" class="no-results">
+      <div v-if="!results || !results.results?.length" class="no-results">
         <NCard>
           <NAlert type="info">
             {{ $t('gatherings.results.noResults') }}
@@ -153,7 +153,7 @@
                 <h5>{{ $t('gatherings.results.votes') }}</h5>
                 <NDataTable
                   :columns="getVoteColumns(result)"
-                  :data="result.votes"
+                  :data="result.votes || []"
                   :pagination="false"
                   size="small"
                 />
