@@ -18,7 +18,7 @@ interface AppConfig {
 
 // Development configuration
 const devConfig: AppConfig = {
-  apiBaseUrl: 'http://localhost:8080/v1/api',
+  apiBaseUrl: '/v1/api',
   apiTimeout: 10000,
   authTokenKey: 'apc_auth_token',
   refreshTokenKey: 'apc_refresh_token',
