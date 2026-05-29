@@ -22,12 +22,15 @@ const associationId = ref<number | null>(
 const buildingId = ref<number | null>(
   route.query.buildingId ? parseInt(route.query.buildingId as string) : null
 )
-// Preserve filter state from query params
+// Preserve filter/pagination state from query params
 const unitTypeFilter = ref<string | null>(
   route.query.unitTypeFilter ? route.query.unitTypeFilter as string : null
 )
 const searchQuery = ref<string | null>(
   route.query.searchQuery ? route.query.searchQuery as string : null
+)
+const page = ref<string | null>(
+  route.query.page ? route.query.page as string : null
 )
 
 // UI state
@@ -111,7 +114,6 @@ const handleOwnerFormCancelled = () => {
 }
 
 const handleBackToUnits = () => {
-  // Navigate back to units list, preserving filters
   if (associationId.value && buildingId.value) {
     router.push({
       path: '/units',
@@ -119,7 +121,8 @@ const handleBackToUnits = () => {
         associationId: associationId.value.toString(),
         buildingId: buildingId.value.toString(),
         unitTypeFilter: unitTypeFilter.value || undefined,
-        searchQuery: searchQuery.value || undefined
+        searchQuery: searchQuery.value || undefined,
+        page: page.value || undefined
       }
     })
   } else {

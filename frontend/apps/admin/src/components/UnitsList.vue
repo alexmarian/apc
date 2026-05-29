@@ -29,7 +29,8 @@ const props = defineProps<{
   associationId: number,
   buildingId: number,
   unitTypeFilter?: string | null,
-  searchQuery?: string | null
+  searchQuery?: string | null,
+  page?: number | null
 }>()
 
 // Emits
@@ -39,6 +40,7 @@ const emit = defineEmits<{
   (e: 'units-rendered', units: Unit[]): void
   (e: 'unit-type-changed', newUnitType: string | null): void
   (e: 'search-query-changed', newSearchQuery: string | null): void
+  (e: 'page-changed', page: number): void
 }>()
 
 // Data
@@ -52,6 +54,7 @@ const hasInitialized = ref(false)
 const unitTypeFilter = ref<string | null>(props.unitTypeFilter || null)
 const searchQuery = ref<string | null>(props.searchQuery || null)
 const debouncedSearchQuery = refDebounced(searchQuery, 500)
+const currentPage = ref<number>(props.page || 1)
 
 // Available unit types for filter (will be populated from units)
 const availableUnitTypes = computed(() => {
@@ -166,7 +169,8 @@ const columns = computed<DataTableColumns<Unit>>(() => [
                     associationId: props.associationId.toString(),
                     buildingId: props.buildingId.toString(),
                     unitTypeFilter: unitTypeFilter.value || undefined,
-                    searchQuery: searchQuery.value || undefined
+                    searchQuery: searchQuery.value || undefined,
+                    page: currentPage.value.toString()
                   }
                 })
               },
@@ -232,13 +236,20 @@ defineExpose({
   refreshData: fetchUnits
 })
 
+const handlePageChange = (page: number) => {
+  currentPage.value = page
+  emit('page-changed', page)
+}
+
 const searchQueryChanged = (newValue: string | null) => {
   searchQuery.value = newValue
+  currentPage.value = 1
   emit('search-query-changed', newValue)
 }
 
 const unitTypeChanged = (newValue: string | null) => {
   unitTypeFilter.value = newValue
+  currentPage.value = 1
   emit('unit-type-changed', newValue)
 }
 
@@ -325,7 +336,9 @@ onMounted(() => {
           :bordered="false"
           :single-line="false"
           :pagination="{
-            pageSize: 10
+            page: currentPage,
+            pageSize: 10,
+            onUpdatePage: handlePageChange
           }"
         >
           <template #empty>

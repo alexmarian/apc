@@ -195,14 +195,6 @@ onMounted(() => {
       </NAlert>
 
       <template v-if="unitReport">
-        <div v-if="!props.showExcerpt" class="actions-bar">
-          <NSpace>
-            <NButton type="primary" @click="handleEditUnit">
-              {{ t('units.editUnit', 'Edit Unit') }}
-            </NButton>
-          </NSpace>
-        </div>
-
         <NTabs v-if="!props.showExcerpt" v-model:value="activeTab" type="line" animated>
           <NTabPane name="info" :tab="t('units.information', 'Unit Information')">
             <!-- Unit Details -->

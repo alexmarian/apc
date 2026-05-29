@@ -26,6 +26,7 @@ const showUnitEditModal = ref(false)
 const editingUnitId = ref<number | undefined>(undefined)
 const unitTypeFilter = ref<string | null>(null)
 const searchQuery = ref<string | null>(null)
+const currentPage = ref<number>(1)
 
 // Reference to the UnitsList component
 const unitsListRef = ref<InstanceType<typeof UnitsList> | null>(null)
@@ -48,6 +49,9 @@ onMounted(() => {
   }
   if (route.query.searchQuery) {
     searchQuery.value = route.query.searchQuery as string
+  }
+  if (route.query.page) {
+    currentPage.value = parseInt(route.query.page as string)
   }
 })
 
@@ -126,15 +130,15 @@ watch(buildingId, () => {
   editingUnitId.value = undefined
 })
 
-// Watch filter changes and update URL
-watch([unitTypeFilter, searchQuery], ([newUnitType, newSearch]) => {
-  // Only update URL if we have a building selected (to avoid unnecessary updates)
+// Watch filter/page changes and update URL
+watch([unitTypeFilter, searchQuery, currentPage], ([newUnitType, newSearch, newPage]) => {
   if (buildingId.value) {
     router.replace({
       query: {
         ...route.query,
         unitTypeFilter: newUnitType || undefined,
-        searchQuery: newSearch || undefined
+        searchQuery: newSearch || undefined,
+        page: newPage > 1 ? newPage.toString() : undefined
       }
     })
   }
@@ -175,10 +179,12 @@ watch([unitTypeFilter, searchQuery], ([newUnitType, newSearch]) => {
         :building-id="buildingId"
         :unit-type-filter="unitTypeFilter"
         :search-query="searchQuery"
+        :page="currentPage"
         @edit="handleEditUnit"
         @units-rendered="setDisplayedUnits"
         @unit-type-changed="newUnitType => unitTypeFilter = newUnitType"
         @search-query-changed="newQuery => searchQuery = newQuery"
+        @page-changed="newPage => currentPage = newPage"
       />
     </div>
 
