@@ -47,7 +47,7 @@ echo "-> Deploying tag: $IMAGE_TAG"
 # 2. Build images locally (no DOCKER_HOST — local daemon)
 # ---------------------------------------------------------------------------
 echo "-> Building images locally..."
-docker compose -f docker-compose.prod.yml build --no-cache
+docker compose -f docker-compose.prod.yml build
 
 # ---------------------------------------------------------------------------
 # 3. Tag images locally
@@ -63,6 +63,13 @@ echo "-> Transferring images to VPS (this may take a while)..."
 docker save "$BACKEND_IMG:$IMAGE_TAG" "$ADMIN_IMG:$IMAGE_TAG" "$MEMBER_IMG:$IMAGE_TAG" \
   | gzip \
   | $SSH "$VPS_USER@$VPS_HOST" "gunzip | docker load"
+
+echo "-> Tagging :latest on VPS..."
+$SSH "$VPS_USER@$VPS_HOST" "
+  docker tag $BACKEND_IMG:$IMAGE_TAG $BACKEND_IMG:latest
+  docker tag $ADMIN_IMG:$IMAGE_TAG   $ADMIN_IMG:latest
+  docker tag $MEMBER_IMG:$IMAGE_TAG  $MEMBER_IMG:latest
+"
 
 # ---------------------------------------------------------------------------
 # 5. Create remote directories
