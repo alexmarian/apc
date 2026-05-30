@@ -24,7 +24,7 @@ import LocalizedCategoryDisplay from './LocalizedCategoryDisplay.vue'
 
 // Props
 const props = defineProps<{
-  associationId: number,
+  associationId: number | null,
   dateRange?: [number, number] | null,
   selectedCategory?: number | null
 }>()
@@ -87,7 +87,7 @@ const fetchExpenses = async (): Promise<void> => {
       endDate = new Date(dateRange.value[1]).toISOString().split('T')[0]
     }
 
-    const response = await expenseApi.getExpenses(props.associationId, startDate, endDate)
+    const response = await expenseApi.getExpenses(props.associationId!, startDate, endDate)
     expenses.value = response.data
     hasInitialized.value = true
 
@@ -264,7 +264,7 @@ const confirmDeleteExpense = (expenseId: number): void => {
 
 const deleteExpense = async (expenseId: number): Promise<void> => {
   try {
-    await expenseApi.deleteExpense(props.associationId, expenseId)
+    await expenseApi.deleteExpense(props.associationId!, expenseId)
 
     // Remove from local array
     expenses.value = expenses.value.filter(expense => expense.id !== expenseId)

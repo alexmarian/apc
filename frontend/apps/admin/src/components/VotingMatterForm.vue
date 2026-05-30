@@ -169,18 +169,17 @@ import type {
   VotingMatterCreateRequest,
   VotingMatterUpdateRequest,
   VotingMatterType,
-  VotingType,
   VotingOption,
-  MajorityType
 } from '@/types/api'
+import { VotingType, MajorityType } from '@/types/api'
 
 // Soft defaults: which voting type and majority to pre-select per matter type
 const MATTER_TYPE_DEFAULTS: Record<string, { type: VotingType; majority: MajorityType }> = {
-  budget:        { type: 'yes_no',         majority: 'simple' },
-  election:      { type: 'ranking',        majority: 'simple' },
-  policy:        { type: 'yes_no',         majority: 'simple' },
-  poll:          { type: 'single_choice',  majority: 'simple' },
-  extraordinary: { type: 'yes_no',         majority: 'qualified' }
+  budget:        { type: VotingType.YesNo,        majority: MajorityType.Simple },
+  election:      { type: VotingType.Ranking,       majority: MajorityType.Simple },
+  policy:        { type: VotingType.YesNo,        majority: MajorityType.Simple },
+  poll:          { type: VotingType.SingleChoice,  majority: MajorityType.Simple },
+  extraordinary: { type: VotingType.YesNo,        majority: MajorityType.Qualified }
 }
 
 interface Props {

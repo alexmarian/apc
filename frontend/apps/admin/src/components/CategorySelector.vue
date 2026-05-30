@@ -9,7 +9,7 @@ import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   modelValue: number | null
-  associationId: number
+  associationId: number | null
   placeholder?: string
   includeAllOption?: boolean
   disabled?: boolean

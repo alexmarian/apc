@@ -11,7 +11,7 @@ import { useI18n } from 'vue-i18n'
 
 // Props
 const props = defineProps<{
-  associationId: number
+  associationId: number | null
 }>()
 
 // Emits
@@ -233,7 +233,7 @@ const fetchCategories = async () => {
     error.value = null
     console.log('Fetching categories for association:', props.associationId)
 
-    const response = await categoryApi.getAllCategories(props.associationId, includeInactive.value)
+    const response = await categoryApi.getAllCategories(props.associationId!, includeInactive.value)
     categories.value = response.data
     hasInitialized.value = true
 
@@ -278,7 +278,7 @@ const deactivateCategory = async (categoryId: number) => {
       negativeText: t('common.cancel'),
       onPositiveClick: async () => {
         try {
-          await categoryApi.deactivateCategory(props.associationId, categoryId)
+          await categoryApi.deactivateCategory(props.associationId!, categoryId)
 
           // Update the local state
           const index = categories.value.findIndex(cat => cat.id === categoryId)
@@ -303,7 +303,7 @@ const deactivateCategory = async (categoryId: number) => {
 // Reactivate single category
 const reactivateCategory = async (categoryId: number) => {
   try {
-    await categoryApi.reactivateCategory(props.associationId, categoryId)
+    await categoryApi.reactivateCategory(props.associationId!, categoryId)
 
     // Update the local state
     const index = categories.value.findIndex(cat => cat.id === categoryId)
@@ -332,7 +332,7 @@ const bulkDeactivate = async () => {
     onPositiveClick: async () => {
       try {
         const categoryIds = selectedRowKeys.value.map(key => Number(key))
-        await categoryApi.bulkDeactivate(props.associationId, categoryIds)
+        await categoryApi.bulkDeactivate(props.associationId!, categoryIds)
 
         // Update local state
         categoryIds.forEach(id => {
@@ -360,7 +360,7 @@ const bulkReactivate = async () => {
 
   try {
     const categoryIds = selectedRowKeys.value.map(key => Number(key))
-    await categoryApi.bulkReactivate(props.associationId, categoryIds)
+    await categoryApi.bulkReactivate(props.associationId!, categoryIds)
 
     // Update local state
     categoryIds.forEach(id => {

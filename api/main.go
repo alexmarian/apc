@@ -36,9 +36,10 @@ func main() {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
 	defer logging.Logger.Sync()
-	err := godotenv.Load(".env")
-	if err != nil {
-		logging.Logger.Log(zap.WarnLevel, "warning: assuming default configuration. .env unreadable", zap.Error(err))
+	if isDevelopment {
+		if err := godotenv.Load(".env"); err != nil {
+			logging.Logger.Log(zap.WarnLevel, "warning: assuming default configuration. .env unreadable", zap.Error(err))
+		}
 	}
 
 	port := os.Getenv("PORT")
@@ -79,6 +80,11 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
 	mux.Handle("/", http.FileServer(http.Dir("static")))
 
 	// Initialize refactored gathering router

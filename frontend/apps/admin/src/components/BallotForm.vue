@@ -55,7 +55,7 @@
                 <div v-else-if="matter.voting_config.type === 'multiple_choice'" class="vote-options">
                   <NCheckboxGroup
                     :value="formData.votes[matter.id] as string[]"
-                    @update:value="val => setVote(matter.id, val)"
+                    @update:value="val => setVote(matter.id, val as string[])"
                   >
                     <NSpace vertical>
                       <NCheckbox

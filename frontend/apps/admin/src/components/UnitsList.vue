@@ -26,8 +26,8 @@ const router = useRouter()
 
 // Props
 const props = defineProps<{
-  associationId: number,
-  buildingId: number,
+  associationId: number | null,
+  buildingId: number | null,
   unitTypeFilter?: string | null,
   searchQuery?: string | null,
   page?: number | null
@@ -166,8 +166,8 @@ const columns = computed<DataTableColumns<Unit>>(() => [
                 onClick: () => router.push({
                   path: `/units/${row.id}`,
                   query: {
-                    associationId: props.associationId.toString(),
-                    buildingId: props.buildingId.toString(),
+                    associationId: props.associationId!.toString(),
+                    buildingId: props.buildingId?.toString(),
                     unitTypeFilter: unitTypeFilter.value || undefined,
                     searchQuery: searchQuery.value || undefined,
                     page: currentPage.value.toString()

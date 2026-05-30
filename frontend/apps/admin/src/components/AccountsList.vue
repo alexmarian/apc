@@ -8,7 +8,7 @@ import { useI18n } from 'vue-i18n'
 
 // Props
 const props = defineProps<{
-  associationId: number
+  associationId: number | null
 }>()
 
 // Emits
@@ -165,7 +165,7 @@ const disableAccount = async (accountId: number) => {
     const confirmDisable = window.confirm(t('accounts.confirmDisable'))
     if (!confirmDisable) return
 
-    await accountApi.disableAccount(props.associationId, accountId)
+    await accountApi.disableAccount(props.associationId!, accountId)
 
     // Update the local state
     const index = accounts.value.findIndex(acc => acc.id === accountId)

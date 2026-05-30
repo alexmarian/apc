@@ -27,7 +27,7 @@ const { t } = useI18n()
 
 // Props
 const props = defineProps<{
-  associationId: number
+  associationId: number | null
   buildingId?: number | null
 }>()
 

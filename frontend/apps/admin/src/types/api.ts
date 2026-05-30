@@ -535,17 +535,27 @@ export interface GatheringParticipant {
   id: number;
   gathering_id: number;
   participant_type: ParticipantType;
+  type: ParticipantType;
   owner_id?: number;
   delegating_owner_id?: number;
   participant_name: string;
+  owner_name: string;
   units_info: number[];
+  unit_ids: number[];
   units_part: number;
   units_area: number;
   delegation_document_ref?: string;
   check_in_time?: string;
+  checked_in_at?: string;
   has_voted: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface Vote {
+  matter_id: number;
+  choice: any;
+  weight: number;
 }
 
 export enum ParticipantType {
