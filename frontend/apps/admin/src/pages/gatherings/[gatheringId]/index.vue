@@ -126,6 +126,13 @@
                 :gathering="gathering!"
               />
             </NTabPane>
+
+            <NTabPane name="invitations" tab="Invitations">
+              <MemberInvitationsPanel
+                :association-id="associationId!"
+                :gathering="gathering!"
+              />
+            </NTabPane>
           </NTabs>
         </div>
       </NSpin>
@@ -174,6 +181,7 @@ import VotingMattersManager from '@/components/VotingMattersManager.vue'
 import VotingWizard from '@/components/VotingWizard.vue'
 import ResultsDisplay from '@/components/ResultsDisplay.vue'
 import BallotsList from '@/components/BallotsList.vue'
+import MemberInvitationsPanel from '@/components/MemberInvitationsPanel.vue'
 
 const { t } = useI18n()
 const route = useRoute()

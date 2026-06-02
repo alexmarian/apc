@@ -726,4 +726,24 @@ export interface NotificationCreateRequest {
   message: string;
 }
 
+export type InvitationStatus = 'active' | 'expired' | 'revoked';
+
+export interface MemberInvitation {
+  id: number;
+  gathering_id: number;
+  owner_id: number;
+  expires_at: string;
+  status: InvitationStatus;
+  created_at: string;
+}
+
+export interface CreateInvitationResponse extends MemberInvitation {
+  token: string;
+}
+
+export interface CreateInvitationRequest {
+  owner_id: number;
+  expires_at?: string;
+}
+
 

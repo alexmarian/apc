@@ -2,6 +2,7 @@
 import { createI18n } from 'vue-i18n'
 import en from '@/i18n/locales/en.json'
 import ro from '@/i18n/locales/ro.json'
+import ru from '@/i18n/locales/ru.json'
 
 // Get locale from browser or stored preference
 const getBrowserLocale = () => {
@@ -22,14 +23,15 @@ const i18n = createI18n({
   fallbackLocale: 'en',
   messages: {
     en,
-    ro
+    ro,
+    ru
   }
 })
 
 export default i18n
 
 // Function to change locale
-export const setLocale = (locale: "en" | "ro") => {
+export const setLocale = (locale: 'en' | 'ro' | 'ru') => {
   i18n.global.locale.value = locale
   localStorage.setItem('userLocale', locale)
   document.querySelector('html')?.setAttribute('lang', locale)

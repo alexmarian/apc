@@ -76,7 +76,9 @@ func (q *Queries) GetAssociationsFromList(ctx context.Context, associationIds []
 }
 
 const listAssociations = `-- name: ListAssociations :many
-SELECT id, name, address, administrator, created_at, updated_at FROM associations ORDER BY id
+
+
+SELECT id, name, address, administrator, created_at, updated_at from associations ORDER BY id
 `
 
 func (q *Queries) ListAssociations(ctx context.Context) ([]Association, error) {
@@ -103,5 +105,8 @@ func (q *Queries) ListAssociations(ctx context.Context) ([]Association, error) {
 	if err := rows.Close(); err != nil {
 		return nil, err
 	}
-	return items, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

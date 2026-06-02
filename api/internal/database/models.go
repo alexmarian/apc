@@ -131,6 +131,17 @@ type GatheringParticipant struct {
 	UpdatedAt                 sql.NullTime
 }
 
+type MemberInvitation struct {
+	ID          int64
+	GatheringID int64
+	OwnerID     int64
+	TokenHash   string
+	ExpiresAt   time.Time
+	RevokedAt   interface{}
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type Owner struct {
 	ID                   int64
 	Name                 string
@@ -187,6 +198,12 @@ type RegistrationToken struct {
 	RevokedBy   sql.NullString
 	Description string
 	IsAdmin     bool
+}
+
+type RevokedToken struct {
+	Jti       string
+	RevokedAt time.Time
+	ExpiresAt time.Time
 }
 
 type Unit struct {
@@ -277,9 +294,9 @@ type VotingMatter struct {
 	Description   sql.NullString
 	MatterType    string
 	VotingConfig  string
-	IsInformative int64
 	CreatedAt     sql.NullTime
 	UpdatedAt     sql.NullTime
+	IsInformative int64
 }
 
 type VotingNotification struct {

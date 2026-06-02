@@ -118,7 +118,7 @@ func HandleLogout(cfg *ApiConfig) http.HandlerFunc {
 			return
 		}
 		expiresAt, _ := claims.GetExpirationTime()
-		if err := cfg.Db.RevokeToken(req.Context(), claims.ID, expiresAt.Time); err != nil {
+		if err := cfg.Db.RevokeToken(req.Context(), database.RevokeTokenParams{Jti: claims.ID, ExpiresAt: expiresAt.Time}); err != nil {
 			RespondWithError(rw, http.StatusInternalServerError, "Error revoking token")
 			return
 		}

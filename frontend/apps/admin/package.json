@@ -13,6 +13,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@apc/voting-widgets": "*",
     "@vicons/antd": "^0.13.0",
     "@vicons/ionicons5": "^0.13.0",
     "@vueuse/core": "^10.11.1",

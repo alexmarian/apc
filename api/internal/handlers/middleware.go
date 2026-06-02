@@ -21,7 +21,7 @@ func (cfg *ApiConfig) MiddlewareAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 		if cfg.Db != nil {
 			revoked, err := cfg.Db.IsTokenRevoked(r.Context(), claims.ID)
-			if err != nil || revoked {
+			if err != nil || revoked != 0 {
 				RespondWithError(w, http.StatusUnauthorized, "token has been revoked")
 				return
 			}

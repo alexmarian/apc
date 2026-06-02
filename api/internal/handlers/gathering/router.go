@@ -11,9 +11,11 @@ type GatheringRouter struct {
 	VotingMatter *gatheringHandlers.VotingMatterHandler
 	Participant  *gatheringHandlers.ParticipantHandler
 	Ballot       *gatheringHandlers.BallotHandler
+	MemberBallot *gatheringHandlers.MemberBallotHandler
 	Results      *gatheringHandlers.ResultsHandler
 	Export       *gatheringHandlers.ExportHandler
 	Notification *gatheringHandlers.NotificationHandler
+	Invitation   *gatheringHandlers.InvitationHandler
 }
 
 // NewGatheringRouter creates and initializes all gathering handlers
@@ -26,8 +28,10 @@ func NewGatheringRouter(cfg *handlers.ApiConfig) *GatheringRouter {
 		VotingMatter: gatheringHandlers.NewVotingMatterHandler(cfg, gatheringHandler),
 		Participant:  gatheringHandlers.NewParticipantHandler(cfg, gatheringHandler),
 		Ballot:       gatheringHandlers.NewBallotHandler(cfg, gatheringHandler),
+		MemberBallot: gatheringHandlers.NewMemberBallotHandler(cfg),
 		Results:      gatheringHandlers.NewResultsHandler(cfg),
 		Export:       gatheringHandlers.NewExportHandler(cfg),
 		Notification: gatheringHandlers.NewNotificationHandler(cfg),
+		Invitation:   gatheringHandlers.NewInvitationHandler(cfg),
 	}
 }

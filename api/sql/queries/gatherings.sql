@@ -415,6 +415,18 @@ FROM unit_slots us
 WHERE us.gathering_id = ?
   AND us.participant_id IS NOT NULL;
 
+-- name: GetGatheringParticipantByOwner :one
+SELECT *
+FROM gathering_participants
+WHERE gathering_id = ?
+  AND owner_id = ?
+LIMIT 1;
+
+-- name: GetGatheringByID :one
+SELECT *
+FROM gatherings
+WHERE id = ?;
+
 -- name: GetVotedUnitsStats :one
 SELECT COUNT(DISTINCT us.unit_id)     as voted_units_count,
        COALESCE(SUM(u.part), 0)       as voted_units_total_part,

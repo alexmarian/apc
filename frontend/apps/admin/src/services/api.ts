@@ -35,7 +35,10 @@ import type {
   NonParticipatingOwner,
   GatheringStatistics,
   VotingAuditLog,
-  NotificationCreateRequest
+  NotificationCreateRequest,
+  MemberInvitation,
+  CreateInvitationRequest,
+  CreateInvitationResponse
 } from '@/types/api'
 import config from '@/config'
 import { attemptTokenRefresh, performLogout, getAuthToken } from '@/services/auth-service'
@@ -506,6 +509,18 @@ export const votingApi = {
   // Verify a ballot hash
   verifyBallot: (ballotHash: string) =>
     api.post<ApiResponse<{ valid: boolean; details?: any }>>(`/ballot/verify`, { hash: ballotHash })
+}
+
+// Member Invitation APIs
+export const invitationApi = {
+  list: (associationId: number, gatheringId: number) =>
+    api.get<MemberInvitation[]>(`/associations/${associationId}/gatherings/${gatheringId}/invitations`),
+
+  create: (associationId: number, gatheringId: number, data: CreateInvitationRequest) =>
+    api.post<CreateInvitationResponse>(`/associations/${associationId}/gatherings/${gatheringId}/invitations`, data),
+
+  revoke: (associationId: number, gatheringId: number, invitationId: number) =>
+    api.delete(`/associations/${associationId}/gatherings/${gatheringId}/invitations/${invitationId}`)
 }
 
 export default api

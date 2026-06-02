@@ -13,6 +13,7 @@ const (
 	GatheringIDPathValue    = "gatheringId"
 	VotingMatterIDPathValue = "matterId"
 	ParticipantIDPathValue  = "participantId"
+	InvitationIDPathValue   = "invitationId"
 )
 
 // Gathering represents a gathering event

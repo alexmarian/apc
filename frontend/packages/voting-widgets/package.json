@@ -1,0 +1,35 @@
+{
+  "name": "@apc/voting-widgets",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/voting-widgets.umd.cjs",
+  "module": "./dist/voting-widgets.js",
+  "types": "./dist/types/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/src/index.d.ts",
+      "import": "./dist/voting-widgets.js",
+      "require": "./dist/voting-widgets.umd.cjs"
+    }
+  },
+  "scripts": {
+    "build": "vite build && vue-tsc --build",
+    "type-check": "vue-tsc --build"
+  },
+  "peerDependencies": {
+    "naive-ui": "^2.37.0",
+    "vue": "^3.5.13",
+    "vue-i18n": "^9.8.0"
+  },
+  "devDependencies": {
+    "vue-i18n": "^9.8.0",
+    "@vitejs/plugin-vue": "^5.2.3",
+    "@vue/tsconfig": "^0.7.0",
+    "naive-ui": "^2.37.0",
+    "typescript": "~5.8.0",
+    "vite": "^6.2.4",
+    "vue": "^3.5.13",
+    "vue-tsc": "^2.2.8"
+  }
+}

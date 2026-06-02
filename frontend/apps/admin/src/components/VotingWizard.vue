@@ -172,100 +172,8 @@
             </NDescriptions>
           </NCard>
 
-          <!-- Voting Matters -->
-          <div v-for="(matter, index) in votingMatters" :key="matter.id" style="margin-bottom: 16px;">
-            <NCard>
-              <template #header>
-                <div>
-                  <NTag size="small" style="margin-right: 8px;">{{ index + 1 }}</NTag>
-                  <strong>{{ matter.title }}</strong>
-                </div>
-                <p style="font-weight: normal; margin-top: 8px; font-size: 14px;">{{ matter.description }}</p>
-              </template>
-
-              <!-- Yes/No Vote -->
-              <div v-if="matter.voting_config.type === 'yes_no'">
-                <NRadioGroup v-model:value="votes[matter.id]">
-                  <NSpace>
-                    <NRadio value="yes">
-                      <span style="font-size: 16px;">✓ {{ $t('common.yes') }}</span>
-                    </NRadio>
-                    <NRadio value="no">
-                      <span style="font-size: 16px;">✗ {{ $t('common.no') }}</span>
-                    </NRadio>
-                    <NRadio v-if="matter.voting_config.allow_abstention" value="abstain">
-                      <span style="font-size: 16px;">○ {{ $t('gatherings.voting.abstain') }}</span>
-                    </NRadio>
-                  </NSpace>
-                </NRadioGroup>
-              </div>
-
-              <!-- Single Choice -->
-              <div v-else-if="matter.voting_config.type === 'single_choice'">
-                <NRadioGroup v-model:value="votes[matter.id]">
-                  <NSpace vertical>
-                    <NRadio
-                      v-for="option in matter.voting_config.options"
-                      :key="option.id"
-                      :value="option.id"
-                    >
-                      <span style="font-size: 16px;">{{ option.text }}</span>
-                    </NRadio>
-                    <NRadio v-if="matter.voting_config.allow_abstention" value="abstain">
-                      <span style="font-size: 16px;">○ {{ $t('gatherings.voting.abstain') }}</span>
-                    </NRadio>
-                  </NSpace>
-                </NRadioGroup>
-              </div>
-
-              <!-- Multiple Choice -->
-              <div v-else-if="matter.voting_config.type === 'multiple_choice'">
-                <NCheckboxGroup v-model:value="votes[matter.id]">
-                  <NSpace vertical>
-                    <NCheckbox
-                      v-for="option in matter.voting_config.options"
-                      :key="option.id"
-                      :value="option.id"
-                    >
-                      <span style="font-size: 16px;">{{ option.text }}</span>
-                    </NCheckbox>
-                  </NSpace>
-                </NCheckboxGroup>
-              </div>
-
-              <!-- Ranking -->
-              <div v-else-if="matter.voting_config.type === 'ranking'">
-                <p style="font-size: 12px; color: #999; margin-bottom: 8px;">{{ $t('gatherings.voting.rankingHint') }}</p>
-                <div
-                  v-for="(optId, idx) in votes[matter.id]"
-                  :key="optId"
-                  style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--n-border-color);"
-                >
-                  <span style="font-weight: bold; min-width: 24px;">{{ idx + 1 }}.</span>
-                  <span style="flex: 1; font-size: 16px;">{{ getOptionText(matter, optId) }}</span>
-                  <NSpace size="small">
-                    <NButton size="tiny" :disabled="idx === 0" @click="moveRankUp(matter.id, idx)">↑</NButton>
-                    <NButton size="tiny" :disabled="idx === votes[matter.id].length - 1" @click="moveRankDown(matter.id, idx)">↓</NButton>
-                  </NSpace>
-                </div>
-              </div>
-
-              <!-- Voting Config Info -->
-              <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--n-border-color);">
-                <NSpace size="small">
-                  <NTag size="small" type="info">
-                    {{ $t('gatherings.matters.type') }}: {{ $t(`gatherings.matters.types.${matter.matter_type}`) }}
-                  </NTag>
-                  <NTag size="small">
-                    {{ $t('gatherings.matters.majorityType') }}: {{ $t(`gatherings.matters.majorityTypes.${matter.voting_config.required_majority}`) }}
-                  </NTag>
-                  <NTag v-if="matter.voting_config.is_anonymous" size="small" type="warning">
-                    {{ $t('gatherings.matters.isAnonymous') }}
-                  </NTag>
-                </NSpace>
-              </div>
-            </NCard>
-          </div>
+          <!-- Voting Matters via shared BallotForm -->
+          <BallotForm :matters="votingMatters" v-model="ballotVotes" />
 
           <div style="margin-top: 24px; display: flex; justify-content: space-between;">
             <NButton @click="previousStep">
@@ -301,8 +209,6 @@ import {
   NSpace,
   NCheckbox,
   NCheckboxGroup,
-  NRadioGroup,
-  NRadio,
   NSpin,
   NAlert,
   NTag,
@@ -312,6 +218,7 @@ import {
   type FormInst,
   type FormRules
 } from 'naive-ui'
+import { BallotForm } from '@apc/voting-widgets'
 import { gatheringApi, votingMatterApi, votingApi } from '@/services/api'
 import type { Gathering, VotingMatter } from '@/types/api'
 
@@ -390,7 +297,7 @@ const delegateRules: FormRules = {
 
 // Step 3: Voting
 const votingMatters = ref<VotingMatter[]>([])
-const votes = ref<Record<number, any>>({})
+const ballotVotes = ref<Record<string, string[]>>({})
 
 // Computed
 const selectedOwner = computed(() => {
@@ -428,16 +335,7 @@ const canProceedStep2 = computed(() => {
 })
 
 const canSubmitBallot = computed(() => {
-  return votingMatters.value.every(matter => {
-    const vote = votes.value[matter.id]
-    if (matter.voting_config.allow_abstention && vote === 'abstain') {
-      return true
-    }
-    if (matter.voting_config.type === 'multiple_choice' || matter.voting_config.type === 'ranking') {
-      return Array.isArray(vote) && vote.length > 0
-    }
-    return vote !== undefined && vote !== null && vote !== ''
-  })
+  return votingMatters.value.every(m => (ballotVotes.value[String(m.id)]?.length ?? 0) > 0)
 })
 
 // Methods
@@ -458,37 +356,11 @@ const loadVotingMatters = async () => {
   try {
     const response = await votingMatterApi.getVotingMatters(props.associationId, props.gathering.id)
     votingMatters.value = response.data.sort((a, b) => a.order_index - b.order_index)
-
-    // Initialize votes
-    votingMatters.value.forEach(matter => {
-      if (matter.voting_config.type === 'multiple_choice') {
-        votes.value[matter.id] = []
-      } else if (matter.voting_config.type === 'ranking') {
-        votes.value[matter.id] = matter.voting_config.options?.map(o => o.id) ?? []
-      } else {
-        votes.value[matter.id] = null
-      }
-    })
+    ballotVotes.value = {}
   } catch (err: any) {
     error.value = err.response?.data?.error || err.message || t('gatherings.matters.loadError')
     message.error(error.value ?? 'An error occurred')
   }
-}
-
-const getOptionText = (matter: VotingMatter, optId: string): string => {
-  return matter.voting_config.options?.find(o => o.id === optId)?.text ?? optId
-}
-
-const moveRankUp = (matterId: number, idx: number) => {
-  const arr = [...votes.value[matterId]]
-  ;[arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]]
-  votes.value[matterId] = arr
-}
-
-const moveRankDown = (matterId: number, idx: number) => {
-  const arr = [...votes.value[matterId]]
-  ;[arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]]
-  votes.value[matterId] = arr
 }
 
 const handleOwnerChange = () => {
@@ -544,18 +416,12 @@ const submitBallot = async () => {
 
     // Build ballot content
     const ballotContent: Record<string, any> = {}
-    votingMatters.value.forEach(matter => {
-      const voteValue = votes.value[matter.id]
-      let values: string[]
-
-      if (matter.voting_config.type === 'multiple_choice' || matter.voting_config.type === 'ranking') {
-        values = Array.isArray(voteValue) ? voteValue : []
-      } else {
-        values = voteValue !== null && voteValue !== undefined ? [String(voteValue)] : []
+    for (const matter of votingMatters.value) {
+      ballotContent[String(matter.id)] = {
+        matter_id: matter.id,
+        values: ballotVotes.value[String(matter.id)] ?? []
       }
-
-      ballotContent[matter.id.toString()] = { matter_id: matter.id, values }
-    })
+    }
 
     // Build request payload
     const payload: any = {
@@ -594,7 +460,7 @@ const resetWizard = () => {
     identification: '',
     document: ''
   }
-  votes.value = {}
+  ballotVotes.value = {}
 
   // Refresh eligible voters
   loadEligibleVoters()

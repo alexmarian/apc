@@ -54,6 +54,7 @@ func main() {
 	if uiOrigin == "" {
 		log.Fatal("UI_ORIGIN environment variable is not set")
 	}
+	memberOrigin := os.Getenv("MEMBER_ORIGIN")
 
 	apiCfg := &handlers.ApiConfig{
 		Secret: secret,
@@ -261,12 +262,36 @@ func main() {
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/audit-logs", handlers.AssociationIdPathValue, domain.GatheringIDPathValue),
 		apiCfg.MiddlewareAssociationResource(gatheringRouter.Notification.HandleGetAuditLogs()))
 
+	// Member invitations - using refactored handlers
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/gatherings/{%s}/invitations", handlers.AssociationIdPathValue, domain.GatheringIDPathValue),
+		apiCfg.MiddlewareAssociationResource(gatheringRouter.Invitation.HandleCreateInvitation()))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}/invitations", handlers.AssociationIdPathValue, domain.GatheringIDPathValue),
+		apiCfg.MiddlewareAssociationResource(gatheringRouter.Invitation.HandleListInvitations()))
+	mux.HandleFunc(fmt.Sprintf("DELETE /v1/api/associations/{%s}/gatherings/{%s}/invitations/{%s}", handlers.AssociationIdPathValue, domain.GatheringIDPathValue, domain.InvitationIDPathValue),
+		apiCfg.MiddlewareAssociationResource(gatheringRouter.Invitation.HandleRevokeInvitation()))
+
 	// Ballot verification (public endpoint) - using refactored handlers
 	mux.HandleFunc("POST /v1/api/ballot/verify", gatheringRouter.Ballot.HandleVerifyBallot())
 
+	// Member app endpoints (token-scoped, no JWT required)
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/member/gatherings/{%s}", handlers.MemberTokenPathValue),
+		apiCfg.MiddlewareMemberToken(handlers.HandleGetMemberContext(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/member/gatherings/{%s}/ballot", handlers.MemberTokenPathValue),
+		apiCfg.MiddlewareMemberToken(gatheringRouter.MemberBallot.HandleSubmitMemberBallot()))
+
+	allowedOrigins := []string{uiOrigin}
+	if memberOrigin != "" {
+		allowedOrigins = append(allowedOrigins, memberOrigin)
+	}
 	corsMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Add("Access-Control-Allow-Origin", uiOrigin)
+			origin := r.Header.Get("Origin")
+			for _, allowed := range allowedOrigins {
+				if origin == allowed {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+					break
+				}
+			}
 			w.Header().Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
