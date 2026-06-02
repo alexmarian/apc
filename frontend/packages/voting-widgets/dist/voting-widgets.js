@@ -1,15 +1,15 @@
-import { defineComponent as J, watch as it, openBlock as u, createElementBlock as g, Fragment as w, renderList as T, createVNode as i, unref as t, withCtx as e, createBlock as h, createTextVNode as n, toDisplayString as a, createCommentVNode as B, ref as q, reactive as ot, computed as D, onMounted as Z, createElementVNode as F, isRef as nt, normalizeStyle as st } from "vue";
-import { useI18n as Q } from "vue-i18n";
-import { NCard as I, NText as N, NRadioGroup as K, NSpace as P, NRadio as U, NCheckboxGroup as ut, NCheckbox as rt, NButton as G, NSpin as tt, NAlert as M, NDescriptions as Y, NDescriptionsItem as A, NTag as j, NDivider as et, NProgress as dt } from "naive-ui";
-const ct = { key: 4 }, ft = /* @__PURE__ */ J({
+import { defineComponent as K, watch as rt, openBlock as r, createElementBlock as b, Fragment as V, renderList as I, createVNode as o, unref as t, withCtx as e, createBlock as h, createTextVNode as n, toDisplayString as a, createCommentVNode as z, ref as A, computed as U, onMounted as et, createElementVNode as Y, normalizeStyle as dt } from "vue";
+import { useI18n as X } from "vue-i18n";
+import { NCard as D, NText as N, NRadioGroup as Z, NSpace as M, NRadio as W, NCheckboxGroup as ct, NCheckbox as ft, NButton as J, NSpin as at, NAlert as P, NDescriptions as L, NDescriptionsItem as q, NTag as O, NDivider as lt, NProgress as pt } from "naive-ui";
+const gt = { key: 4 }, vt = /* @__PURE__ */ K({
   __name: "BallotForm",
   props: {
     matters: {},
     modelValue: {}
   },
   emits: ["update:modelValue"],
-  setup(S, { emit: o }) {
-    const { t: k } = Q({
+  setup(w, { emit: i }) {
+    const { t: x, locale: m } = X({
       useScope: "local",
       messages: {
         en: {
@@ -31,143 +31,151 @@ const ct = { key: 4 }, ft = /* @__PURE__ */ J({
           rankingHint: "Упорядочьте варианты от наиболее предпочтительного (вверху) до наименее предпочтительного (внизу)."
         }
       }
-    }), v = S, y = o;
-    it(
-      () => v.matters,
-      (m) => {
-        const f = { ...v.modelValue };
+    }), y = w, _ = i;
+    rt(
+      () => y.matters,
+      (d) => {
+        const u = { ...y.modelValue };
         let l = !1;
-        for (const s of m) {
-          const r = String(s.id);
-          f[r] === void 0 && (f[r] = s.voting_config.type === "ranking" ? (s.voting_config.options ?? []).map((b) => b.id) : [], l = !0);
+        for (const f of d) {
+          const k = String(f.id);
+          u[k] === void 0 && (u[k] = f.voting_config.type === "ranking" ? (f.voting_config.options ?? []).map((H) => H.id) : [], l = !0);
         }
-        l && y("update:modelValue", f);
+        l && _("update:modelValue", u);
       },
       { immediate: !0 }
     );
-    function _(m) {
-      var f;
-      return ((f = v.modelValue[String(m)]) == null ? void 0 : f[0]) ?? "";
+    function S(d) {
+      var u;
+      return ((u = y.modelValue[String(d)]) == null ? void 0 : u[0]) ?? "";
     }
-    function V(m, f) {
-      y("update:modelValue", { ...v.modelValue, [String(m)]: f ? [f] : [] });
+    function B(d, u) {
+      _("update:modelValue", { ...y.modelValue, [String(d)]: u ? [u] : [] });
     }
-    function x(m) {
-      return v.modelValue[String(m)] ?? [];
+    function v(d) {
+      return y.modelValue[String(d)] ?? [];
     }
-    function C(m, f) {
-      y("update:modelValue", { ...v.modelValue, [String(m)]: f.map(String) });
+    function C(d, u) {
+      _("update:modelValue", { ...y.modelValue, [String(d)]: u.map(String) });
     }
-    function z(m) {
-      return v.modelValue[String(m)] ?? [];
+    function T(d) {
+      return y.modelValue[String(d)] ?? [];
     }
-    function E(m, f, l) {
-      const s = [...z(m)], r = f + l;
-      r < 0 || r >= s.length || ([s[f], s[r]] = [s[r], s[f]], y("update:modelValue", { ...v.modelValue, [String(m)]: s }));
+    function E(d, u, l) {
+      const f = [...T(d)], k = u + l;
+      k < 0 || k >= f.length || ([f[u], f[k]] = [f[k], f[u]], _("update:modelValue", { ...y.modelValue, [String(d)]: f }));
     }
-    function R(m, f) {
-      var l, s;
-      return ((s = (l = m.voting_config.options) == null ? void 0 : l.find((r) => r.id === f)) == null ? void 0 : s.text) ?? f;
+    function $(d) {
+      var l;
+      return ((l = m.value) == null ? void 0 : l.slice(0, 2)) === "ru" && d.title_ru ? d.title_ru : d.title;
     }
-    return (m, f) => (u(), g("div", null, [
-      (u(!0), g(w, null, T(S.matters, (l) => (u(), g("div", {
+    function j(d) {
+      var l;
+      return ((l = m.value) == null ? void 0 : l.slice(0, 2)) === "ru" && d.description_ru ? d.description_ru : d.description;
+    }
+    function g(d, u) {
+      var l, f;
+      return ((f = (l = d.voting_config.options) == null ? void 0 : l.find((k) => k.id === u)) == null ? void 0 : f.text) ?? u;
+    }
+    return (d, u) => (r(), b("div", null, [
+      (r(!0), b(V, null, I(w.matters, (l) => (r(), b("div", {
         key: l.id,
         style: { "margin-bottom": "20px" }
       }, [
-        i(t(I), { size: "small" }, {
+        o(t(D), { size: "small" }, {
           header: e(() => [
-            n(a(l.title), 1)
+            n(a($(l)), 1)
           ]),
           default: e(() => [
-            l.description ? (u(), h(t(N), {
+            l.description || l.description_ru ? (r(), h(t(N), {
               key: 0,
               depth: 2,
               style: { display: "block", "margin-bottom": "12px", "font-size": "13px" }
             }, {
               default: e(() => [
-                n(a(l.description), 1)
+                n(a(j(l)), 1)
               ]),
               _: 2
-            }, 1024)) : B("", !0),
-            l.voting_config.type === "yes_no" ? (u(), h(t(K), {
+            }, 1024)) : z("", !0),
+            l.voting_config.type === "yes_no" ? (r(), h(t(Z), {
               key: 1,
-              value: _(l.id),
-              "onUpdate:value": (s) => V(l.id, s)
+              value: S(l.id),
+              "onUpdate:value": (f) => B(l.id, f)
             }, {
               default: e(() => [
-                i(t(P), null, {
+                o(t(M), null, {
                   default: e(() => [
-                    i(t(U), { value: "yes" }, {
+                    o(t(W), { value: "yes" }, {
                       default: e(() => [
-                        n(a(t(k)("yes")), 1)
+                        n(a(t(x)("yes")), 1)
                       ]),
                       _: 1
                     }),
-                    i(t(U), { value: "no" }, {
+                    o(t(W), { value: "no" }, {
                       default: e(() => [
-                        n(a(t(k)("no")), 1)
+                        n(a(t(x)("no")), 1)
                       ]),
                       _: 1
                     }),
-                    l.voting_config.allow_abstention ? (u(), h(t(U), {
+                    l.voting_config.allow_abstention ? (r(), h(t(W), {
                       key: 0,
                       value: "abstain"
                     }, {
                       default: e(() => [
-                        n(a(t(k)("abstain")), 1)
+                        n(a(t(x)("abstain")), 1)
                       ]),
                       _: 1
-                    })) : B("", !0)
+                    })) : z("", !0)
                   ]),
                   _: 2
                 }, 1024)
               ]),
               _: 2
-            }, 1032, ["value", "onUpdate:value"])) : l.voting_config.type === "single_choice" ? (u(), h(t(K), {
+            }, 1032, ["value", "onUpdate:value"])) : l.voting_config.type === "single_choice" ? (r(), h(t(Z), {
               key: 2,
-              value: _(l.id),
-              "onUpdate:value": (s) => V(l.id, s)
+              value: S(l.id),
+              "onUpdate:value": (f) => B(l.id, f)
             }, {
               default: e(() => [
-                i(t(P), { vertical: "" }, {
+                o(t(M), { vertical: "" }, {
                   default: e(() => [
-                    (u(!0), g(w, null, T(l.voting_config.options ?? [], (s) => (u(), h(t(U), {
-                      key: s.id,
-                      value: s.id
+                    (r(!0), b(V, null, I(l.voting_config.options ?? [], (f) => (r(), h(t(W), {
+                      key: f.id,
+                      value: f.id
                     }, {
                       default: e(() => [
-                        n(a(s.text), 1)
+                        n(a(f.text), 1)
                       ]),
                       _: 2
                     }, 1032, ["value"]))), 128)),
-                    l.voting_config.allow_abstention ? (u(), h(t(U), {
+                    l.voting_config.allow_abstention ? (r(), h(t(W), {
                       key: 0,
                       value: "abstain"
                     }, {
                       default: e(() => [
-                        n(a(t(k)("abstain")), 1)
+                        n(a(t(x)("abstain")), 1)
                       ]),
                       _: 1
-                    })) : B("", !0)
+                    })) : z("", !0)
                   ]),
                   _: 2
                 }, 1024)
               ]),
               _: 2
-            }, 1032, ["value", "onUpdate:value"])) : l.voting_config.type === "multiple_choice" ? (u(), h(t(ut), {
+            }, 1032, ["value", "onUpdate:value"])) : l.voting_config.type === "multiple_choice" ? (r(), h(t(ct), {
               key: 3,
-              value: x(l.id),
-              "onUpdate:value": (s) => C(l.id, s)
+              value: v(l.id),
+              "onUpdate:value": (f) => C(l.id, f)
             }, {
               default: e(() => [
-                i(t(P), { vertical: "" }, {
+                o(t(M), { vertical: "" }, {
                   default: e(() => [
-                    (u(!0), g(w, null, T(l.voting_config.options ?? [], (s) => (u(), h(t(rt), {
-                      key: s.id,
-                      value: s.id
+                    (r(!0), b(V, null, I(l.voting_config.options ?? [], (f) => (r(), h(t(ft), {
+                      key: f.id,
+                      value: f.id
                     }, {
                       default: e(() => [
-                        n(a(s.text), 1)
+                        n(a(f.text), 1)
                       ]),
                       _: 2
                     }, 1032, ["value"]))), 128))
@@ -176,57 +184,57 @@ const ct = { key: 4 }, ft = /* @__PURE__ */ J({
                 }, 1024)
               ]),
               _: 2
-            }, 1032, ["value", "onUpdate:value"])) : l.voting_config.type === "ranking" ? (u(), g("div", ct, [
-              i(t(N), {
+            }, 1032, ["value", "onUpdate:value"])) : l.voting_config.type === "ranking" ? (r(), b("div", gt, [
+              o(t(N), {
                 depth: 3,
                 style: { "font-size": "12px", "margin-bottom": "10px", display: "block" }
               }, {
                 default: e(() => [
-                  n(a(t(k)("rankingHint")), 1)
+                  n(a(t(x)("rankingHint")), 1)
                 ]),
                 _: 1
               }),
-              (u(!0), g(w, null, T(z(l.id), (s, r) => (u(), g("div", {
-                key: s,
+              (r(!0), b(V, null, I(T(l.id), (f, k) => (r(), b("div", {
+                key: f,
                 style: { display: "flex", "align-items": "center", gap: "8px", "margin-bottom": "6px", padding: "6px 10px", border: "1px solid var(--n-border-color)", "border-radius": "4px" }
               }, [
-                i(t(N), {
+                o(t(N), {
                   depth: 3,
                   style: { "min-width": "20px", "text-align": "center", "font-weight": "600" }
                 }, {
                   default: e(() => [
-                    n(a(r + 1), 1)
+                    n(a(k + 1), 1)
                   ]),
                   _: 2
                 }, 1024),
-                i(t(N), { style: { flex: "1" } }, {
+                o(t(N), { style: { flex: "1" } }, {
                   default: e(() => [
-                    n(a(R(l, s)), 1)
+                    n(a(g(l, f)), 1)
                   ]),
                   _: 2
                 }, 1024),
-                i(t(G), {
+                o(t(J), {
                   size: "tiny",
-                  disabled: r === 0,
-                  onClick: (b) => E(l.id, r, -1)
+                  disabled: k === 0,
+                  onClick: (H) => E(l.id, k, -1)
                 }, {
-                  default: e(() => [...f[0] || (f[0] = [
+                  default: e(() => [...u[0] || (u[0] = [
                     n("↑", -1)
                   ])]),
                   _: 1
                 }, 8, ["disabled", "onClick"]),
-                i(t(G), {
+                o(t(J), {
                   size: "tiny",
-                  disabled: r === z(l.id).length - 1,
-                  onClick: (b) => E(l.id, r, 1)
+                  disabled: k === T(l.id).length - 1,
+                  onClick: (H) => E(l.id, k, 1)
                 }, {
-                  default: e(() => [...f[1] || (f[1] = [
+                  default: e(() => [...u[1] || (u[1] = [
                     n("↓", -1)
                   ])]),
                   _: 1
                 }, 8, ["disabled", "onClick"])
               ]))), 128))
-            ])) : B("", !0)
+            ])) : z("", !0)
           ]),
           _: 2
         }, 1024)
@@ -234,24 +242,26 @@ const ct = { key: 4 }, ft = /* @__PURE__ */ J({
     ]));
   }
 });
-class L extends Error {
-  constructor(o, k) {
-    super(o), this.status = k, this.name = "HttpError";
+class Q extends Error {
+  constructor(i, x) {
+    super(i), this.status = x, this.name = "HttpError";
   }
 }
-const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" } }, gt = /* @__PURE__ */ J({
+const bt = { style: { "margin-bottom": "16px" } }, mt = { style: { "margin-top": "8px" } }, yt = { style: { color: "#18a058" } }, _t = /* @__PURE__ */ K({
   __name: "VotingWidget",
   props: {
-    service: {}
+    service: {},
+    initialContext: {}
   },
-  setup(S) {
-    const { t: o } = Q({
+  setup(w) {
+    const { t: i, locale: x } = X({
       useScope: "local",
       messages: {
         en: {
           owner: "Owner",
           units: "Units",
-          votingWeight: "Voting weight",
+          votingWeight: "Voting weight (%)",
+          votingUnits: "Voting units",
           yourBallot: "Your Ballot",
           submitBallot: "Submit Ballot",
           ballotSubmitted: "Ballot Submitted",
@@ -267,12 +277,14 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
           statusTallied: "Voting has closed. Results are being tallied.",
           statusClosed: "Voting is closed.",
           errAlreadySubmitted: "A ballot has already been submitted for this gathering.",
-          errInvalidBallot: "Invalid ballot."
+          errInvalidBallot: "Invalid ballot.",
+          unitsAlreadyVoted: "The voting rights for your unit(s) have already been exercised by another co-owner."
         },
         ro: {
           owner: "Proprietar",
           units: "Unități",
-          votingWeight: "Pondere de vot",
+          votingWeight: "Pondere de vot (%)",
+          votingUnits: "Unități de vot",
           yourBallot: "Buletinul dvs. de vot",
           submitBallot: "Trimite buletinul",
           ballotSubmitted: "Buletin trimis",
@@ -288,12 +300,14 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
           statusTallied: "Votul s-a încheiat. Rezultatele sunt în curs de numărare.",
           statusClosed: "Votul este închis.",
           errAlreadySubmitted: "Un buletin de vot a fost deja trimis pentru această adunare.",
-          errInvalidBallot: "Buletin de vot invalid."
+          errInvalidBallot: "Buletin de vot invalid.",
+          unitsAlreadyVoted: "Dreptul de vot pentru unitatea dvs. a fost deja exercitat de un alt coproprietar."
         },
         ru: {
           owner: "Владелец",
           units: "Единицы",
-          votingWeight: "Вес голоса",
+          votingWeight: "Вес голоса (%)",
+          votingUnits: "Единицы голосования",
           yourBallot: "Ваш бюллетень",
           submitBallot: "Подать бюллетень",
           ballotSubmitted: "Бюллетень подан",
@@ -309,34 +323,49 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
           statusTallied: "Голосование завершено. Результаты подсчитываются.",
           statusClosed: "Голосование закрыто.",
           errAlreadySubmitted: "Бюллетень для этого собрания уже был подан.",
-          errInvalidBallot: "Недействительный бюллетень."
+          errInvalidBallot: "Недействительный бюллетень.",
+          unitsAlreadyVoted: "Право голоса за вашу единицу уже было реализовано другим совладельцем."
         }
       }
-    }), k = S, v = q(!1), y = q(!1), _ = q(null), V = q(null), x = q(null), C = q(null);
-    let z = ot({});
-    const E = D(
+    }), m = w, y = A(!1), _ = A(!1), S = A(null), B = A(null), v = A(null), C = A(null), T = A({}), E = U(
       () => {
-        var d;
-        return ((d = x.value) == null ? void 0 : d.units.reduce((c, p) => c + p.voting_weight, 0)) ?? 0;
+        var s;
+        return ((s = v.value) == null ? void 0 : s.units.reduce((c, p) => c + p.voting_weight, 0)) ?? 0;
       }
-    ), R = D(
+    ), $ = U(() => {
+      var c, p;
+      const s = (c = v.value) == null ? void 0 : c.gathering;
+      if (!s) return 0;
+      if (s.voting_mode === "by_weight") {
+        const R = s.qualified_units_total_part;
+        return R > 0 ? E.value / R * 100 : 0;
+      } else {
+        const R = s.qualified_units_count;
+        return R > 0 ? (((p = v.value) == null ? void 0 : p.units.length) ?? 0) / R * 100 : 0;
+      }
+    }), j = U(
       () => {
-        var d;
-        return (((d = x.value) == null ? void 0 : d.matters) ?? []).filter((c) => !c.is_informative);
+        var s;
+        return (((s = v.value) == null ? void 0 : s.units.length) ?? 0) > 0 && v.value.units.every((c) => !c.is_available);
       }
-    ), m = D(
+    ), g = U(
       () => {
-        var d;
-        return (((d = x.value) == null ? void 0 : d.matters) ?? []).filter((c) => c.is_informative);
+        var s;
+        return (((s = v.value) == null ? void 0 : s.matters) ?? []).filter((c) => !c.is_informative);
       }
-    ), f = D(
-      () => R.value.length > 0 && R.value.every((d) => {
+    ), d = U(
+      () => {
+        var s;
+        return (((s = v.value) == null ? void 0 : s.matters) ?? []).filter((c) => c.is_informative);
+      }
+    ), u = U(
+      () => g.value.length > 0 && g.value.every((s) => {
         var c;
-        return (((c = z[String(d.id)]) == null ? void 0 : c.length) ?? 0) > 0;
+        return (((c = T.value[String(s.id)]) == null ? void 0 : c.length) ?? 0) > 0;
       })
-    ), l = D(() => {
-      var d;
-      switch ((d = x.value) == null ? void 0 : d.gathering.status) {
+    ), l = U(() => {
+      var s;
+      switch ((s = v.value) == null ? void 0 : s.gathering.status) {
         case "active":
           return "success";
         case "scheduled":
@@ -349,118 +378,156 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
           return "default";
       }
     });
-    function s() {
-      const d = {};
-      for (const c of R.value) {
-        const p = String(c.id);
-        d[p] = { matter_id: c.id, values: z[p] ?? [] };
-      }
-      return d;
+    function f(s) {
+      var p;
+      return ((p = x.value) == null ? void 0 : p.slice(0, 2)) === "ru" && s.title_ru ? s.title_ru : s.title;
     }
-    function r(d) {
+    function k(s) {
+      var p;
+      return ((p = x.value) == null ? void 0 : p.slice(0, 2)) === "ru" && s.description_ru ? s.description_ru : s.description;
+    }
+    function H() {
+      const s = {};
+      for (const c of g.value) {
+        const p = String(c.id);
+        s[p] = { matter_id: c.id, values: T.value[p] ?? [] };
+      }
+      return s;
+    }
+    function nt(s) {
       if (!C.value) return "—";
-      const c = C.value.ballot_content[String(d.id)];
-      return !c || c.values.length === 0 ? "—" : d.voting_config.type === "ranking" ? c.values.map((p, H) => {
-        var W;
-        const $ = (W = d.voting_config.options) == null ? void 0 : W.find((lt) => lt.id === p);
-        return `${H + 1}. ${$ ? $.text : p}`;
+      const c = C.value.ballot_content[String(s.id)];
+      return !c || c.values.length === 0 ? "—" : s.voting_config.type === "ranking" ? c.values.map((p, R) => {
+        var G;
+        const F = (G = s.voting_config.options) == null ? void 0 : G.find((st) => st.id === p);
+        return `${R + 1}. ${F ? F.text : p}`;
       }).join(", ") : c.values.map((p) => {
-        var $;
-        if (p === "abstain") return o("abstain");
-        if (d.voting_config.type === "yes_no") return o(p === "yes" ? "yes" : "no");
-        const H = ($ = d.voting_config.options) == null ? void 0 : $.find((W) => W.id === p);
-        return H ? H.text : p;
+        var F;
+        if (p === "abstain") return i("abstain");
+        if (s.voting_config.type === "yes_no") return i(p === "yes" ? "yes" : "no");
+        const R = (F = s.voting_config.options) == null ? void 0 : F.find((G) => G.id === p);
+        return R ? R.text : p;
       }).join(", ");
     }
-    async function b() {
-      v.value = !0, _.value = null;
-      try {
-        const d = await k.service.getContext();
-        x.value = d, d.ballot && (C.value = {
-          ballot_id: d.ballot.ballot_id,
-          ballot_hash: d.ballot.ballot_hash,
-          submitted_at: d.ballot.submitted_at,
-          ballot_content: d.ballot.ballot_content
+    async function ot() {
+      if (m.initialContext) {
+        v.value = m.initialContext, m.initialContext.ballot && (C.value = {
+          ballot_id: m.initialContext.ballot.ballot_id,
+          ballot_hash: m.initialContext.ballot.ballot_hash,
+          submitted_at: m.initialContext.ballot.submitted_at,
+          ballot_content: m.initialContext.ballot.ballot_content
         });
-      } catch (d) {
-        _.value = d instanceof Error ? d.message : "Network error";
-      } finally {
-        v.value = !1;
+        return;
       }
-    }
-    async function O() {
-      if (!f.value) return;
-      y.value = !0, V.value = null;
-      const d = s();
+      y.value = !0, S.value = null;
       try {
-        const c = await k.service.submitBallot(d);
-        C.value = {
-          ballot_id: c.ballot_id,
-          ballot_hash: c.ballot_hash,
-          submitted_at: c.submitted_at,
-          ballot_content: c.ballot_content ?? d
-        };
-      } catch (c) {
-        c instanceof L ? c.status === 409 ? V.value = o("errAlreadySubmitted") : c.status === 400 ? V.value = c.message || o("errInvalidBallot") : V.value = c.message : V.value = c instanceof Error ? c.message : "Network error";
+        const s = await m.service.getContext();
+        v.value = s, s.ballot && (C.value = {
+          ballot_id: s.ballot.ballot_id,
+          ballot_hash: s.ballot.ballot_hash,
+          submitted_at: s.ballot.submitted_at,
+          ballot_content: s.ballot.ballot_content
+        });
+      } catch (s) {
+        S.value = s instanceof Error ? s.message : "Network error";
       } finally {
         y.value = !1;
       }
     }
-    return Z(b), (d, c) => (u(), h(t(tt), { show: v.value }, {
+    async function ut() {
+      if (!u.value) return;
+      _.value = !0, B.value = null;
+      const s = H();
+      try {
+        const c = await m.service.submitBallot(s);
+        C.value = {
+          ballot_id: c.ballot_id,
+          ballot_hash: c.ballot_hash,
+          submitted_at: c.submitted_at,
+          ballot_content: c.ballot_content ?? s
+        };
+      } catch (c) {
+        c instanceof Q ? c.status === 409 ? B.value = i("errAlreadySubmitted") : c.status === 400 ? B.value = c.message || i("errInvalidBallot") : B.value = c.message : B.value = c instanceof Error ? c.message : "Network error";
+      } finally {
+        _.value = !1;
+      }
+    }
+    return et(ot), (s, c) => (r(), h(t(at), { show: y.value }, {
       default: e(() => [
-        _.value ? (u(), h(t(M), {
+        S.value ? (r(), h(t(P), {
           key: 0,
           type: "error",
           style: { "margin-bottom": "16px" }
         }, {
           default: e(() => [
-            n(a(_.value), 1)
+            n(a(S.value), 1)
           ]),
           _: 1
-        })) : B("", !0),
-        x.value ? (u(), g(w, { key: 1 }, [
-          i(t(I), { style: { "margin-bottom": "16px" } }, {
+        })) : z("", !0),
+        v.value ? (r(), b(V, { key: 1 }, [
+          Y("div", bt, [
+            o(t(N), {
+              tag: "h2",
+              style: { "font-size": "18px", "font-weight": "600", margin: "0 0 4px" }
+            }, {
+              default: e(() => [
+                n(a(v.value.gathering.title), 1)
+              ]),
+              _: 1
+            }),
+            v.value.gathering.description ? (r(), h(t(N), {
+              key: 0,
+              depth: 2,
+              style: { "font-size": "14px", display: "block" }
+            }, {
+              default: e(() => [
+                n(a(v.value.gathering.description), 1)
+              ]),
+              _: 1
+            })) : z("", !0)
+          ]),
+          o(t(D), { style: { "margin-bottom": "16px" } }, {
             default: e(() => [
-              i(t(Y), {
+              o(t(L), {
                 column: 3,
                 "label-placement": "top",
                 size: "small"
               }, {
                 default: e(() => [
-                  i(t(A), {
-                    label: t(o)("owner")
+                  o(t(q), {
+                    label: t(i)("owner")
                   }, {
                     default: e(() => [
-                      n(a(x.value.owner.name), 1)
+                      n(a(v.value.owner.name), 1)
                     ]),
                     _: 1
                   }, 8, ["label"]),
-                  i(t(A), {
-                    label: t(o)("units")
+                  o(t(q), {
+                    label: t(i)("units")
                   }, {
                     default: e(() => [
-                      n(a(x.value.units.length), 1)
+                      n(a(v.value.units.length), 1)
                     ]),
                     _: 1
                   }, 8, ["label"]),
-                  i(t(A), {
-                    label: t(o)("votingWeight")
+                  o(t(q), {
+                    label: v.value.gathering.voting_mode === "by_weight" ? t(i)("votingWeight") : t(i)("votingUnits")
                   }, {
                     default: e(() => [
-                      n(a(E.value.toFixed(4)), 1)
+                      n(a($.value.toFixed(2)) + "% ", 1)
                     ]),
                     _: 1
                   }, 8, ["label"])
                 ]),
                 _: 1
               }),
-              F("div", pt, [
-                i(t(j), {
+              Y("div", mt, [
+                o(t(O), {
                   type: l.value,
                   size: "small"
                 }, {
                   default: e(() => [
-                    n(a(x.value.gathering.status.toUpperCase()), 1)
+                    n(a(v.value.gathering.status.toUpperCase()), 1)
                   ]),
                   _: 1
                 }, 8, ["type"])
@@ -468,46 +535,55 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
             ]),
             _: 1
           }),
-          x.value.gathering.status !== "active" ? (u(), h(t(M), {
+          v.value.gathering.status !== "active" ? (r(), h(t(P), {
             key: 0,
-            type: x.value.gathering.status === "tallied" ? "info" : "warning"
+            type: v.value.gathering.status === "tallied" ? "info" : "warning"
           }, {
             default: e(() => [
-              ["draft", "scheduled"].includes(x.value.gathering.status) ? (u(), g(w, { key: 0 }, [
-                n(a(t(o)("statusNotStarted")), 1)
-              ], 64)) : x.value.gathering.status === "tallied" ? (u(), g(w, { key: 1 }, [
-                n(a(t(o)("statusTallied")), 1)
-              ], 64)) : (u(), g(w, { key: 2 }, [
-                n(a(t(o)("statusClosed")), 1)
+              ["draft", "scheduled"].includes(v.value.gathering.status) ? (r(), b(V, { key: 0 }, [
+                n(a(t(i)("statusNotStarted")), 1)
+              ], 64)) : v.value.gathering.status === "tallied" ? (r(), b(V, { key: 1 }, [
+                n(a(t(i)("statusTallied")), 1)
+              ], 64)) : (r(), b(V, { key: 2 }, [
+                n(a(t(i)("statusClosed")), 1)
               ], 64))
             ]),
             _: 1
-          }, 8, ["type"])) : (u(), g(w, { key: 1 }, [
-            C.value ? (u(), h(t(I), { key: 0 }, {
+          }, 8, ["type"])) : (r(), b(V, { key: 1 }, [
+            j.value && !C.value ? (r(), h(t(P), {
+              key: 0,
+              type: "warning",
+              style: { "margin-bottom": "16px" }
+            }, {
+              default: e(() => [
+                n(a(t(i)("unitsAlreadyVoted")), 1)
+              ]),
+              _: 1
+            })) : C.value ? (r(), h(t(D), { key: 1 }, {
               header: e(() => [
-                F("span", vt, "✓ " + a(t(o)("ballotSubmitted")), 1)
+                Y("span", yt, "✓ " + a(t(i)("ballotSubmitted")), 1)
               ]),
               default: e(() => [
-                i(t(Y), {
+                o(t(L), {
                   column: 1,
                   "label-placement": "left",
                   size: "small",
                   style: { "margin-bottom": "16px" }
                 }, {
                   default: e(() => [
-                    i(t(A), {
-                      label: t(o)("ballotId")
+                    o(t(q), {
+                      label: t(i)("ballotId")
                     }, {
                       default: e(() => [
                         n(a(C.value.ballot_id), 1)
                       ]),
                       _: 1
                     }, 8, ["label"]),
-                    i(t(A), {
-                      label: t(o)("verificationHash")
+                    o(t(q), {
+                      label: t(i)("verificationHash")
                     }, {
                       default: e(() => [
-                        i(t(N), {
+                        o(t(N), {
                           code: "",
                           style: { "font-size": "11px", "word-break": "break-all" }
                         }, {
@@ -519,8 +595,8 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
                       ]),
                       _: 1
                     }, 8, ["label"]),
-                    i(t(A), {
-                      label: t(o)("submittedAt")
+                    o(t(q), {
+                      label: t(i)("submittedAt")
                     }, {
                       default: e(() => [
                         n(a(C.value.submitted_at ? new Date(C.value.submitted_at).toLocaleString() : "—"), 1)
@@ -530,95 +606,95 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
                   ]),
                   _: 1
                 }),
-                i(t(et), { "title-placement": "left" }, {
+                o(t(lt), { "title-placement": "left" }, {
                   default: e(() => [
-                    n(a(t(o)("yourVotes")), 1)
+                    n(a(t(i)("yourVotes")), 1)
                   ]),
                   _: 1
                 }),
-                (u(!0), g(w, null, T(x.value.matters.filter((p) => !p.is_informative), (p) => (u(), g("div", {
+                (r(!0), b(V, null, I(v.value.matters.filter((p) => !p.is_informative), (p) => (r(), b("div", {
                   key: p.id,
                   style: { "margin-bottom": "12px", "padding-left": "4px" }
                 }, [
-                  i(t(N), {
+                  o(t(N), {
                     strong: "",
                     style: { display: "block" }
                   }, {
                     default: e(() => [
-                      n(a(p.title), 1)
+                      n(a(f(p)), 1)
                     ]),
                     _: 2
                   }, 1024),
-                  i(t(N), {
+                  o(t(N), {
                     depth: 2,
                     style: { "margin-top": "4px", display: "block", "padding-left": "12px" }
                   }, {
                     default: e(() => [
-                      n(a(r(p)), 1)
+                      n(a(nt(p)), 1)
                     ]),
                     _: 2
                   }, 1024)
                 ]))), 128))
               ]),
               _: 1
-            })) : (u(), h(t(I), { key: 1 }, {
+            })) : (r(), h(t(D), { key: 2 }, {
               header: e(() => [
-                F("span", null, a(t(o)("yourBallot")), 1),
-                i(t(N), {
+                Y("span", null, a(t(i)("yourBallot")), 1),
+                o(t(N), {
                   depth: 3,
                   style: { "font-size": "13px", "margin-left": "8px" }
                 }, {
                   default: e(() => [
-                    n(" — " + a(x.value.gathering.title), 1)
+                    n(" — " + a(v.value.gathering.title), 1)
                   ]),
                   _: 1
                 })
               ]),
               default: e(() => [
-                V.value ? (u(), h(t(M), {
+                B.value ? (r(), h(t(P), {
                   key: 0,
                   type: "error",
                   closable: "",
                   style: { "margin-bottom": "16px" },
-                  onClose: c[0] || (c[0] = (p) => V.value = null)
+                  onClose: c[0] || (c[0] = (p) => B.value = null)
                 }, {
                   default: e(() => [
-                    n(a(V.value), 1)
+                    n(a(B.value), 1)
                   ]),
                   _: 1
-                })) : B("", !0),
-                (u(!0), g(w, null, T(m.value, (p) => (u(), g("div", {
+                })) : z("", !0),
+                (r(!0), b(V, null, I(d.value, (p) => (r(), b("div", {
                   key: p.id,
                   style: { "margin-bottom": "16px" }
                 }, [
-                  i(t(I), {
+                  o(t(D), {
                     size: "small",
                     embedded: ""
                   }, {
                     header: e(() => [
-                      i(t(N), { style: { "font-size": "14px" } }, {
+                      o(t(N), { style: { "font-size": "14px" } }, {
                         default: e(() => [
-                          n(a(p.title), 1)
+                          n(a(f(p)), 1)
                         ]),
                         _: 2
                       }, 1024),
-                      i(t(j), {
+                      o(t(O), {
                         size: "tiny",
                         style: { "margin-left": "8px" }
                       }, {
                         default: e(() => [
-                          n(a(t(o)("informational")), 1)
+                          n(a(t(i)("informational")), 1)
                         ]),
                         _: 1
                       })
                     ]),
                     default: e(() => [
-                      i(t(N), {
+                      o(t(N), {
                         depth: 2,
                         style: { "font-size": "13px" }
                       }, {
                         default: e(() => [
-                          n(a(p.description), 1)
+                          n(a(k(p)), 1)
                         ]),
                         _: 2
                       }, 1024)
@@ -626,24 +702,24 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
                     _: 2
                   }, 1024)
                 ]))), 128)),
-                i(ft, {
-                  matters: R.value,
-                  modelValue: t(z),
-                  "onUpdate:modelValue": c[1] || (c[1] = (p) => nt(z) ? z.value = p : z = p)
+                o(vt, {
+                  matters: g.value,
+                  modelValue: T.value,
+                  "onUpdate:modelValue": c[1] || (c[1] = (p) => T.value = p)
                 }, null, 8, ["matters", "modelValue"]),
-                i(t(P), {
+                o(t(M), {
                   justify: "end",
                   style: { "margin-top": "8px" }
                 }, {
                   default: e(() => [
-                    i(t(G), {
+                    o(t(J), {
                       type: "primary",
-                      loading: y.value,
-                      disabled: !f.value,
-                      onClick: O
+                      loading: _.value,
+                      disabled: !u.value,
+                      onClick: ut
                     }, {
                       default: e(() => [
-                        n(a(t(o)("submitBallot")), 1)
+                        n(a(t(i)("submitBallot")), 1)
                       ]),
                       _: 1
                     }, 8, ["loading", "disabled"])
@@ -654,23 +730,24 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
               _: 1
             }))
           ], 64))
-        ], 64)) : B("", !0)
+        ], 64)) : z("", !0)
       ]),
       _: 1
     }, 8, ["show"]));
   }
-}), at = (S, o) => {
-  const k = S.__vccOpts || S;
-  for (const [v, y] of o)
-    k[v] = y;
-  return k;
-}, ht = /* @__PURE__ */ at(gt, [["__scopeId", "data-v-2c9825bd"]]), bt = /* @__PURE__ */ J({
+}), it = (w, i) => {
+  const x = w.__vccOpts || w;
+  for (const [m, y] of i)
+    x[m] = y;
+  return x;
+}, wt = /* @__PURE__ */ it(_t, [["__scopeId", "data-v-a8ef0700"]]), ht = /* @__PURE__ */ K({
   __name: "VotingResultsWidget",
   props: {
-    service: {}
+    service: {},
+    initialContext: {}
   },
-  setup(S) {
-    const { t: o } = Q({
+  setup(w) {
+    const { t: i } = X({
       useScope: "local",
       messages: {
         en: {
@@ -688,7 +765,10 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
           yourVote: "Your vote",
           vote: "vote",
           votes: "votes",
+          yes: "Yes",
+          no: "No",
           abstain: "Abstain",
+          weight: "weight",
           quorum: "Quorum",
           quorumMet: "Met",
           quorumNotMet: "Not met",
@@ -712,7 +792,10 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
           yourVote: "Votul dvs.",
           vote: "vot",
           votes: "voturi",
+          yes: "Da",
+          no: "Nu",
           abstain: "Abținere",
+          weight: "pondere",
           quorum: "Cvorum",
           quorumMet: "Întrunit",
           quorumNotMet: "Neîntrunit",
@@ -736,7 +819,10 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
           yourVote: "Ваш голос",
           vote: "голос",
           votes: "голосов",
+          yes: "Да",
+          no: "Нет",
           abstain: "Воздержаться",
+          weight: "вес",
           quorum: "Кворум",
           quorumMet: "Достигнут",
           quorumNotMet: "Не достигнут",
@@ -746,9 +832,9 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
           willBePublished: "Результаты будут опубликованы после подсчёта голосов."
         }
       }
-    }), k = S, v = q(!1), y = q(null), _ = q(null), V = q(null), x = D(() => {
-      var l;
-      switch ((l = _.value) == null ? void 0 : l.gathering.status) {
+    }), x = w, m = A(!1), y = A(null), _ = A(null), S = A(null), B = U(() => {
+      var g;
+      switch ((g = _.value) == null ? void 0 : g.gathering.status) {
         case "active":
           return "success";
         case "scheduled":
@@ -761,50 +847,54 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
           return "default";
       }
     });
-    function C(l) {
-      var r;
-      if (!((r = _.value) != null && r.ballot)) return !1;
-      const s = _.value.ballot.ballot_content[String(l)];
-      return !!s && s.values.length > 0;
+    function v(g) {
+      var u;
+      if (!((u = _.value) != null && u.ballot)) return !1;
+      const d = _.value.ballot.ballot_content[String(g)];
+      return !!d && d.values.length > 0;
     }
-    function z(l, s) {
-      var b;
-      if (!((b = _.value) != null && b.ballot)) return !1;
-      const r = _.value.ballot.ballot_content[String(l)];
-      return !!r && r.values.includes(s);
+    function C(g, d) {
+      var l;
+      if (!((l = _.value) != null && l.ballot)) return !1;
+      const u = _.value.ballot.ballot_content[String(g)];
+      return !!u && u.values.includes(d);
     }
-    function E(l, s) {
-      var b;
-      if (l === "abstain") return o("abstain");
-      if (s.type === "yes_no") return l === "yes" ? "Yes" : "No";
-      const r = (b = s.options) == null ? void 0 : b.find((O) => O.id === l);
-      return r ? r.text : l;
+    function T(g, d) {
+      var l;
+      if (g === "abstain") return i("abstain");
+      if (d.type === "yes_no") return i(g === "yes" ? "yes" : "no");
+      const u = (l = d.options) == null ? void 0 : l.find((f) => f.id === g);
+      return u ? u.text : g;
     }
-    function R(l) {
-      return [...l.votes].sort((s, r) => r.vote_count - s.vote_count);
+    function E(g) {
+      return [...g.votes].sort((d, u) => u.vote_count - d.vote_count);
     }
-    function m(l, s) {
-      if (l === "abstain") return "warning";
-      if (s.voting_config.type === "yes_no") {
-        if (l === "yes") return s.is_passed ? "success" : "default";
-        if (l === "no") return s.is_passed ? "default" : "error";
+    function $(g, d) {
+      if (g === "abstain") return "warning";
+      if (d.voting_config.type === "yes_no") {
+        if (g === "yes") return d.is_passed ? "success" : "default";
+        if (g === "no") return d.is_passed ? "default" : "error";
       }
       return "default";
     }
-    async function f() {
-      v.value = !0, y.value = null;
+    async function j() {
+      if (x.initialContext) {
+        _.value = x.initialContext, S.value = x.initialContext.results ?? null;
+        return;
+      }
+      m.value = !0, y.value = null;
       try {
-        const l = await k.service.getContext();
-        _.value = l, V.value = l.results ?? null;
-      } catch (l) {
-        y.value = l instanceof Error ? l.message : "Network error";
+        const g = await x.service.getContext();
+        _.value = g, S.value = g.results ?? null;
+      } catch (g) {
+        y.value = g instanceof Error ? g.message : "Network error";
       } finally {
-        v.value = !1;
+        m.value = !1;
       }
     }
-    return Z(f), (l, s) => (u(), h(t(tt), { show: v.value }, {
+    return et(j), (g, d) => (r(), h(t(at), { show: m.value }, {
       default: e(() => [
-        y.value ? (u(), h(t(M), {
+        y.value ? (r(), h(t(P), {
           key: 0,
           type: "error",
           style: { "margin-bottom": "16px" }
@@ -813,30 +903,30 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
             n(a(y.value), 1)
           ]),
           _: 1
-        })) : B("", !0),
-        _.value ? (u(), g(w, { key: 1 }, [
-          i(t(I), { style: { "margin-bottom": "16px" } }, {
+        })) : z("", !0),
+        _.value ? (r(), b(V, { key: 1 }, [
+          o(t(D), { style: { "margin-bottom": "16px" } }, {
             default: e(() => [
-              i(t(Y), {
+              o(t(L), {
                 column: 2,
                 "label-placement": "top",
                 size: "small"
               }, {
                 default: e(() => [
-                  i(t(A), {
-                    label: t(o)("gathering")
+                  o(t(q), {
+                    label: t(i)("gathering")
                   }, {
                     default: e(() => [
                       n(a(_.value.gathering.title), 1)
                     ]),
                     _: 1
                   }, 8, ["label"]),
-                  i(t(A), {
-                    label: t(o)("status")
+                  o(t(q), {
+                    label: t(i)("status")
                   }, {
                     default: e(() => [
-                      i(t(j), {
-                        type: x.value,
+                      o(t(O), {
+                        type: B.value,
                         size: "small"
                       }, {
                         default: e(() => [
@@ -853,40 +943,40 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
             ]),
             _: 1
           }),
-          V.value ? (u(), g(w, { key: 1 }, [
-            i(t(I), {
+          S.value ? (r(), b(V, { key: 1 }, [
+            o(t(D), {
               size: "small",
               style: { "margin-bottom": "16px" },
-              title: t(o)("participationSummary")
+              title: t(i)("participationSummary")
             }, {
               default: e(() => [
-                i(t(Y), {
+                o(t(L), {
                   column: 3,
                   "label-placement": "top",
                   size: "small"
                 }, {
                   default: e(() => [
-                    i(t(A), {
-                      label: t(o)("participated")
+                    o(t(q), {
+                      label: t(i)("participated")
                     }, {
                       default: e(() => [
-                        n(a(V.value.statistics.participating_units) + " " + a(t(o)("units")), 1)
+                        n(a(S.value.statistics.participating_units) + " " + a(t(i)("units")), 1)
                       ]),
                       _: 1
                     }, 8, ["label"]),
-                    i(t(A), {
-                      label: t(o)("voted")
+                    o(t(q), {
+                      label: t(i)("voted")
                     }, {
                       default: e(() => [
-                        n(a(V.value.statistics.voted_units) + " " + a(t(o)("units")), 1)
+                        n(a(S.value.statistics.voted_units) + " " + a(t(i)("units")), 1)
                       ]),
                       _: 1
                     }, 8, ["label"]),
-                    i(t(A), {
-                      label: t(o)("participationRate")
+                    o(t(q), {
+                      label: t(i)("participationRate")
                     }, {
                       default: e(() => [
-                        n(a(V.value.statistics.participation_rate.toFixed(1)) + "% ", 1)
+                        n(a(S.value.statistics.participation_rate.toFixed(1)) + "% ", 1)
                       ]),
                       _: 1
                     }, 8, ["label"])
@@ -896,30 +986,30 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
               ]),
               _: 1
             }, 8, ["title"]),
-            (u(!0), g(w, null, T(V.value.results, (r) => (u(), g("div", {
-              key: r.matter_id,
+            (r(!0), b(V, null, I(S.value.results, (u) => (r(), b("div", {
+              key: u.matter_id,
               style: { "margin-bottom": "16px" }
             }, [
-              i(t(I), { size: "small" }, {
+              o(t(D), { size: "small" }, {
                 header: e(() => [
-                  i(t(P), {
+                  o(t(M), {
                     align: "center",
                     justify: "space-between",
                     style: { "flex-wrap": "wrap", gap: "4px" }
                   }, {
                     default: e(() => [
-                      i(t(N), { strong: "" }, {
+                      o(t(N), { strong: "" }, {
                         default: e(() => [
-                          n(a(r.matter_title), 1)
+                          n(a(u.matter_title), 1)
                         ]),
                         _: 2
                       }, 1024),
-                      i(t(j), {
-                        type: r.is_passed ? "success" : "error",
+                      o(t(O), {
+                        type: u.is_passed ? "success" : "error",
                         size: "small"
                       }, {
                         default: e(() => [
-                          n(a(r.is_passed ? t(o)("passed") : t(o)("failed")), 1)
+                          n(a(u.is_passed ? t(i)("passed") : t(i)("failed")), 1)
                         ]),
                         _: 2
                       }, 1032, ["type"])
@@ -928,96 +1018,103 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
                   }, 1024)
                 ]),
                 default: e(() => [
-                  C(r.matter_id) ? (u(), h(t(M), {
+                  v(u.matter_id) ? (r(), h(t(P), {
                     key: 0,
                     type: "success",
                     size: "small",
                     style: { "margin-bottom": "12px" }
                   }, {
                     default: e(() => [
-                      n(a(t(o)("yourVoteCounted")), 1)
+                      n(a(t(i)("yourVoteCounted")), 1)
                     ]),
                     _: 1
-                  })) : _.value.ballot ? (u(), h(t(M), {
+                  })) : _.value.ballot ? (r(), h(t(P), {
                     key: 1,
                     type: "default",
                     size: "small",
                     style: { "margin-bottom": "12px" }
                   }, {
                     default: e(() => [
-                      n(a(t(o)("didNotVote")), 1)
+                      n(a(t(i)("didNotVote")), 1)
                     ]),
                     _: 1
-                  })) : B("", !0),
-                  (u(!0), g(w, null, T(R(r), (b) => (u(), g("div", {
-                    key: b.choice,
+                  })) : z("", !0),
+                  (r(!0), b(V, null, I(E(u), (l) => (r(), b("div", {
+                    key: l.choice,
                     style: { "margin-bottom": "10px" }
                   }, [
-                    i(t(P), {
+                    o(t(M), {
                       align: "center",
                       justify: "space-between",
                       style: { "margin-bottom": "4px" }
                     }, {
                       default: e(() => [
-                        i(t(P), {
+                        o(t(M), {
                           align: "center",
                           size: "small"
                         }, {
                           default: e(() => [
-                            i(t(N), {
-                              style: st(z(r.matter_id, b.choice) ? "font-weight:600;color:#18a058" : "")
+                            o(t(N), {
+                              style: dt(C(u.matter_id, l.choice) ? "font-weight:600;color:#18a058" : "")
                             }, {
                               default: e(() => [
-                                n(a(E(b.choice, r.voting_config)), 1)
+                                n(a(T(l.choice, u.voting_config)), 1)
                               ]),
                               _: 2
                             }, 1032, ["style"]),
-                            z(r.matter_id, b.choice) ? (u(), h(t(j), {
+                            C(u.matter_id, l.choice) ? (r(), h(t(O), {
                               key: 0,
                               type: "success",
                               size: "tiny"
                             }, {
                               default: e(() => [
-                                n(a(t(o)("yourVote")), 1)
+                                n(a(t(i)("yourVote")), 1)
                               ]),
                               _: 1
-                            })) : B("", !0)
+                            })) : z("", !0)
                           ]),
                           _: 2
                         }, 1024),
-                        i(t(N), {
+                        o(t(N), {
                           depth: 2,
                           style: { "font-size": "12px" }
                         }, {
-                          default: e(() => [
-                            n(a(b.vote_count) + " " + a(b.vote_count !== 1 ? t(o)("votes") : t(o)("vote")) + " (" + a(b.percentage.toFixed(1)) + "%) ", 1)
-                          ]),
+                          default: e(() => {
+                            var f, k;
+                            return [
+                              n(a(l.vote_count) + " " + a(l.vote_count !== 1 ? t(i)("votes") : t(i)("vote")) + " (" + a(l.percentage.toFixed(1)) + "%", 1),
+                              ((k = (f = S.value) == null ? void 0 : f.statistics) == null ? void 0 : k.voting_mode) === "by_weight" ? (r(), b(V, { key: 0 }, [
+                                n(" · " + a(t(i)("weight")) + ": " + a(l.weight_percentage.toFixed(1)) + "%", 1)
+                              ], 64)) : z("", !0),
+                              d[1] || (d[1] = n(") ", -1))
+                            ];
+                          }),
                           _: 2
                         }, 1024)
                       ]),
                       _: 2
                     }, 1024),
-                    i(t(dt), {
+                    o(t(pt), {
                       type: "line",
-                      percentage: b.percentage,
-                      status: m(b.choice, r),
+                      percentage: l.percentage,
+                      status: $(l.choice, u),
                       "show-indicator": !1,
                       height: 8,
                       "border-radius": 4
                     }, null, 8, ["percentage", "status"])
                   ]))), 128)),
-                  i(t(et), { style: { margin: "8px 0" } }),
-                  i(t(N), {
+                  o(t(lt), { style: { margin: "8px 0" } }),
+                  o(t(N), {
                     depth: 3,
                     style: { "font-size": "12px" }
                   }, {
                     default: e(() => {
-                      var b;
+                      var l;
                       return [
-                        n(a(t(o)("quorum")) + ": " + a((b = r.quorum_info) != null && b.met ? t(o)("quorumMet") : t(o)("quorumNotMet")) + " ", 1),
-                        r.quorum_info ? (u(), g(w, { key: 0 }, [
-                          n(" — " + a(r.quorum_info.achieved_percentage.toFixed(1)) + "% " + a(t(o)("of")) + " " + a(r.quorum_info.required_percentage) + "% " + a(t(o)("required")), 1)
-                        ], 64)) : B("", !0)
+                        n(a(t(i)("quorum")) + ": " + a((l = u.quorum_info) != null && l.met ? t(i)("quorumMet") : t(i)("quorumNotMet")) + " ", 1),
+                        u.quorum_info ? (r(), b(V, { key: 0 }, [
+                          n(" — " + a(u.quorum_info.achieved_percentage.toFixed(1)) + "% " + a(t(i)("of")) + " " + a(u.quorum_info.required_percentage) + "% " + a(t(i)("required")), 1)
+                        ], 64)) : z("", !0)
                       ];
                     }),
                     _: 2
@@ -1026,52 +1123,52 @@ const pt = { style: { "margin-top": "8px" } }, vt = { style: { color: "#18a058" 
                 _: 2
               }, 1024)
             ]))), 128))
-          ], 64)) : (u(), h(t(M), {
+          ], 64)) : (r(), h(t(P), {
             key: 0,
             type: "info"
           }, {
             default: e(() => [
-              n(a(t(o)("notAvailable")) + " ", 1),
-              F("strong", null, a(_.value.gathering.status), 1),
-              s[0] || (s[0] = n(". ", -1)),
-              _.value.gathering.status !== "tallied" ? (u(), g(w, { key: 0 }, [
-                n(a(t(o)("willBePublished")), 1)
-              ], 64)) : B("", !0)
+              n(a(t(i)("notAvailable")) + " ", 1),
+              Y("strong", null, a(_.value.gathering.status), 1),
+              d[0] || (d[0] = n(". ", -1)),
+              _.value.gathering.status !== "tallied" ? (r(), b(V, { key: 0 }, [
+                n(a(t(i)("willBePublished")), 1)
+              ], 64)) : z("", !0)
             ]),
             _: 1
           }))
-        ], 64)) : B("", !0)
+        ], 64)) : z("", !0)
       ]),
       _: 1
     }, 8, ["show"]));
   }
-}), xt = /* @__PURE__ */ at(bt, [["__scopeId", "data-v-140a0d46"]]);
-async function X(S) {
-  return (await S.json().catch(() => ({ error: S.statusText }))).error ?? `Request failed (${S.status})`;
+}), St = /* @__PURE__ */ it(ht, [["__scopeId", "data-v-f9ffa84d"]]);
+async function tt(w) {
+  return (await w.json().catch(() => ({ error: w.statusText }))).error ?? `Request failed (${w.status})`;
 }
-function kt(S, o = "") {
-  const k = o.replace(/\/$/, "");
+function Ct(w, i = "") {
+  const x = i.replace(/\/$/, "");
   return {
     async getContext() {
-      const v = await fetch(`${k}/v1/api/member/gatherings/${S}`);
-      if (!v.ok) throw new L(await X(v), v.status);
-      return v.json();
+      const m = await fetch(`${x}/v1/api/member/gatherings/${w}`);
+      if (!m.ok) throw new Q(await tt(m), m.status);
+      return m.json();
     },
-    async submitBallot(v) {
-      const y = await fetch(`${k}/v1/api/member/gatherings/${S}/ballot`, {
+    async submitBallot(m) {
+      const y = await fetch(`${x}/v1/api/member/gatherings/${w}/ballot`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ballot_content: v })
+        body: JSON.stringify({ ballot_content: m })
       });
-      if (!y.ok) throw new L(await X(y), y.status);
+      if (!y.ok) throw new Q(await tt(y), y.status);
       return y.json();
     }
   };
 }
 export {
-  ft as BallotForm,
-  L as HttpError,
-  xt as VotingResultsWidget,
-  ht as VotingWidget,
-  kt as createMemberVotingService
+  vt as BallotForm,
+  Q as HttpError,
+  St as VotingResultsWidget,
+  wt as VotingWidget,
+  Ct as createMemberVotingService
 };

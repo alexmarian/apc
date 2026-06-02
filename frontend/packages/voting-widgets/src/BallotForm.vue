@@ -6,10 +6,10 @@
       style="margin-bottom: 20px"
     >
       <NCard size="small">
-        <template #header>{{ matter.title }}</template>
+        <template #header>{{ matterTitle(matter) }}</template>
 
-        <NText v-if="matter.description" :depth="2" style="display: block; margin-bottom: 12px; font-size: 13px">
-          {{ matter.description }}
+        <NText v-if="matter.description || matter.description_ru" :depth="2" style="display: block; margin-bottom: 12px; font-size: 13px">
+          {{ matterDescription(matter) }}
         </NText>
 
         <!-- yes_no -->
@@ -104,7 +104,7 @@ import {
 } from 'naive-ui'
 import type { MatterInfo } from './types'
 
-const { t } = useI18n({
+const { t, locale } = useI18n({
   useScope: 'local',
   messages: {
     en: {
@@ -183,6 +183,18 @@ function moveRank(matterId: number, idx: number, dir: -1 | 1) {
   if (newIdx < 0 || newIdx >= arr.length) return
   ;[arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]]
   emit('update:modelValue', { ...props.modelValue, [String(matterId)]: arr })
+}
+
+function matterTitle(matter: MatterInfo): string {
+  const lang = locale.value?.slice(0, 2)
+  if (lang === 'ru' && matter.title_ru) return matter.title_ru
+  return matter.title
+}
+
+function matterDescription(matter: MatterInfo): string {
+  const lang = locale.value?.slice(0, 2)
+  if (lang === 'ru' && matter.description_ru) return matter.description_ru
+  return matter.description
 }
 
 function optionText(matter: MatterInfo, optId: string): string {

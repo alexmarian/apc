@@ -72,7 +72,9 @@ type memberGatheringResponse struct {
 type memberMatterInfo struct {
 	ID            int64           `json:"id"`
 	Title         string          `json:"title"`
+	TitleRu       string          `json:"title_ru"`
 	Description   string          `json:"description"`
+	DescriptionRu string          `json:"description_ru"`
 	MatterType    string          `json:"matter_type"`
 	OrderIndex    int64           `json:"order_index"`
 	VotingConfig  json.RawMessage `json:"voting_config"`
@@ -80,13 +82,15 @@ type memberMatterInfo struct {
 }
 
 type memberGatheringInfo struct {
-	ID            int64     `json:"id"`
-	Title         string    `json:"title"`
-	Description   string    `json:"description"`
-	GatheringDate time.Time `json:"gathering_date"`
-	GatheringType string    `json:"gathering_type"`
-	Status        string    `json:"status"`
-	VotingMode    string    `json:"voting_mode"`
+	ID                      int64     `json:"id"`
+	Title                   string    `json:"title"`
+	Description             string    `json:"description"`
+	GatheringDate           time.Time `json:"gathering_date"`
+	GatheringType           string    `json:"gathering_type"`
+	Status                  string    `json:"status"`
+	VotingMode              string    `json:"voting_mode"`
+	QualifiedUnitsCount     int64     `json:"qualified_units_count"`
+	QualifiedUnitsTotalPart float64   `json:"qualified_units_total_part"`
 }
 
 type memberOwnerInfo struct {
@@ -196,7 +200,9 @@ func HandleGetMemberContext(cfg *ApiConfig) http.HandlerFunc {
 			matterInfos = append(matterInfos, memberMatterInfo{
 				ID:            m.ID,
 				Title:         m.Title,
+				TitleRu:       m.TitleRu,
 				Description:   m.Description.String,
+				DescriptionRu: m.DescriptionRu.String,
 				MatterType:    m.MatterType,
 				OrderIndex:    m.OrderIndex,
 				VotingConfig:  json.RawMessage(m.VotingConfig),
@@ -214,13 +220,15 @@ func HandleGetMemberContext(cfg *ApiConfig) http.HandlerFunc {
 
 		RespondWithJSON(w, http.StatusOK, memberGatheringResponse{
 			Gathering: memberGatheringInfo{
-				ID:            gathering.ID,
-				Title:         gathering.Title,
-				Description:   gathering.Description,
-				GatheringDate: gathering.GatheringDate,
-				GatheringType: gathering.GatheringType,
-				Status:        gathering.Status,
-				VotingMode:    gathering.VotingMode,
+				ID:                      gathering.ID,
+				Title:                   gathering.Title,
+				Description:             gathering.Description,
+				GatheringDate:           gathering.GatheringDate,
+				GatheringType:           gathering.GatheringType,
+				Status:                  gathering.Status,
+				VotingMode:              gathering.VotingMode,
+				QualifiedUnitsCount:     gathering.QualifiedUnitsCount.Int64,
+				QualifiedUnitsTotalPart: gathering.QualifiedUnitsTotalPart.Float64,
 			},
 			Owner: memberOwnerInfo{
 				ID:             owner.ID,

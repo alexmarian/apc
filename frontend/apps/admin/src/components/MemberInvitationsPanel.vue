@@ -97,7 +97,7 @@ import type { DataTableColumns } from 'naive-ui'
 import { gatheringApi, invitationApi } from '@/services/api'
 import type { Gathering, MemberInvitation, QualifiedUnit } from '@/types/api'
 
-const MEMBER_BASE_URL = 'https://member.blocul-nostru.online'
+const MEMBER_BASE_URL = import.meta.env.VITE_MEMBER_BASE_URL || 'https://member.blocul-nostru.online'
 
 const props = defineProps<{
   associationId: number
@@ -114,6 +114,7 @@ interface OwnerRow {
 const loading = ref(false)
 const error = ref<string | null>(null)
 const rows = ref<OwnerRow[]>([])
+const generatedUrlsByOwner = ref<Map<number, string>>(new Map())
 
 const generateModalVisible = ref(false)
 const generateModalOwner = ref<OwnerRow | null>(null)
@@ -235,10 +236,12 @@ async function confirmGenerate() {
         owner_id: generateModalOwner.value.ownerId,
         expires_at: expiresAt
       })
+      const url = `${MEMBER_BASE_URL}/${res.data.token}`
+      generatedUrlsByOwner.value.set(generateModalOwner.value.ownerId, url)
       generatedTokens.value = [{
         ownerId: generateModalOwner.value.ownerId,
         ownerName: generateModalOwner.value.ownerName,
-        url: `${MEMBER_BASE_URL}/${res.data.token}`
+        url
       }]
     } catch (err: any) {
       error.value = err.response?.data?.error ?? err.message ?? 'Failed to generate invitation'
@@ -255,11 +258,9 @@ async function confirmGenerate() {
           owner_id: row.ownerId,
           expires_at: expiresAt
         })
-        results.push({
-          ownerId: row.ownerId,
-          ownerName: row.ownerName,
-          url: `${MEMBER_BASE_URL}/${res.data.token}`
-        })
+        const url = `${MEMBER_BASE_URL}/${res.data.token}`
+        generatedUrlsByOwner.value.set(row.ownerId, url)
+        results.push({ ownerId: row.ownerId, ownerName: row.ownerName, url })
       } catch {
         // skip already-active or errored
       }
@@ -303,8 +304,9 @@ function exportCsv() {
   for (const row of activeRows.value) {
     if (!row.invitation) continue
     const ownerName = `"${row.ownerName.replace(/"/g, '""')}"`
+    const url = generatedUrlsByOwner.value.get(row.ownerId) ?? '—'
     const expires = new Date(row.invitation.expires_at).toLocaleDateString()
-    lines.push(`${ownerName},—,${expires}`)
+    lines.push(`${ownerName},${url},${expires}`)
   }
   const blob = new Blob([lines.join('\n')], { type: 'text/csv' })
   const url = URL.createObjectURL(blob)
@@ -319,6 +321,7 @@ async function loadData() {
   if (!props.associationId || !props.gathering.id) return
   loading.value = true
   error.value = null
+  generatedUrlsByOwner.value = new Map()
   try {
     const [unitsRes, invitationsRes] = await Promise.all([
       gatheringApi.getQualifiedUnits(props.associationId, props.gathering.id),

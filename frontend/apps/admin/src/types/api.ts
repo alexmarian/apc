@@ -466,7 +466,9 @@ export interface VotingMatter {
   id: number;
   gathering_id: number;
   title: string;
+  title_ru: string;
   description: string;
+  description_ru: string;
   matter_type: VotingMatterType;
   order_index: number;
   voting_config: VotingConfig;
@@ -508,13 +510,16 @@ export enum VotingType {
 export enum MajorityType {
   Simple = 'simple',
   Absolute = 'absolute',
+  AbsoluteTwoThirds = 'absolute_two_thirds',
   Qualified = 'qualified',
   Unanimous = 'unanimous'
 }
 
 export interface VotingMatterCreateRequest {
   title: string;
+  title_ru: string;
   description: string;
+  description_ru: string;
   matter_type: VotingMatterType;
   order_index: number;
   voting_config: VotingConfig;
@@ -523,7 +528,9 @@ export interface VotingMatterCreateRequest {
 
 export interface VotingMatterUpdateRequest {
   title?: string;
+  title_ru?: string;
   description?: string;
+  description_ru?: string;
   matter_type?: VotingMatterType;
   order_index?: number;
   voting_config?: VotingConfig;

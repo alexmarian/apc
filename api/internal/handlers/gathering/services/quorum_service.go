@@ -110,10 +110,10 @@ func (s *QuorumService) CalculateIfPassed(result domain.VoteMatterResult, config
 		}
 	}
 
-	// simple: majority of votes cast; absolute: majority of all qualified voters
+	// absolute and absolute_two_thirds use all qualified voters as denominator
 	var denominator float64
 	switch config.RequiredMajority {
-	case "absolute":
+	case "absolute", "absolute_two_thirds":
 		if gathering.VotingMode == "by_unit" {
 			denominator = qualifiedCount
 		} else {
@@ -134,6 +134,8 @@ func (s *QuorumService) CalculateIfPassed(result domain.VoteMatterResult, config
 		return percentage > 50
 	case "absolute":
 		return percentage > 50
+	case "absolute_two_thirds":
+		return percentage >= 66.67
 	case "qualified":
 		threshold := config.RequiredMajorityValue
 		if threshold == 0 {

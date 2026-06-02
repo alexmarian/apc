@@ -608,11 +608,15 @@
       "options": "Opțiuni",
       "addOption": "Adaugă Opțiune",
       "removeOption": "Elimină Opțiune",
+      "titleRo": "Titlu (RO)",
+      "titleRu": "Titlu (RU)",
       "titlePlaceholder": "Introduceți titlul punctului",
+      "descriptionRo": "Descriere (RO)",
+      "descriptionRu": "Descriere (RU)",
       "description": "Descriere",
       "descriptionPlaceholder": "Introduceți descrierea punctului",
       "optionPlaceholder": "Opțiunea {index}",
-      "titleRequired": "Titlul este obligatoriu",
+      "titleRequired": "Titlul (RO) este obligatoriu",
       "descriptionRequired": "Descrierea este obligatorie",
       "typeRequired": "Tipul este obligatoriu",
       "orderRequired": "Ordinea este obligatorie",
@@ -632,9 +636,10 @@
         "ranking": "Clasament"
       },
       "majorityTypes": {
-        "simple": "Simplă",
-        "absolute": "Absolută",
-        "qualified": "Calificată",
+        "simple": "Simplă (>1/2 exprimate)",
+        "absolute": "Absolută (>1/2 calificați)",
+        "absolute_two_thirds": "Absolută 2/3 (≥2/3 calificați)",
+        "qualified": "Calificată (% personalizat)",
         "unanimous": "Unanimă",
         "informative": "Informativă"
       }
@@ -769,6 +774,9 @@
       "generatedAt": "Generat la",
       "choice": "Alegere",
       "downloadResults": "Descarcă Rezultate"
+    },
+    "invitations": {
+      "title": "Invitații"
     },
     "ballots": {
       "title": "Buletine de Vot",

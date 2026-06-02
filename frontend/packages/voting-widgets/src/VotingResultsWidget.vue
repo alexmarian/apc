@@ -83,7 +83,7 @@
                 </NSpace>
                 <NText :depth="2" style="font-size: 12px">
                   {{ vote.vote_count }} {{ vote.vote_count !== 1 ? t('votes') : t('vote') }}
-                  ({{ vote.percentage.toFixed(1) }}%)
+                  ({{ vote.percentage.toFixed(1) }}%<template v-if="results?.statistics?.voting_mode === 'by_weight'">&nbsp;· {{ t('weight') }}: {{ vote.weight_percentage.toFixed(1) }}%</template>)
                 </NText>
               </NSpace>
               <NProgress
@@ -141,7 +141,8 @@ const { t } = useI18n({
       yourVoteCounted: 'Your vote has been counted for this matter.',
       didNotVote: 'You did not vote on this matter.',
       yourVote: 'Your vote', vote: 'vote', votes: 'votes',
-      abstain: 'Abstain',
+      yes: 'Yes', no: 'No', abstain: 'Abstain',
+      weight: 'weight',
       quorum: 'Quorum', quorumMet: 'Met', quorumNotMet: 'Not met',
       of: 'of', required: 'required',
       notAvailable: 'Results are not yet available. Current status:',
@@ -156,7 +157,8 @@ const { t } = useI18n({
       yourVoteCounted: 'Votul dvs. a fost înregistrat pentru acest punct.',
       didNotVote: 'Nu ați votat pentru acest punct.',
       yourVote: 'Votul dvs.', vote: 'vot', votes: 'voturi',
-      abstain: 'Abținere',
+      yes: 'Da', no: 'Nu', abstain: 'Abținere',
+      weight: 'pondere',
       quorum: 'Cvorum', quorumMet: 'Întrunit', quorumNotMet: 'Neîntrunit',
       of: 'din', required: 'necesar',
       notAvailable: 'Rezultatele nu sunt disponibile încă. Stare curentă:',
@@ -171,7 +173,8 @@ const { t } = useI18n({
       yourVoteCounted: 'Ваш голос учтён по данному вопросу.',
       didNotVote: 'Вы не голосовали по данному вопросу.',
       yourVote: 'Ваш голос', vote: 'голос', votes: 'голосов',
-      abstain: 'Воздержаться',
+      yes: 'Да', no: 'Нет', abstain: 'Воздержаться',
+      weight: 'вес',
       quorum: 'Кворум', quorumMet: 'Достигнут', quorumNotMet: 'Не достигнут',
       of: 'из', required: 'требуется',
       notAvailable: 'Результаты пока недоступны. Текущий статус:',
@@ -182,6 +185,7 @@ const { t } = useI18n({
 
 const props = defineProps<{
   service: VotingService
+  initialContext?: MemberContext
 }>()
 
 const loading = ref(false)
@@ -213,7 +217,7 @@ function isMyChoice(matterId: number, choice: string): boolean {
 
 function formatChoice(choice: string, config: VotingConfig): string {
   if (choice === 'abstain') return t('abstain')
-  if (config.type === 'yes_no') return choice === 'yes' ? 'Yes' : 'No'
+  if (config.type === 'yes_no') return choice === 'yes' ? t('yes') : t('no')
   const opt = config.options?.find(o => o.id === choice)
   return opt ? opt.text : choice
 }
@@ -232,6 +236,11 @@ function progressStatus(choice: string, matter: MatterResult): 'success' | 'erro
 }
 
 async function fetchContext() {
+  if (props.initialContext) {
+    context.value = props.initialContext
+    results.value = props.initialContext.results ?? null
+    return
+  }
   loading.value = true
   fetchError.value = null
   try {

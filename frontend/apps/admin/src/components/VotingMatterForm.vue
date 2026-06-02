@@ -11,21 +11,47 @@
         </NAlert>
 
         <NForm ref="formRef" :model="formData" :rules="rules" label-placement="top">
-          <NFormItem :label="$t('gatherings.matters.title')" path="title">
-            <NInput
-              v-model:value="formData.title"
-              :placeholder="$t('gatherings.matters.titlePlaceholder')"
-            />
-          </NFormItem>
+          <NGrid :cols="2" :x-gap="16">
+            <NGridItem>
+              <NFormItem :label="$t('gatherings.matters.titleRo')" path="title">
+                <NInput
+                  v-model:value="formData.title"
+                  :placeholder="$t('gatherings.matters.titlePlaceholder')"
+                />
+              </NFormItem>
+            </NGridItem>
+            <NGridItem>
+              <NFormItem :label="$t('gatherings.matters.titleRu')" path="title_ru">
+                <NInput
+                  v-model:value="formData.title_ru"
+                  :placeholder="$t('gatherings.matters.titlePlaceholder')"
+                />
+              </NFormItem>
+            </NGridItem>
+          </NGrid>
 
-          <NFormItem :label="$t('gatherings.matters.description')" path="description">
-            <NInput
-              v-model:value="formData.description"
-              type="textarea"
-              :placeholder="$t('gatherings.matters.descriptionPlaceholder')"
-              :rows="3"
-            />
-          </NFormItem>
+          <NGrid :cols="2" :x-gap="16">
+            <NGridItem>
+              <NFormItem :label="$t('gatherings.matters.descriptionRo')" path="description">
+                <NInput
+                  v-model:value="formData.description"
+                  type="textarea"
+                  :placeholder="$t('gatherings.matters.descriptionPlaceholder')"
+                  :rows="3"
+                />
+              </NFormItem>
+            </NGridItem>
+            <NGridItem>
+              <NFormItem :label="$t('gatherings.matters.descriptionRu')" path="description_ru">
+                <NInput
+                  v-model:value="formData.description_ru"
+                  type="textarea"
+                  :placeholder="$t('gatherings.matters.descriptionPlaceholder')"
+                  :rows="3"
+                />
+              </NFormItem>
+            </NGridItem>
+          </NGrid>
 
           <NFormItem :label="$t('gatherings.matters.type')" path="matter_type">
             <NSelect
@@ -81,6 +107,7 @@
                 <NSelect
                   v-model:value="formData.voting_config.required_majority"
                   :options="majorityTypeOptions"
+                  :disabled="isSurvey"
                   @update:value="handleMajorityTypeChange"
                 />
               </NFormItem>
@@ -173,13 +200,14 @@ import type {
 } from '@/types/api'
 import { VotingType, MajorityType } from '@/types/api'
 
-// Soft defaults: which voting type and majority to pre-select per matter type
+// Auto-set majority per matter type per association rules:
+// policy → simple (>1/2 expressed), budget → absolute (2/3 qualified denominator),
+// election → simple (1/2 expressed), poll → simple (survey, no pass/fail quota)
 const MATTER_TYPE_DEFAULTS: Record<string, { type: VotingType; majority: MajorityType }> = {
-  budget:        { type: VotingType.YesNo,        majority: MajorityType.Simple },
-  election:      { type: VotingType.Ranking,       majority: MajorityType.Simple },
-  policy:        { type: VotingType.YesNo,        majority: MajorityType.Simple },
-  poll:          { type: VotingType.SingleChoice,  majority: MajorityType.Simple },
-  extraordinary: { type: VotingType.YesNo,        majority: MajorityType.Qualified }
+  budget:   { type: VotingType.YesNo,       majority: MajorityType.AbsoluteTwoThirds },
+  election: { type: VotingType.Ranking,     majority: MajorityType.Simple },
+  policy:   { type: VotingType.YesNo,       majority: MajorityType.Simple },
+  poll:     { type: VotingType.SingleChoice, majority: MajorityType.Simple },
 }
 
 interface Props {
@@ -206,7 +234,9 @@ const isEditMode = computed(() => !!props.matter)
 
 const formData = reactive<{
   title: string
+  title_ru: string
   description: string
+  description_ru: string
   matter_type: VotingMatterType
   order_index: number
   is_informative: boolean
@@ -220,7 +250,9 @@ const formData = reactive<{
   }
 }>({
   title: '',
+  title_ru: '',
   description: '',
+  description_ru: '',
   matter_type: 'policy' as VotingMatterType,
   order_index: 1,
   is_informative: false,
@@ -235,11 +267,10 @@ const formData = reactive<{
 })
 
 const typeOptions = computed(() => [
-  { label: t('gatherings.matters.types.policy'),        value: 'policy' },
-  { label: t('gatherings.matters.types.budget'),        value: 'budget' },
-  { label: t('gatherings.matters.types.election'),      value: 'election' },
-  { label: t('gatherings.matters.types.poll'),          value: 'poll' },
-  { label: t('gatherings.matters.types.extraordinary'), value: 'extraordinary' }
+  { label: t('gatherings.matters.types.policy'),   value: 'policy' },
+  { label: t('gatherings.matters.types.budget'),   value: 'budget' },
+  { label: t('gatherings.matters.types.election'), value: 'election' },
+  { label: t('gatherings.matters.types.poll'),     value: 'poll' },
 ])
 
 const votingTypeOptions = computed(() => [
@@ -250,10 +281,11 @@ const votingTypeOptions = computed(() => [
 ])
 
 const majorityTypeOptions = computed(() => [
-  { label: t('gatherings.matters.majorityTypes.simple'),    value: 'simple' },
-  { label: t('gatherings.matters.majorityTypes.absolute'),  value: 'absolute' },
-  { label: t('gatherings.matters.majorityTypes.qualified'), value: 'qualified' },
-  { label: t('gatherings.matters.majorityTypes.unanimous'), value: 'unanimous' }
+  { label: t('gatherings.matters.majorityTypes.simple'),              value: 'simple' },
+  { label: t('gatherings.matters.majorityTypes.absolute'),            value: 'absolute' },
+  { label: t('gatherings.matters.majorityTypes.absolute_two_thirds'), value: 'absolute_two_thirds' },
+  { label: t('gatherings.matters.majorityTypes.qualified'),           value: 'qualified' },
+  { label: t('gatherings.matters.majorityTypes.unanimous'),           value: 'unanimous' },
 ])
 
 const needsOptions = computed(() =>
@@ -264,9 +296,11 @@ const needsMajorityThreshold = computed(() =>
   formData.voting_config.required_majority === 'qualified'
 )
 
+// Surveys (polls) have no pass/fail quota — majority field is locked
+const isSurvey = computed(() => formData.matter_type === 'poll')
+
 const rules: FormRules = {
   title:         [{ required: true, message: t('gatherings.matters.titleRequired') }],
-  description:   [{ required: true, message: t('gatherings.matters.descriptionRequired') }],
   matter_type:   [{ required: true, message: t('gatherings.matters.typeRequired') }],
   order_index:   [{ required: true, message: t('gatherings.matters.orderRequired'), type: 'number' }],
   'voting_config.type':             [{ required: true, message: t('gatherings.matters.votingTypeRequired') }],
@@ -280,6 +314,7 @@ const handleMatterTypeChange = (value: string) => {
     formData.voting_config.type = defaults.type
     formData.voting_config.required_majority = defaults.majority
     handleVotingTypeChange(defaults.type)
+    handleMajorityTypeChange(defaults.majority)
   }
 }
 
@@ -356,18 +391,20 @@ const handleCancel = () => {
 watch(() => props.matter, (newMatter) => {
   if (newMatter) {
     Object.assign(formData, {
-      title:          newMatter.title,
-      description:    newMatter.description,
+      title:         newMatter.title,
+      title_ru:      newMatter.title_ru,
+      description:   newMatter.description,
+      description_ru: newMatter.description_ru,
       matter_type:    newMatter.matter_type,
       order_index:    newMatter.order_index,
       is_informative: newMatter.is_informative,
       voting_config: {
-        type:                   newMatter.voting_config.type,
-        options:                newMatter.voting_config.options || [],
-        required_majority:      newMatter.voting_config.required_majority,
-        required_majority_value:newMatter.voting_config.required_majority_value,
-        is_anonymous:           newMatter.voting_config.is_anonymous,
-        allow_abstention:       newMatter.voting_config.allow_abstention
+        type:                    newMatter.voting_config.type,
+        options:                 newMatter.voting_config.options || [],
+        required_majority:       newMatter.voting_config.required_majority,
+        required_majority_value: newMatter.voting_config.required_majority_value,
+        is_anonymous:            newMatter.voting_config.is_anonymous,
+        allow_abstention:        newMatter.voting_config.allow_abstention
       }
     })
   }

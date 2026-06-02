@@ -88,7 +88,9 @@ type VotingMatter struct {
 	GatheringID   int64        `json:"gathering_id"`
 	OrderIndex    int          `json:"order_index"`
 	Title         string       `json:"title"`
+	TitleRu       string       `json:"title_ru"`
 	Description   string       `json:"description"`
+	DescriptionRu string       `json:"description_ru"`
 	MatterType    string       `json:"matter_type"`
 	VotingConfig  VotingConfig `json:"voting_config"`
 	IsInformative bool         `json:"is_informative"`
@@ -100,7 +102,7 @@ type VotingMatter struct {
 type VotingConfig struct {
 	Type                    string         `json:"type"` // yes_no, multiple_choice, ranking
 	Options                 []VotingOption `json:"options,omitempty"`
-	RequiredMajority        string         `json:"required_majority"` // simple, absolute, qualified, unanimous
+	RequiredMajority        string         `json:"required_majority"` // simple, absolute, absolute_two_thirds, qualified, unanimous
 	RequiredMajorityValue   float64        `json:"required_majority_value,omitempty"`
 	Quorum                  float64        `json:"quorum"`
 	AllowAbstention         bool           `json:"allow_abstention"`
@@ -280,7 +282,9 @@ func DBVotingMatterToResponse(m database.VotingMatter) VotingMatter {
 		GatheringID:   m.GatheringID,
 		OrderIndex:    int(m.OrderIndex),
 		Title:         m.Title,
+		TitleRu:       m.TitleRu,
 		Description:   m.Description.String,
+		DescriptionRu: m.DescriptionRu.String,
 		MatterType:    m.MatterType,
 		VotingConfig:  config,
 		IsInformative: m.IsInformative != 0,

@@ -128,13 +128,15 @@ WHERE id = ?
   AND gathering_id = ?;
 
 -- name: CreateVotingMatter :one
-INSERT INTO voting_matters (gathering_id, order_index, title, description, matter_type, voting_config, is_informative)
-VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *;
+INSERT INTO voting_matters (gathering_id, order_index, title, title_ru, description, description_ru, matter_type, voting_config, is_informative)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *;
 
 -- name: UpdateVotingMatter :one
 UPDATE voting_matters
 SET title          = ?,
+    title_ru       = ?,
     description    = ?,
+    description_ru = ?,
     matter_type    = ?,
     order_index    = ?,
     voting_config  = ?,

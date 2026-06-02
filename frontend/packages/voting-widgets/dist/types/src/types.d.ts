@@ -10,7 +10,9 @@ export interface VotingConfig {
 export interface MatterInfo {
     id: number;
     title: string;
+    title_ru: string;
     description: string;
+    description_ru: string;
     matter_type: string;
     order_index: number;
     voting_config: VotingConfig;
@@ -26,6 +28,8 @@ export interface GatheringInfo {
     description: string;
     status: string;
     voting_mode: string;
+    qualified_units_count: number;
+    qualified_units_total_part: number;
 }
 export interface OwnerInfo {
     id: number;
@@ -88,7 +92,7 @@ export interface GatheringSummary {
     voted_weight: number;
     participation_rate: number;
     voting_completion_rate: number;
-    voting_mode?: string;
+    voting_mode: string;
 }
 export interface VoteResults {
     gathering_id: number;
@@ -117,4 +121,8 @@ export declare class HttpError extends Error {
 export interface VotingService {
     getContext(): Promise<MemberContext>;
     submitBallot(content: Record<string, BallotVote>): Promise<BallotReceipt>;
+}
+export interface VotingWidgetProps {
+    service: VotingService;
+    initialContext?: MemberContext;
 }

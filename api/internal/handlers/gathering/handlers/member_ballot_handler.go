@@ -156,7 +156,10 @@ func (h *MemberBallotHandler) HandleSubmitMemberBallot() http.HandlerFunc {
 				GatheringID:   inv.GatheringID,
 				UnitID:        unitID,
 			}); err != nil {
-				logging.Logger.Log(zap.WarnLevel, "failed to assign unit slot", zap.Error(err), zap.Int64("unit_id", unitID))
+				// Slot already claimed by another owner — unit was voted concurrently
+				logging.Logger.Log(zap.WarnLevel, "unit slot already claimed", zap.Error(err), zap.Int64("unit_id", unitID))
+				handlers.RespondWithError(w, http.StatusConflict, "voting rights for this unit have already been exercised")
+				return
 			}
 		}
 

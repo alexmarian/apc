@@ -1,7 +1,7 @@
 import { watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { NButton, NCard, NCheckbox, NCheckboxGroup, NRadio, NRadioGroup, NSpace, NText } from 'naive-ui';
-const { t } = useI18n({
+const { t, locale } = useI18n({
     useScope: 'local',
     messages: {
         en: {
@@ -65,6 +65,18 @@ function moveRank(matterId, idx, dir) {
     [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
     emit('update:modelValue', { ...props.modelValue, [String(matterId)]: arr });
 }
+function matterTitle(matter) {
+    const lang = locale.value?.slice(0, 2);
+    if (lang === 'ru' && matter.title_ru)
+        return matter.title_ru;
+    return matter.title;
+}
+function matterDescription(matter) {
+    const lang = locale.value?.slice(0, 2);
+    if (lang === 'ru' && matter.description_ru)
+        return matter.description_ru;
+    return matter.description;
+}
 function optionText(matter, optId) {
     return matter.voting_config.options?.find(o => o.id === optId)?.text ?? optId;
 }
@@ -90,9 +102,9 @@ for (const [matter] of __VLS_getVForSourceType((__VLS_ctx.matters))) {
     __VLS_3.slots.default;
     {
         const { header: __VLS_thisSlot } = __VLS_3.slots;
-        (matter.title);
+        (__VLS_ctx.matterTitle(matter));
     }
-    if (matter.description) {
+    if (matter.description || matter.description_ru) {
         const __VLS_4 = {}.NText;
         /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
         // @ts-ignore
@@ -105,7 +117,7 @@ for (const [matter] of __VLS_getVForSourceType((__VLS_ctx.matters))) {
             ...{ style: {} },
         }, ...__VLS_functionalComponentArgsRest(__VLS_5));
         __VLS_7.slots.default;
-        (matter.description);
+        (__VLS_ctx.matterDescription(matter));
         var __VLS_7;
     }
     if (matter.voting_config.type === 'yes_no') {
@@ -434,6 +446,8 @@ const __VLS_self = (await import('vue')).defineComponent({
             setMulti: setMulti,
             rankValue: rankValue,
             moveRank: moveRank,
+            matterTitle: matterTitle,
+            matterDescription: matterDescription,
             optionText: optionText,
         };
     },

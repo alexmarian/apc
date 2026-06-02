@@ -127,7 +127,7 @@
               />
             </NTabPane>
 
-            <NTabPane name="invitations" tab="Invitations">
+            <NTabPane name="invitations" :tab="$t('gatherings.invitations.title')">
               <MemberInvitationsPanel
                 :association-id="associationId!"
                 :gathering="gathering!"

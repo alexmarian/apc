@@ -608,11 +608,15 @@
       "options": "Варианты",
       "addOption": "Добавить вариант",
       "removeOption": "Удалить вариант",
+      "titleRo": "Название (RO)",
+      "titleRu": "Название (RU)",
       "titlePlaceholder": "Введите название вопроса",
+      "descriptionRo": "Описание (RO)",
+      "descriptionRu": "Описание (RU)",
       "description": "Описание",
       "descriptionPlaceholder": "Введите описание вопроса",
       "optionPlaceholder": "Вариант {index}",
-      "titleRequired": "Название обязательно",
+      "titleRequired": "Название (RO) обязательно",
       "descriptionRequired": "Описание обязательно",
       "typeRequired": "Тип обязателен",
       "orderRequired": "Порядок обязателен",
@@ -632,9 +636,10 @@
         "ranking": "Ранжирование"
       },
       "majorityTypes": {
-        "simple": "Простое",
-        "absolute": "Абсолютное",
-        "qualified": "Квалифицированное",
+        "simple": "Простое (>1/2 выраженных)",
+        "absolute": "Абсолютное (>1/2 квалифицированных)",
+        "absolute_two_thirds": "Абсолютное 2/3 (≥2/3 квалифицированных)",
+        "qualified": "Квалифицированное (% на выбор)",
         "unanimous": "Единогласное",
         "informative": "Информационное"
       }
@@ -769,6 +774,9 @@
       "generatedAt": "Сформировано в",
       "choice": "Выбор",
       "downloadResults": "Скачать результаты"
+    },
+    "invitations": {
+      "title": "Приглашения"
     },
     "ballots": {
       "title": "Бюллетени",

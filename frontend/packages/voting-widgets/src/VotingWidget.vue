@@ -5,12 +5,24 @@
     </NAlert>
 
     <template v-if="context">
+      <!-- Gathering header -->
+      <div style="margin-bottom: 16px">
+        <NText tag="h2" style="font-size: 18px; font-weight: 600; margin: 0 0 4px">
+          {{ context.gathering.title }}
+        </NText>
+        <NText v-if="context.gathering.description" :depth="2" style="font-size: 14px; display: block">
+          {{ context.gathering.description }}
+        </NText>
+      </div>
+
       <!-- Summary header -->
       <NCard style="margin-bottom: 16px">
         <NDescriptions :column="3" label-placement="top" size="small">
           <NDescriptionsItem :label="t('owner')">{{ context.owner.name }}</NDescriptionsItem>
           <NDescriptionsItem :label="t('units')">{{ context.units.length }}</NDescriptionsItem>
-          <NDescriptionsItem :label="t('votingWeight')">{{ totalWeight.toFixed(4) }}</NDescriptionsItem>
+          <NDescriptionsItem :label="context.gathering.voting_mode === 'by_weight' ? t('votingWeight') : t('votingUnits')">
+            {{ votingShare.toFixed(2) }}%
+          </NDescriptionsItem>
         </NDescriptions>
         <div style="margin-top: 8px">
           <NTag :type="statusTagType" size="small">{{ context.gathering.status.toUpperCase() }}</NTag>
@@ -35,8 +47,13 @@
 
       <!-- Active gathering -->
       <template v-else>
+        <!-- Unit already voted by co-owner -->
+        <NAlert v-if="allUnitsUnavailable && !receipt" type="warning" style="margin-bottom: 16px">
+          {{ t('unitsAlreadyVoted') }}
+        </NAlert>
+
         <!-- Read-only receipt (already voted or just submitted) -->
-        <NCard v-if="receipt">
+        <NCard v-else-if="receipt">
           <template #header>
             <span style="color: #18a058">✓ {{ t('ballotSubmitted') }}</span>
           </template>
@@ -60,7 +77,7 @@
             :key="matter.id"
             style="margin-bottom: 12px; padding-left: 4px"
           >
-            <NText strong style="display: block">{{ matter.title }}</NText>
+            <NText strong style="display: block">{{ matterTitle(matter) }}</NText>
             <NText :depth="2" style="margin-top: 4px; display: block; padding-left: 12px">
               {{ formatVotedValues(matter) }}
             </NText>
@@ -88,10 +105,10 @@
           >
             <NCard size="small" embedded>
               <template #header>
-                <NText style="font-size: 14px">{{ matter.title }}</NText>
+                <NText style="font-size: 14px">{{ matterTitle(matter) }}</NText>
                 <NTag size="tiny" style="margin-left: 8px">{{ t('informational') }}</NTag>
               </template>
-              <NText :depth="2" style="font-size: 13px">{{ matter.description }}</NText>
+              <NText :depth="2" style="font-size: 13px">{{ matterDescription(matter) }}</NText>
             </NCard>
           </div>
 
@@ -115,7 +132,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   NAlert,
@@ -133,13 +150,14 @@ import BallotForm from './BallotForm.vue'
 import type { VotingService, MemberContext, MatterInfo, BallotVote } from './types'
 import { HttpError } from './types'
 
-const { t } = useI18n({
+const { t, locale } = useI18n({
   useScope: 'local',
   messages: {
     en: {
       owner: 'Owner',
       units: 'Units',
-      votingWeight: 'Voting weight',
+      votingWeight: 'Voting weight (%)',
+      votingUnits: 'Voting units',
       yourBallot: 'Your Ballot',
       submitBallot: 'Submit Ballot',
       ballotSubmitted: 'Ballot Submitted',
@@ -154,11 +172,13 @@ const { t } = useI18n({
       statusClosed: 'Voting is closed.',
       errAlreadySubmitted: 'A ballot has already been submitted for this gathering.',
       errInvalidBallot: 'Invalid ballot.',
+      unitsAlreadyVoted: 'The voting rights for your unit(s) have already been exercised by another co-owner.',
     },
     ro: {
       owner: 'Proprietar',
       units: 'Unități',
-      votingWeight: 'Pondere de vot',
+      votingWeight: 'Pondere de vot (%)',
+      votingUnits: 'Unități de vot',
       yourBallot: 'Buletinul dvs. de vot',
       submitBallot: 'Trimite buletinul',
       ballotSubmitted: 'Buletin trimis',
@@ -173,11 +193,13 @@ const { t } = useI18n({
       statusClosed: 'Votul este închis.',
       errAlreadySubmitted: 'Un buletin de vot a fost deja trimis pentru această adunare.',
       errInvalidBallot: 'Buletin de vot invalid.',
+      unitsAlreadyVoted: 'Dreptul de vot pentru unitatea dvs. a fost deja exercitat de un alt coproprietar.',
     },
     ru: {
       owner: 'Владелец',
       units: 'Единицы',
-      votingWeight: 'Вес голоса',
+      votingWeight: 'Вес голоса (%)',
+      votingUnits: 'Единицы голосования',
       yourBallot: 'Ваш бюллетень',
       submitBallot: 'Подать бюллетень',
       ballotSubmitted: 'Бюллетень подан',
@@ -192,12 +214,14 @@ const { t } = useI18n({
       statusClosed: 'Голосование закрыто.',
       errAlreadySubmitted: 'Бюллетень для этого собрания уже был подан.',
       errInvalidBallot: 'Недействительный бюллетень.',
+      unitsAlreadyVoted: 'Право голоса за вашу единицу уже было реализовано другим совладельцем.',
     },
   }
 })
 
 const props = defineProps<{
   service: VotingService
+  initialContext?: MemberContext
 }>()
 
 const loading = ref(false)
@@ -207,10 +231,27 @@ const submitError = ref<string | null>(null)
 const context = ref<MemberContext | null>(null)
 const receipt = ref<{ ballot_id: number; ballot_hash: string; submitted_at: string | null; ballot_content: Record<string, BallotVote> } | null>(null)
 
-const ballotVotes = reactive<Record<string, string[]>>({})
+const ballotVotes = ref<Record<string, string[]>>({})
 
-const totalWeight = computed(() =>
+const ownerPartSum = computed(() =>
   context.value?.units.reduce((sum, u) => sum + u.voting_weight, 0) ?? 0
+)
+
+const votingShare = computed(() => {
+  const g = context.value?.gathering
+  if (!g) return 0
+  if (g.voting_mode === 'by_weight') {
+    const denom = g.qualified_units_total_part
+    return denom > 0 ? (ownerPartSum.value / denom) * 100 : 0
+  } else {
+    const denom = g.qualified_units_count
+    return denom > 0 ? ((context.value?.units.length ?? 0) / denom) * 100 : 0
+  }
+})
+
+const allUnitsUnavailable = computed(() =>
+  (context.value?.units.length ?? 0) > 0 &&
+  context.value!.units.every(u => !u.is_available)
 )
 
 const votableMatters = computed(() =>
@@ -223,7 +264,7 @@ const informativeMatters = computed(() =>
 
 const canSubmit = computed(() =>
   votableMatters.value.length > 0 &&
-  votableMatters.value.every(m => (ballotVotes[String(m.id)]?.length ?? 0) > 0)
+  votableMatters.value.every(m => (ballotVotes.value[String(m.id)]?.length ?? 0) > 0)
 )
 
 const statusTagType = computed((): 'success' | 'warning' | 'error' | 'info' | 'default' => {
@@ -236,11 +277,23 @@ const statusTagType = computed((): 'success' | 'warning' | 'error' | 'info' | 'd
   }
 })
 
+function matterTitle(matter: MatterInfo): string {
+  const lang = locale.value?.slice(0, 2)
+  if (lang === 'ru' && matter.title_ru) return matter.title_ru
+  return matter.title
+}
+
+function matterDescription(matter: MatterInfo): string {
+  const lang = locale.value?.slice(0, 2)
+  if (lang === 'ru' && matter.description_ru) return matter.description_ru
+  return matter.description
+}
+
 function buildBallotContent(): Record<string, BallotVote> {
   const content: Record<string, BallotVote> = {}
   for (const m of votableMatters.value) {
     const key = String(m.id)
-    content[key] = { matter_id: m.id, values: ballotVotes[key] ?? [] }
+    content[key] = { matter_id: m.id, values: ballotVotes.value[key] ?? [] }
   }
   return content
 }
@@ -270,6 +323,18 @@ function formatVotedValues(matter: MatterInfo): string {
 }
 
 async function fetchContext() {
+  if (props.initialContext) {
+    context.value = props.initialContext
+    if (props.initialContext.ballot) {
+      receipt.value = {
+        ballot_id: props.initialContext.ballot.ballot_id,
+        ballot_hash: props.initialContext.ballot.ballot_hash,
+        submitted_at: props.initialContext.ballot.submitted_at,
+        ballot_content: props.initialContext.ballot.ballot_content
+      }
+    }
+    return
+  }
   loading.value = true
   fetchError.value = null
   try {
