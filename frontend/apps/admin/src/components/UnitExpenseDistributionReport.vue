@@ -280,34 +280,17 @@ const exportToCSV = (): void => {
       t('distribution.total_share')
     ]
 
-    // Get category names (keys from category_totals)
-    const categoryKeys = distributionData.value.category_totals
-      ? Object.keys(distributionData.value.category_totals)
-      : []
-
-    // Add category headers
-    categoryKeys.forEach(categoryKey => {
-      headers.push(t(`categories.names.${categoryKey}`, categoryKey))
-    })
-
     allRows.push(headers)
 
     // Data rows
     distributionData.value.unit_distributions.forEach((unit: UnitDistribution) => {
-      const row: (string | number)[] = [
+      allRows.push([
         unit.unit_number,
         unit.unit_type,
         unit.area.toFixed(2),
         (unit.distribution_factor * 100).toFixed(2) + '%',
         unit.total_share.toFixed(2)
-      ]
-
-      // Add expense shares for each category
-      categoryKeys.forEach(categoryKey => {
-        row.push((unit.expenses_share[categoryKey] || 0).toFixed(2))
-      })
-
-      allRows.push(row)
+      ])
     })
 
     // Add empty row
@@ -380,7 +363,6 @@ watch([buildingId, dateRange, selectedCategoryId, selectedCategoryFamily, unitTy
 const updateUrlFromFilters = (): void => {
   const query: Record<string, string> = {}
 
-  if (associationId.value) query.associationId = associationId.value.toString()
   if (buildingId.value) query.buildingId = buildingId.value.toString()
   if (dateRange.value) {
     query.startDate = dateRange.value[0].toString()

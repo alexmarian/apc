@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { NCard, NPageHeader } from 'naive-ui'
+import { NCard, NPageHeader, NSpin } from 'naive-ui'
 import UnitExpenseDistributionReport from '@/components/UnitExpenseDistributionReport.vue'
 import BuildingSelector from '@/components/BuildingSelector.vue'
 import { useAssociationStore } from '@/stores/association'
@@ -32,6 +32,7 @@ const buildingId = ref<number | null>(null)
 
     <div class="content">
       <UnitExpenseDistributionReport
+        v-if="associationId"
         :association-id="associationId"
         :building-id="buildingId"
       />

@@ -100,9 +100,15 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 			filteredExpenses = append(filteredExpenses, expense)
 		}
 
-		// If we filtered out all expenses, return early
+		// If we filtered out all expenses, return empty response
 		if len(filteredExpenses) == 0 {
-			RespondWithError(rw, http.StatusNotFound, "No expenses found matching the criteria")
+			RespondWithJSON(rw, http.StatusOK, map[string]interface{}{
+				"total_units":        0,
+				"total_area":         0,
+				"total_expenses":     0,
+				"category_totals":    map[string]interface{}{},
+				"unit_distributions": []interface{}{},
+			})
 			return
 		}
 
@@ -155,7 +161,13 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 		}
 
 		if len(units) == 0 {
-			RespondWithError(rw, http.StatusNotFound, "No units found matching the criteria")
+			RespondWithJSON(rw, http.StatusOK, map[string]interface{}{
+				"total_units":        0,
+				"total_area":         0,
+				"total_expenses":     0,
+				"category_totals":    map[string]interface{}{},
+				"unit_distributions": []interface{}{},
+			})
 			return
 		}
 		type ExpenseShare struct {
