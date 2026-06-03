@@ -786,7 +786,9 @@
       "downloadResults": "Download Results"
     },
     "invitations": {
-      "title": "Invitations"
+      "title": "Invitations",
+      "printBallotRo": "Print ballot (RO)",
+      "printBallotRu": "Print ballot (RU)"
     },
     "ballots": {
       "title": "Ballots",

@@ -780,7 +780,9 @@
       "downloadResults": "Descarcă Rezultate"
     },
     "invitations": {
-      "title": "Invitații"
+      "title": "Invitații",
+      "printBallotRo": "Tipărește buletin (RO)",
+      "printBallotRu": "Tipărește buletin (RU)"
     },
     "ballots": {
       "title": "Buletine de Vot",

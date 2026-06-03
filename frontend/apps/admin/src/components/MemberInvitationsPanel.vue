@@ -13,6 +13,12 @@
         <NButton @click="exportCsv" :disabled="activeRows.length === 0">
           Export CSV
         </NButton>
+        <PrintBallot :association-id="associationId" :gathering="gathering" lang="ro">
+          {{ $t('gatherings.invitations.printBallotRo') }}
+        </PrintBallot>
+        <PrintBallot :association-id="associationId" :gathering="gathering" lang="ru">
+          {{ $t('gatherings.invitations.printBallotRu') }}
+        </PrintBallot>
       </NSpace>
     </NSpace>
 
@@ -103,6 +109,7 @@ import {
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { gatheringApi, invitationApi } from '@/services/api'
+import PrintBallot from './PrintBallot.vue'
 import type { Gathering, MemberInvitation, QualifiedUnit } from '@/types/api'
 
 const MEMBER_BASE_URL = import.meta.env.VITE_MEMBER_BASE_URL || 'https://member.blocul-nostru.online'

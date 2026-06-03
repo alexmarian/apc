@@ -780,7 +780,9 @@
       "downloadResults": "Скачать результаты"
     },
     "invitations": {
-      "title": "Приглашения"
+      "title": "Приглашения",
+      "printBallotRo": "Печать бюллетеня (RO)",
+      "printBallotRu": "Печать бюллетеня (RU)"
     },
     "ballots": {
       "title": "Бюллетени",
