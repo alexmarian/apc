@@ -728,7 +728,11 @@
       "selectedUnitsCount": "Unități selectate",
       "totalVotingWeight": "Greutate totală de vot",
       "delegateNameRequired": "Numele delegatului este obligatoriu",
-      "delegateIdRequired": "ID-ul delegatului este obligatoriu"
+      "delegateIdRequired": "ID-ul delegatului este obligatoriu",
+      "generateMemberLink": "Generează link membru",
+      "copyLink": "Copiază link",
+      "linkCopied": "✓ Copiat",
+      "memberLinkAlreadyActive": "Acest proprietar are deja un link de membru activ. Găsiți-l în fila Invitații."
     },
     "results": {
       "title": "Rezultate",

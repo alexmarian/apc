@@ -728,7 +728,11 @@
       "selectedUnitsCount": "Выбранные единицы",
       "totalVotingWeight": "Общий вес голоса",
       "delegateNameRequired": "Имя делегата обязательно",
-      "delegateIdRequired": "ID делегата обязателен"
+      "delegateIdRequired": "ID делегата обязателен",
+      "generateMemberLink": "Сгенерировать ссылку для участника",
+      "copyLink": "Копировать ссылку",
+      "linkCopied": "✓ Скопировано",
+      "memberLinkAlreadyActive": "У этого владельца уже есть активная ссылка для участника. Найдите её во вкладке «Приглашения»."
     },
     "results": {
       "title": "Результаты",

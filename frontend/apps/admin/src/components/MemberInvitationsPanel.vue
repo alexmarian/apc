@@ -5,10 +5,10 @@
     </NAlert>
 
     <NSpace justify="space-between" align="center" style="margin-bottom: 16px">
-      <NText strong>{{ rows.length }} qualified owner{{ rows.length !== 1 ? 's' : '' }}</NText>
+      <NText strong>{{ filteredRows.length }} qualified owner{{ filteredRows.length !== 1 ? 's' : '' }}</NText>
       <NSpace>
         <NButton @click="handleGenerateAll" :loading="bulkGenerating" :disabled="ownersWithoutActive.length === 0">
-          Generate all ({{ ownersWithoutActive.length }})
+          Generate for visible ({{ ownersWithoutActive.length }})
         </NButton>
         <NButton @click="exportCsv" :disabled="activeRows.length === 0">
           Export CSV
@@ -16,7 +16,14 @@
       </NSpace>
     </NSpace>
 
-    <NDataTable :columns="columns" :data="rows" :bordered="false" size="small" />
+    <NInput
+      v-model:value="searchQuery"
+      placeholder="Search owners..."
+      clearable
+      style="margin-bottom: 12px"
+    />
+
+    <NDataTable :columns="columns" :data="filteredRows" :bordered="false" size="small" />
   </NSpin>
 
   <!-- Generate link modal -->
@@ -55,6 +62,7 @@
         </div>
 
         <NSpace justify="end" style="margin-top: 16px">
+          <NButton v-if="generatedTokens.length > 1" @click="exportGeneratedCsv">Export CSV</NButton>
           <NButton type="primary" @click="closeGenerateModal">Done</NButton>
         </NSpace>
       </template>
@@ -129,14 +137,31 @@ const revokeModalVisible = ref(false)
 const revokeTarget = ref<OwnerRow | null>(null)
 const revoking = ref(false)
 
-const ownersWithoutActive = computed(() => rows.value.filter(r => r.status !== 'active'))
-const activeRows = computed(() => rows.value.filter(r => r.status === 'active'))
+const searchQuery = ref('')
+
+function normalize(s: string): string {
+  return s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+}
+
+const filteredRows = computed(() => {
+  const q = normalize(searchQuery.value.trim())
+  if (!q) return rows.value
+  return rows.value.filter(r => normalize(r.ownerName).includes(q))
+})
+
+const ownersWithoutActive = computed(() => filteredRows.value.filter(r => r.status !== 'active'))
+const activeRows = computed(() => filteredRows.value.filter(r => r.status === 'active'))
 
 function defaultExpiry(): number {
   const base = props.gathering.scheduled_date
     ? new Date(props.gathering.scheduled_date)
     : new Date()
-  base.setFullYear(base.getFullYear() + 1)
+  base.setMonth(base.getMonth() + 3)
+  if (base.getTime() <= Date.now()) {
+    const fallback = new Date()
+    fallback.setMonth(fallback.getMonth() + 1)
+    return fallback.getTime()
+  }
   return base.getTime()
 }
 
@@ -297,6 +322,21 @@ async function confirmRevoke() {
   } finally {
     revoking.value = false
   }
+}
+
+function exportGeneratedCsv() {
+  const lines = ['Owner,Link']
+  for (const item of generatedTokens.value) {
+    const ownerName = `"${item.ownerName.replace(/"/g, '""')}"`
+    lines.push(`${ownerName},${item.url}`)
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `invitations-gathering-${props.gathering.id}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 function exportCsv() {

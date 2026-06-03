@@ -36,6 +36,31 @@
             />
           </NFormItem>
 
+          <!-- Invitation link -->
+          <div v-if="selectedOwnerId" style="margin-top: 8px; margin-bottom: 16px;">
+            <NSpin :show="invitationLinkLoading" size="small">
+              <template v-if="!invitationLinkLoading">
+                <NAlert v-if="ownerHasActiveInvitation && !invitationLink" type="info" style="margin-bottom: 0">
+                  {{ $t('gatherings.voting.memberLinkAlreadyActive') }}
+                </NAlert>
+                <NInputGroup v-else-if="invitationLink">
+                  <NInput :value="invitationLink" readonly style="font-size: 12px; font-family: monospace" />
+                  <NButton @click="copyInvitationLink" style="min-width: 80px">
+                    {{ invitationLinkCopied ? $t('gatherings.voting.linkCopied') : $t('gatherings.voting.copyLink') }}
+                  </NButton>
+                </NInputGroup>
+                <NButton
+                  v-else
+                  size="small"
+                  :loading="invitationLinkGenerating"
+                  @click="generateInvitationLink"
+                >
+                  {{ $t('gatherings.voting.generateMemberLink') }}
+                </NButton>
+              </template>
+            </NSpin>
+          </div>
+
           <!-- Owner Units -->
           <div v-if="selectedOwnerId && selectedOwner" style="margin-top: 16px;">
             <h4>{{ $t('gatherings.voting.availableUnits') }}</h4>
@@ -204,6 +229,7 @@ import {
   NForm,
   NFormItem,
   NInput,
+  NInputGroup,
   NSelect,
   NButton,
   NSpace,
@@ -219,8 +245,8 @@ import {
   type FormRules
 } from 'naive-ui'
 import { BallotForm } from '@apc/voting-widgets'
-import { gatheringApi, votingMatterApi, votingApi } from '@/services/api'
-import type { Gathering, VotingMatter } from '@/types/api'
+import { gatheringApi, votingMatterApi, votingApi, invitationApi } from '@/services/api'
+import type { Gathering, VotingMatter, MemberInvitation } from '@/types/api'
 
 interface EligibleVoterUnit {
   id: number
@@ -277,6 +303,14 @@ const isDelegateVoting = ref(false)
 const eligibleVoters = ref<EligibleVoter[]>([])
 const selectedOwnerId = ref<number | null>(null)
 const selectedUnitIds = ref<number[]>([])
+
+// Step 1: Invitation link
+const MEMBER_BASE_URL = import.meta.env.VITE_MEMBER_BASE_URL || 'https://member.blocul-nostru.online'
+const ownerHasActiveInvitation = ref(false)
+const invitationLink = ref<string | null>(null)
+const invitationLinkLoading = ref(false)
+const invitationLinkGenerating = ref(false)
+const invitationLinkCopied = ref(false)
 
 // Step 2: Delegate Details
 const delegateFormRef = ref<FormInst | null>(null)
@@ -363,8 +397,60 @@ const loadVotingMatters = async () => {
   }
 }
 
-const handleOwnerChange = () => {
+const handleOwnerChange = async () => {
   selectedUnitIds.value = []
+  invitationLink.value = null
+  invitationLinkCopied.value = false
+  ownerHasActiveInvitation.value = false
+  if (!selectedOwnerId.value) return
+  invitationLinkLoading.value = true
+  try {
+    const res = await invitationApi.list(props.associationId, props.gathering.id)
+    const active = (res.data as MemberInvitation[]).find(
+      inv => inv.owner_id === selectedOwnerId.value && inv.status === 'active'
+    )
+    ownerHasActiveInvitation.value = !!active
+  } catch {
+    // non-critical, ignore
+  } finally {
+    invitationLinkLoading.value = false
+  }
+}
+
+function defaultInvitationExpiry(): string {
+  const base = props.gathering.scheduled_date
+    ? new Date(props.gathering.scheduled_date)
+    : new Date()
+  base.setMonth(base.getMonth() + 3)
+  if (base.getTime() <= Date.now()) {
+    const fallback = new Date()
+    fallback.setMonth(fallback.getMonth() + 1)
+    return fallback.toISOString()
+  }
+  return base.toISOString()
+}
+
+const generateInvitationLink = async () => {
+  if (!selectedOwnerId.value) return
+  invitationLinkGenerating.value = true
+  try {
+    const res = await invitationApi.create(props.associationId, props.gathering.id, {
+      owner_id: selectedOwnerId.value,
+      expires_at: defaultInvitationExpiry()
+    })
+    invitationLink.value = `${MEMBER_BASE_URL}/${res.data.token}`
+  } catch (err: any) {
+    error.value = err.response?.data?.error ?? err.message ?? 'Failed to generate invitation link'
+  } finally {
+    invitationLinkGenerating.value = false
+  }
+}
+
+const copyInvitationLink = async () => {
+  if (!invitationLink.value) return
+  await navigator.clipboard.writeText(invitationLink.value)
+  invitationLinkCopied.value = true
+  setTimeout(() => { invitationLinkCopied.value = false }, 2000)
 }
 
 const handleSelectAllUnits = (checked: boolean) => {
@@ -455,6 +541,9 @@ const resetWizard = () => {
   isDelegateVoting.value = false
   selectedOwnerId.value = null
   selectedUnitIds.value = []
+  ownerHasActiveInvitation.value = false
+  invitationLink.value = null
+  invitationLinkCopied.value = false
   delegateData.value = {
     name: '',
     identification: '',

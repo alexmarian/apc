@@ -734,7 +734,11 @@
       "selectedUnitsCount": "Selected units",
       "totalVotingWeight": "Total voting weight",
       "delegateNameRequired": "Delegate name is required",
-      "delegateIdRequired": "Delegate ID is required"
+      "delegateIdRequired": "Delegate ID is required",
+      "generateMemberLink": "Generate member link",
+      "copyLink": "Copy link",
+      "linkCopied": "✓ Copied",
+      "memberLinkAlreadyActive": "This owner already has an active member link. Find it in the Invitations tab."
     },
     "results": {
       "title": "Results",
