@@ -26,6 +26,7 @@ import type { OwnerReportItem, OwnerUnit, OwnerCoOwner } from '@/types/api'
 import { useAssociationStore } from '@/stores/association'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
+import { arrayToCsv, downloadCsv } from '@/utils/csvUtils'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -160,6 +161,32 @@ const unitsColumns = computed<DataTableColumns<OwnerUnit>>(() => [
     )
   }
 ])
+
+const downloadFilteredUnits = () => {
+  const units = filteredUnits.value
+  if (!units.length) return
+  const headers = [
+    t('units.building', 'Building'),
+    t('units.cadastralNumber', 'Cadastral Number'),
+    t('units.address', 'Address'),
+    t('units.unit', 'Unit'),
+    t('units.area', 'Area (m²)'),
+    t('units.part', 'Part (%)'),
+    t('units.type', 'Type')
+  ]
+  const rows = units.map(u => [
+    u.building_name,
+    u.unit_cadastral_number,
+    u.unit_address,
+    u.unit_number,
+    u.area.toFixed(2),
+    (u.part * 100).toFixed(4),
+    t(`unitTypes.${u.unit_type}`, u.unit_type)
+  ])
+  const ownerName = ownerData.value?.owner.name ?? 'owner'
+  const filename = `${ownerName.replace(/\s+/g, '_')}_units.csv`
+  downloadCsv(arrayToCsv([headers, ...rows]), filename)
+}
 
 const navigateToCoOwner = (coOwner: OwnerCoOwner) => {
   // Build the new breadcrumb chain: existing chain + current owner
@@ -336,6 +363,9 @@ onMounted(fetchOwnerDetail)
             >
               {{ t(`unitTypes.${type}`, type) }}
             </NTag>
+            <NButton size="small" @click="downloadFilteredUnits" style="margin-left: auto;">
+              {{ t('owners.exportToCsv', 'Export to CSV') }}
+            </NButton>
           </div>
           <NDataTable
             :columns="unitsColumns"
