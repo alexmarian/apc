@@ -29,8 +29,24 @@ const associationStore = useAssociationStore()
 const appReady = ref(false)
 router.isReady().then(() => {
   appReady.value = true
-  associationStore.init()
+  if (authStore.isAuthenticated) {
+    associationStore.init()
+  }
 })
+
+// init() is only meaningful once authenticated. On a cold load the user is
+// redirected to /login before init() can succeed, so re-run it when auth flips
+// to true (e.g. after a login that navigates via SPA without a full reload).
+watch(
+  () => authStore.isAuthenticated,
+  (isAuthenticated) => {
+    if (isAuthenticated) {
+      associationStore.init()
+    } else {
+      associationStore.reset()
+    }
+  }
+)
 
 // Check if current route is an auth page (login, register, etc.)
 const isAuthPage = computed(() => route.meta.isAuthPage)

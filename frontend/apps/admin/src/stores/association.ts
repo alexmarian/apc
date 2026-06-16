@@ -23,5 +23,10 @@ export const useAssociationStore = defineStore('association', () => {
     }
   }
 
-  return { associationId, loading, init }
+  function reset() {
+    associationId.value = null
+    loading.value = false
+  }
+
+  return { associationId, loading, init, reset }
 })
