@@ -234,11 +234,12 @@ export const ownerApi = {
     contact_email: string;
   }) =>
     api.put<Owner>(`/associations/${associationId}/owners/${ownerId}`, ownerData),
-  getOwnerReport: (associationId: number, includeUnits: boolean = false, includeCoOwners: boolean = false) =>
+  getOwnerReport: (associationId: number, includeUnits: boolean = false, includeCoOwners: boolean = false, ownerId?: number) =>
     api.get(`/associations/${associationId}/owners/report`, {
       params: {
         units: includeUnits ? 'true' : 'false',
-        co_owners: includeCoOwners ? 'true' : 'false'
+        co_owners: includeCoOwners ? 'true' : 'false',
+        ...(ownerId != null ? { owner_id: ownerId } : {})
       }
     }),
   getVotingOwners: (associationId: number, filters?: {

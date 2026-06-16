@@ -114,7 +114,10 @@ const handleOwnerFormCancelled = () => {
 }
 
 const handleBackToUnits = () => {
-  if (associationId.value && buildingId.value) {
+  const from = route.query.from as string | undefined
+  if (from) {
+    router.push(from)
+  } else if (associationId.value && buildingId.value) {
     router.push({
       path: '/units',
       query: {

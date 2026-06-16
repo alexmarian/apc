@@ -191,6 +191,12 @@
   "owners": {
     "title": "Owners",
     "report": "Owners Report",
+    "detail": {
+      "title": "Owner Detail",
+      "backToReport": "Back to Owners Report",
+      "backToPrevOwner": "Back to Previous Owner",
+      "notFound": "Owner not found"
+    },
     "votingReport": "Voting Report",
     "list": "Owners List",
     "cumulative": "Cumulative Ownership",

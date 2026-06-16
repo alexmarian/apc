@@ -8,24 +8,22 @@ import {
   NAlert,
   NButton,
   useMessage,
-  NSwitch,
   NInputGroup,
   NInput,
   NSelect,
-  NRadioGroup,
-  NRadio,
   NText
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { ownerApi } from '@/services/api'
 import { formatPercentage } from '@/utils/formatters'
-import type { OwnerReportItem, Owner, OwnerUnit, OwnerCoOwner } from '@/types/api'
+import type { OwnerReportItem } from '@/types/api'
 import { UnitType } from '@/types/api'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 // i18n
 const { t } = useI18n()
+const route = useRoute()
 const router = useRouter()
 
 // Props
@@ -39,27 +37,26 @@ const emit = defineEmits<{
   (e: 'edit-owner', ownerId: number): void
 }>()
 
-// State
+// State — initialised from URL query so filters survive navigation
 const loading = ref<boolean>(false)
 const error = ref<string | null>(null)
 const ownersData = ref<OwnerReportItem[] | null>(null)
 const message = useMessage()
-const includeUnits = ref<boolean>(false)
-const includeCoOwners = ref<boolean>(false)
-const searchQuery = ref<string>('')
-const sortBy = ref<'name' | 'part'>('part')
-const sortOrder = ref<'asc' | 'desc'>('desc')
-const ownerFilter = ref<number | null>(null)
-// Multi-select unit-type filter for the owner list (OR semantics)
-const unitTypeFilter = ref<string[]>([])
-// Selecting a row in the per-type summary narrows the units table to that type
-const selectedUnitType = ref<string | null>(null)
-
-// Unit data is required whenever we filter by type, drill into an owner, or the
-// user explicitly asks for it. Drives whether the report is fetched with units.
-const unitsNeeded = computed<boolean>(() =>
-  includeUnits.value || unitTypeFilter.value.length > 0 || ownerFilter.value !== null
+const searchQuery = ref<string>((route.query.search as string) ?? '')
+const sortBy = ref<'name' | 'part'>((route.query.sortBy as 'name' | 'part') ?? 'part')
+const sortOrder = ref<'asc' | 'desc'>((route.query.sortOrder as 'asc' | 'desc') ?? 'desc')
+const unitTypeFilter = ref<string[]>(
+  route.query.unitTypes ? (route.query.unitTypes as string).split(',').filter(Boolean) : []
 )
+const currentPage = ref<number>(route.query.page ? parseInt(route.query.page as string) : 1)
+const pagination = computed(() => ({
+  pageSize: 10,
+  page: currentPage.value,
+  onUpdatePage: (p: number) => { currentPage.value = p }
+}))
+
+// Unit data is required whenever filtering by type (client-side narrowing needs it).
+const unitsNeeded = computed<boolean>(() => unitTypeFilter.value.length > 0)
 
 // Select options for the unit-type filters
 const unitTypeOptions = computed(() =>
@@ -69,40 +66,6 @@ const unitTypeOptions = computed(() =>
   }))
 )
 
-// Computed property for selected owner data
-const selectedOwnerData = computed<OwnerReportItem | undefined>(()=>{
-  return filteredSortedData.value?.find(item => item.owner.id === ownerFilter.value)
-})
-
-// Per-unit-type breakdown for the selected owner (all types they hold)
-const unitTypeSummary = computed(() => {
-  const units = selectedOwnerData.value?.units
-  if (!units) return []
-
-  const byType = new Map<string, { unit_type: string; count: number; area: number; part: number }>()
-  for (const unit of units) {
-    const entry = byType.get(unit.unit_type) ?? { unit_type: unit.unit_type, count: 0, area: 0, part: 0 }
-    entry.count += 1
-    entry.area += unit.area
-    entry.part += unit.part
-    byType.set(unit.unit_type, entry)
-  }
-
-  return Array.from(byType.values())
-})
-
-// Selected owner's units, narrowed to the unit type picked in the summary (if any)
-const filteredOwnerUnits = computed<OwnerUnit[]>(() => {
-  const units = selectedOwnerData.value?.units ?? []
-  if (selectedUnitType.value === null) return units
-  return units.filter(unit => unit.unit_type === selectedUnitType.value)
-})
-
-// Toggle the units-table filter when a summary row is clicked
-const handleSelectUnitType = (unitType: string): void => {
-  selectedUnitType.value = selectedUnitType.value === unitType ? null : unitType
-}
-
 // CSV-escape a single value
 const csvEscape = (value: string | number): string => {
   if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
@@ -111,55 +74,21 @@ const csvEscape = (value: string | number): string => {
   return String(value)
 }
 
-// Export the currently shown units of the selected owner (respects the type filter)
-const exportUnitsToCSV = (): void => {
-  const units = filteredOwnerUnits.value
-  if (units.length === 0) {
-    message.error(t('owners.noDataToExport', 'No data to export'))
-    return
+// When a unit-type filter is active, compute area/part/count from filtered units.
+// Falls back to server-side statistics when no filter is applied.
+const filteredStatsForRow = (row: OwnerReportItem): { area: number; part: number; count: number } => {
+  if (unitTypeFilter.value.length === 0 || !row.units) {
+    return {
+      area: row.statistics.total_area,
+      part: row.statistics.total_condo_part,
+      count: row.statistics.total_units
+    }
   }
-
-  try {
-    const headers = [
-      t('units.building', 'Building'),
-      t('units.cadastralNumber', 'Cadastral Number'),
-      t('units.address', 'Address'),
-      t('units.unit', 'Unit'),
-      t('owners.csvHeaders.areaShort', 'Area (m²)'),
-      t('owners.csvHeaders.partShort', 'Part (%)'),
-      t('units.type', 'Type')
-    ]
-
-    const rows = units.map(unit => [
-      unit.building_name,
-      unit.unit_cadastral_number,
-      unit.unit_address,
-      unit.unit_number,
-      parseFloat(unit.area.toFixed(2)),
-      parseFloat((unit.part * 100).toFixed(4)),
-      t(`unitTypes.${unit.unit_type}`, unit.unit_type)
-    ])
-
-    let csvContent = headers.map(csvEscape).join(',') + '\n'
-    rows.forEach(row => {
-      csvContent += row.map(csvEscape).join(',') + '\n'
-    })
-
-    const ownerName = selectedOwnerData.value?.owner.name?.replace(/\s+/g, '_') ?? 'owner'
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', `${ownerName}_units_${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
-    message.success(t('owners.exportSuccess', 'CSV exported successfully'))
-  } catch (err) {
-    console.error('Error exporting units to CSV:', err)
-    message.error(t('owners.exportError', 'Failed to export CSV'))
+  const matching = row.units.filter(u => unitTypeFilter.value.includes(u.unit_type))
+  return {
+    area: matching.reduce((s, u) => s + u.area, 0),
+    part: matching.reduce((s, u) => s + u.part, 0),
+    count: matching.length
   }
 }
 
@@ -185,16 +114,17 @@ const columns = computed<DataTableColumns<OwnerReportItem>>(() => {
     {
       title: t('owners.totalArea', 'Total Area'),
       key: 'statistics.total_area',
-      render: (row: OwnerReportItem) => `${row.statistics.total_area.toFixed(2)} m²`
+      render: (row: OwnerReportItem) => `${filteredStatsForRow(row).area.toFixed(2)} m²`
     },
     {
       title: t('owners.totalPart', 'Condo Part'),
       key: 'statistics.total_condo_part',
-      render: (row: OwnerReportItem) => formatPercentage(row.statistics.total_condo_part, 4)
+      render: (row: OwnerReportItem) => formatPercentage(filteredStatsForRow(row).part, 4)
     },
     {
       title: t('units.title', 'Units'),
-      key: 'statistics.total_units'
+      key: 'statistics.total_units',
+      render: (row: OwnerReportItem) => String(filteredStatsForRow(row).count)
     },
     {
       title: t('common.actions', 'Actions'),
@@ -232,107 +162,7 @@ const columns = computed<DataTableColumns<OwnerReportItem>>(() => {
   return cols
 })
 
-type UnitTypeSummaryRow = { unit_type: string; count: number; area: number; part: number }
 
-// Make summary rows clickable to filter the units table by that type
-const summaryRowProps = (row: UnitTypeSummaryRow) => ({
-  style: 'cursor: pointer',
-  onClick: () => handleSelectUnitType(row.unit_type)
-})
-const summaryRowClass = (row: UnitTypeSummaryRow) =>
-  row.unit_type === selectedUnitType.value ? 'selected-type-row' : ''
-
-// Columns for the selected owner's per-unit-type breakdown header
-const unitTypeSummaryColumns = computed<DataTableColumns<UnitTypeSummaryRow>>(() => [
-  {
-    title: t('units.type', 'Type'),
-    key: 'unit_type',
-    sorter: (a, b) => t(`unitTypes.${a.unit_type}`, a.unit_type).localeCompare(t(`unitTypes.${b.unit_type}`, b.unit_type)),
-    render: (row) => t(`unitTypes.${row.unit_type}`, row.unit_type)
-  },
-  {
-    title: t('owners.unitCount', 'Count'),
-    key: 'count',
-    sorter: (a, b) => a.count - b.count
-  },
-  {
-    title: t('owners.surface', 'Surface'),
-    key: 'area',
-    sorter: (a, b) => a.area - b.area,
-    render: (row) => `${row.area.toFixed(2)} m²`
-  },
-  {
-    title: t('units.part', 'Part'),
-    key: 'part',
-    sorter: (a, b) => a.part - b.part,
-    render: (row) => formatPercentage(row.part, 4)
-  }
-])
-
-// TOTAL row for the breakdown table, taken from the owner's official statistics
-const unitTypeSummaryRow = () => {
-  const stats = selectedOwnerData.value?.statistics
-  return {
-    unit_type: { value: h(NText, { strong: true }, { default: () => t('common.total', 'Total') }) },
-    count: { value: h(NText, { strong: true }, { default: () => stats?.total_units ?? 0 }) },
-    area: { value: h(NText, { strong: true }, { default: () => `${(stats?.total_area ?? 0).toFixed(2)} m²` }) },
-    part: { value: h(NText, { strong: true }, { default: () => formatPercentage(stats?.total_condo_part ?? 0, 4) }) }
-  }
-}
-
-// Deep-link to the unit edit flow (opens the edit modal on the Units page)
-const handleEditUnit = (unit: OwnerUnit): void => {
-  router.push({
-    path: '/units',
-    query: {
-      buildingId: unit.building_id.toString(),
-      editUnitId: unit.unit_id.toString()
-    }
-  })
-}
-
-// Columns for the selected owner's units detail table (sortable + edit action)
-const ownerUnitsColumns = computed<DataTableColumns<OwnerUnit>>(() => [
-  {
-    title: t('units.building', 'Building'),
-    key: 'building_name',
-    sorter: (a, b) => a.building_name.localeCompare(b.building_name)
-  },
-  { title: t('units.cadastralNumber', 'Cadastral Number'), key: 'unit_cadastral_number' },
-  { title: t('units.address', 'Address'), key: 'unit_address' },
-  {
-    title: t('units.unit', 'Unit'),
-    key: 'unit_number',
-    sorter: (a, b) => a.unit_number.localeCompare(b.unit_number, undefined, { numeric: true })
-  },
-  {
-    title: t('units.area', 'Area'),
-    key: 'area',
-    sorter: (a, b) => a.area - b.area,
-    render: (row) => `${row.area.toFixed(2)} m²`
-  },
-  {
-    title: t('units.part', 'Part'),
-    key: 'part',
-    sorter: (a, b) => a.part - b.part,
-    render: (row) => formatPercentage(row.part, 4)
-  },
-  {
-    title: t('units.type', 'Type'),
-    key: 'unit_type',
-    sorter: (a, b) => t(`unitTypes.${a.unit_type}`, a.unit_type).localeCompare(t(`unitTypes.${b.unit_type}`, b.unit_type)),
-    render: (row) => t(`unitTypes.${row.unit_type}`, row.unit_type)
-  },
-  {
-    title: t('common.actions', 'Actions'),
-    key: 'actions',
-    render: (row) => h(
-      NButton,
-      { size: 'small', onClick: () => handleEditUnit(row) },
-      { default: () => t('common.edit', 'Edit') }
-    )
-  }
-])
 
 // Fetch owners report
 const fetchOwnersReport = async (forceUnits = false): Promise<void> => {
@@ -345,7 +175,7 @@ const fetchOwnersReport = async (forceUnits = false): Promise<void> => {
     const response = await ownerApi.getOwnerReport(
       props.associationId,
       forceUnits || unitsNeeded.value,
-      includeCoOwners.value
+      false
     )
 
     ownersData.value = response.data
@@ -357,17 +187,12 @@ const fetchOwnersReport = async (forceUnits = false): Promise<void> => {
   }
 }
 
-// Handle viewing owner details
+// Handle viewing owner details — navigate to dedicated detail page
 const handleViewOwnerDetails = (ownerId: number): void => {
-  // Reset the per-type units filter whenever the selected owner changes
-  selectedUnitType.value = null
-  if (ownerId === ownerFilter.value) {
-    // If already filtered by this owner, clear filter
-    ownerFilter.value = null
-  } else {
-    // Filter to show only this owner
-    ownerFilter.value = ownerId
-  }
+  router.push({
+    path: `/owners/${ownerId}`,
+    query: { from: route.fullPath }
+  })
 }
 
 // Handle edit owner - emit event to parent
@@ -396,9 +221,10 @@ const exportToCSV = async (): Promise<void> => {
     return
   }
 
-  // The per-type breakdown columns need unit data; load it if not already present.
-  if (!unitsNeeded.value && !ownersData.value.some(item => item.units !== undefined)) {
-    await fetchOwnersReport(true)
+  // CSV needs units + co-owners; fetch them if not already loaded.
+  if (!ownersData.value.some(item => item.units !== undefined)) {
+    const response = await ownerApi.getOwnerReport(props.associationId!, true, true)
+    ownersData.value = response.data
   }
 
   try {
@@ -419,52 +245,33 @@ const exportToCSV = async (): Promise<void> => {
       ...unitTypes.map(type => `${t(`unitTypes.${type}`, type)} ${t('owners.csvHeaders.partShort', 'Part (%)')}`)
     ]
 
-    // Add co-owner headers if included
-    if (includeCoOwners.value) {
-      headers.push(t('owners.csvHeaders.coOwners', 'Co-Owners'))
-    }
-
-    // Add unit headers if included
-    if (includeUnits.value) {
-      headers.push(t('owners.csvHeaders.unitsList', 'Units'))
-    }
+    headers.push(t('owners.csvHeaders.coOwners', 'Co-Owners'))
+    headers.push(t('owners.csvHeaders.unitsList', 'Units'))
 
     // Create CSV rows
     const rows: (string | number)[][] = filteredSortedData.value.map(item => {
       const breakdown = unitTypeBreakdown(item)
+      const stats = filteredStatsForRow(item)
       const row: (string | number)[] = [
         item.owner.id,
         item.owner.name,
         item.owner.identification_number,
         item.owner.contact_phone,
         item.owner.contact_email,
-        item.statistics.total_units,
-        parseFloat(item.statistics.total_area.toFixed(2)),
-        parseFloat((item.statistics.total_condo_part * 100).toFixed(4)),
+        stats.count,
+        parseFloat(stats.area.toFixed(2)),
+        parseFloat((stats.part * 100).toFixed(4)),
         // Per-type surfaces, then per-type parts — same order as the headers
         ...unitTypes.map(type => parseFloat(breakdown[type].area.toFixed(2))),
         ...unitTypes.map(type => parseFloat((breakdown[type].part * 100).toFixed(4)))
       ]
 
-      // Add co-owners if included
-      if (includeCoOwners.value) {
-        if (item.co_owners && item.co_owners.length > 0) {
-          row.push(item.co_owners.map(co => co.name).join(', '))
-        } else {
-          row.push('')
-        }
-      }
-
-      // Add units if included
-      if (includeUnits.value) {
-        if (item.units && item.units.length > 0) {
-          row.push(item.units.map(unit =>
-            `${unit.building_name} - ${unit.unit_number} (${unit.area} m²)`
-          ).join('; '))
-        } else {
-          row.push('')
-        }
-      }
+      row.push(item.co_owners && item.co_owners.length > 0
+        ? item.co_owners.map(co => co.name).join(', ')
+        : '')
+      row.push(item.units && item.units.length > 0
+        ? item.units.map(unit => `${unit.building_name} - ${unit.unit_number} (${unit.area} m²)`).join('; ')
+        : '')
 
       return row
     })
@@ -521,8 +328,7 @@ const filteredSortedData = computed<OwnerReportItem[]>(() => {
 
   let data = [...ownersData.value]
 
-  // Apply unit-type filter: keep owners holding at least one unit of any selected
-  // type. Rows are narrowed but each owner's stat columns keep their full totals.
+  // Apply unit-type filter: keep owners holding at least one unit of the selected types.
   if (unitTypeFilter.value.length > 0) {
     data = data.filter(item =>
       item.units?.some(unit => unitTypeFilter.value.includes(unit.unit_type))
@@ -547,7 +353,7 @@ const filteredSortedData = computed<OwnerReportItem[]>(() => {
     if (sortBy.value === 'name') {
       comparison = a.owner.name.localeCompare(b.owner.name)
     } else if (sortBy.value === 'part') {
-      comparison = a.statistics.total_condo_part - b.statistics.total_condo_part
+      comparison = filteredStatsForRow(a).part - filteredStatsForRow(b).part
     }
 
     return sortOrder.value === 'asc' ? comparison : -comparison
@@ -556,37 +362,34 @@ const filteredSortedData = computed<OwnerReportItem[]>(() => {
   return data
 })
 
-// Refetch only when the data we need from the server changes (units presence or
-// co-owners). Owner/type filtering is applied client-side, but unitsNeeded flips
-// to true the first time a type filter or owner drill-down requires unit data.
-watch([unitsNeeded, includeCoOwners], () => {
-  if (props.associationId) {
-    fetchOwnersReport()
-  }
+// Sync filter/page state to URL so navigating away and back restores it
+watch([searchQuery, sortBy, sortOrder, unitTypeFilter, currentPage], () => {
+  router.replace({
+    query: {
+      ...route.query,
+      search: searchQuery.value || undefined,
+      sortBy: sortBy.value !== 'part' ? sortBy.value : undefined,
+      sortOrder: sortOrder.value !== 'desc' ? sortOrder.value : undefined,
+      unitTypes: unitTypeFilter.value.length > 0 ? unitTypeFilter.value.join(',') : undefined,
+      page: currentPage.value > 1 ? currentPage.value.toString() : undefined,
+    }
+  })
 })
 
-// Initialize component
-onMounted(() => {
-  if (props.associationId) {
-    fetchOwnersReport()
-  }
+// Refetch when the association changes or the unit-type filter crosses the
+// needs-units boundary (empty→some or some→empty).
+watch(() => props.associationId, (id) => {
+  if (id) fetchOwnersReport()
+}, { immediate: true })
+
+watch(unitsNeeded, () => {
+  if (props.associationId) fetchOwnersReport()
 })
 </script>
 
 <template>
   <div class="owners-report">
-    <NCard :title="t('owners.report', 'Owners Report')">
-      <template #header-extra>
-        <NSpace>
-          <NButton
-            type="primary"
-            @click="exportToCSV"
-            :disabled="!ownersData || filteredSortedData.length === 0"
-          >
-            {{ t('owners.exportToCsv', 'Export to CSV') }}
-          </NButton>
-        </NSpace>
-      </template>
+    <NCard>
 
       <div class="report-controls">
         <NSpace align="center" justify="space-between" wrap-item>
@@ -625,25 +428,20 @@ onMounted(() => {
           </div>
 
           <div class="report-options">
-            <NSpace>
-              <div class="option">
-                <span>{{ t('owners.includeUnits', 'Include Units') }}: </span>
-                <NSwitch v-model:value="includeUnits" />
-              </div>
-              <div class="option">
-                <span>{{ t('owners.includeCoOwners', 'Include Co-Owners') }}: </span>
-                <NSwitch v-model:value="includeCoOwners" />
-              </div>
+            <NSpace align="center">
+              <NText depth="3" style="white-space: nowrap;">
+                {{ filteredSortedData.length }} {{ t('owners.totalOwners', 'owners') }}
+              </NText>
+              <NButton
+                type="primary"
+                @click="exportToCSV"
+                :disabled="!ownersData || filteredSortedData.length === 0"
+              >
+                {{ t('owners.exportToCsv', 'Export to CSV') }}
+              </NButton>
             </NSpace>
           </div>
         </NSpace>
-      </div>
-
-      <div v-if="ownerFilter !== null" class="filter-banner">
-        <div>
-          {{ t('owners.viewingDetails', 'Viewing details for selected owner') }}
-        </div>
-        <NButton size="small" @click="ownerFilter = null">{{ t('common.clear', 'Clear Filter') }}</NButton>
       </div>
 
       <NSpin :show="loading">
@@ -653,94 +451,13 @@ onMounted(() => {
         </NAlert>
 
         <div v-if="ownersData && filteredSortedData.length > 0" class="owners-table">
-          <div class="summary-stats">
-            <div class="stat-item">
-              <div class="stat-label">{{ t('owners.totalOwners', 'Total Owners') }}:</div>
-              <div class="stat-value">{{ filteredSortedData.length }}</div>
-            </div>
-          </div>
-
           <NDataTable
             :columns="columns"
             :data="filteredSortedData"
-            :pagination="{
-              pageSize: 10
-            }"
+            :pagination="pagination"
             :row-key="(row: OwnerReportItem) => row.owner.id"
             :bordered="false"
           />
-
-          <!-- Per-unit-type summary header (visible when an owner is selected) -->
-          <div v-if="ownerFilter !== null && unitTypeSummary.length > 0" class="details-section">
-            <h3>{{ t('owners.holdingsByType', 'Holdings by unit type') }}</h3>
-            <p class="details-hint">{{ t('owners.selectTypeHint', 'Click a row to show only that unit type below.') }}</p>
-            <NDataTable
-              :columns="unitTypeSummaryColumns"
-              :data="unitTypeSummary"
-              :summary="unitTypeSummaryRow"
-              :row-key="(row: any) => row.unit_type"
-              :row-props="summaryRowProps"
-              :row-class-name="summaryRowClass"
-              :bordered="false"
-            />
-          </div>
-
-          <!-- Units Details (visible when an owner is selected and unit data is loaded) -->
-          <div v-if="ownerFilter !== null && selectedOwnerData?.units && selectedOwnerData.units.length > 0">
-            <div class="details-section">
-              <div class="details-header">
-                <div class="details-title">
-                  <h3>{{ t('owners.unitsDetails', "Owner's Units") }}</h3>
-                  <NTag
-                    v-if="selectedUnitType !== null"
-                    type="info"
-                    closable
-                    @close="selectedUnitType = null"
-                  >
-                    {{ t(`unitTypes.${selectedUnitType}`, selectedUnitType) }}
-                  </NTag>
-                </div>
-                <NButton
-                  size="small"
-                  type="primary"
-                  @click="exportUnitsToCSV"
-                  :disabled="filteredOwnerUnits.length === 0"
-                >
-                  {{ t('owners.exportToCsv', 'Export to CSV') }}
-                </NButton>
-              </div>
-              <NDataTable
-                :columns="ownerUnitsColumns"
-                :data="filteredOwnerUnits"
-                :pagination="{
-                  pageSize: 5
-                }"
-                :row-key="(row: OwnerUnit) => row.unit_id"
-                :bordered="false"
-              />
-            </div>
-          </div>
-
-          <!-- Co-Owners Details (visible when owner is filtered and includeCoOwners is true) -->
-          <div v-if="ownerFilter !== null && includeCoOwners && filteredSortedData.length > 0 && selectedOwnerData?.co_owners && selectedOwnerData.co_owners.length > 0">
-            <div class="details-section">
-              <h3>{{ t('owners.coOwners', 'Co-Owners') }}</h3>
-              <NDataTable
-                :columns="[
-                  { title: t('owners.name', 'Name'), key: 'name' },
-                  { title: t('owners.identification', 'Identification'), key: 'identification_number' },
-                  { title: t('owners.contactPhone', 'Contact Phone'), key: 'contact_phone' },
-                  { title: t('owners.contactEmail', 'Contact Email'), key: 'contact_email' },
-                  { title: t('owners.sharedUnits', 'Shared Units'), key: 'shared_unit_nums', render: (row: OwnerCoOwner) => row.shared_unit_nums.join(', ') }
-                ]"
-                :data="selectedOwnerData.co_owners"
-                :pagination="{
-                  pageSize: 5
-                }"
-                :bordered="false"
-              />
-            </div>
-          </div>
         </div>
 
         <NEmpty v-else-if="!loading && (!ownersData || filteredSortedData.length === 0)" :description="t('owners.noOwnersFound', 'No owners found')">
@@ -774,84 +491,6 @@ onMounted(() => {
   gap: 16px;
 }
 
-.option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 
-.summary-stats {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  padding: 12px;
-  border-radius: 4px;
-}
 
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.stat-label {
-  font-size: 0.9rem;
-  color: var(--text-color);
-  opacity: 0.8;
-}
-
-.stat-value {
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.filter-banner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  margin-bottom: 16px;
-  border-radius: 4px;
-  border-left: 4px solid #2080f0;
-}
-
-.details-section {
-  margin-top: 24px;
-  padding-top: 16px;
-}
-
-.details-section h3 {
-  margin-bottom: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.details-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.details-header h3 {
-  margin-bottom: 0;
-}
-
-.details-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.details-hint {
-  margin: 0 0 8px;
-  font-size: 0.85rem;
-  opacity: 0.7;
-}
-
-:deep(.selected-type-row td) {
-  background-color: rgba(32, 128, 240, 0.12);
-  font-weight: 600;
-}
 </style>

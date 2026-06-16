@@ -466,10 +466,11 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 		}
 
 		type OwnerReportItem struct {
-			Owner      Owner       `json:"owner"`
-			CoOwners   []CoOwner   `json:"co_owners,omitempty"`
-			Units      []OwnerUnit `json:"units,omitempty"`
-			Statistics OwnerStats  `json:"statistics"`
+			Owner       Owner       `json:"owner"`
+			CoOwners    []CoOwner   `json:"co_owners,omitempty"`
+			Units       []OwnerUnit `json:"units,omitempty"`
+			Statistics  OwnerStats  `json:"statistics"`
+			seenUnitIDs map[int64]bool
 		}
 
 		reportData, err := cfg.Db.GetOwnerUnitsWithDetailsForReport(req.Context(), database.GetOwnerUnitsWithDetailsForReportParams{
@@ -501,18 +502,18 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 						CreatedAt:            row.OwnerCreatedAt.Time,
 						UpdatedAt:            row.OwnerUpdatedAt.Time,
 					},
-					Statistics: OwnerStats{},
-					Units:      []OwnerUnit{},
-					CoOwners:   []CoOwner{},
+					Statistics:  OwnerStats{},
+					Units:       []OwnerUnit{},
+					CoOwners:    []CoOwner{},
+					seenUnitIDs: make(map[int64]bool),
 				}
 			}
 
 			ownerEntry := ownerMap[row.OwnerID]
 
 			// Track unique units for statistics
-			uniqueUnitIDs := make(map[int64]bool)
-			if !uniqueUnitIDs[row.UnitID] {
-				uniqueUnitIDs[row.UnitID] = true
+			if !ownerEntry.seenUnitIDs[row.UnitID] {
+				ownerEntry.seenUnitIDs[row.UnitID] = true
 
 				// Update statistics
 				ownerEntry.Statistics.TotalUnits++

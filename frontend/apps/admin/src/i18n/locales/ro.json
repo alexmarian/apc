@@ -185,6 +185,12 @@
   "owners": {
     "title": "Proprietari",
     "report": "Raport Proprietari",
+    "detail": {
+      "title": "Detalii Proprietar",
+      "backToReport": "Înapoi la Raport Proprietari",
+      "backToPrevOwner": "Înapoi la Proprietarul Anterior",
+      "notFound": "Proprietarul nu a fost găsit"
+    },
     "votingReport": "Raport Votare",
     "list": "Lista Proprietari",
     "cumulative": "Proprietate Cumulativă",
