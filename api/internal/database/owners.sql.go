@@ -450,6 +450,7 @@ SELECT o.id                     as owner_id,
        u.area,
        u.part,
        u.unit_type,
+       u.building_id            as building_id,
        b.name                   as building_name,
        b.address                as building_address,
        o2.id                    as co_owner_id,
@@ -498,6 +499,7 @@ type GetOwnerUnitsWithDetailsForReportRow struct {
 	Area                        float64
 	Part                        float64
 	UnitType                    string
+	BuildingID                  int64
 	BuildingName                string
 	BuildingAddress             string
 	CoOwnerID                   sql.NullInt64
@@ -534,6 +536,7 @@ func (q *Queries) GetOwnerUnitsWithDetailsForReport(ctx context.Context, arg Get
 			&i.Area,
 			&i.Part,
 			&i.UnitType,
+			&i.BuildingID,
 			&i.BuildingName,
 			&i.BuildingAddress,
 			&i.CoOwnerID,

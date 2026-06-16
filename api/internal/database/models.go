@@ -291,14 +291,14 @@ type VotingMatter struct {
 	GatheringID   int64
 	OrderIndex    int64
 	Title         string
-	TitleRu       string
 	Description   sql.NullString
-	DescriptionRu sql.NullString
 	MatterType    string
 	VotingConfig  string
 	CreatedAt     sql.NullTime
 	UpdatedAt     sql.NullTime
 	IsInformative int64
+	TitleRu       string
+	DescriptionRu sql.NullString
 }
 
 type VotingNotification struct {

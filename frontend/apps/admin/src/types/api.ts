@@ -327,8 +327,9 @@ export interface OwnerUnit {
   unit_id: number;
   unit_number: string;
   unit_cadastral_number: string;
+  unit_address: string;
+  building_id: number;
   building_name: string;
-  building_address: string;
   area: number;
   part: number;
   unit_type: string;

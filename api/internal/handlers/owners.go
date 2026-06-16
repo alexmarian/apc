@@ -444,6 +444,7 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 		type OwnerUnit struct {
 			UnitID              int64   `json:"unit_id"`
 			UnitNumber          string  `json:"unit_number"`
+			BuildingID          int64   `json:"building_id"`
 			BuildingName        string  `json:"building_name"`
 			UnitAddress         string  `json:"unit_address"`
 			UnitCadastralNumber string  `json:"unit_cadastral_number"`
@@ -523,6 +524,7 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 					ownerEntry.Units = append(ownerEntry.Units, OwnerUnit{
 						UnitID:              row.UnitID,
 						UnitNumber:          row.UnitNumber,
+						BuildingID:          row.BuildingID,
 						BuildingName:        row.BuildingName,
 						UnitAddress:         row.UnitAddress,
 						UnitCadastralNumber: row.UnitCadastralNumber,

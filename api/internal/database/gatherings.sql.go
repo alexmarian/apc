@@ -323,7 +323,7 @@ func (q *Queries) CreateUnitSlot(ctx context.Context, arg CreateUnitSlotParams) 
 
 const createVotingMatter = `-- name: CreateVotingMatter :one
 INSERT INTO voting_matters (gathering_id, order_index, title, title_ru, description, description_ru, matter_type, voting_config, is_informative)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, gathering_id, order_index, title, title_ru, description, description_ru, matter_type, voting_config, created_at, updated_at, is_informative
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, gathering_id, order_index, title, description, matter_type, voting_config, created_at, updated_at, is_informative, title_ru, description_ru
 `
 
 type CreateVotingMatterParams struct {
@@ -356,14 +356,14 @@ func (q *Queries) CreateVotingMatter(ctx context.Context, arg CreateVotingMatter
 		&i.GatheringID,
 		&i.OrderIndex,
 		&i.Title,
-		&i.TitleRu,
 		&i.Description,
-		&i.DescriptionRu,
 		&i.MatterType,
 		&i.VotingConfig,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IsInformative,
+		&i.TitleRu,
+		&i.DescriptionRu,
 	)
 	return i, err
 }
@@ -1707,7 +1707,7 @@ func (q *Queries) GetVotedUnitsStats(ctx context.Context, gatheringID int64) (Ge
 }
 
 const getVotingMatter = `-- name: GetVotingMatter :one
-SELECT id, gathering_id, order_index, title, title_ru, description, description_ru, matter_type, voting_config, created_at, updated_at, is_informative
+SELECT id, gathering_id, order_index, title, description, matter_type, voting_config, created_at, updated_at, is_informative, title_ru, description_ru
 FROM voting_matters
 WHERE id = ?
   AND gathering_id = ?
@@ -1726,20 +1726,20 @@ func (q *Queries) GetVotingMatter(ctx context.Context, arg GetVotingMatterParams
 		&i.GatheringID,
 		&i.OrderIndex,
 		&i.Title,
-		&i.TitleRu,
 		&i.Description,
-		&i.DescriptionRu,
 		&i.MatterType,
 		&i.VotingConfig,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IsInformative,
+		&i.TitleRu,
+		&i.DescriptionRu,
 	)
 	return i, err
 }
 
 const getVotingMatters = `-- name: GetVotingMatters :many
-SELECT id, gathering_id, order_index, title, title_ru, description, description_ru, matter_type, voting_config, created_at, updated_at, is_informative
+SELECT id, gathering_id, order_index, title, description, matter_type, voting_config, created_at, updated_at, is_informative, title_ru, description_ru
 FROM voting_matters
 WHERE gathering_id = ?
 ORDER BY order_index
@@ -1759,14 +1759,14 @@ func (q *Queries) GetVotingMatters(ctx context.Context, gatheringID int64) ([]Vo
 			&i.GatheringID,
 			&i.OrderIndex,
 			&i.Title,
-			&i.TitleRu,
 			&i.Description,
-			&i.DescriptionRu,
 			&i.MatterType,
 			&i.VotingConfig,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.IsInformative,
+			&i.TitleRu,
+			&i.DescriptionRu,
 		); err != nil {
 			return nil, err
 		}
@@ -2079,7 +2079,7 @@ SET title          = ?,
     is_informative = ?,
     updated_at     = CURRENT_TIMESTAMP
 WHERE id = ?
-  AND gathering_id = ? RETURNING id, gathering_id, order_index, title, title_ru, description, description_ru, matter_type, voting_config, created_at, updated_at, is_informative
+  AND gathering_id = ? RETURNING id, gathering_id, order_index, title, description, matter_type, voting_config, created_at, updated_at, is_informative, title_ru, description_ru
 `
 
 type UpdateVotingMatterParams struct {
@@ -2114,14 +2114,14 @@ func (q *Queries) UpdateVotingMatter(ctx context.Context, arg UpdateVotingMatter
 		&i.GatheringID,
 		&i.OrderIndex,
 		&i.Title,
-		&i.TitleRu,
 		&i.Description,
-		&i.DescriptionRu,
 		&i.MatterType,
 		&i.VotingConfig,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IsInformative,
+		&i.TitleRu,
+		&i.DescriptionRu,
 	)
 	return i, err
 }
