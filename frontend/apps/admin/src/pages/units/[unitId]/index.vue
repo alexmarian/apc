@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { NCard, NButton, NSpace, NPageHeader, NSpin, NAlert, NModal } from 'naive-ui'
+import { NCard, NButton, NPageHeader, NSpin, NAlert, NModal } from 'naive-ui'
 import UnitDetails from '@/components/UnitDetails.vue'
 import UnitForm from '@/components/UnitForm.vue'
 import OwnerForm from '@/components/OwnerForm.vue'
@@ -140,24 +140,19 @@ onMounted(() => {
 
 <template>
   <div class="unit-details-page">
-    <NPageHeader>
+    <NPageHeader @back="handleBackToUnits">
       <template #title>
         {{ showEditForm ? t('units.editUnit', 'Edit Unit') : t('units.details', 'Unit Details') }}
       </template>
       <template #extra>
-        <NSpace>
-          <NButton @click="handleBackToUnits">
-            {{ t('units.backToList', 'Back to Units List') }}
-          </NButton>
-          <NButton
-            v-if="!showEditForm"
-            type="primary"
-            @click="handleEditUnit"
-            :disabled="loading || error !== null"
-          >
-            {{ t('units.editUnit', 'Edit Unit') }}
-          </NButton>
-        </NSpace>
+        <NButton
+          v-if="!showEditForm"
+          type="primary"
+          @click="handleEditUnit"
+          :disabled="loading || error !== null"
+        >
+          {{ t('units.editUnit', 'Edit Unit') }}
+        </NButton>
       </template>
     </NPageHeader>
 
@@ -168,9 +163,6 @@ onMounted(() => {
         </NAlert>
         <div style="text-align: center; padding: 16px;">
           <NButton @click="verifyParams">{{ t('common.retry', 'Retry') }}</NButton>
-          <NButton @click="handleBackToUnits" style="margin-left: 16px;">
-            {{ t('units.backToList', 'Return to Units List') }}
-          </NButton>
         </div>
       </NCard>
 

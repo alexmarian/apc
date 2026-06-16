@@ -28,7 +28,7 @@ const router = useRouter()
 const props = defineProps<{
   associationId: number | null,
   buildingId: number | null,
-  unitTypeFilter?: string | null,
+  unitTypeFilter?: string[] | null,
   searchQuery?: string | null,
   page?: number | null
 }>()
@@ -38,7 +38,7 @@ const emit = defineEmits<{
   (e: 'edit', unitId: number): void
   (e: 'view-report', unitId: number): void
   (e: 'units-rendered', units: Unit[]): void
-  (e: 'unit-type-changed', newUnitType: string | null): void
+  (e: 'unit-type-changed', newUnitType: string[]): void
   (e: 'search-query-changed', newSearchQuery: string | null): void
   (e: 'page-changed', page: number): void
 }>()
@@ -51,7 +51,7 @@ const message = useMessage()
 const hasInitialized = ref(false)
 
 // Filters - use shared filters if available, otherwise use local state
-const unitTypeFilter = ref<string | null>(props.unitTypeFilter || null)
+const unitTypeFilter = ref<string[]>(props.unitTypeFilter || [])
 const searchQuery = ref<string | null>(props.searchQuery || null)
 const debouncedSearchQuery = refDebounced(searchQuery, 500)
 const currentPage = ref<number>(props.page || 1)
@@ -74,8 +74,8 @@ const filteredUnits = computed(() => {
   let result = [...units.value]
 
   // Filter by unit type if selected
-  if (unitTypeFilter.value) {
-    result = result.filter(unit => unit.unit_type === unitTypeFilter.value)
+  if (unitTypeFilter.value.length > 0) {
+    result = result.filter(unit => unitTypeFilter.value.includes(unit.unit_type))
   }
 
   // Filter by search query if provided
@@ -168,7 +168,7 @@ const columns = computed<DataTableColumns<Unit>>(() => [
                   query: {
                     associationId: props.associationId!.toString(),
                     buildingId: props.buildingId?.toString(),
-                    unitTypeFilter: unitTypeFilter.value || undefined,
+                    unitTypeFilter: unitTypeFilter.value.length > 0 ? unitTypeFilter.value.join(',') : undefined,
                     searchQuery: searchQuery.value || undefined,
                     page: currentPage.value.toString()
                   }
@@ -247,7 +247,7 @@ const searchQueryChanged = (newValue: string | null) => {
   emit('search-query-changed', newValue)
 }
 
-const unitTypeChanged = (newValue: string | null) => {
+const unitTypeChanged = (newValue: string[]) => {
   unitTypeFilter.value = newValue
   currentPage.value = 1
   emit('unit-type-changed', newValue)
@@ -255,7 +255,7 @@ const unitTypeChanged = (newValue: string | null) => {
 
 // Reset filters
 const resetFilters = () => {
-  unitTypeFilter.value = null
+  unitTypeFilter.value = []
   searchQuery.value = null
 }
 
@@ -293,8 +293,8 @@ onMounted(() => {
 <template>
   <div class="units-list">
     <NCard style="margin-top: 16px;">
-      <NFlex align="center">
-        <NText>{{ t('common.search', 'Search') }}:</NText>
+      <NFlex align="center" :wrap="false">
+        <NText style="white-space: nowrap">{{ t('common.search', 'Search') }}:</NText>
         <NInput
           :value="searchQuery"
           @update:value="searchQueryChanged"
@@ -302,16 +302,18 @@ onMounted(() => {
           clearable
           style="width: 300px"
         />
-        <NText>{{ t('units.type', 'Unit Type') }}:</NText>
+        <NText style="white-space: nowrap">{{ t('units.type', 'Unit Type') }}:</NText>
         <NSelect
           :value="unitTypeFilter"
           @update:value="unitTypeChanged"
           :options="availableUnitTypes"
           :placeholder="t('units.allTypes', 'All Types')"
+          multiple
           clearable
-          style="width: 200px"
+          :max-tag-count="2"
+          style="min-width: 200px"
         />
-        <NButton @click="resetFilters">{{ t('common.reset_filters', 'Reset Filters') }}</NButton>
+        <NButton @click="resetFilters" style="white-space: nowrap">{{ t('common.reset_filters', 'Reset Filters') }}</NButton>
       </NFlex>
     </NCard>
 

@@ -37,7 +37,7 @@ const ownerId = computed(() => parseInt(route.params.ownerId as string))
 const loading = ref(true)
 const error = ref<string | null>(null)
 const ownerData = ref<OwnerReportItem | null>(null)
-const selectedUnitType = ref<string | null>(null)
+const selectedUnitTypes = ref<string[]>([])
 
 // Breadcrumb chain: array of {id, name} read from query param, plus the current owner appended once loaded
 interface BreadcrumbEntry { id: number; name: string }
@@ -77,7 +77,7 @@ const fetchOwnerDetail = async () => {
 // Refetch when navigating between co-owner pages (ownerId param changes)
 watch(ownerId, () => {
   ownerData.value = null
-  selectedUnitType.value = null
+  selectedUnitTypes.value = []
   fetchOwnerDetail()
 })
 
@@ -97,12 +97,17 @@ const unitTypeSummary = computed(() => {
 
 const filteredUnits = computed<OwnerUnit[]>(() => {
   const units = ownerData.value?.units ?? []
-  if (!selectedUnitType.value) return units
-  return units.filter(u => u.unit_type === selectedUnitType.value)
+  if (selectedUnitTypes.value.length === 0) return units
+  return units.filter(u => selectedUnitTypes.value.includes(u.unit_type))
 })
 
 const handleSelectUnitType = (unitType: string) => {
-  selectedUnitType.value = selectedUnitType.value === unitType ? null : unitType
+  const idx = selectedUnitTypes.value.indexOf(unitType)
+  if (idx === -1) {
+    selectedUnitTypes.value = [...selectedUnitTypes.value, unitType]
+  } else {
+    selectedUnitTypes.value = selectedUnitTypes.value.filter(t => t !== unitType)
+  }
 }
 
 const unitsColumns = computed<DataTableColumns<OwnerUnit>>(() => [
@@ -238,11 +243,6 @@ onMounted(fetchOwnerDetail)
           </NBreadcrumbItem>
         </NBreadcrumb>
       </template>
-      <template #extra>
-        <NButton @click="handleBack">
-          {{ breadcrumbChain.length > 0 ? t('owners.detail.backToPrevOwner', 'Back to Previous Owner') : t('owners.detail.backToReport', 'Back to Owners Report') }}
-        </NButton>
-      </template>
     </NPageHeader>
 
     <NSpin :show="loading">
@@ -303,13 +303,22 @@ onMounted(fetchOwnerDetail)
               v-for="entry in unitTypeSummary"
               :key="entry.unit_type"
               class="type-card"
-              :class="{ 'type-card--active': selectedUnitType === entry.unit_type }"
+              :class="{ 'type-card--active': selectedUnitTypes.includes(entry.unit_type) }"
               @click="handleSelectUnitType(entry.unit_type)"
             >
               <div class="type-card__label">{{ t(`unitTypes.${entry.unit_type}`, entry.unit_type) }}</div>
-              <div class="type-card__stat">{{ entry.count }} {{ t('owners.unitCount', 'units') }}</div>
-              <div class="type-card__stat">{{ entry.area.toFixed(2) }} m²</div>
-              <div class="type-card__stat">{{ formatPercentage(entry.part, 4) }}</div>
+              <div class="type-card__row">
+                <span class="type-card__key">{{ t('owners.unitCount', 'Number') }}</span>
+                <span class="type-card__val">{{ entry.count }}</span>
+              </div>
+              <div class="type-card__row">
+                <span class="type-card__key">{{ t('units.area', 'Area') }}</span>
+                <span class="type-card__val">{{ entry.area.toFixed(2) }} m²</span>
+              </div>
+              <div class="type-card__row">
+                <span class="type-card__key">{{ t('units.part', 'Part') }}</span>
+                <span class="type-card__val">{{ formatPercentage(entry.part, 4) }}</span>
+              </div>
             </div>
           </div>
         </NCard>
@@ -319,12 +328,13 @@ onMounted(fetchOwnerDetail)
           <div class="section-header">
             <h3 class="section-title">{{ t('owners.unitsDetails', "Owner's Units") }}</h3>
             <NTag
-              v-if="selectedUnitType"
+              v-for="type in selectedUnitTypes"
+              :key="type"
               type="info"
               closable
-              @close="selectedUnitType = null"
+              @close="handleSelectUnitType(type)"
             >
-              {{ t(`unitTypes.${selectedUnitType}`, selectedUnitType) }}
+              {{ t(`unitTypes.${type}`, type) }}
             </NTag>
           </div>
           <NDataTable
@@ -406,14 +416,27 @@ onMounted(fetchOwnerDetail)
 .type-card__label {
   font-weight: 600;
   font-size: 0.85rem;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   text-transform: capitalize;
 }
 
-.type-card__stat {
+.type-card__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
   font-size: 0.82rem;
-  opacity: 0.75;
-  line-height: 1.5;
+  line-height: 1.7;
+}
+
+.type-card__key {
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.type-card__val {
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 </style>

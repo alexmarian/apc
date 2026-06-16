@@ -24,7 +24,7 @@ const buildingId = ref<number | null>(null)
 // UI state
 const showUnitEditModal = ref(false)
 const editingUnitId = ref<number | undefined>(undefined)
-const unitTypeFilter = ref<string | null>(null)
+const unitTypeFilter = ref<string[]>([])
 const searchQuery = ref<string | null>(null)
 const currentPage = ref<number>(1)
 
@@ -45,7 +45,7 @@ onMounted(() => {
   }
   // Restore filter state from URL
   if (route.query.unitTypeFilter) {
-    unitTypeFilter.value = route.query.unitTypeFilter as string
+    unitTypeFilter.value = (route.query.unitTypeFilter as string).split(',').filter(Boolean)
   }
   if (route.query.searchQuery) {
     searchQuery.value = route.query.searchQuery as string
@@ -118,7 +118,7 @@ const handleBuildingIdUpdate = (newBuildingId: number) => {
     query: {
       ...route.query,
       buildingId: newBuildingId.toString(),
-      unitTypeFilter: unitTypeFilter.value || undefined,
+      unitTypeFilter: unitTypeFilter.value.length > 0 ? unitTypeFilter.value.join(',') : undefined,
       searchQuery: searchQuery.value || undefined
     }
   })
@@ -136,9 +136,9 @@ watch([unitTypeFilter, searchQuery, currentPage], ([newUnitType, newSearch, newP
     router.replace({
       query: {
         ...route.query,
-        unitTypeFilter: newUnitType || undefined,
+        unitTypeFilter: (newUnitType as string[]).length > 0 ? (newUnitType as string[]).join(',') : undefined,
         searchQuery: newSearch || undefined,
-        page: newPage > 1 ? newPage.toString() : undefined
+        page: (newPage as number) > 1 ? (newPage as number).toString() : undefined
       }
     })
   }
@@ -182,7 +182,7 @@ watch([unitTypeFilter, searchQuery, currentPage], ([newUnitType, newSearch, newP
         :page="currentPage"
         @edit="handleEditUnit"
         @units-rendered="setDisplayedUnits"
-        @unit-type-changed="newUnitType => unitTypeFilter = newUnitType"
+        @unit-type-changed="(newUnitType: string[]) => unitTypeFilter = newUnitType"
         @search-query-changed="newQuery => searchQuery = newQuery"
         @page-changed="newPage => currentPage = newPage"
       />
