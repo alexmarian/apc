@@ -27,6 +27,7 @@ type Unit struct {
 	UnitType        string    `json:"unit_type"`
 	Floor           int64     `json:"floor"`
 	RoomCount       int64     `json:"room_count"`
+	OwnerNames      string    `json:"owner_names,omitempty"`
 	CreatedAt       time.Time `json:"createdAt"`
 	UpdatedAt       time.Time `json:"updatedAt"`
 }
@@ -44,17 +45,24 @@ type UnitUpdateRequest struct {
 
 func HandleGetBuildingUnits(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		//associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
+		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
 		buildingId, _ := strconv.Atoi(req.PathValue(BuildingIdPathValue))
-		unitsFromList, err := cfg.Db.GetBuildingUnits(req.Context(), int64(buildingId))
+		unitsFromList, err := cfg.Db.GetBuildingUnitsWithOwners(req.Context(), database.GetBuildingUnitsWithOwnersParams{
+			AssociationID: int64(associationId),
+			BuildingID:    int64(buildingId),
+		})
 		if err != nil {
-			var errors = fmt.Sprintf("Error getting associations: %s", err)
-			logging.Logger.Log(zap.WarnLevel, "Error getting associations")
+			var errors = fmt.Sprintf("Error getting units: %s", err)
+			logging.Logger.Log(zap.WarnLevel, "Error getting units")
 			RespondWithError(rw, http.StatusInternalServerError, errors)
 			return
 		}
 		units := make([]Unit, len(unitsFromList))
 		for i, unit := range unitsFromList {
+			ownerNames := ""
+			if unit.OwnerNames != nil {
+				ownerNames = fmt.Sprintf("%v", unit.OwnerNames)
+			}
 			units[i] = Unit{
 				ID:              unit.ID,
 				CadastralNumber: unit.CadastralNumber,
@@ -67,6 +75,7 @@ func HandleGetBuildingUnits(cfg *ApiConfig) func(http.ResponseWriter, *http.Requ
 				UnitType:        unit.UnitType,
 				Floor:           unit.Floor,
 				RoomCount:       unit.RoomCount,
+				OwnerNames:      ownerNames,
 				CreatedAt:       unit.CreatedAt.Time,
 				UpdatedAt:       unit.UpdatedAt.Time,
 			}

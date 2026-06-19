@@ -83,7 +83,7 @@ const filteredUnits = computed(() => {
     const query = debouncedSearchQuery.value.toLowerCase()
     result = result.filter(unit =>
       unit.unit_number.toLowerCase().includes(query) ||
-      unit.address.toLowerCase().includes(query) ||
+      (unit.owner_names || '').toLowerCase().includes(query) ||
       unit.cadastral_number.toLowerCase().includes(query)
     )
   }
@@ -96,12 +96,15 @@ const columns = computed<DataTableColumns<Unit>>(() => [
   {
     title: t('units.cadastralNumber', 'Cadastral Number'),
     key: 'cadastral_number',
-    sorter: 'default'
+    sorter: 'default',
+    titleColSpan: 1,
+    render: (row) => h('span', { style: 'white-space: nowrap' }, row.cadastral_number)
   },
   {
     title: t('units.unitNumber', 'Unit Number'),
     key: 'unit_number',
-    sorter: 'default'
+    sorter: 'default',
+    width: 80
   },
   {
     title: t('units.type', 'Type'),
@@ -133,8 +136,8 @@ const columns = computed<DataTableColumns<Unit>>(() => [
     key: 'room_count'
   },
   {
-    title: t('units.address', 'Address'),
-    key: 'address'
+    title: t('units.owners', 'Owners'),
+    key: 'owner_names'
   },
   {
     title: t('common.actions', 'Actions'),
@@ -293,28 +296,30 @@ onMounted(() => {
 <template>
   <div class="units-list">
     <NCard style="margin-top: 16px;">
-      <NFlex align="center" :wrap="false">
-        <NText style="white-space: nowrap">{{ t('common.search', 'Search') }}:</NText>
-        <NInput
-          :value="searchQuery"
-          @update:value="searchQueryChanged"
-          :placeholder="t('units.searchPlaceholder', 'Search by unit number, address...')"
-          clearable
-          style="width: 300px"
-        />
-        <NText style="white-space: nowrap">{{ t('units.type', 'Unit Type') }}:</NText>
-        <NSelect
-          :value="unitTypeFilter"
-          @update:value="unitTypeChanged"
-          :options="availableUnitTypes"
-          :placeholder="t('units.allTypes', 'All Types')"
-          multiple
-          clearable
-          :max-tag-count="2"
-          style="min-width: 200px"
-        />
-        <NButton @click="resetFilters" style="white-space: nowrap">{{ t('common.reset_filters', 'Reset Filters') }}</NButton>
-      </NFlex>
+      <div class="filter-bar">
+        <div class="filter-search">
+          <NText style="white-space: nowrap">{{ t('common.search', 'Search') }}:</NText>
+          <NInput
+            :value="searchQuery"
+            @update:value="searchQueryChanged"
+            :placeholder="t('units.searchPlaceholder', 'Search by unit number, owner...')"
+            clearable
+          />
+        </div>
+        <div class="filter-type">
+          <NText style="white-space: nowrap">{{ t('units.type', 'Unit Type') }}:</NText>
+          <NSelect
+            :value="unitTypeFilter"
+            @update:value="unitTypeChanged"
+            :options="availableUnitTypes"
+            :placeholder="t('units.allTypes', 'All Types')"
+            multiple
+            clearable
+            :max-tag-count="2"
+          />
+          <NButton @click="resetFilters" style="white-space: nowrap">{{ t('common.reset_filters', 'Reset Filters') }}</NButton>
+        </div>
+      </div>
     </NCard>
 
     <NCard style="margin-top: 16px;">
@@ -359,6 +364,26 @@ onMounted(() => {
 <style scoped>
 .units-list {
   margin: 1rem 0;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.filter-search {
+  flex: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-type {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .summary {

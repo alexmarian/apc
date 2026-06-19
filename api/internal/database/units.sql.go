@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 )
 
 const getBuildingUnit = `-- name: GetBuildingUnit :one
@@ -69,6 +70,77 @@ func (q *Queries) GetBuildingUnits(ctx context.Context, buildingID int64) ([]Uni
 			&i.RoomCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getBuildingUnitsWithOwners = `-- name: GetBuildingUnitsWithOwners :many
+
+SELECT u.id, u.cadastral_number, u.building_id, u.unit_number, u.address, u.entrance, u.area, u.part, u.unit_type, u.floor, u.room_count, u.created_at, u.updated_at,
+       COALESCE(GROUP_CONCAT(ow.name, ', '), '') as owner_names
+FROM units u
+LEFT JOIN ownerships o ON o.unit_id = u.id AND o.association_id = ? AND o.is_active = true
+LEFT JOIN owners ow ON ow.id = o.owner_id
+WHERE u.building_id = ?
+GROUP BY u.id
+`
+
+type GetBuildingUnitsWithOwnersParams struct {
+	AssociationID int64
+	BuildingID    int64
+}
+
+type GetBuildingUnitsWithOwnersRow struct {
+	ID              int64
+	CadastralNumber string
+	BuildingID      int64
+	UnitNumber      string
+	Address         string
+	Entrance        int64
+	Area            float64
+	Part            float64
+	UnitType        string
+	Floor           int64
+	RoomCount       int64
+	CreatedAt       sql.NullTime
+	UpdatedAt       sql.NullTime
+	OwnerNames      interface{}
+}
+
+func (q *Queries) GetBuildingUnitsWithOwners(ctx context.Context, arg GetBuildingUnitsWithOwnersParams) ([]GetBuildingUnitsWithOwnersRow, error) {
+	rows, err := q.db.QueryContext(ctx, getBuildingUnitsWithOwners, arg.AssociationID, arg.BuildingID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetBuildingUnitsWithOwnersRow
+	for rows.Next() {
+		var i GetBuildingUnitsWithOwnersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CadastralNumber,
+			&i.BuildingID,
+			&i.UnitNumber,
+			&i.Address,
+			&i.Entrance,
+			&i.Area,
+			&i.Part,
+			&i.UnitType,
+			&i.Floor,
+			&i.RoomCount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.OwnerNames,
 		); err != nil {
 			return nil, err
 		}

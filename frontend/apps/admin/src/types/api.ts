@@ -63,6 +63,7 @@ export interface Unit {
   unit_type: string;
   floor: number;
   room_count: number;
+  owner_names?: string;
   createdAt: string;
   updatedAt: string;
 }
