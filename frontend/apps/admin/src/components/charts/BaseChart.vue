@@ -118,7 +118,7 @@ const dataWithPercentages = computed(() => {
 }
 
 .legend-name {
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -126,7 +126,7 @@ const dataWithPercentages = computed(() => {
 }
 
 .legend-value {
-  font-size: 11px;
+  font-size: var(--text-xs);
   opacity: 0.8;
   white-space: nowrap;
 }

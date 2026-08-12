@@ -361,7 +361,7 @@ onMounted(() => {
 
 .breakdown-section h3 {
   margin-bottom: 10px;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   font-weight: 600;
 }
 

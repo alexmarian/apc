@@ -149,7 +149,7 @@ const handleLogin = async (e: MouseEvent) => {
   color: #e0e0e0;
   text-align: center;
   margin-bottom: 24px;
-  font-size: 1.5rem;
+  font-size: var(--text-xl);
 }
 
 .form-title.light {

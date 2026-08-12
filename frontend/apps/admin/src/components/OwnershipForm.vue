@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FormShell from '@/components/FormShell.vue'
 import { ref, reactive, onMounted, computed } from 'vue'
 import {
   NForm,
@@ -174,7 +175,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="ownership-form">
+  <FormShell>
     <h2>{{ props.mode === 'create'
       ? t('units.ownership.addNewOwner', 'Add New Owner')
       : t('units.ownership.selectExistingOwner', 'Select Existing Owner') }}
@@ -286,12 +287,6 @@ onMounted(() => {
         </div>
       </NForm>
     </NSpin>
-  </div>
+  </FormShell>
 </template>
 
-<style scoped>
-.ownership-form {
-  max-width: 600px;
-  margin: 0 auto;
-}
-</style>

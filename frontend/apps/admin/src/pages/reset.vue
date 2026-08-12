@@ -186,7 +186,7 @@ const goToLogin = () => {
   color: #e0e0e0;
   text-align: center;
   margin-bottom: 24px;
-  font-size: 1.5rem;
+  font-size: var(--text-xl);
 }
 
 .form-title.light {
@@ -199,7 +199,7 @@ const goToLogin = () => {
 }
 
 .help-text {
-  font-size: 0.85rem;
+  font-size: var(--text-md);
   color: #aaa;
   margin-top: 4px;
 }

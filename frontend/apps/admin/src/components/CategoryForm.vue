@@ -315,7 +315,7 @@ onMounted(async () => {
                 @click="typeKeyManuallyEdited = true"
               >
                 <template #prefix>
-                  <span style="color: #999; font-size: 12px;">{{ t('categories.i18nKey') }}:</span>
+                  <span style="color: #999; font-size: var(--text-sm);">{{ t('categories.i18nKey') }}:</span>
                 </template>
               </NInput>
             </div>
@@ -351,7 +351,7 @@ onMounted(async () => {
                 @click="familyKeyManuallyEdited = true"
               >
                 <template #prefix>
-                  <span style="color: #999; font-size: 12px;">{{ t('categories.i18nKey') }}:</span>
+                  <span style="color: #999; font-size: var(--text-sm);">{{ t('categories.i18nKey') }}:</span>
                 </template>
               </NInput>
             </div>
@@ -374,7 +374,7 @@ onMounted(async () => {
               @click="nameKeyManuallyEdited = true"
             >
               <template #prefix>
-                <span style="color: #999; font-size: 12px;">{{ t('categories.i18nKey') }}:</span>
+                <span style="color: #999; font-size: var(--text-sm);">{{ t('categories.i18nKey') }}:</span>
               </template>
             </NInput>
           </div>

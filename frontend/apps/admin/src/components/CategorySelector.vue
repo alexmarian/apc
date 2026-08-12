@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { NSelect, NSpin } from 'naive-ui'
+import FieldError from '@/components/FieldError.vue'
 import type { SelectInst } from 'naive-ui'
 import { categoryApi } from '@/services/api'
 import type { Category } from '@/types/api'
@@ -127,17 +128,12 @@ watch(
         :input-props="{ onKeydown: handleTabKey }"
       />
     </NSpin>
-    <p v-if="error" class="error">{{ error }}</p>
+    <FieldError v-if="error">{{ error }}</FieldError>
   </div>
 </template>
 
 <style scoped>
 .category-selector {
   width: 100%;
-}
-.error {
-  color: #d03050;
-  font-size: 0.8rem;
-  margin-top: 4px;
 }
 </style>

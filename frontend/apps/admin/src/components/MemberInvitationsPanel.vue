@@ -60,7 +60,7 @@
         <div v-for="item in generatedTokens" :key="item.ownerId" style="margin-bottom: 12px">
           <NText strong style="display: block; margin-bottom: 4px">{{ item.ownerName }}</NText>
           <NInputGroup>
-            <NInput :value="item.url" readonly style="font-size: 12px; font-family: monospace" />
+            <NInput :value="item.url" readonly style="font-size: var(--text-sm); font-family: monospace" />
             <NButton @click="copyUrl(item.url)" style="min-width: 70px">
               {{ copiedUrl === item.url ? '✓ Copied' : 'Copy' }}
             </NButton>

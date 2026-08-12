@@ -209,7 +209,7 @@ watch(isDark, () => {
 }
 
 .app-title {
-  font-size: 1.25rem;
+  font-size: var(--text-lg);
   font-weight: bold;
   margin: 0;
 }

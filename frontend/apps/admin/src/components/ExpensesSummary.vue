@@ -90,7 +90,7 @@ const topCategories = computed(() => {
           </div>
         </div>
       </div>
-      <div v-else class="no-data">{{ t('expenses.noCategoryData', 'No category data available') }}</div>
+      <NEmpty v-else size="small" :description="t('expenses.noCategoryData', 'No category data available')" />
     </template>
   </NCard>
 </template>
@@ -98,12 +98,6 @@ const topCategories = computed(() => {
 <style scoped>
 .expense-summary {
   margin-bottom: 20px;
-}
-
-.error {
-  color: #e03;
-  text-align: center;
-  padding: 1rem;
 }
 
 .top-categories {
@@ -128,15 +122,8 @@ const topCategories = computed(() => {
 
 .category-count {
   margin-left: 8px;
-  font-size: 0.85em;
+  font-size: var(--text-sm);
   opacity: 0.7;
   font-weight: normal;
-}
-
-.no-data {
-  text-align: center;
-  padding: 1rem;
-  color: var(--text-color);
-  opacity: 0.7;
 }
 </style>

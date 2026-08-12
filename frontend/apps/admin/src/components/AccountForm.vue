@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FormShell from '@/components/FormShell.vue'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { NForm, NFormItem, NInput, NButton, NSpace, NSpin, NAlert, useMessage } from 'naive-ui'
 import { accountApi } from '@/services/api'
@@ -136,7 +137,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="account-form">
+  <FormShell>
     <h2>{{ isEditMode ? t('accounts.editAccount') : t('accounts.createNew') }}</h2>
 
     <NSpin :show="loading">
@@ -157,7 +158,7 @@ onMounted(() => {
           <NInput
             :value="originalAccount.id.toString()"
             readonly
-            class="account-form__readonly-input"
+            class="readonly-input"
           />
         </NFormItem>
 
@@ -202,25 +203,8 @@ onMounted(() => {
         </div>
       </NForm>
     </NSpin>
-  </div>
+  </FormShell>
 </template>
 
 <style scoped>
-.account-form {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 1.5rem;
-  border-radius: 8px;
-}
-
-.account-form__readonly-input {
-  background-color: var(--input-color-disabled);
-  color: var(--text-color-disabled);
-}
-
-.account-form__readonly-input :deep(.n-input__input-el) {
-  background-color: var(--input-color-disabled) !important;
-  color: var(--text-color-disabled) !important;
-  cursor: not-allowed;
-}
 </style>

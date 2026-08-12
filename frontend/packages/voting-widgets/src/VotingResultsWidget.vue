@@ -81,7 +81,7 @@
                     {{ t('yourVote') }}
                   </NTag>
                 </NSpace>
-                <NText :depth="2" style="font-size: 12px">
+                <NText :depth="2" style="font-size: var(--text-sm, 12px)">
                   {{ vote.vote_count }} {{ vote.vote_count !== 1 ? t('votes') : t('vote') }}
                   ({{ vote.percentage.toFixed(1) }}%<template v-if="results?.statistics?.voting_mode === 'by_weight'">&nbsp;· {{ t('weight') }}: {{ vote.weight_percentage.toFixed(1) }}%</template>)
                 </NText>
@@ -98,7 +98,7 @@
 
             <!-- Quorum info -->
             <NDivider style="margin: 8px 0" />
-            <NText :depth="3" style="font-size: 12px">
+            <NText :depth="3" style="font-size: var(--text-sm, 12px)">
               {{ t('quorum') }}: {{ matter.quorum_info?.met ? t('quorumMet') : t('quorumNotMet') }}
               <template v-if="matter.quorum_info">
                 — {{ matter.quorum_info.achieved_percentage.toFixed(1) }}% {{ t('of') }}

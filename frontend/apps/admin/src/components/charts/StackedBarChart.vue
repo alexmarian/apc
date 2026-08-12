@@ -162,7 +162,7 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => ({
 }
 
 .legend-name {
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 500;
   white-space: nowrap;
 }

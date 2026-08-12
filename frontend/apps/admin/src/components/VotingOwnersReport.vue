@@ -607,12 +607,12 @@ watch(() => props.associationId, (newVal) => {
 }
 
 .stat-label {
-  font-size: 0.9rem;
+  font-size: var(--text-md);
   color: var(--text-color-secondary);
 }
 
 .stat-value {
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   font-weight: 600;
 }
 
@@ -631,7 +631,7 @@ watch(() => props.associationId, (newVal) => {
 
 .details-header h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
 }
 
 .empty-state {

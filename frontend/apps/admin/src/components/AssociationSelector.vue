@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { NSelect, NSpin } from 'naive-ui'
+import FieldError from '@/components/FieldError.vue'
 import config from '@/config'
 import type { Association } from '@/types/api'
 import { associationApi } from '@/services/api.ts'
@@ -82,7 +83,7 @@ onMounted(() => {
         :disabled="loading || associations.length === 0"
       />
     </NSpin>
-    <p v-if="error" class="error">{{ error }}</p>
+    <FieldError v-if="error">{{ error }}</FieldError>
   </div>
 </template>
 
@@ -90,10 +91,5 @@ onMounted(() => {
 .association-selector {
   width: 100%;
   max-width: 300px;
-}
-.error {
-  color: #d03050;
-  font-size: 0.8rem;
-  margin-top: 4px;
 }
 </style>

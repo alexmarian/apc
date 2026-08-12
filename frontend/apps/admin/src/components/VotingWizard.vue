@@ -44,7 +44,7 @@
                   {{ $t('gatherings.voting.memberLinkAlreadyActive') }}
                 </NAlert>
                 <NInputGroup v-else-if="invitationLink">
-                  <NInput :value="invitationLink" readonly style="font-size: 12px; font-family: monospace" />
+                  <NInput :value="invitationLink" readonly style="font-size: var(--text-sm); font-family: monospace" />
                   <NButton @click="copyInvitationLink" style="min-width: 80px">
                     {{ invitationLinkCopied ? $t('gatherings.voting.linkCopied') : $t('gatherings.voting.copyLink') }}
                   </NButton>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { NSelect, NSpin } from 'naive-ui'
+import FieldError from '@/components/FieldError.vue'
 import { buildingApi } from '@/services/api'
 import type { Building } from '@/types/api'
 import { useI18n } from 'vue-i18n'
@@ -86,16 +87,11 @@ watch(
         filterable
       />
     </NSpin>
-    <p v-if="error" class="error">{{ error }}</p>
+    <FieldError v-if="error">{{ error }}</FieldError>
   </div>
 </template>
 
 <style scoped>
-.error {
-  color: #d03050;
-  font-size: 0.8rem;
-  margin-top: 4px;
-}
 
 .building-selector {
   width: 100%;

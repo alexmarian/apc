@@ -8,7 +8,7 @@
       <NCard size="small">
         <template #header>{{ matterTitle(matter) }}</template>
 
-        <NText v-if="matter.description || matter.description_ru" :depth="2" style="display: block; margin-bottom: 12px; font-size: 13px">
+        <NText v-if="matter.description || matter.description_ru" :depth="2" style="display: block; margin-bottom: 12px; font-size: var(--text-md, 14px)">
           {{ matterDescription(matter) }}
         </NText>
 
@@ -66,7 +66,7 @@
 
         <!-- ranking -->
         <div v-else-if="matter.voting_config.type === 'ranking'">
-          <NText :depth="3" style="font-size: 12px; margin-bottom: 10px; display: block">
+          <NText :depth="3" style="font-size: var(--text-sm, 12px); margin-bottom: 10px; display: block">
             {{ t('rankingHint') }}
           </NText>
           <div

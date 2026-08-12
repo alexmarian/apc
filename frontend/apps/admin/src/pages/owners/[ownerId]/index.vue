@@ -403,7 +403,7 @@ onMounted(fetchOwnerDetail)
 }
 
 .section-title {
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
   font-weight: 600;
   margin: 0 0 12px;
 }
@@ -445,7 +445,7 @@ onMounted(fetchOwnerDetail)
 
 .type-card__label {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--text-md);
   margin-bottom: 8px;
   text-transform: capitalize;
 }
@@ -455,7 +455,7 @@ onMounted(fetchOwnerDetail)
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   line-height: 1.7;
 }
 

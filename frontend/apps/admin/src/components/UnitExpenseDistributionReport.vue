@@ -631,12 +631,12 @@ onMounted(() => {
 }
 
 .summary-label {
-  font-size: 0.9rem;
+  font-size: var(--text-md);
   color: #666;
 }
 
 .summary-value {
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   font-weight: 600;
 }
 
@@ -660,7 +660,7 @@ onMounted(() => {
 }
 
 .category-name {
-  font-size: 0.9rem;
+  font-size: var(--text-md);
 }
 
 .category-amount {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FormShell from '@/components/FormShell.vue'
 import { ref, reactive, onMounted, computed } from 'vue'
 import {
   NForm,
@@ -230,7 +231,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="owner-form">
+  <FormShell>
     <h2>{{ isEditMode ? t('owners.editOwner') : t('owners.createOwner') }}</h2>
 
     <NSpin :show="loading">
@@ -252,7 +253,7 @@ onMounted(() => {
           <NInput
             :value="originalOwner.id.toString()"
             readonly
-            class="owner-form__readonly-input"
+            class="readonly-input"
           />
         </NFormItem>
 
@@ -306,25 +307,8 @@ onMounted(() => {
         </div>
       </NForm>
     </NSpin>
-  </div>
+  </FormShell>
 </template>
 
 <style scoped>
-.owner-form {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 1.5rem;
-  border-radius: 8px;
-}
-
-.owner-form__readonly-input {
-  background-color: var(--input-color-disabled);
-  color: var(--text-color-disabled);
-}
-
-.owner-form__readonly-input :deep(.n-input__input-el) {
-  background-color: var(--input-color-disabled) !important;
-  color: var(--text-color-disabled) !important;
-  cursor: not-allowed;
-}
 </style>

@@ -7,10 +7,10 @@
     <template v-if="context">
       <!-- Gathering header -->
       <div style="margin-bottom: 16px">
-        <NText tag="h2" style="font-size: 18px; font-weight: 600; margin: 0 0 4px">
+        <NText tag="h2" style="font-size: var(--text-lg, 18px); font-weight: 600; margin: 0 0 4px">
           {{ context.gathering.title }}
         </NText>
-        <NText v-if="context.gathering.description" :depth="2" style="font-size: 14px; display: block">
+        <NText v-if="context.gathering.description" :depth="2" style="font-size: var(--text-md, 14px); display: block">
           {{ context.gathering.description }}
         </NText>
       </div>
@@ -61,7 +61,7 @@
           <NDescriptions :column="1" label-placement="left" size="small" style="margin-bottom: 16px">
             <NDescriptionsItem :label="t('ballotId')">{{ receipt.ballot_id }}</NDescriptionsItem>
             <NDescriptionsItem :label="t('verificationHash')">
-              <NText code style="font-size: 11px; word-break: break-all">
+              <NText code style="font-size: var(--text-xs, 11px); word-break: break-all">
                 {{ receipt.ballot_hash }}
               </NText>
             </NDescriptionsItem>
@@ -88,7 +88,7 @@
         <NCard v-else>
           <template #header>
             <span>{{ t('yourBallot') }}</span>
-            <NText :depth="3" style="font-size: 13px; margin-left: 8px">
+            <NText :depth="3" style="font-size: var(--text-md, 14px); margin-left: 8px">
               — {{ context.gathering.title }}
             </NText>
           </template>
@@ -105,10 +105,10 @@
           >
             <NCard size="small" embedded>
               <template #header>
-                <NText style="font-size: 14px">{{ matterTitle(matter) }}</NText>
+                <NText style="font-size: var(--text-md, 14px)">{{ matterTitle(matter) }}</NText>
                 <NTag size="tiny" style="margin-left: 8px">{{ t('informational') }}</NTag>
               </template>
-              <NText :depth="2" style="font-size: 13px">{{ matterDescription(matter) }}</NText>
+              <NText :depth="2" style="font-size: var(--text-md, 14px)">{{ matterDescription(matter) }}</NText>
             </NCard>
           </div>
 

@@ -6,6 +6,23 @@
  * so it tracks the active theme instead of the OS colour scheme.
  */
 
+/*
+ * Type scale. This is the one thing naive-ui cannot own: its font-size vars are
+ * a *component* scale (14/14/14/15/16px), not a typographic one, so it has no
+ * value to offer above body size. --text-md is naive's own 14px base, so the
+ * scale is anchored to it and steps out from there.
+ *
+ * Print output (PrintBallot.vue) builds its own standalone document and is
+ * deliberately excluded — paper wants different sizes than screens.
+ */
+:root {
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 14px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+}
+
 *,
 *::before,
 *::after {

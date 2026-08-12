@@ -351,7 +351,7 @@ onMounted(() => {
 }
 
 .ranking-hint {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: #999;
   margin-bottom: 8px;
 }

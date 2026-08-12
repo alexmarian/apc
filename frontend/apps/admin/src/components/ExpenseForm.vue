@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FormShell from '@/components/FormShell.vue'
 import { ref, reactive, onMounted, nextTick, computed } from 'vue'
 import {
   NForm,
@@ -258,7 +259,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="expense-form">
+  <FormShell>
     <NSpin :show="loading">
       <NAlert
         v-if="error"
@@ -285,7 +286,7 @@ onMounted(() => {
           <NInput
             :value="originalExpense.id.toString()"
             readonly
-            class="expense-form__readonly-input"
+            class="readonly-input"
           />
         </NFormItem>
 
@@ -381,34 +382,16 @@ onMounted(() => {
         </div>
       </NForm>
     </NSpin>
-  </div>
+  </FormShell>
 </template>
 
 <style scoped>
-.expense-form {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 1.5rem;
-  border-radius: 8px;
-}
-
 .expense-form__error {
   margin-bottom: 1rem;
 }
 
 .expense-form__form {
   margin-bottom: 1.5rem;
-}
-
-.expense-form__readonly-input {
-  background-color: var(--input-color-disabled);
-  color: var(--text-color-disabled);
-}
-
-.expense-form__readonly-input :deep(.n-input__input-el) {
-  background-color: var(--input-color-disabled) !important;
-  color: var(--text-color-disabled) !important;
-  cursor: not-allowed;
 }
 
 .expense-form__number-input,

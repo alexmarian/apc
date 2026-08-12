@@ -397,7 +397,7 @@ onMounted(() => {
 .summary {
   margin: 1rem 0;
   padding: 0.5rem 1rem;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   text-align: right;
   display: flex;
   justify-content: space-between;
@@ -408,7 +408,7 @@ onMounted(() => {
 }
 
 .date-range-label {
-  font-size: 0.9rem;
+  font-size: var(--text-md);
   color: var(--text-color);
   opacity: 0.8;
 }

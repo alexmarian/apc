@@ -77,7 +77,7 @@
                 <template #suffix>
                   <NTooltip>
                     <template #trigger>
-                      <span style="cursor: help; font-size: 12px; color: #888;">
+                      <span style="cursor: help; font-size: var(--text-sm); color: #888;">
                         &nbsp;({{ $t('gatherings.results.ofQualified') }})
                       </span>
                     </template>
@@ -107,7 +107,7 @@
                 <template #suffix>
                   <NTooltip>
                     <template #trigger>
-                      <span style="cursor: help; font-size: 12px; color: #888;">
+                      <span style="cursor: help; font-size: var(--text-sm); color: #888;">
                         &nbsp;({{ $t('gatherings.results.ofParticipating') }})
                       </span>
                     </template>
@@ -168,7 +168,7 @@
                   </NDescriptionsItem>
                   <NDescriptionsItem :label="$t('gatherings.results.totalWeight')">
                     {{ formatPercent(result.statistics.participation_rate) }}%
-                    <span style="font-size: 11px; color: #888;">&nbsp;{{ $t('gatherings.results.ofQualified') }}</span>
+                    <span style="font-size: var(--text-xs); color: #888;">&nbsp;{{ $t('gatherings.results.ofQualified') }}</span>
                   </NDescriptionsItem>
                   <NDescriptionsItem :label="$t('gatherings.results.abstentions')">
                     {{ result.statistics.abstentions }}
@@ -292,7 +292,7 @@ const getVoteColumns = (result: MatterResult): DataTableColumns<VoteResult> => {
           showIndicator: false,
           style: 'flex:1; min-width:60px;'
         }),
-        h('span', { style: 'font-size:12px; white-space:nowrap;' }, `${formatPercent(row.percentage)}%`)
+        h('span', { style: 'font-size: var(--text-sm); white-space:nowrap;' }, `${formatPercent(row.percentage)}%`)
       ])
     },
     {
@@ -313,7 +313,7 @@ const getVoteColumns = (result: MatterResult): DataTableColumns<VoteResult> => {
           showIndicator: false,
           style: 'flex:1; min-width:60px;'
         }),
-        h('span', { style: 'font-size:12px; white-space:nowrap;' }, `${formatPercent(row.weight_percentage)}%`)
+        h('span', { style: 'font-size: var(--text-sm); white-space:nowrap;' }, `${formatPercent(row.weight_percentage)}%`)
       ])
     },
     {
@@ -330,7 +330,7 @@ const getVoteColumns = (result: MatterResult): DataTableColumns<VoteResult> => {
             showIndicator: false,
             style: 'flex:1; min-width:60px;'
           }),
-          h('span', { style: 'font-size:12px; white-space:nowrap;' }, `${formatPercent(pct)}%`)
+          h('span', { style: 'font-size: var(--text-sm); white-space:nowrap;' }, `${formatPercent(pct)}%`)
         ])
       }
     }

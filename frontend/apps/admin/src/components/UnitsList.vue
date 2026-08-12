@@ -389,7 +389,7 @@ onMounted(() => {
 .summary {
   margin: 1rem 0;
   padding: 0.5rem 1rem;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -399,7 +399,7 @@ onMounted(() => {
 }
 
 .unit-count {
-  font-size: 0.9rem;
+  font-size: var(--text-md);
   color: var(--text-color);
   opacity: 0.8;
 }

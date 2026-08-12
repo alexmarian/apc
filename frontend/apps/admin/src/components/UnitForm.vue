@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FormShell from '@/components/FormShell.vue'
 import { ref, reactive, onMounted, nextTick, computed } from 'vue'
 import {
   NForm,
@@ -261,7 +262,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="unit-form">
+  <FormShell>
     <h2 class="unit-form__title">
       {{ isEditMode ? t('units.editUnit') : t('units.createUnit') }}
     </h2>
@@ -292,7 +293,7 @@ onMounted(() => {
             :value="originalUnit?.cadastral_number || ''"
             :placeholder="t('units.cadastralNumber')"
             readonly
-            class="unit-form__readonly-input"
+            class="readonly-input"
           />
         </NFormItem>
 
@@ -301,7 +302,7 @@ onMounted(() => {
             :value="originalUnit ? `${originalUnit.area.toFixed(2)} m²` : ''"
             :placeholder="t('units.area')"
             readonly
-            class="unit-form__readonly-input"
+            class="readonly-input"
           />
         </NFormItem>
 
@@ -310,7 +311,7 @@ onMounted(() => {
             :value="originalUnit ? `${(originalUnit.part * 100).toFixed(3)}%` : ''"
             :placeholder="t('units.part')"
             readonly
-            class="unit-form__readonly-input"
+            class="readonly-input"
           />
         </NFormItem>
 
@@ -385,20 +386,13 @@ onMounted(() => {
         </div>
       </NForm>
     </NSpin>
-  </div>
+  </FormShell>
 </template>
 
 <style scoped>
-.unit-form {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 1.5rem;
-  border-radius: 8px;
-}
-
 .unit-form__title {
   margin-bottom: 1.5rem;
-  font-size: 1.5rem;
+  font-size: var(--text-xl);
   font-weight: 600;
   color: var(--text-color-1);
 }
@@ -411,32 +405,8 @@ onMounted(() => {
   margin-bottom: 1.5rem;
 }
 
-.unit-form__readonly-input {
-  background-color: var(--input-color-disabled);
-  color: var(--text-color-disabled);
-}
-
-.unit-form__readonly-input :deep(.n-input__input-el) {
-  background-color: var(--input-color-disabled) !important;
-  color: var(--text-color-disabled) !important;
-  cursor: not-allowed;
-}
-
 .unit-form__number-input {
   width: 100%;
-}
-
-.unit-form__number-input--disabled {
-  --n-text-color-disabled: var(--text-color-2);
-}
-
-.unit-form__number-input--disabled :deep(.n-input-number-input) {
-  text-decoration: none !important;
-}
-
-.unit-form__number-input--disabled :deep(.n-input__input-el[disabled]) {
-  text-decoration: none !important;
-  -webkit-text-decoration: none !important;
 }
 
 .unit-form__actions {
