@@ -37,6 +37,17 @@ const tokens = computed<Record<string, string>>(() => {
     '--success-color': v.successColor,
     '--warning-color': v.warningColor,
     '--error-color': v.errorColor,
+
+    '--font-weight': v.fontWeight,
+    '--font-weight-strong': v.fontWeightStrong,
+    '--font-size': v.fontSize,
+    '--font-size-small': v.fontSizeSmall,
+    '--font-size-medium': v.fontSizeMedium,
+    '--font-size-large': v.fontSizeLarge,
+    '--font-size-huge': v.fontSizeHuge,
+
+    '--border-radius': v.borderRadius,
+    '--border-radius-small': v.borderRadiusSmall,
   }
 })
 

@@ -3,7 +3,8 @@
 import { ref, provide, computed, watchEffect, watch } from 'vue'
 import {
   darkTheme,
-  lightTheme
+  lightTheme,
+  NGlobalStyle
 } from 'naive-ui'
 import { usePreferences } from '@/stores/preferences.ts'
 import ThemeTokens from '@/providers/ThemeTokens.vue'
@@ -39,6 +40,7 @@ watch(currentTheme, () => {
   <NConfigProvider
     :theme="currentTheme"
   >
+    <NGlobalStyle />
     <ThemeTokens>
       <NLoadingBarProvider>
         <NDialogProvider>
