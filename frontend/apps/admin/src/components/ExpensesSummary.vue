@@ -96,12 +96,6 @@ const topCategories = computed(() => {
 </template>
 
 <style scoped>
-:root {
-  --background-color: #f9f9f9;
-  --border-color: #ddd;
-  --text-color: #555;
-}
-
 .expense-summary {
   margin-bottom: 20px;
 }

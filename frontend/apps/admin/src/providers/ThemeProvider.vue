@@ -6,6 +6,7 @@ import {
   lightTheme
 } from 'naive-ui'
 import { usePreferences } from '@/stores/preferences.ts'
+import ThemeTokens from '@/providers/ThemeTokens.vue'
 
 const preferences = usePreferences()
 const props = defineProps<{
@@ -38,17 +39,16 @@ watch(currentTheme, () => {
   <NConfigProvider
     :theme="currentTheme"
   >
-    <NLoadingBarProvider>
-      <NDialogProvider>
-        <NNotificationProvider>
-          <NMessageProvider>
-            <slot></slot>
-          </NMessageProvider>
-        </NNotificationProvider>
-      </NDialogProvider>
-    </NLoadingBarProvider>
+    <ThemeTokens>
+      <NLoadingBarProvider>
+        <NDialogProvider>
+          <NNotificationProvider>
+            <NMessageProvider>
+              <slot></slot>
+            </NMessageProvider>
+          </NNotificationProvider>
+        </NDialogProvider>
+      </NLoadingBarProvider>
+    </ThemeTokens>
   </NConfigProvider>
 </template>
-
-<style>
-</style>
