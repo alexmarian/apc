@@ -16,11 +16,11 @@ export function createMemberVotingService(token, apiBaseUrl = '') {
             const res = await fetch(`${base}/v1/api/member/gatherings/${token}/ballot`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ballot_content: content })
+                body: JSON.stringify({ ballot_content: content }),
             });
             if (!res.ok)
                 throw new HttpError(await parseError(res), res.status);
             return res.json();
-        }
+        },
     };
 }

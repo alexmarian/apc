@@ -32,7 +32,7 @@ export function useConfirm() {
     content,
     positiveText,
     tone = 'destructive',
-    onConfirm
+    onConfirm,
   }: ConfirmOptions) {
     const destructive = tone === 'destructive'
 
@@ -42,7 +42,7 @@ export function useConfirm() {
       positiveText: positiveText ?? t('common.confirm'),
       negativeText: t('common.cancel'),
       positiveButtonProps: destructive ? { type: 'error' } : undefined,
-      onPositiveClick: onConfirm
+      onPositiveClick: onConfirm,
     })
   }
 }

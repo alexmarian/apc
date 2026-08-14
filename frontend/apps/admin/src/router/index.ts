@@ -7,7 +7,7 @@ const authPages = ['/login', '/register', '/reset']
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes
+  routes,
 })
 
 // Register router service for logout navigation

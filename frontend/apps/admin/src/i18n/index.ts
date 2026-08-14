@@ -6,9 +6,8 @@ import ru from '@/i18n/locales/ru.json'
 
 // Get locale from browser or stored preference
 const getBrowserLocale = () => {
-  const navigatorLocale = navigator.languages !== undefined
-    ? navigator.languages[0]
-    : navigator.language
+  const navigatorLocale =
+    navigator.languages !== undefined ? navigator.languages[0] : navigator.language
 
   return navigatorLocale.split('-')[0]
 }
@@ -24,8 +23,8 @@ const i18n = createI18n({
   messages: {
     en,
     ro,
-    ru
-  }
+    ru,
+  },
 })
 
 // setLocale keeps this in sync afterwards, but it only runs on an actual

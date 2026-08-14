@@ -1,11 +1,11 @@
 <template>
   <div class="voting-wizard">
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" closable @close="error = null" style="margin-bottom: 16px;">
+      <NAlert v-if="error" type="error" closable @close="error = null" style="margin-bottom: 16px">
         {{ error }}
       </NAlert>
 
-      <NSteps :current="currentStep" style="margin-bottom: 24px;">
+      <NSteps :current="currentStep" style="margin-bottom: 24px">
         <NStep :title="$t('gatherings.voting.selectOwnerUnits')" />
         <NStep v-if="isDelegateVoting" :title="$t('gatherings.voting.delegateDetails')" />
         <NStep :title="$t('gatherings.voting.castBallot')" />
@@ -14,7 +14,7 @@
       <!-- Step 1: Select Owner and Units -->
       <div v-if="currentStep === 0" class="step-content">
         <NCard :title="$t('gatherings.voting.selectOwnerUnits')">
-          <NAlert type="info" style="margin-bottom: 16px;">
+          <NAlert type="info" style="margin-bottom: 16px">
             {{ $t('gatherings.voting.step1Instructions') }}
           </NAlert>
 
@@ -37,16 +37,28 @@
           </NFormItem>
 
           <!-- Invitation link -->
-          <div v-if="selectedOwnerId" style="margin-top: 8px; margin-bottom: 16px;">
+          <div v-if="selectedOwnerId" style="margin-top: 8px; margin-bottom: 16px">
             <NSpin :show="invitationLinkLoading" size="small">
               <template v-if="!invitationLinkLoading">
-                <NAlert v-if="ownerHasActiveInvitation && !invitationLink" type="info" style="margin-bottom: 0">
+                <NAlert
+                  v-if="ownerHasActiveInvitation && !invitationLink"
+                  type="info"
+                  style="margin-bottom: 0"
+                >
                   {{ $t('gatherings.voting.memberLinkAlreadyActive') }}
                 </NAlert>
                 <NInputGroup v-else-if="invitationLink">
-                  <NInput :value="invitationLink" readonly style="font-size: var(--text-sm); font-family: monospace" />
+                  <NInput
+                    :value="invitationLink"
+                    readonly
+                    style="font-size: var(--text-sm); font-family: monospace"
+                  />
                   <NButton @click="copyInvitationLink" style="min-width: 80px">
-                    {{ invitationLinkCopied ? $t('gatherings.voting.linkCopied') : $t('gatherings.voting.copyLink') }}
+                    {{
+                      invitationLinkCopied
+                        ? $t('gatherings.voting.linkCopied')
+                        : $t('gatherings.voting.copyLink')
+                    }}
                   </NButton>
                 </NInputGroup>
                 <NButton
@@ -62,39 +74,52 @@
           </div>
 
           <!-- Owner Units -->
-          <div v-if="selectedOwnerId && selectedOwner" style="margin-top: 16px;">
+          <div v-if="selectedOwnerId && selectedOwner" style="margin-top: 16px">
             <h4>{{ $t('gatherings.voting.availableUnits') }}</h4>
 
-            <NAlert v-if="selectedOwner.available_units_count === 0" type="warning" style="margin: 16px 0;">
+            <NAlert
+              v-if="selectedOwner.available_units_count === 0"
+              type="warning"
+              style="margin: 16px 0"
+            >
               {{ $t('gatherings.voting.noAvailableUnits') }}
             </NAlert>
 
-            <div v-else style="margin-top: 16px;">
+            <div v-else style="margin-top: 16px">
               <!-- Select All Checkbox -->
-              <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--n-border-color);">
-                <NCheckbox
-                  :checked="allUnitsSelected"
-                  @update:checked="handleSelectAllUnits"
-                >
+              <div
+                style="
+                  margin-bottom: 12px;
+                  padding-bottom: 12px;
+                  border-bottom: 1px solid var(--n-border-color);
+                "
+              >
+                <NCheckbox :checked="allUnitsSelected" @update:checked="handleSelectAllUnits">
                   <strong>{{ $t('common.selectAll') }}</strong>
-                  ({{ selectedOwner.units.filter(u => u.is_available).length }} {{ $t('gatherings.voting.availableUnits').toLowerCase() }})
+                  ({{ selectedOwner.units.filter((u) => u.is_available).length }}
+                  {{ $t('gatherings.voting.availableUnits').toLowerCase() }})
                 </NCheckbox>
               </div>
 
               <NCheckboxGroup v-model:value="selectedUnitIds">
                 <NSpace vertical>
                   <NCheckbox
-                    v-for="unit in selectedOwner.units.filter(u => u.is_available)"
+                    v-for="unit in selectedOwner.units.filter((u) => u.is_available)"
                     :key="unit.id"
                     :value="unit.id"
                   >
-                    <div style="display: flex; justify-content: space-between; min-width: 500px;">
+                    <div style="display: flex; justify-content: space-between; min-width: 500px">
                       <span>
                         <strong>{{ unit.unit_number }}</strong>
-                        - {{ unit.floor !== null ? $t('units.floor') + ': ' + unit.floor : $t('units.basement') }}
+                        -
+                        {{
+                          unit.floor !== null
+                            ? $t('units.floor') + ': ' + unit.floor
+                            : $t('units.basement')
+                        }}
                         ({{ $t('units.entrance') }}: {{ unit.entrance }})
                       </span>
-                      <span style="margin-left: 16px;">
+                      <span style="margin-left: 16px">
                         {{ unit.area.toFixed(2) }} m² ({{ (unit.voting_weight * 100).toFixed(4) }}%)
                       </span>
                     </div>
@@ -102,22 +127,19 @@
                 </NSpace>
               </NCheckboxGroup>
 
-              <NAlert v-if="selectedUnitIds.length > 0" type="info" style="margin-top: 16px;">
+              <NAlert v-if="selectedUnitIds.length > 0" type="info" style="margin-top: 16px">
                 {{ $t('gatherings.voting.selectedUnitsCount') }}: {{ selectedUnitIds.length }}
-                <br>
-                {{ $t('gatherings.voting.totalVotingWeight') }}: {{ totalSelectedWeight.toFixed(4) }}%
-                <br>
+                <br />
+                {{ $t('gatherings.voting.totalVotingWeight') }}:
+                {{ totalSelectedWeight.toFixed(4) }}%
+                <br />
                 {{ $t('gatherings.voting.totalArea') }}: {{ totalSelectedArea.toFixed(2) }} m²
               </NAlert>
             </div>
           </div>
 
-          <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
-            <NButton
-              type="primary"
-              :disabled="!canProceedStep1"
-              @click="nextStep"
-            >
+          <div style="margin-top: 24px; display: flex; justify-content: flex-end">
+            <NButton type="primary" :disabled="!canProceedStep1" @click="nextStep">
               {{ $t('common.next') }} →
             </NButton>
           </div>
@@ -127,11 +149,16 @@
       <!-- Step 2: Delegate Details (conditional) -->
       <div v-if="currentStep === 1 && isDelegateVoting" class="step-content">
         <NCard :title="$t('gatherings.voting.delegateDetails')">
-          <NAlert type="info" style="margin-bottom: 16px;">
+          <NAlert type="info" style="margin-bottom: 16px">
             {{ $t('gatherings.voting.step2Instructions') }}
           </NAlert>
 
-          <NForm ref="delegateFormRef" :model="delegateData" :rules="delegateRules" label-placement="top">
+          <NForm
+            ref="delegateFormRef"
+            :model="delegateData"
+            :rules="delegateRules"
+            label-placement="top"
+          >
             <NFormItem :label="$t('gatherings.participants.delegateName')" path="name">
               <NInput
                 v-model:value="delegateData.name"
@@ -154,15 +181,9 @@
             </NFormItem>
           </NForm>
 
-          <div style="margin-top: 24px; display: flex; justify-content: space-between;">
-            <NButton @click="previousStep">
-              ← {{ $t('common.back') }}
-            </NButton>
-            <NButton
-              type="primary"
-              :disabled="!canProceedStep2"
-              @click="nextStep"
-            >
+          <div style="margin-top: 24px; display: flex; justify-content: space-between">
+            <NButton @click="previousStep"> ← {{ $t('common.back') }} </NButton>
+            <NButton type="primary" :disabled="!canProceedStep2" @click="nextStep">
               {{ $t('common.next') }} →
             </NButton>
           </div>
@@ -170,14 +191,17 @@
       </div>
 
       <!-- Step 3: Cast Ballot -->
-      <div v-if="(currentStep === 1 && !isDelegateVoting) || (currentStep === 2 && isDelegateVoting)" class="step-content">
+      <div
+        v-if="(currentStep === 1 && !isDelegateVoting) || (currentStep === 2 && isDelegateVoting)"
+        class="step-content"
+      >
         <NCard :title="$t('gatherings.voting.castBallot')">
-          <NAlert type="info" style="margin-bottom: 16px;">
+          <NAlert type="info" style="margin-bottom: 16px">
             {{ $t('gatherings.voting.step3Instructions') }}
           </NAlert>
 
           <!-- Voting Summary -->
-          <NCard size="small" style="margin-bottom: 16px;">
+          <NCard size="small" style="margin-bottom: 16px">
             <template #header>
               <h4>{{ $t('gatherings.voting.summary') }}</h4>
             </template>
@@ -185,7 +209,10 @@
               <NDescriptionsItem :label="$t('gatherings.participants.owner')">
                 {{ selectedOwner?.owner.Name }}
               </NDescriptionsItem>
-              <NDescriptionsItem v-if="isDelegateVoting" :label="$t('gatherings.participants.delegate')">
+              <NDescriptionsItem
+                v-if="isDelegateVoting"
+                :label="$t('gatherings.participants.delegate')"
+              >
                 {{ delegateData.name }}
               </NDescriptionsItem>
               <NDescriptionsItem :label="$t('gatherings.voting.selectedUnits')">
@@ -200,10 +227,8 @@
           <!-- Voting Matters via shared BallotForm -->
           <BallotForm :matters="votingMatters" v-model="ballotVotes" />
 
-          <div style="margin-top: 24px; display: flex; justify-content: space-between;">
-            <NButton @click="previousStep">
-              ← {{ $t('common.back') }}
-            </NButton>
+          <div style="margin-top: 24px; display: flex; justify-content: space-between">
+            <NButton @click="previousStep"> ← {{ $t('common.back') }} </NButton>
             <NButton
               type="primary"
               :disabled="!canSubmitBallot"
@@ -241,7 +266,7 @@ import {
   NDescriptionsItem,
   useMessage,
   type FormInst,
-  type FormRules
+  type FormRules,
 } from 'naive-ui'
 import { BallotForm } from '@apc/voting-widgets'
 import { gatheringApi, votingMatterApi, votingApi, invitationApi } from '@/services/api'
@@ -305,7 +330,8 @@ const selectedOwnerId = ref<number | null>(null)
 const selectedUnitIds = ref<number[]>([])
 
 // Step 1: Invitation link
-const MEMBER_BASE_URL = import.meta.env.VITE_MEMBER_BASE_URL || 'https://member.blocul-nostru.online'
+const MEMBER_BASE_URL =
+  import.meta.env.VITE_MEMBER_BASE_URL || 'https://member.blocul-nostru.online'
 const ownerHasActiveInvitation = ref(false)
 const invitationLink = ref<string | null>(null)
 const invitationLinkLoading = ref(false)
@@ -317,16 +343,16 @@ const delegateFormRef = ref<FormInst | null>(null)
 const delegateData = ref({
   name: '',
   identification: '',
-  document: ''
+  document: '',
 })
 
 const delegateRules: FormRules = {
   name: [
-    { required: true, message: t('gatherings.participants.delegateNameRequired'), trigger: 'blur' }
+    { required: true, message: t('gatherings.participants.delegateNameRequired'), trigger: 'blur' },
   ],
   identification: [
-    { required: true, message: t('gatherings.participants.delegateIdRequired'), trigger: 'blur' }
-  ]
+    { required: true, message: t('gatherings.participants.delegateIdRequired'), trigger: 'blur' },
+  ],
 }
 
 // Step 3: Voting
@@ -336,15 +362,15 @@ const ballotVotes = ref<Record<string, string[]>>({})
 // Computed
 const selectedOwner = computed(() => {
   if (!selectedOwnerId.value) return null
-  return eligibleVoters.value.find(v => v.owner.ID === selectedOwnerId.value) || null
+  return eligibleVoters.value.find((v) => v.owner.ID === selectedOwnerId.value) || null
 })
 
 const ownerOptions = computed(() => {
   return eligibleVoters.value
-    .filter(v => v.has_available_units)
-    .map(v => ({
+    .filter((v) => v.has_available_units)
+    .map((v) => ({
       label: `${v.owner.Name} (${v.owner.IdentificationNumber})`,
-      value: v.owner.ID
+      value: v.owner.ID,
     }))
 })
 
@@ -356,7 +382,7 @@ const totalSelectedWeight = computed(() => {
 const totalSelectedArea = computed(() => {
   if (!selectedOwner.value) return 0
   return selectedOwner.value.units
-    .filter(u => selectedUnitIds.value.includes(u.id))
+    .filter((u) => selectedUnitIds.value.includes(u.id))
     .reduce((sum, u) => sum + u.area, 0)
 })
 
@@ -369,7 +395,7 @@ const canProceedStep2 = computed(() => {
 })
 
 const canSubmitBallot = computed(() => {
-  return votingMatters.value.every(m => (ballotVotes.value[String(m.id)]?.length ?? 0) > 0)
+  return votingMatters.value.every((m) => (ballotVotes.value[String(m.id)]?.length ?? 0) > 0)
 })
 
 // Methods
@@ -407,7 +433,7 @@ const handleOwnerChange = async () => {
   try {
     const res = await invitationApi.list(props.associationId, props.gathering.id)
     const active = (res.data as MemberInvitation[]).find(
-      inv => inv.owner_id === selectedOwnerId.value && inv.status === 'active'
+      (inv) => inv.owner_id === selectedOwnerId.value && inv.status === 'active',
     )
     ownerHasActiveInvitation.value = !!active
   } catch {
@@ -436,7 +462,7 @@ const generateInvitationLink = async () => {
   try {
     const res = await invitationApi.create(props.associationId, props.gathering.id, {
       owner_id: selectedOwnerId.value,
-      expires_at: defaultInvitationExpiry()
+      expires_at: defaultInvitationExpiry(),
     })
     invitationLink.value = `${MEMBER_BASE_URL}/${res.data.token}`
   } catch (err) {
@@ -450,16 +476,16 @@ const copyInvitationLink = async () => {
   if (!invitationLink.value) return
   await navigator.clipboard.writeText(invitationLink.value)
   invitationLinkCopied.value = true
-  setTimeout(() => { invitationLinkCopied.value = false }, 2000)
+  setTimeout(() => {
+    invitationLinkCopied.value = false
+  }, 2000)
 }
 
 const handleSelectAllUnits = (checked: boolean) => {
   if (!selectedOwner.value) return
 
   if (checked) {
-    selectedUnitIds.value = selectedOwner.value.units
-      .filter(u => u.is_available)
-      .map(u => u.id)
+    selectedUnitIds.value = selectedOwner.value.units.filter((u) => u.is_available).map((u) => u.id)
   } else {
     selectedUnitIds.value = []
   }
@@ -467,7 +493,7 @@ const handleSelectAllUnits = (checked: boolean) => {
 
 const allUnitsSelected = computed(() => {
   if (!selectedOwner.value) return false
-  const availableUnits = selectedOwner.value.units.filter(u => u.is_available)
+  const availableUnits = selectedOwner.value.units.filter((u) => u.is_available)
   return availableUnits.length > 0 && selectedUnitIds.value.length === availableUnits.length
 })
 
@@ -505,7 +531,7 @@ const submitBallot = async () => {
     for (const matter of votingMatters.value) {
       ballotContent[String(matter.id)] = {
         matter_id: matter.id,
-        values: ballotVotes.value[String(matter.id)] ?? []
+        values: ballotVotes.value[String(matter.id)] ?? [],
       }
     }
 
@@ -514,7 +540,7 @@ const submitBallot = async () => {
       voter_type: isDelegateVoting.value ? 'delegate' : 'owner',
       owner_id: selectedOwnerId.value,
       unit_ids: selectedUnitIds.value,
-      ballot_content: ballotContent
+      ballot_content: ballotContent,
     }
 
     if (isDelegateVoting.value) {
@@ -547,7 +573,7 @@ const resetWizard = () => {
   delegateData.value = {
     name: '',
     identification: '',
-    document: ''
+    document: '',
   }
   ballotVotes.value = {}
 

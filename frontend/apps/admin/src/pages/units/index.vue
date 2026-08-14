@@ -72,8 +72,8 @@ const handleEditUnit = (unitId: number) => {
   router.replace({
     query: {
       ...route.query,
-      editUnitId: unitId.toString()
-    }
+      editUnitId: unitId.toString(),
+    },
   })
 }
 
@@ -114,8 +114,8 @@ const handleBuildingIdUpdate = (newBuildingId: number) => {
       ...route.query,
       buildingId: newBuildingId.toString(),
       unitTypeFilter: unitTypeFilter.value.length > 0 ? unitTypeFilter.value.join(',') : undefined,
-      searchQuery: searchQuery.value || undefined
-    }
+      searchQuery: searchQuery.value || undefined,
+    },
   })
 }
 
@@ -131,10 +131,11 @@ watch([unitTypeFilter, searchQuery, currentPage], ([newUnitType, newSearch, newP
     router.replace({
       query: {
         ...route.query,
-        unitTypeFilter: (newUnitType as string[]).length > 0 ? (newUnitType as string[]).join(',') : undefined,
+        unitTypeFilter:
+          (newUnitType as string[]).length > 0 ? (newUnitType as string[]).join(',') : undefined,
         searchQuery: newSearch || undefined,
-        page: (newPage as number) > 1 ? (newPage as number).toString() : undefined
-      }
+        page: (newPage as number) > 1 ? (newPage as number).toString() : undefined,
+      },
     })
   }
 })
@@ -151,7 +152,9 @@ watch([unitTypeFilter, searchQuery, currentPage], ([newUnitType, newSearch, newP
     </template>
 
     <NCard v-if="!buildingId">
-      <NEmpty :description="t('units.selectBuilding', 'Please select a building to manage units')" />
+      <NEmpty
+        :description="t('units.selectBuilding', 'Please select a building to manage units')"
+      />
     </NCard>
 
     <UnitsList

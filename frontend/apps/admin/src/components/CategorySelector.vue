@@ -26,16 +26,16 @@ const error = ref<string | null>(null)
 
 const options = computed(() => {
   const categoryOptions = categories.value
-  .filter(category => !category.is_deleted)
-  .map(category => ({
-    label: `${t(`categories.types.${category.type}`, category.type)} → ${t(`categories.families.${category.family}`, category.family)} → ${t(`categories.names.${category.name}`, category.name)}`,
-    value: category.id
-  }))
+    .filter((category) => !category.is_deleted)
+    .map((category) => ({
+      label: `${t(`categories.types.${category.type}`, category.type)} → ${t(`categories.families.${category.family}`, category.family)} → ${t(`categories.names.${category.name}`, category.name)}`,
+      value: category.id,
+    }))
 
   if (props.includeAllOption) {
     categoryOptions.unshift({
-      label: t('categories.allCategories','All Categories'),
-      value: null as any // Need to cast this because TypeScript doesn't like null values
+      label: t('categories.allCategories', 'All Categories'),
+      value: null as any, // Need to cast this because TypeScript doesn't like null values
     })
   }
 
@@ -52,7 +52,6 @@ const fetchCategories = async () => {
 
     const response = await categoryApi.getCategories(props.associationId)
     categories.value = response.data
-
   } catch (err) {
     console.error('Error fetching categories:', err)
     error.value = 'Failed to load categories'
@@ -62,7 +61,10 @@ const fetchCategories = async () => {
 }
 
 const normalize = (s: string) =>
-  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
 
 const filterOption: import('naive-ui').SelectFilter = (pattern, option) => {
   return typeof option.label === 'string' && normalize(option.label).includes(normalize(pattern))
@@ -85,8 +87,8 @@ const handleTabKey = (e: KeyboardEvent) => {
   if (e.key !== 'Tab') return
   const query = currentFilter.value.trim()
   if (!query) return
-  const matched = options.value.find(o =>
-    o.value !== null && normalize(o.label).includes(normalize(query))
+  const matched = options.value.find(
+    (o) => o.value !== null && normalize(o.label).includes(normalize(query)),
   )
   if (matched) {
     emit('update:modelValue', matched.value)
@@ -104,7 +106,7 @@ watch(
   () => {
     fetchCategories()
   },
-  { immediate: true }
+  { immediate: true },
 )
 </script>
 
@@ -117,7 +119,7 @@ watch(
         :filter="filterOption"
         :value="props.modelValue"
         :options="options"
-        :placeholder="placeholder || t('common.select','Select a category')"
+        :placeholder="placeholder || t('common.select', 'Select a category')"
         @update:value="handleChange"
         @search="handleSearch"
         @focus="handleFocus"

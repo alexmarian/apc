@@ -7,11 +7,7 @@
 
       <NCard :title="$t('gatherings.ballots.title')">
         <template #header-extra>
-          <NButton
-            type="primary"
-            @click="handleDownloadBallots"
-            :loading="downloading"
-          >
+          <NButton type="primary" @click="handleDownloadBallots" :loading="downloading">
             <template #icon>
               <NIcon><DownloadOutlined /></NIcon>
             </template>
@@ -30,7 +26,7 @@
             :columns="columns"
             :data="ballots"
             :pagination="pagination"
-            :row-key="row => row.id"
+            :row-key="(row) => row.id"
           />
         </div>
       </NCard>
@@ -49,7 +45,7 @@ import {
   NSpin,
   NDataTable,
   NTag,
-  type DataTableColumns
+  type DataTableColumns,
 } from 'naive-ui'
 import { DownloadOutlined } from '@vicons/antd'
 import { votingApi } from '@/services/api'
@@ -84,20 +80,20 @@ const error = ref<string | null>(null)
 const ballots = ref<Ballot[]>([])
 
 const pagination = {
-  pageSize: 20
+  pageSize: 20,
 }
 
 const columns: DataTableColumns<Ballot> = [
   {
     title: t('gatherings.ballots.participant'),
     key: 'participant_name',
-    width: 200
+    width: 200,
   },
   {
     title: t('gatherings.ballots.unitsCount'),
     key: 'units_info',
     width: 100,
-    render: (row) => row.units_info.length
+    render: (row) => row.units_info.length,
   },
   {
     title: t('gatherings.ballots.weight'),
@@ -105,8 +101,8 @@ const columns: DataTableColumns<Ballot> = [
     width: 120,
     render: (row) => {
       if (!props.gathering.qualified_weight) return row.units_part.toFixed(4)
-      return `${(row.units_part / props.gathering.qualified_weight * 100).toFixed(2)}%`
-    }
+      return `${((row.units_part / props.gathering.qualified_weight) * 100).toFixed(2)}%`
+    },
   },
   {
     title: t('gatherings.ballots.area'),
@@ -114,37 +110,38 @@ const columns: DataTableColumns<Ballot> = [
     width: 120,
     render: (row) => {
       if (!props.gathering.qualified_area) return `${row.units_area.toFixed(2)} m²`
-      return `${row.units_area.toFixed(2)} m² (${(row.units_area / props.gathering.qualified_area * 100).toFixed(2)}%)`
-    }
+      return `${row.units_area.toFixed(2)} m² (${((row.units_area / props.gathering.qualified_area) * 100).toFixed(2)}%)`
+    },
   },
   {
     title: t('gatherings.ballots.submittedAt'),
     key: 'submitted_at',
     width: 180,
-    render: (row) => new Date(row.submitted_at).toLocaleString()
+    render: (row) => new Date(row.submitted_at).toLocaleString(),
   },
   {
     title: t('gatherings.ballots.status'),
     key: 'is_valid',
     width: 100,
-    render: (row) => h(
-      NTag,
-      {
-        type: row.is_valid ? 'success' : 'error',
-        size: 'small'
-      },
-      { default: () => row.is_valid ? t('common.valid') : t('common.invalid') }
-    )
+    render: (row) =>
+      h(
+        NTag,
+        {
+          type: row.is_valid ? 'success' : 'error',
+          size: 'small',
+        },
+        { default: () => (row.is_valid ? t('common.valid') : t('common.invalid')) },
+      ),
   },
   {
     title: t('gatherings.ballots.hash'),
     key: 'ballot_hash',
     width: 150,
     ellipsis: {
-      tooltip: true
+      tooltip: true,
     },
-    render: (row) => row.ballot_hash.substring(0, 16) + '...'
-  }
+    render: (row) => row.ballot_hash.substring(0, 16) + '...',
+  },
 ]
 
 const loadBallots = async () => {

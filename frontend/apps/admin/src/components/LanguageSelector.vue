@@ -11,13 +11,13 @@ const preferences = usePreferences()
 // Available languages
 const languages = [
   { label: 'English', key: 'en' },
-  { label: 'Română', key: 'ro' }
+  { label: 'Română', key: 'ro' },
 ]
 
 const selectedLocale = ref(preferences.locale || 'en')
 i18n.locale.value = selectedLocale.value
 const currentLanguage = computed(() => {
-  return languages.find(language => language.key === selectedLocale.value) || languages[0]
+  return languages.find((language) => language.key === selectedLocale.value) || languages[0]
 })
 // Handle language change
 const handleLanguageChange = (key: string) => {
@@ -25,7 +25,7 @@ const handleLanguageChange = (key: string) => {
   i18n.locale.value = key
   // Save the selected language in preferences
   preferences.setLocale(key)
-  selectedLocale.value= key
+  selectedLocale.value = key
 }
 </script>
 

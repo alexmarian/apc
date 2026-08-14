@@ -3,11 +3,7 @@
     <NCard :title="$t('gatherings.matters.title')">
       <template #header-extra>
         <NSpace>
-          <NButton
-            v-if="canEdit"
-            type="primary"
-            @click="showCreateModal = true"
-          >
+          <NButton v-if="canEdit" type="primary" @click="showCreateModal = true">
             {{ $t('gatherings.matters.create') }}
           </NButton>
         </NSpace>
@@ -21,11 +17,7 @@
         <div v-if="matters.length === 0" class="no-matters">
           <NEmpty :description="$t('gatherings.matters.noMatters')">
             <template #extra>
-              <NButton
-                v-if="canEdit"
-                type="primary"
-                @click="showCreateModal = true"
-              >
+              <NButton v-if="canEdit" type="primary" @click="showCreateModal = true">
                 {{ $t('gatherings.matters.create') }}
               </NButton>
             </template>
@@ -61,7 +53,6 @@
         @cancelled="handleModalCancelled"
       />
     </NModal>
-
   </div>
 </template>
 
@@ -79,7 +70,7 @@ import {
   NEmpty,
   NTag,
   NIcon,
-  type DataTableColumns
+  type DataTableColumns,
 } from 'naive-ui'
 import { ArrowUpOutline, ArrowDownOutline } from '@vicons/ionicons5'
 import { votingMatterApi } from '@/services/api'
@@ -130,25 +121,20 @@ const getMatterTypeColor = (type: VotingMatterType) => {
 }
 
 const handleMoveUp = async (matter: VotingMatter) => {
-  const index = matters.value.findIndex(m => m.id === matter.id)
+  const index = matters.value.findIndex((m) => m.id === matter.id)
   if (index === 0) return
 
   const targetMatter = matters.value[index - 1]
 
   try {
     // Swap order_index values
-    await votingMatterApi.updateVotingMatter(
-      props.associationId,
-      props.gathering.id,
-      matter.id,
-      {
-        title: matter.title,
-        description: matter.description,
-        matter_type: matter.matter_type,
-        order_index: targetMatter.order_index,
-        voting_config: matter.voting_config
-      }
-    )
+    await votingMatterApi.updateVotingMatter(props.associationId, props.gathering.id, matter.id, {
+      title: matter.title,
+      description: matter.description,
+      matter_type: matter.matter_type,
+      order_index: targetMatter.order_index,
+      voting_config: matter.voting_config,
+    })
 
     await votingMatterApi.updateVotingMatter(
       props.associationId,
@@ -159,8 +145,8 @@ const handleMoveUp = async (matter: VotingMatter) => {
         description: targetMatter.description,
         matter_type: targetMatter.matter_type,
         order_index: matter.order_index,
-        voting_config: targetMatter.voting_config
-      }
+        voting_config: targetMatter.voting_config,
+      },
     )
 
     await loadMatters()
@@ -171,25 +157,20 @@ const handleMoveUp = async (matter: VotingMatter) => {
 }
 
 const handleMoveDown = async (matter: VotingMatter) => {
-  const index = matters.value.findIndex(m => m.id === matter.id)
+  const index = matters.value.findIndex((m) => m.id === matter.id)
   if (index === matters.value.length - 1) return
 
   const targetMatter = matters.value[index + 1]
 
   try {
     // Swap order_index values
-    await votingMatterApi.updateVotingMatter(
-      props.associationId,
-      props.gathering.id,
-      matter.id,
-      {
-        title: matter.title,
-        description: matter.description,
-        matter_type: matter.matter_type,
-        order_index: targetMatter.order_index,
-        voting_config: matter.voting_config
-      }
-    )
+    await votingMatterApi.updateVotingMatter(props.associationId, props.gathering.id, matter.id, {
+      title: matter.title,
+      description: matter.description,
+      matter_type: matter.matter_type,
+      order_index: targetMatter.order_index,
+      voting_config: matter.voting_config,
+    })
 
     await votingMatterApi.updateVotingMatter(
       props.associationId,
@@ -200,8 +181,8 @@ const handleMoveDown = async (matter: VotingMatter) => {
         description: targetMatter.description,
         matter_type: targetMatter.matter_type,
         order_index: matter.order_index,
-        voting_config: targetMatter.voting_config
-      }
+        voting_config: targetMatter.voting_config,
+      },
     )
 
     await loadMatters()
@@ -217,92 +198,132 @@ const columns: DataTableColumns<VotingMatter> = [
     key: 'order_index',
     width: 100,
     render: (row) => {
-      const index = matters.value.findIndex(m => m.id === row.id)
-      return h(NSpace, { align: 'center' }, {
-        default: () => [
-          h(NButton, {
-            size: 'small',
-            circle: true,
-            disabled: !canEdit.value || index === 0,
-            onClick: () => handleMoveUp(row)
-          }, {
-            default: () => h(NIcon, {}, {
-              default: () => h(ArrowUpOutline)
-            })
-          }),
-          h('span', { style: { margin: '0 8px' } }, row.order_index),
-          h(NButton, {
-            size: 'small',
-            circle: true,
-            disabled: !canEdit.value || index === matters.value.length - 1,
-            onClick: () => handleMoveDown(row)
-          }, {
-            default: () => h(NIcon, {}, {
-              default: () => h(ArrowDownOutline)
-            })
-          })
-        ]
-      })
-    }
+      const index = matters.value.findIndex((m) => m.id === row.id)
+      return h(
+        NSpace,
+        { align: 'center' },
+        {
+          default: () => [
+            h(
+              NButton,
+              {
+                size: 'small',
+                circle: true,
+                disabled: !canEdit.value || index === 0,
+                onClick: () => handleMoveUp(row),
+              },
+              {
+                default: () =>
+                  h(
+                    NIcon,
+                    {},
+                    {
+                      default: () => h(ArrowUpOutline),
+                    },
+                  ),
+              },
+            ),
+            h('span', { style: { margin: '0 8px' } }, row.order_index),
+            h(
+              NButton,
+              {
+                size: 'small',
+                circle: true,
+                disabled: !canEdit.value || index === matters.value.length - 1,
+                onClick: () => handleMoveDown(row),
+              },
+              {
+                default: () =>
+                  h(
+                    NIcon,
+                    {},
+                    {
+                      default: () => h(ArrowDownOutline),
+                    },
+                  ),
+              },
+            ),
+          ],
+        },
+      )
+    },
   },
   {
     title: t('gatherings.matters.title'),
     key: 'title',
     width: 200,
     ellipsis: {
-      tooltip: true
-    }
+      tooltip: true,
+    },
   },
   {
     title: t('gatherings.matters.type'),
     key: 'matter_type',
     width: 120,
-    render: (row) => h(NTag, {
-      type: getMatterTypeColor(row.matter_type),
-      size: 'small'
-    }, {
-      default: () => t(`gatherings.matters.types.${row.matter_type}`)
-    })
+    render: (row) =>
+      h(
+        NTag,
+        {
+          type: getMatterTypeColor(row.matter_type),
+          size: 'small',
+        },
+        {
+          default: () => t(`gatherings.matters.types.${row.matter_type}`),
+        },
+      ),
   },
   {
     title: t('gatherings.matters.votingType'),
     key: 'voting_config',
     width: 150,
-    render: (row) => t(`gatherings.matters.votingTypes.${row.voting_config.type}`)
+    render: (row) => t(`gatherings.matters.votingTypes.${row.voting_config.type}`),
   },
   {
     title: t('gatherings.matters.majorityType'),
     key: 'voting_config',
     width: 120,
-    render: (row) => t(`gatherings.matters.majorityTypes.${row.voting_config.required_majority}`)
+    render: (row) => t(`gatherings.matters.majorityTypes.${row.voting_config.required_majority}`),
   },
   {
     title: t('gatherings.matters.isAnonymous'),
     key: 'voting_config',
     width: 100,
-    render: (row) => row.voting_config.is_anonymous ? t('common.yes') : t('common.no')
+    render: (row) => (row.voting_config.is_anonymous ? t('common.yes') : t('common.no')),
   },
   {
     title: t('common.actions'),
     key: 'actions',
     width: 180,
-    render: (row) => h(NSpace, {}, {
-      default: () => [
-        h(NButton, {
-          size: 'small',
-          onClick: () => handleEditMatter(row),
-          disabled: !canEdit.value
-        }, { default: () => t('common.edit') }),
+    render: (row) =>
+      h(
+        NSpace,
+        {},
+        {
+          default: () => [
+            h(
+              NButton,
+              {
+                size: 'small',
+                onClick: () => handleEditMatter(row),
+                disabled: !canEdit.value,
+              },
+              { default: () => t('common.edit') },
+            ),
 
-        h(NButton, {
-          size: 'small',
-          type: 'error',
-          onClick: () => handleDeleteConfirm(row),
-          disabled: !canEdit.value
-        }, { default: () => t('common.delete') })
-      ]
-    })
-  }
+            h(
+              NButton,
+              {
+                size: 'small',
+                type: 'error',
+                onClick: () => handleDeleteConfirm(row),
+                disabled: !canEdit.value,
+              },
+              { default: () => t('common.delete') },
+            ),
+          ],
+        },
+      ),
+  },
 ]
 
 const loadMatters = async () => {
@@ -329,17 +350,13 @@ const handleDeleteConfirm = (matter: VotingMatter) => {
     title: t('gatherings.matters.deleteConfirm'),
     content: `${t('gatherings.matters.deleteWarning')}\n\n${matter.title}`,
     positiveText: t('common.delete'),
-    onConfirm: () => deleteMatter(matter)
+    onConfirm: () => deleteMatter(matter),
   })
 }
 
 const deleteMatter = async (matter: VotingMatter) => {
   try {
-    await votingMatterApi.deleteVotingMatter(
-      props.associationId,
-      props.gathering.id,
-      matter.id
-    )
+    await votingMatterApi.deleteVotingMatter(props.associationId, props.gathering.id, matter.id)
 
     await loadMatters()
     emit('updated')

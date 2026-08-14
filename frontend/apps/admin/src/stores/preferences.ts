@@ -3,7 +3,7 @@ import { ref } from 'vue'
 
 const keys = {
   theme: 'theme',
-  locale: 'locale'
+  locale: 'locale',
 }
 // Create the auth store
 export const usePreferences = defineStore('preferences', () => {
@@ -29,6 +29,6 @@ export const usePreferences = defineStore('preferences', () => {
 
     // Actions
     setTheme,
-    setLocale
+    setLocale,
   }
 })

@@ -5,7 +5,7 @@
         {{ error }}
       </NAlert>
 
-      <NAlert v-if="props.gathering.status === 'active'" type="warning" style="margin-bottom: 16px;">
+      <NAlert v-if="props.gathering.status === 'active'" type="warning" style="margin-bottom: 16px">
         {{ $t('gatherings.results.preliminary') }}
       </NAlert>
 
@@ -18,12 +18,8 @@
       </div>
 
       <div v-else class="results-content">
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
-          <NButton
-            type="primary"
-            @click="handleDownloadResults"
-            :loading="downloading"
-          >
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 16px">
+          <NButton type="primary" @click="handleDownloadResults" :loading="downloading">
             <template #icon>
               <NIcon><DownloadOutlined /></NIcon>
             </template>
@@ -77,7 +73,7 @@
                 <template #suffix>
                   <NTooltip>
                     <template #trigger>
-                      <span style="cursor: help; font-size: var(--text-sm); color: #888;">
+                      <span style="cursor: help; font-size: var(--text-sm); color: #888">
                         &nbsp;({{ $t('gatherings.results.ofQualified') }})
                       </span>
                     </template>
@@ -107,7 +103,7 @@
                 <template #suffix>
                   <NTooltip>
                     <template #trigger>
-                      <span style="cursor: help; font-size: var(--text-sm); color: #888;">
+                      <span style="cursor: help; font-size: var(--text-sm); color: #888">
                         &nbsp;({{ $t('gatherings.results.ofParticipating') }})
                       </span>
                     </template>
@@ -125,11 +121,12 @@
             <template #header>
               <div class="matter-header">
                 <h4>{{ result.matter_title }}</h4>
-                <NTag
-                  :type="result.is_passed ? 'success' : 'error'"
-                  size="large"
-                >
-                  {{ result.is_passed ? $t('gatherings.results.passed') : $t('gatherings.results.failed') }}
+                <NTag :type="result.is_passed ? 'success' : 'error'" size="large">
+                  {{
+                    result.is_passed
+                      ? $t('gatherings.results.passed')
+                      : $t('gatherings.results.failed')
+                  }}
                 </NTag>
               </div>
             </template>
@@ -138,13 +135,16 @@
             <NAlert
               v-if="result.quorum_info"
               :type="result.quorum_info.met ? 'success' : 'warning'"
-              style="margin-bottom: 12px;"
+              style="margin-bottom: 12px"
             >
               {{ $t('gatherings.results.quorum') }}:
               {{ formatPercent(result.quorum_info.achieved_percentage) }}%
               {{ $t('gatherings.results.quorumRequired') }}
-              {{ formatPercent(result.quorum_info.required_percentage) }}%
-              ({{ result.quorum_info.met ? $t('gatherings.results.quorumMet') : $t('gatherings.results.quorumNotMet') }})
+              {{ formatPercent(result.quorum_info.required_percentage) }}% ({{
+                result.quorum_info.met
+                  ? $t('gatherings.results.quorumMet')
+                  : $t('gatherings.results.quorumNotMet')
+              }})
             </NAlert>
 
             <NGrid :cols="2" :x-gap="16">
@@ -168,7 +168,9 @@
                   </NDescriptionsItem>
                   <NDescriptionsItem :label="$t('gatherings.results.totalWeight')">
                     {{ formatPercent(result.statistics.participation_rate) }}%
-                    <span style="font-size: var(--text-xs); color: #888;">&nbsp;{{ $t('gatherings.results.ofQualified') }}</span>
+                    <span style="font-size: var(--text-xs); color: #888"
+                      >&nbsp;{{ $t('gatherings.results.ofQualified') }}</span
+                    >
                   </NDescriptionsItem>
                   <NDescriptionsItem :label="$t('gatherings.results.abstentions')">
                     {{ result.statistics.abstentions }}
@@ -184,7 +186,9 @@
                 {{ $t(`gatherings.matters.votingTypes.${result.voting_config.type}`) }}
               </NDescriptionsItem>
               <NDescriptionsItem :label="$t('gatherings.matters.majorityType')">
-                {{ $t(`gatherings.matters.majorityTypes.${result.voting_config.required_majority}`) }}
+                {{
+                  $t(`gatherings.matters.majorityTypes.${result.voting_config.required_majority}`)
+                }}
               </NDescriptionsItem>
               <NDescriptionsItem :label="$t('gatherings.matters.isAnonymous')">
                 {{ result.voting_config.is_anonymous ? $t('common.yes') : $t('common.no') }}
@@ -225,7 +229,7 @@ import {
   NProgress,
   NIcon,
   NTooltip,
-  type DataTableColumns
+  type DataTableColumns,
 } from 'naive-ui'
 import { DownloadOutlined } from '@vicons/antd'
 import { votingApi } from '@/services/api'
@@ -274,67 +278,81 @@ const getVoteColumns = (): DataTableColumns<VoteResult> => {
     {
       title: t('gatherings.results.choice'),
       key: 'choice',
-      width: 120
+      width: 120,
     },
     {
       title: t('gatherings.results.votes'),
       key: 'vote_count',
-      width: 60
+      width: 60,
     },
     {
       title: t('gatherings.results.percentageOfCast'),
       key: 'percentage',
       width: 140,
-      render: (row) => h('div', { style: 'display:flex; align-items:center; gap:6px;' }, [
-        h(NProgress, {
-          type: 'line',
-          percentage: row.percentage,
-          height: 8,
-          showIndicator: false,
-          style: 'flex:1; min-width:60px;'
-        }),
-        h('span', { style: 'font-size: var(--text-sm); white-space:nowrap;' }, `${formatPercent(row.percentage)}%`)
-      ])
+      render: (row) =>
+        h('div', { style: 'display:flex; align-items:center; gap:6px;' }, [
+          h(NProgress, {
+            type: 'line',
+            percentage: row.percentage,
+            height: 8,
+            showIndicator: false,
+            style: 'flex:1; min-width:60px;',
+          }),
+          h(
+            'span',
+            { style: 'font-size: var(--text-sm); white-space:nowrap;' },
+            `${formatPercent(row.percentage)}%`,
+          ),
+        ]),
     },
     {
       title: t('gatherings.results.weight'),
       key: 'weight_sum',
       width: 80,
-      render: (row) => formatWeight(row.weight_sum)
+      render: (row) => formatWeight(row.weight_sum),
     },
     {
       title: t('gatherings.results.weightPctOfCast'),
       key: 'weight_percentage',
       width: 150,
-      render: (row) => h('div', { style: 'display:flex; align-items:center; gap:6px;' }, [
-        h(NProgress, {
-          type: 'line',
-          percentage: row.weight_percentage,
-          height: 8,
-          showIndicator: false,
-          style: 'flex:1; min-width:60px;'
-        }),
-        h('span', { style: 'font-size: var(--text-sm); white-space:nowrap;' }, `${formatPercent(row.weight_percentage)}%`)
-      ])
+      render: (row) =>
+        h('div', { style: 'display:flex; align-items:center; gap:6px;' }, [
+          h(NProgress, {
+            type: 'line',
+            percentage: row.weight_percentage,
+            height: 8,
+            showIndicator: false,
+            style: 'flex:1; min-width:60px;',
+          }),
+          h(
+            'span',
+            { style: 'font-size: var(--text-sm); white-space:nowrap;' },
+            `${formatPercent(row.weight_percentage)}%`,
+          ),
+        ]),
     },
     {
       title: t('gatherings.results.weightPctOfQualified'),
       key: 'weight_sum_qualified',
       width: 150,
       render: (row) => {
-        const pct = qualifiedWeight > 0 ? (row.weight_sum / qualifiedWeight * 100) : 0
+        const pct = qualifiedWeight > 0 ? (row.weight_sum / qualifiedWeight) * 100 : 0
         return h('div', { style: 'display:flex; align-items:center; gap:6px;' }, [
           h(NProgress, {
             type: 'line',
             percentage: pct,
             height: 8,
             showIndicator: false,
-            style: 'flex:1; min-width:60px;'
+            style: 'flex:1; min-width:60px;',
           }),
-          h('span', { style: 'font-size: var(--text-sm); white-space:nowrap;' }, `${formatPercent(pct)}%`)
+          h(
+            'span',
+            { style: 'font-size: var(--text-sm); white-space:nowrap;' },
+            `${formatPercent(pct)}%`,
+          ),
         ])
-      }
-    }
+      },
+    },
   ]
 }
 
@@ -374,17 +392,23 @@ const handleDownloadResults = async () => {
 }
 
 // Watch for gathering status changes and reload results
-watch(() => props.gathering.status, (newStatus, oldStatus) => {
-  if ((newStatus === 'closed' || newStatus === 'tallied') && newStatus !== oldStatus) {
-    loadResults()
-  }
-})
+watch(
+  () => props.gathering.status,
+  (newStatus, oldStatus) => {
+    if ((newStatus === 'closed' || newStatus === 'tallied') && newStatus !== oldStatus) {
+      loadResults()
+    }
+  },
+)
 
 // Watch for gathering ID changes
-watch(() => props.gathering.id, () => {
-  results.value = null
-  loadResults()
-})
+watch(
+  () => props.gathering.id,
+  () => {
+    results.value = null
+    loadResults()
+  },
+)
 
 onMounted(() => {
   loadResults()

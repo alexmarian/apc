@@ -11,10 +11,10 @@ const store = useAssociationStore()
 const { associationId, associations, loading } = storeToRefs(store)
 
 const options = computed(() =>
-  associations.value.map(assoc => ({
+  associations.value.map((assoc) => ({
     label: assoc.name,
-    value: assoc.id
-  }))
+    value: assoc.id,
+  })),
 )
 </script>
 

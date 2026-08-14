@@ -1,58 +1,91 @@
 import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { NAlert, NCard, NDescriptions, NDescriptionsItem, NDivider, NProgress, NSpace, NSpin, NTag, NText } from 'naive-ui';
+import { NAlert, NCard, NDescriptions, NDescriptionsItem, NDivider, NProgress, NSpace, NSpin, NTag, NText, } from 'naive-ui';
 const { t } = useI18n({
     useScope: 'local',
     messages: {
         en: {
-            gathering: 'Gathering', status: 'Status',
+            gathering: 'Gathering',
+            status: 'Status',
             participationSummary: 'Participation Summary',
-            participated: 'Participated', voted: 'Voted', units: 'units',
+            participated: 'Participated',
+            voted: 'Voted',
+            units: 'units',
             participationRate: 'Participation rate',
-            passed: 'PASSED', failed: 'FAILED',
+            passed: 'PASSED',
+            failed: 'FAILED',
             yourVoteCounted: 'Your vote has been counted for this matter.',
             didNotVote: 'You did not vote on this matter.',
-            yourVote: 'Your vote', vote: 'vote', votes: 'votes',
-            yes: 'Yes', no: 'No', abstain: 'Abstain',
+            yourVote: 'Your vote',
+            vote: 'vote',
+            votes: 'votes',
+            yes: 'Yes',
+            no: 'No',
+            abstain: 'Abstain',
             weight: 'weight',
-            quorum: 'Quorum', quorumMet: 'Met', quorumNotMet: 'Not met',
-            of: 'of', required: 'required',
+            quorum: 'Quorum',
+            quorumMet: 'Met',
+            quorumNotMet: 'Not met',
+            of: 'of',
+            required: 'required',
             notAvailable: 'Results are not yet available. Current status:',
             willBePublished: 'Results will be published after the gathering is tallied.',
         },
         ro: {
-            gathering: 'Adunare', status: 'Status',
+            gathering: 'Adunare',
+            status: 'Status',
             participationSummary: 'Rezumat participare',
-            participated: 'Participat', voted: 'Votat', units: 'unități',
+            participated: 'Participat',
+            voted: 'Votat',
+            units: 'unități',
             participationRate: 'Rata de participare',
-            passed: 'ADOPTAT', failed: 'RESPINS',
+            passed: 'ADOPTAT',
+            failed: 'RESPINS',
             yourVoteCounted: 'Votul dvs. a fost înregistrat pentru acest punct.',
             didNotVote: 'Nu ați votat pentru acest punct.',
-            yourVote: 'Votul dvs.', vote: 'vot', votes: 'voturi',
-            yes: 'Da', no: 'Nu', abstain: 'Abținere',
+            yourVote: 'Votul dvs.',
+            vote: 'vot',
+            votes: 'voturi',
+            yes: 'Da',
+            no: 'Nu',
+            abstain: 'Abținere',
             weight: 'pondere',
-            quorum: 'Cvorum', quorumMet: 'Întrunit', quorumNotMet: 'Neîntrunit',
-            of: 'din', required: 'necesar',
+            quorum: 'Cvorum',
+            quorumMet: 'Întrunit',
+            quorumNotMet: 'Neîntrunit',
+            of: 'din',
+            required: 'necesar',
             notAvailable: 'Rezultatele nu sunt disponibile încă. Stare curentă:',
             willBePublished: 'Rezultatele vor fi publicate după numărarea voturilor.',
         },
         ru: {
-            gathering: 'Собрание', status: 'Статус',
+            gathering: 'Собрание',
+            status: 'Статус',
             participationSummary: 'Сводка участия',
-            participated: 'Участвовало', voted: 'Проголосовало', units: 'ед.',
+            participated: 'Участвовало',
+            voted: 'Проголосовало',
+            units: 'ед.',
             participationRate: 'Явка',
-            passed: 'ПРИНЯТО', failed: 'ОТКЛОНЕНО',
+            passed: 'ПРИНЯТО',
+            failed: 'ОТКЛОНЕНО',
             yourVoteCounted: 'Ваш голос учтён по данному вопросу.',
             didNotVote: 'Вы не голосовали по данному вопросу.',
-            yourVote: 'Ваш голос', vote: 'голос', votes: 'голосов',
-            yes: 'Да', no: 'Нет', abstain: 'Воздержаться',
+            yourVote: 'Ваш голос',
+            vote: 'голос',
+            votes: 'голосов',
+            yes: 'Да',
+            no: 'Нет',
+            abstain: 'Воздержаться',
             weight: 'вес',
-            quorum: 'Кворум', quorumMet: 'Достигнут', quorumNotMet: 'Не достигнут',
-            of: 'из', required: 'требуется',
+            quorum: 'Кворум',
+            quorumMet: 'Достигнут',
+            quorumNotMet: 'Не достигнут',
+            of: 'из',
+            required: 'требуется',
             notAvailable: 'Результаты пока недоступны. Текущий статус:',
             willBePublished: 'Результаты будут опубликованы после подсчёта голосов.',
         },
-    }
+    },
 });
 const props = defineProps();
 const loading = ref(false);
@@ -61,11 +94,16 @@ const context = ref(null);
 const results = ref(null);
 const statusTagType = computed(() => {
     switch (context.value?.gathering.status) {
-        case 'active': return 'success';
-        case 'scheduled': return 'info';
-        case 'tallied': return 'info';
-        case 'closed': return 'error';
-        default: return 'default';
+        case 'active':
+            return 'success';
+        case 'scheduled':
+            return 'info';
+        case 'tallied':
+            return 'info';
+        case 'closed':
+            return 'error';
+        default:
+            return 'default';
     }
 });
 function memberVotedOnMatter(matterId) {
@@ -85,7 +123,7 @@ function formatChoice(choice, config) {
         return t('abstain');
     if (config.type === 'yes_no')
         return choice === 'yes' ? t('yes') : t('no');
-    const opt = config.options?.find(o => o.id === choice);
+    const opt = config.options?.find((o) => o.id === choice);
     return opt ? opt.text : choice;
 }
 function sortedVotes(matter) {

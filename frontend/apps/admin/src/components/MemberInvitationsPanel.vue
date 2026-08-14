@@ -7,8 +7,14 @@
     <NSpace justify="space-between" align="center" style="margin-bottom: 16px">
       <NText strong>{{ t('gatherings.invitations.qualifiedOwners', filteredRows.length) }}</NText>
       <NSpace>
-        <NButton @click="handleGenerateAll" :loading="bulkGenerating" :disabled="ownersWithoutActive.length === 0">
-          {{ t('gatherings.invitations.generateForVisible', { count: ownersWithoutActive.length }) }}
+        <NButton
+          @click="handleGenerateAll"
+          :loading="bulkGenerating"
+          :disabled="ownersWithoutActive.length === 0"
+        >
+          {{
+            t('gatherings.invitations.generateForVisible', { count: ownersWithoutActive.length })
+          }}
         </NButton>
         <NButton @click="exportCsv" :disabled="activeRows.length === 0">
           {{ t('gatherings.invitations.exportCsv') }}
@@ -37,55 +43,68 @@
     v-model:show="generateModalVisible"
     style="width: 480px"
     preset="card"
-    :title="generateModalOwner
-      ? t('gatherings.invitations.generateLinkFor', { name: generateModalOwner.ownerName })
-      : t('gatherings.invitations.generateAllLinks')"
+    :title="
+      generateModalOwner
+        ? t('gatherings.invitations.generateLinkFor', { name: generateModalOwner.ownerName })
+        : t('gatherings.invitations.generateAllLinks')
+    "
     :mask-closable="false"
     :close-on-esc="true"
   >
     <template v-if="!generatedTokens.length">
-        <NFormItem :label="t('gatherings.invitations.expiryDate')" :feedback="expiryError || undefined" :validation-status="expiryError ? 'error' : undefined">
-          <NDatePicker
-            v-model:value="expiryTimestamp"
-            type="date"
-            style="width: 100%"
-            :is-date-disabled="isPastDate"
-          />
-        </NFormItem>
-        <NSpace justify="end" style="margin-top: 8px">
-          <NButton @click="generateModalVisible = false">{{ t('common.cancel') }}</NButton>
-          <NButton type="primary" :loading="generating" @click="confirmGenerate">
-            {{ t('gatherings.invitations.generate') }}
-          </NButton>
-        </NSpace>
+      <NFormItem
+        :label="t('gatherings.invitations.expiryDate')"
+        :feedback="expiryError || undefined"
+        :validation-status="expiryError ? 'error' : undefined"
+      >
+        <NDatePicker
+          v-model:value="expiryTimestamp"
+          type="date"
+          style="width: 100%"
+          :is-date-disabled="isPastDate"
+        />
+      </NFormItem>
+      <NSpace justify="end" style="margin-top: 8px">
+        <NButton @click="generateModalVisible = false">{{ t('common.cancel') }}</NButton>
+        <NButton type="primary" :loading="generating" @click="confirmGenerate">
+          {{ t('gatherings.invitations.generate') }}
+        </NButton>
+      </NSpace>
     </template>
 
     <template v-else>
-        <NAlert type="warning" style="margin-bottom: 16px">
-          {{ t('gatherings.invitations.linksNotRecoverable') }}
-        </NAlert>
+      <NAlert type="warning" style="margin-bottom: 16px">
+        {{ t('gatherings.invitations.linksNotRecoverable') }}
+      </NAlert>
 
-        <div v-for="item in generatedTokens" :key="item.ownerId" style="margin-bottom: 12px">
-          <NText strong style="display: block; margin-bottom: 4px">{{ item.ownerName }}</NText>
-          <NInputGroup>
-            <NInput :value="item.url" readonly style="font-size: var(--text-sm); font-family: monospace" />
-            <NButton @click="copyUrl(item.url)" style="min-width: 70px">
-              {{ copiedUrl === item.url ? `✓ ${t('gatherings.invitations.copied')}` : t('gatherings.invitations.copy') }}
-            </NButton>
-          </NInputGroup>
-        </div>
+      <div v-for="item in generatedTokens" :key="item.ownerId" style="margin-bottom: 12px">
+        <NText strong style="display: block; margin-bottom: 4px">{{ item.ownerName }}</NText>
+        <NInputGroup>
+          <NInput
+            :value="item.url"
+            readonly
+            style="font-size: var(--text-sm); font-family: monospace"
+          />
+          <NButton @click="copyUrl(item.url)" style="min-width: 70px">
+            {{
+              copiedUrl === item.url
+                ? `✓ ${t('gatherings.invitations.copied')}`
+                : t('gatherings.invitations.copy')
+            }}
+          </NButton>
+        </NInputGroup>
+      </div>
 
-        <NSpace justify="end" style="margin-top: 16px">
-          <NButton v-if="generatedTokens.length > 1" @click="exportGeneratedCsv">
-            {{ t('gatherings.invitations.exportCsv') }}
-          </NButton>
-          <NButton type="primary" @click="closeGenerateModal">
-            {{ t('gatherings.invitations.done') }}
-          </NButton>
-        </NSpace>
+      <NSpace justify="end" style="margin-top: 16px">
+        <NButton v-if="generatedTokens.length > 1" @click="exportGeneratedCsv">
+          {{ t('gatherings.invitations.exportCsv') }}
+        </NButton>
+        <NButton type="primary" @click="closeGenerateModal">
+          {{ t('gatherings.invitations.done') }}
+        </NButton>
+      </NSpace>
     </template>
   </NModal>
-
 </template>
 
 <script setup lang="ts">
@@ -102,7 +121,7 @@ import {
   NSpace,
   NSpin,
   NTag,
-  NText
+  NText,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { gatheringApi, invitationApi } from '@/services/api'
@@ -112,7 +131,8 @@ import { useI18n } from 'vue-i18n'
 import PrintBallot from './PrintBallot.vue'
 import type { Gathering, MemberInvitation, QualifiedUnit } from '@/types/api'
 
-const MEMBER_BASE_URL = import.meta.env.VITE_MEMBER_BASE_URL || 'https://member.blocul-nostru.online'
+const MEMBER_BASE_URL =
+  import.meta.env.VITE_MEMBER_BASE_URL || 'https://member.blocul-nostru.online'
 
 const props = defineProps<{
   associationId: number
@@ -143,7 +163,6 @@ const generating = ref(false)
 const bulkGenerating = ref(false)
 const copiedUrl = ref<string | null>(null)
 
-
 const searchQuery = ref('')
 
 function normalize(s: string): string {
@@ -153,11 +172,11 @@ function normalize(s: string): string {
 const filteredRows = computed(() => {
   const q = normalize(searchQuery.value.trim())
   if (!q) return rows.value
-  return rows.value.filter(r => normalize(r.ownerName).includes(q))
+  return rows.value.filter((r) => normalize(r.ownerName).includes(q))
 })
 
-const ownersWithoutActive = computed(() => filteredRows.value.filter(r => r.status !== 'active'))
-const activeRows = computed(() => filteredRows.value.filter(r => r.status === 'active'))
+const ownersWithoutActive = computed(() => filteredRows.value.filter((r) => r.status !== 'active'))
+const activeRows = computed(() => filteredRows.value.filter((r) => r.status === 'active'))
 
 function defaultExpiry(): number {
   const base = props.gathering.scheduled_date
@@ -186,16 +205,16 @@ const columns = computed<DataTableColumns<OwnerRow>>(() => [
         active: 'success',
         expired: 'warning',
         revoked: 'error',
-        none: 'default'
+        none: 'default',
       }
       const labels: Record<string, string> = {
         active: t('gatherings.invitations.statusActive'),
         expired: t('gatherings.invitations.statusExpired'),
         revoked: t('gatherings.invitations.statusRevoked'),
-        none: t('gatherings.invitations.statusNone')
+        none: t('gatherings.invitations.statusNone'),
       }
       return h(NTag, { type: types[row.status], size: 'small' }, () => labels[row.status])
-    }
+    },
   },
   {
     title: t('gatherings.invitations.expires'),
@@ -203,7 +222,7 @@ const columns = computed<DataTableColumns<OwnerRow>>(() => [
     render(row) {
       if (!row.invitation || row.status === 'revoked') return '—'
       return new Date(row.invitation.expires_at).toLocaleDateString()
-    }
+    },
   },
   {
     title: t('common.actions'),
@@ -212,24 +231,32 @@ const columns = computed<DataTableColumns<OwnerRow>>(() => [
       const actions: ReturnType<typeof h>[] = []
       if (row.status !== 'active') {
         actions.push(
-          h(NButton, {
-            size: 'small',
-            onClick: () => openGenerateSingle(row)
-          }, () => t('gatherings.invitations.generateLink'))
+          h(
+            NButton,
+            {
+              size: 'small',
+              onClick: () => openGenerateSingle(row),
+            },
+            () => t('gatherings.invitations.generateLink'),
+          ),
         )
       }
       if (row.status === 'active') {
         actions.push(
-          h(NButton, {
-            size: 'small',
-            type: 'error',
-            onClick: () => openRevoke(row)
-          }, () => t('gatherings.invitations.revoke'))
+          h(
+            NButton,
+            {
+              size: 'small',
+              type: 'error',
+              onClick: () => openRevoke(row),
+            },
+            () => t('gatherings.invitations.revoke'),
+          ),
         )
       }
       return h(NSpace, { size: 'small' }, () => actions)
-    }
-  }
+    },
+  },
 ])
 
 function openGenerateSingle(row: OwnerRow) {
@@ -245,7 +272,7 @@ function openRevoke(row: OwnerRow) {
     title: t('gatherings.invitations.revokeTitle'),
     content: t('gatherings.invitations.revokeWarning', { name: row.ownerName }),
     positiveText: t('gatherings.invitations.revoke'),
-    onConfirm: () => revokeInvitation(row)
+    onConfirm: () => revokeInvitation(row),
   })
 }
 
@@ -270,15 +297,17 @@ async function confirmGenerate() {
     try {
       const res = await invitationApi.create(props.associationId, props.gathering.id, {
         owner_id: generateModalOwner.value.ownerId,
-        expires_at: expiresAt
+        expires_at: expiresAt,
       })
       const url = `${MEMBER_BASE_URL}/${res.data.token}`
       generatedUrlsByOwner.value.set(generateModalOwner.value.ownerId, url)
-      generatedTokens.value = [{
-        ownerId: generateModalOwner.value.ownerId,
-        ownerName: generateModalOwner.value.ownerName,
-        url
-      }]
+      generatedTokens.value = [
+        {
+          ownerId: generateModalOwner.value.ownerId,
+          ownerName: generateModalOwner.value.ownerName,
+          url,
+        },
+      ]
     } catch (err) {
       error.value = apiErrorMessage(err, t('gatherings.invitations.generateError'))
       generateModalVisible.value = false
@@ -292,7 +321,7 @@ async function confirmGenerate() {
       try {
         const res = await invitationApi.create(props.associationId, props.gathering.id, {
           owner_id: row.ownerId,
-          expires_at: expiresAt
+          expires_at: expiresAt,
         })
         const url = `${MEMBER_BASE_URL}/${res.data.token}`
         generatedUrlsByOwner.value.set(row.ownerId, url)
@@ -309,7 +338,9 @@ async function confirmGenerate() {
 async function copyUrl(url: string) {
   await navigator.clipboard.writeText(url)
   copiedUrl.value = url
-  setTimeout(() => { copiedUrl.value = null }, 2000)
+  setTimeout(() => {
+    copiedUrl.value = null
+  }, 2000)
 }
 
 function closeGenerateModal() {
@@ -322,7 +353,7 @@ async function revokeInvitation(target: OwnerRow) {
   if (!target.invitation) return
   try {
     await invitationApi.revoke(props.associationId, props.gathering.id, target.invitation.id)
-    const row = rows.value.find(r => r.ownerId === target.ownerId)
+    const row = rows.value.find((r) => r.ownerId === target.ownerId)
     if (row) {
       row.status = 'revoked'
     }
@@ -347,11 +378,13 @@ function exportGeneratedCsv() {
 }
 
 function exportCsv() {
-  const lines = [[
-    t('gatherings.invitations.owner'),
-    t('gatherings.invitations.link'),
-    t('gatherings.invitations.expires')
-  ].join(',')]
+  const lines = [
+    [
+      t('gatherings.invitations.owner'),
+      t('gatherings.invitations.link'),
+      t('gatherings.invitations.expires'),
+    ].join(','),
+  ]
   for (const row of activeRows.value) {
     if (!row.invitation) continue
     const ownerName = `"${row.ownerName.replace(/"/g, '""')}"`
@@ -376,7 +409,7 @@ async function loadData() {
   try {
     const [unitsRes, invitationsRes] = await Promise.all([
       gatheringApi.getQualifiedUnits(props.associationId, props.gathering.id),
-      invitationApi.list(props.associationId, props.gathering.id)
+      invitationApi.list(props.associationId, props.gathering.id),
     ])
 
     const units: QualifiedUnit[] = unitsRes.data
@@ -397,15 +430,17 @@ async function loadData() {
       }
     }
 
-    rows.value = Array.from(ownerMap.entries()).map(([ownerId, ownerName]) => {
-      const inv = invByOwner.get(ownerId) ?? null
-      return {
-        ownerId,
-        ownerName,
-        invitation: inv,
-        status: inv ? (inv.status as OwnerRow['status']) : 'none'
-      }
-    }).sort((a, b) => a.ownerName.localeCompare(b.ownerName))
+    rows.value = Array.from(ownerMap.entries())
+      .map(([ownerId, ownerName]) => {
+        const inv = invByOwner.get(ownerId) ?? null
+        return {
+          ownerId,
+          ownerName,
+          invitation: inv,
+          status: inv ? (inv.status as OwnerRow['status']) : 'none',
+        }
+      })
+      .sort((a, b) => a.ownerName.localeCompare(b.ownerName))
   } catch (err) {
     error.value = apiErrorMessage(err, t('gatherings.invitations.loadError'))
   } finally {

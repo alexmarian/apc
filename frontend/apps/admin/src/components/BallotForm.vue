@@ -19,12 +19,12 @@
                 <p>{{ matter.description }}</p>
               </template>
 
-              <NFormItem
-                :label="$t('gatherings.voting.choice')"
-                :path="`votes.${matter.id}`"
-              >
+              <NFormItem :label="$t('gatherings.voting.choice')" :path="`votes.${matter.id}`">
                 <div v-if="matter.voting_config.type === 'yes_no'" class="vote-options">
-                  <NRadioGroup v-model:value="(formData.votes[matter.id] as string[])[0]" @update:value="val => setVote(matter.id, [val])">
+                  <NRadioGroup
+                    v-model:value="(formData.votes[matter.id] as string[])[0]"
+                    @update:value="(val) => setVote(matter.id, [val])"
+                  >
                     <NSpace>
                       <NRadio value="yes">{{ $t('common.yes') }}</NRadio>
                       <NRadio value="no">{{ $t('common.no') }}</NRadio>
@@ -36,7 +36,10 @@
                 </div>
 
                 <div v-else-if="matter.voting_config.type === 'single_choice'" class="vote-options">
-                  <NRadioGroup v-model:value="(formData.votes[matter.id] as string[])[0]" @update:value="val => setVote(matter.id, [val])">
+                  <NRadioGroup
+                    v-model:value="(formData.votes[matter.id] as string[])[0]"
+                    @update:value="(val) => setVote(matter.id, [val])"
+                  >
                     <NSpace vertical>
                       <NRadio
                         v-for="option in matter.voting_config.options"
@@ -52,10 +55,13 @@
                   </NRadioGroup>
                 </div>
 
-                <div v-else-if="matter.voting_config.type === 'multiple_choice'" class="vote-options">
+                <div
+                  v-else-if="matter.voting_config.type === 'multiple_choice'"
+                  class="vote-options"
+                >
                   <NCheckboxGroup
                     :value="formData.votes[matter.id] as string[]"
-                    @update:value="val => setVote(matter.id, val as string[])"
+                    @update:value="(val) => setVote(matter.id, val as string[])"
                   >
                     <NSpace vertical>
                       <NCheckbox
@@ -72,15 +78,22 @@
                 <div v-else-if="matter.voting_config.type === 'ranking'" class="vote-options">
                   <p class="ranking-hint">{{ $t('gatherings.voting.rankingHint') }}</p>
                   <div
-                    v-for="(optId, idx) in (formData.votes[matter.id] as string[])"
+                    v-for="(optId, idx) in formData.votes[matter.id] as string[]"
                     :key="optId"
                     class="ranking-item"
                   >
                     <span class="ranking-pos">{{ idx + 1 }}.</span>
                     <span class="ranking-label">{{ getOptionText(matter, optId) }}</span>
                     <NSpace size="small">
-                      <NButton size="tiny" :disabled="idx === 0" @click="moveRankUp(matter.id, idx)">↑</NButton>
-                      <NButton size="tiny" :disabled="idx === (formData.votes[matter.id] as string[]).length - 1" @click="moveRankDown(matter.id, idx)">↓</NButton>
+                      <NButton size="tiny" :disabled="idx === 0" @click="moveRankUp(matter.id, idx)"
+                        >↑</NButton
+                      >
+                      <NButton
+                        size="tiny"
+                        :disabled="idx === (formData.votes[matter.id] as string[]).length - 1"
+                        @click="moveRankDown(matter.id, idx)"
+                        >↓</NButton
+                      >
                     </NSpace>
                   </div>
                 </div>
@@ -161,7 +174,7 @@ import {
   NCheckbox,
   NDatePicker,
   type FormInst,
-  type FormRules
+  type FormRules,
 } from 'naive-ui'
 import { votingMatterApi, votingApi } from '@/services/api'
 import type {
@@ -169,7 +182,7 @@ import type {
   VotingMatter,
   GatheringParticipant,
   BallotSubmissionRequest,
-  BallotVote
+  BallotVote,
 } from '@/types/api'
 
 interface Props {
@@ -180,7 +193,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isOfflineMode: false
+  isOfflineMode: false,
 })
 
 const emit = defineEmits<{
@@ -205,11 +218,11 @@ const formData = reactive<{
   votes: {},
   ballot_number: '',
   submitted_at: null,
-  notes: ''
+  notes: '',
 })
 
 const canSubmit = computed(() => {
-  const allAnswered = matters.value.every(matter => {
+  const allAnswered = matters.value.every((matter) => {
     const v = formData.votes[matter.id]
     return v && v.length > 0
   })
@@ -223,8 +236,8 @@ const canSubmit = computed(() => {
 
 const rules: FormRules = {
   ballot_number: [
-    { required: true, message: t('gatherings.voting.ballotNumberRequired'), trigger: 'blur' }
-  ]
+    { required: true, message: t('gatherings.voting.ballotNumberRequired'), trigger: 'blur' },
+  ],
 }
 
 const setVote = (matterId: number, values: string[]) => {
@@ -232,7 +245,7 @@ const setVote = (matterId: number, values: string[]) => {
 }
 
 const getOptionText = (matter: VotingMatter, optId: string): string => {
-  return matter.voting_config.options?.find(o => o.id === optId)?.text ?? optId
+  return matter.voting_config.options?.find((o) => o.id === optId)?.text ?? optId
 }
 
 const moveRankUp = (matterId: number, idx: number) => {
@@ -248,10 +261,10 @@ const moveRankDown = (matterId: number, idx: number) => {
 }
 
 const initVotes = () => {
-  matters.value.forEach(matter => {
+  matters.value.forEach((matter) => {
     const type = matter.voting_config.type
     if (type === 'ranking') {
-      formData.votes[matter.id] = matter.voting_config.options?.map(o => o.id) ?? []
+      formData.votes[matter.id] = matter.voting_config.options?.map((o) => o.id) ?? []
     } else if (type === 'multiple_choice') {
       formData.votes[matter.id] = []
     } else {
@@ -296,11 +309,11 @@ const handleSubmit = async () => {
 
     const ballotContent: Record<string, BallotVote> = {}
     matters.value
-      .filter(matter => formData.votes[matter.id]?.length > 0)
-      .forEach(matter => {
+      .filter((matter) => formData.votes[matter.id]?.length > 0)
+      .forEach((matter) => {
         ballotContent[String(matter.id)] = {
           matter_id: matter.id,
-          values: formData.votes[matter.id]
+          values: formData.votes[matter.id],
         }
       })
 
@@ -310,13 +323,12 @@ const handleSubmit = async () => {
       delegating_owner_id: props.participant.delegating_owner_id,
       delegation_document_ref: props.participant.delegation_document_ref,
       unit_ids: props.participant.units_info,
-      ballot_content: ballotContent
+      ballot_content: ballotContent,
     }
 
     await votingApi.submitBallot(props.associationId, props.gathering.id, payload)
 
     emit('saved')
-
   } catch (err: unknown) {
     error.value = (err as Error).message || t('common.error')
   } finally {

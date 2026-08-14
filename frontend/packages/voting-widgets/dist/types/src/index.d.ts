@@ -2,5 +2,5 @@ export { default as VotingWidget } from './VotingWidget.vue';
 export { default as VotingResultsWidget } from './VotingResultsWidget.vue';
 export { default as BallotForm } from './BallotForm.vue';
 export { createMemberVotingService } from './services';
-export type { VotingService, VotingConfig, MatterInfo, BallotVote, BallotReceipt, MemberContext } from './types';
+export type { VotingService, VotingConfig, MatterInfo, BallotVote, BallotReceipt, MemberContext, } from './types';
 export { HttpError } from './types';

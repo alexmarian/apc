@@ -12,7 +12,7 @@ import {
   NAlert,
   NDatePicker,
   NInputNumber,
-  useMessage
+  useMessage,
 } from 'naive-ui'
 import type { FormInst, FormItemInst, FormRules } from 'naive-ui'
 import { expenseApi } from '@/services/api'
@@ -30,7 +30,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  saved: [expense: Expense]  // Pass the updated/created expense data
+  saved: [expense: Expense] // Pass the updated/created expense data
   cancelled: []
 }>()
 
@@ -43,7 +43,7 @@ const formData = reactive<FormData>({
   date: new Date().toISOString().split('T')[0],
   category_id: null,
   account_id: 0,
-  document_ref: ''
+  document_ref: '',
 })
 
 const rules: FormRules = {
@@ -53,28 +53,28 @@ const rules: FormRules = {
       type: 'number',
       min: 0.01,
       message: t('expenses.amountPositive'),
-      trigger: ['blur', 'change']
-    }
+      trigger: ['blur', 'change'],
+    },
   ],
   description: [
     {
       required: true,
       message: t('validation.required', { field: t('expenses.description') }),
-      trigger: 'blur'
+      trigger: 'blur',
     },
     {
       type: 'string',
       max: 255,
       message: t('validation.maxLength', { field: t('expenses.description'), max: 255 }),
-      trigger: 'blur'
-    }
+      trigger: 'blur',
+    },
   ],
   date: [
     {
       required: true,
       message: t('validation.required', { field: t('expenses.date') }),
-      trigger: 'blur'
-    }
+      trigger: 'blur',
+    },
   ],
   category_id: [
     {
@@ -85,17 +85,17 @@ const rules: FormRules = {
         }
         return true
       },
-      trigger: ['blur', 'change']
-    }
+      trigger: ['blur', 'change'],
+    },
   ],
   document_ref: [
     {
       type: 'string',
       max: 50,
       message: t('validation.maxLength', { field: t('expenses.documentRef'), max: 50 }),
-      trigger: 'blur'
-    }
-  ]
+      trigger: 'blur',
+    },
+  ],
 }
 
 const loading = ref(false)
@@ -113,7 +113,7 @@ const allDestinations = ref<string[]>([])
 const destinationOptions = computed(() => {
   const input = formData.destination?.trim().toLowerCase() ?? ''
   if (!input) return allDestinations.value
-  return allDestinations.value.filter(d => d.toLowerCase().includes(input))
+  return allDestinations.value.filter((d) => d.toLowerCase().includes(input))
 })
 
 const handleDestinationKeydown = (e: KeyboardEvent) => {
@@ -146,7 +146,7 @@ const resetForm = () => {
     date: new Date().toISOString().split('T')[0],
     category_id: null,
     account_id: 0,
-    document_ref: ''
+    document_ref: '',
   })
   error.value = null
 }
@@ -166,10 +166,12 @@ const fetchExpenseDetails = async () => {
       amount: Number(expenseData.amount) || 0.01,
       description: expenseData.description || '',
       destination: expenseData.destination || '',
-      date: expenseData.date ? formatDateForInput(expenseData.date) : new Date().toISOString().split('T')[0],
+      date: expenseData.date
+        ? formatDateForInput(expenseData.date)
+        : new Date().toISOString().split('T')[0],
       category_id: Number(expenseData.category_id) || null,
       account_id: Number(expenseData.account_id) || 0,
-      document_ref: expenseData.document_ref || ''
+      document_ref: expenseData.document_ref || '',
     })
 
     await nextTick()
@@ -210,7 +212,7 @@ const handleSubmit = async () => {
       date: formData.date + 'T00:00:00Z',
       category_id: Number(formData.category_id!),
       account_id: Number(formData.account_id),
-      document_ref: formData.document_ref?.trim() || ''
+      document_ref: formData.document_ref?.trim() || '',
     }
 
     let response: { data: Expense }
@@ -283,11 +285,7 @@ onMounted(() => {
       >
         <!-- Readonly Expense ID for edit mode -->
         <NFormItem v-if="isEditMode && originalExpense" :label="'Expense ID'">
-          <NInput
-            :value="originalExpense.id.toString()"
-            readonly
-            class="readonly-input"
-          />
+          <NInput :value="originalExpense.id.toString()" readonly class="readonly-input" />
         </NFormItem>
 
         <NFormItem :label="t('expenses.amount')" path="amount">
@@ -364,18 +362,11 @@ onMounted(() => {
 
         <div class="expense-form__actions">
           <NSpace justify="end">
-            <NButton
-              @click="handleCancel"
-              :disabled="submitting"
-            >
+            <NButton @click="handleCancel" :disabled="submitting">
               {{ t('common.cancel') }}
             </NButton>
 
-            <NButton
-              type="primary"
-              @click="handleSubmit"
-              :loading="submitting"
-            >
+            <NButton type="primary" @click="handleSubmit" :loading="submitting">
               {{ isEditMode ? t('common.update') : t('common.create') }}
             </NButton>
           </NSpace>

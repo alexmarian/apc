@@ -23,19 +23,20 @@ const devConfig: AppConfig = {
   authTokenKey: 'apc_auth_token',
   refreshTokenKey: 'apc_refresh_token',
   appName: 'APC Management Portal',
-  appVersion: '1.0.0-dev'
+  appVersion: '1.0.0-dev',
 }
 
 // Production configuration
 const prodConfig: AppConfig = {
-  apiBaseUrl: import.meta.env.MODE === 'production'
-    ? (import.meta.env.VITE_API_BASE_URL || '/v1/api/')
-    : devConfig.apiBaseUrl,
+  apiBaseUrl:
+    import.meta.env.MODE === 'production'
+      ? import.meta.env.VITE_API_BASE_URL || '/v1/api/'
+      : devConfig.apiBaseUrl,
   apiTimeout: 30000,
   authTokenKey: 'apc_auth_token',
   refreshTokenKey: 'apc_refresh_token',
   appName: 'APC Management Portal',
-  appVersion: '1.0.0'
+  appVersion: '1.0.0',
 }
 
 // Export the appropriate configuration based on environment

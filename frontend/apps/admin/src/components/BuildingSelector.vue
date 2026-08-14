@@ -52,9 +52,9 @@ const fetchBuildings = async () => {
 }
 
 const options = computed(() => {
-  return buildings.value.map(building => ({
+  return buildings.value.map((building) => ({
     label: `${building.name} - ${building.address}`,
-    value: building.id
+    value: building.id,
   }))
 })
 
@@ -70,7 +70,7 @@ watch(
   () => {
     fetchBuildings()
   },
-  { immediate: true }
+  { immediate: true },
 )
 </script>
 
@@ -92,7 +92,6 @@ watch(
 </template>
 
 <style scoped>
-
 .building-selector {
   width: 100%;
   max-width: 300px;

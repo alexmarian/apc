@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted, h, watch } from 'vue'
-import { NDataTable, NButton, NSpace, NTag, NEmpty, NSpin, NAlert, NCard, useMessage } from 'naive-ui'
+import {
+  NDataTable,
+  NButton,
+  NSpace,
+  NTag,
+  NEmpty,
+  NSpin,
+  NAlert,
+  NCard,
+  useMessage,
+} from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { accountApi } from '@/services/api'
 import type { Account } from '@/types/api'
@@ -35,20 +45,20 @@ const columns = ref<DataTableColumns<Account>>([
     title: 'ID',
     key: 'id',
     width: 80,
-    sorter: (a, b) => a.id - b.id
+    sorter: (a, b) => a.id - b.id,
   },
   {
     title: t('accounts.accountNumber'),
     key: 'number',
-    sorter: 'default'
+    sorter: 'default',
   },
   {
     title: t('accounts.description'),
-    key: 'description'
+    key: 'description',
   },
   {
     title: t('accounts.destination'),
-    key: 'destination'
+    key: 'destination',
   },
   {
     title: t('accounts.status'),
@@ -58,11 +68,11 @@ const columns = ref<DataTableColumns<Account>>([
         NTag,
         {
           type: row.is_active ? 'success' : 'error',
-          bordered: false
+          bordered: false,
         },
-        { default: () => row.is_active ? t('accounts.active') : t('accounts.inactive') }
+        { default: () => (row.is_active ? t('accounts.active') : t('accounts.inactive')) },
       )
-    }
+    },
   },
   {
     title: t('common.actions'),
@@ -72,7 +82,7 @@ const columns = ref<DataTableColumns<Account>>([
         NSpace,
         {
           justify: 'center',
-          align: 'center'
+          align: 'center',
         },
         {
           default: () => [
@@ -84,9 +94,9 @@ const columns = ref<DataTableColumns<Account>>([
                 type: 'info',
                 size: 'small',
                 disabled: !row.is_active,
-                onClick: () => emit('edit', row.id)
+                onClick: () => emit('edit', row.id),
               },
-              { default: () => t('common.edit') }
+              { default: () => t('common.edit') },
             ),
             h(
               NButton,
@@ -96,15 +106,15 @@ const columns = ref<DataTableColumns<Account>>([
                 type: 'error',
                 size: 'small',
                 disabled: !row.is_active,
-                onClick: () => disableAccount(row.id)
+                onClick: () => disableAccount(row.id),
               },
-              { default: () => t('common.disable') }
-            )
-          ]
-        }
+              { default: () => t('common.disable') },
+            ),
+          ],
+        },
       )
-    }
-  }
+    },
+  },
 ])
 
 // Fetch accounts - simplified to prevent loops
@@ -140,7 +150,7 @@ const fetchAccounts = async () => {
 
 // Method to update a single account in the list (called when account is updated)
 const updateAccount = (updatedAccount: Account) => {
-  const index = accounts.value.findIndex(account => account.id === updatedAccount.id)
+  const index = accounts.value.findIndex((account) => account.id === updatedAccount.id)
   if (index !== -1) {
     // Replace the account in the array while maintaining reactivity
     accounts.value.splice(index, 1, updatedAccount)
@@ -158,7 +168,7 @@ const addAccount = (newAccount: Account) => {
 defineExpose({
   updateAccount,
   addAccount,
-  refreshData: fetchAccounts
+  refreshData: fetchAccounts,
 })
 
 // Disable account
@@ -167,7 +177,7 @@ const disableAccount = (accountId: number) => {
     title: t('common.disable'),
     content: t('accounts.confirmDisable'),
     positiveText: t('common.disable'),
-    onConfirm: () => performDisableAccount(accountId)
+    onConfirm: () => performDisableAccount(accountId),
   })
 }
 
@@ -176,7 +186,7 @@ const performDisableAccount = async (accountId: number) => {
     await accountApi.disableAccount(props.associationId!, accountId)
 
     // Update the local state
-    const index = accounts.value.findIndex(acc => acc.id === accountId)
+    const index = accounts.value.findIndex((acc) => acc.id === accountId)
     if (index !== -1) {
       accounts.value[index].is_active = false
     }
@@ -191,7 +201,8 @@ const performDisableAccount = async (accountId: number) => {
 }
 
 // Watch for associationId changes and refetch only when necessary
-watch(() => props.associationId,
+watch(
+  () => props.associationId,
   (newAssocId, oldAssocId) => {
     console.log('Association ID changed:', { newAssocId, oldAssocId })
 
@@ -202,7 +213,7 @@ watch(() => props.associationId,
       fetchAccounts()
     }
   },
-  { immediate: false }
+  { immediate: false },
 )
 
 // Load accounts on component mount
@@ -229,11 +240,13 @@ onMounted(() => {
         :bordered="false"
         :single-line="false"
         :pagination="{
-          pageSize: 10
+          pageSize: 10,
         }"
-        :row-props="row => ({
-          style: !row.is_active ? 'opacity: 0.6' : ''
-        })"
+        :row-props="
+          (row) => ({
+            style: !row.is_active ? 'opacity: 0.6' : '',
+          })
+        "
       >
         <template #empty>
           <NEmpty :description="t('accounts.noAccounts')">

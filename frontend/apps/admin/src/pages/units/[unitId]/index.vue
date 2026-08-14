@@ -18,21 +18,19 @@ const refreshKey = ref(0)
 // Extract route params and query params
 const unitId = ref<number>(parseInt(route.params.unitId as string))
 const associationId = ref<number | null>(
-  route.query.associationId ? parseInt(route.query.associationId as string) : null
+  route.query.associationId ? parseInt(route.query.associationId as string) : null,
 )
 const buildingId = ref<number | null>(
-  route.query.buildingId ? parseInt(route.query.buildingId as string) : null
+  route.query.buildingId ? parseInt(route.query.buildingId as string) : null,
 )
 // Preserve filter/pagination state from query params
 const unitTypeFilter = ref<string | null>(
-  route.query.unitTypeFilter ? route.query.unitTypeFilter as string : null
+  route.query.unitTypeFilter ? (route.query.unitTypeFilter as string) : null,
 )
 const searchQuery = ref<string | null>(
-  route.query.searchQuery ? route.query.searchQuery as string : null
+  route.query.searchQuery ? (route.query.searchQuery as string) : null,
 )
-const page = ref<string | null>(
-  route.query.page ? route.query.page as string : null
-)
+const page = ref<string | null>(route.query.page ? (route.query.page as string) : null)
 
 // UI state
 const loading = ref(true)
@@ -44,7 +42,10 @@ const editingOwnerId = ref<number | null>(null)
 const verifyParams = async () => {
   // Only fetch if we have all required IDs
   if (!associationId.value || !buildingId.value) {
-    error.value = t('units.missingIds', 'Missing association or building ID. Please ensure these are provided in the URL.')
+    error.value = t(
+      'units.missingIds',
+      'Missing association or building ID. Please ensure these are provided in the URL.',
+    )
     loading.value = false
     return
   }
@@ -54,16 +55,12 @@ const verifyParams = async () => {
 
   try {
     // Use the existing API method that requires all three IDs
-    await unitApi.getUnit(
-      associationId.value,
-      buildingId.value,
-      unitId.value
-    )
+    await unitApi.getUnit(associationId.value, buildingId.value, unitId.value)
 
     // If the API call is successful, then we have valid IDs
-
   } catch (err) {
-    error.value = err instanceof Error ? err.message : t('common.error', 'Error fetching unit information')
+    error.value =
+      err instanceof Error ? err.message : t('common.error', 'Error fetching unit information')
     console.error('Error fetching unit data:', err)
   } finally {
     loading.value = false
@@ -126,8 +123,8 @@ const handleBackToUnits = () => {
         buildingId: buildingId.value.toString(),
         unitTypeFilter: unitTypeFilter.value || undefined,
         searchQuery: searchQuery.value || undefined,
-        page: page.value || undefined
-      }
+        page: page.value || undefined,
+      },
     })
   } else {
     router.push('/units')

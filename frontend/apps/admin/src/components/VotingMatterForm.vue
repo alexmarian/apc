@@ -1,163 +1,172 @@
 <template>
   <FormShell :max-width="700">
-      <NSpin :show="loading">
-        <NAlert v-if="error" type="error" closable @close="error = null">
-          {{ error }}
-        </NAlert>
+    <NSpin :show="loading">
+      <NAlert v-if="error" type="error" closable @close="error = null">
+        {{ error }}
+      </NAlert>
 
-        <NForm ref="formRef" :model="formData" :rules="rules" label-placement="top">
-          <NGrid :cols="2" :x-gap="16">
-            <NGridItem>
-              <NFormItem :label="$t('gatherings.matters.titleRo')" path="title">
-                <NInput
-                  v-model:value="formData.title"
-                  :placeholder="$t('gatherings.matters.titlePlaceholder')"
-                />
-              </NFormItem>
-            </NGridItem>
-            <NGridItem>
-              <NFormItem :label="$t('gatherings.matters.titleRu')" path="title_ru">
-                <NInput
-                  v-model:value="formData.title_ru"
-                  :placeholder="$t('gatherings.matters.titlePlaceholder')"
-                />
-              </NFormItem>
-            </NGridItem>
-          </NGrid>
+      <NForm ref="formRef" :model="formData" :rules="rules" label-placement="top">
+        <NGrid :cols="2" :x-gap="16">
+          <NGridItem>
+            <NFormItem :label="$t('gatherings.matters.titleRo')" path="title">
+              <NInput
+                v-model:value="formData.title"
+                :placeholder="$t('gatherings.matters.titlePlaceholder')"
+              />
+            </NFormItem>
+          </NGridItem>
+          <NGridItem>
+            <NFormItem :label="$t('gatherings.matters.titleRu')" path="title_ru">
+              <NInput
+                v-model:value="formData.title_ru"
+                :placeholder="$t('gatherings.matters.titlePlaceholder')"
+              />
+            </NFormItem>
+          </NGridItem>
+        </NGrid>
 
-          <NGrid :cols="2" :x-gap="16">
-            <NGridItem>
-              <NFormItem :label="$t('gatherings.matters.descriptionRo')" path="description">
-                <NInput
-                  v-model:value="formData.description"
-                  type="textarea"
-                  :placeholder="$t('gatherings.matters.descriptionPlaceholder')"
-                  :rows="3"
-                />
-              </NFormItem>
-            </NGridItem>
-            <NGridItem>
-              <NFormItem :label="$t('gatherings.matters.descriptionRu')" path="description_ru">
-                <NInput
-                  v-model:value="formData.description_ru"
-                  type="textarea"
-                  :placeholder="$t('gatherings.matters.descriptionPlaceholder')"
-                  :rows="3"
-                />
-              </NFormItem>
-            </NGridItem>
-          </NGrid>
+        <NGrid :cols="2" :x-gap="16">
+          <NGridItem>
+            <NFormItem :label="$t('gatherings.matters.descriptionRo')" path="description">
+              <NInput
+                v-model:value="formData.description"
+                type="textarea"
+                :placeholder="$t('gatherings.matters.descriptionPlaceholder')"
+                :rows="3"
+              />
+            </NFormItem>
+          </NGridItem>
+          <NGridItem>
+            <NFormItem :label="$t('gatherings.matters.descriptionRu')" path="description_ru">
+              <NInput
+                v-model:value="formData.description_ru"
+                type="textarea"
+                :placeholder="$t('gatherings.matters.descriptionPlaceholder')"
+                :rows="3"
+              />
+            </NFormItem>
+          </NGridItem>
+        </NGrid>
 
-          <NFormItem :label="$t('gatherings.matters.type')" path="matter_type">
-            <NSelect
-              v-model:value="formData.matter_type"
-              :options="typeOptions"
-              @update:value="handleMatterTypeChange"
-            />
-          </NFormItem>
+        <NFormItem :label="$t('gatherings.matters.type')" path="matter_type">
+          <NSelect
+            v-model:value="formData.matter_type"
+            :options="typeOptions"
+            @update:value="handleMatterTypeChange"
+          />
+        </NFormItem>
 
-          <NDivider>{{ $t('gatherings.matters.votingConfig') }}</NDivider>
+        <NDivider>{{ $t('gatherings.matters.votingConfig') }}</NDivider>
 
-          <NFormItem :label="$t('gatherings.matters.votingType')" path="voting_config.type">
-            <NSelect
-              v-model:value="formData.voting_config.type"
-              :options="votingTypeOptions"
-              @update:value="handleVotingTypeChange"
-            />
-          </NFormItem>
+        <NFormItem :label="$t('gatherings.matters.votingType')" path="voting_config.type">
+          <NSelect
+            v-model:value="formData.voting_config.type"
+            :options="votingTypeOptions"
+            @update:value="handleVotingTypeChange"
+          />
+        </NFormItem>
 
-          <NFormItem
-            v-if="needsOptions"
-            :label="$t('gatherings.matters.options')"
-            path="voting_config.options"
-          >
-            <div class="options-section">
-              <div
-                v-for="(option, index) in formData.voting_config.options"
-                :key="index"
-                class="option-item"
+        <NFormItem
+          v-if="needsOptions"
+          :label="$t('gatherings.matters.options')"
+          path="voting_config.options"
+        >
+          <div class="options-section">
+            <div
+              v-for="(option, index) in formData.voting_config.options"
+              :key="index"
+              class="option-item"
+            >
+              <NInput
+                v-model:value="formData.voting_config.options[index].text"
+                :placeholder="$t('gatherings.matters.optionPlaceholder', { index: index + 1 })"
+              />
+              <NButton
+                type="error"
+                size="small"
+                @click="removeOption(index)"
+                :disabled="formData.voting_config.options.length <= 2"
               >
-                <NInput
-                  v-model:value="formData.voting_config.options[index].text"
-                  :placeholder="$t('gatherings.matters.optionPlaceholder', { index: index + 1 })"
-                />
-                <NButton
-                  type="error"
-                  size="small"
-                  @click="removeOption(index)"
-                  :disabled="formData.voting_config.options.length <= 2"
-                >
-                  {{ $t('gatherings.matters.removeOption') }}
-                </NButton>
-              </div>
-              <NButton @click="addOption" dashed style="width: 100%">
-                {{ $t('gatherings.matters.addOption') }}
+                {{ $t('gatherings.matters.removeOption') }}
               </NButton>
             </div>
-          </NFormItem>
+            <NButton @click="addOption" dashed style="width: 100%">
+              {{ $t('gatherings.matters.addOption') }}
+            </NButton>
+          </div>
+        </NFormItem>
 
-          <NGrid :cols="2" :x-gap="16">
-            <NGridItem>
-              <NFormItem :label="$t('gatherings.matters.majorityType')" path="voting_config.required_majority">
-                <NSelect
-                  v-model:value="formData.voting_config.required_majority"
-                  :options="majorityTypeOptions"
-                  :disabled="isSurvey"
-                  @update:value="handleMajorityTypeChange"
-                />
-              </NFormItem>
-            </NGridItem>
+        <NGrid :cols="2" :x-gap="16">
+          <NGridItem>
+            <NFormItem
+              :label="$t('gatherings.matters.majorityType')"
+              path="voting_config.required_majority"
+            >
+              <NSelect
+                v-model:value="formData.voting_config.required_majority"
+                :options="majorityTypeOptions"
+                :disabled="isSurvey"
+                @update:value="handleMajorityTypeChange"
+              />
+            </NFormItem>
+          </NGridItem>
 
-            <NGridItem>
-              <NFormItem
-                v-if="needsMajorityThreshold"
-                :label="$t('gatherings.matters.majorityThreshold')"
-                path="voting_config.required_majority_value"
+          <NGridItem>
+            <NFormItem
+              v-if="needsMajorityThreshold"
+              :label="$t('gatherings.matters.majorityThreshold')"
+              path="voting_config.required_majority_value"
+            >
+              <NInputNumber
+                v-model:value="formData.voting_config.required_majority_value"
+                :min="1"
+                :max="100"
+                :precision="1"
+                style="width: 100%"
               >
-                <NInputNumber
-                  v-model:value="formData.voting_config.required_majority_value"
-                  :min="1"
-                  :max="100"
-                  :precision="1"
-                  style="width: 100%"
-                >
-                  <template #suffix>%</template>
-                </NInputNumber>
-              </NFormItem>
-            </NGridItem>
-          </NGrid>
+                <template #suffix>%</template>
+              </NInputNumber>
+            </NFormItem>
+          </NGridItem>
+        </NGrid>
 
-          <NGrid :cols="3" :x-gap="16">
-            <NGridItem>
-              <NFormItem :label="$t('gatherings.matters.isAnonymous')" path="voting_config.is_anonymous">
-                <NSwitch v-model:value="formData.voting_config.is_anonymous" />
-              </NFormItem>
-            </NGridItem>
+        <NGrid :cols="3" :x-gap="16">
+          <NGridItem>
+            <NFormItem
+              :label="$t('gatherings.matters.isAnonymous')"
+              path="voting_config.is_anonymous"
+            >
+              <NSwitch v-model:value="formData.voting_config.is_anonymous" />
+            </NFormItem>
+          </NGridItem>
 
-            <NGridItem>
-              <NFormItem :label="$t('gatherings.matters.allowAbstention')" path="voting_config.allow_abstention">
-                <NSwitch v-model:value="formData.voting_config.allow_abstention" />
-              </NFormItem>
-            </NGridItem>
+          <NGridItem>
+            <NFormItem
+              :label="$t('gatherings.matters.allowAbstention')"
+              path="voting_config.allow_abstention"
+            >
+              <NSwitch v-model:value="formData.voting_config.allow_abstention" />
+            </NFormItem>
+          </NGridItem>
 
-            <NGridItem>
-              <NFormItem :label="$t('gatherings.matters.isInformative')" path="is_informative">
-                <NSwitch v-model:value="formData.is_informative" />
-              </NFormItem>
-            </NGridItem>
-          </NGrid>
-        </NForm>
+          <NGridItem>
+            <NFormItem :label="$t('gatherings.matters.isInformative')" path="is_informative">
+              <NSwitch v-model:value="formData.is_informative" />
+            </NFormItem>
+          </NGridItem>
+        </NGrid>
+      </NForm>
 
-        <div class="form-actions">
-          <NSpace justify="end">
-            <NButton @click="handleCancel">
-              {{ $t('common.cancel') }}
-            </NButton>
-            <NButton type="primary" @click="handleSubmit" :loading="submitting">
-              {{ isEditMode ? $t('common.update') : $t('common.create') }}
-            </NButton>
-          </NSpace>
-        </div>
+      <div class="form-actions">
+        <NSpace justify="end">
+          <NButton @click="handleCancel">
+            {{ $t('common.cancel') }}
+          </NButton>
+          <NButton type="primary" @click="handleSubmit" :loading="submitting">
+            {{ isEditMode ? $t('common.update') : $t('common.create') }}
+          </NButton>
+        </NSpace>
+      </div>
     </NSpin>
   </FormShell>
 </template>
@@ -180,7 +189,7 @@ import {
   NDivider,
   NSwitch,
   type FormInst,
-  type FormRules
+  type FormRules,
 } from 'naive-ui'
 import FormShell from '@/components/FormShell.vue'
 import { votingMatterApi } from '@/services/api'
@@ -199,10 +208,10 @@ import { VotingType, MajorityType } from '@/types/api'
 // policy → simple (>1/2 expressed), budget → absolute (2/3 qualified denominator),
 // election → simple (1/2 expressed), poll → simple (survey, no pass/fail quota)
 const MATTER_TYPE_DEFAULTS: Record<string, { type: VotingType; majority: MajorityType }> = {
-  budget:   { type: VotingType.YesNo,       majority: MajorityType.AbsoluteTwoThirds },
-  election: { type: VotingType.Ranking,     majority: MajorityType.Simple },
-  policy:   { type: VotingType.YesNo,       majority: MajorityType.Simple },
-  poll:     { type: VotingType.SingleChoice, majority: MajorityType.Simple },
+  budget: { type: VotingType.YesNo, majority: MajorityType.AbsoluteTwoThirds },
+  election: { type: VotingType.Ranking, majority: MajorityType.Simple },
+  policy: { type: VotingType.YesNo, majority: MajorityType.Simple },
+  poll: { type: VotingType.SingleChoice, majority: MajorityType.Simple },
 }
 
 interface Props {
@@ -257,49 +266,54 @@ const formData = reactive<{
     required_majority: 'simple' as MajorityType,
     required_majority_value: null,
     is_anonymous: false,
-    allow_abstention: true
-  }
+    allow_abstention: true,
+  },
 })
 
 const typeOptions = computed(() => [
-  { label: t('gatherings.matters.types.policy'),   value: 'policy' },
-  { label: t('gatherings.matters.types.budget'),   value: 'budget' },
+  { label: t('gatherings.matters.types.policy'), value: 'policy' },
+  { label: t('gatherings.matters.types.budget'), value: 'budget' },
   { label: t('gatherings.matters.types.election'), value: 'election' },
-  { label: t('gatherings.matters.types.poll'),     value: 'poll' },
+  { label: t('gatherings.matters.types.poll'), value: 'poll' },
 ])
 
 const votingTypeOptions = computed(() => [
-  { label: t('gatherings.matters.votingTypes.yes_no'),          value: 'yes_no' },
-  { label: t('gatherings.matters.votingTypes.single_choice'),   value: 'single_choice' },
+  { label: t('gatherings.matters.votingTypes.yes_no'), value: 'yes_no' },
+  { label: t('gatherings.matters.votingTypes.single_choice'), value: 'single_choice' },
   { label: t('gatherings.matters.votingTypes.multiple_choice'), value: 'multiple_choice' },
-  { label: t('gatherings.matters.votingTypes.ranking'),         value: 'ranking' }
+  { label: t('gatherings.matters.votingTypes.ranking'), value: 'ranking' },
 ])
 
 const majorityTypeOptions = computed(() => [
-  { label: t('gatherings.matters.majorityTypes.simple'),              value: 'simple' },
-  { label: t('gatherings.matters.majorityTypes.absolute'),            value: 'absolute' },
-  { label: t('gatherings.matters.majorityTypes.absolute_two_thirds'), value: 'absolute_two_thirds' },
-  { label: t('gatherings.matters.majorityTypes.qualified'),           value: 'qualified' },
-  { label: t('gatherings.matters.majorityTypes.unanimous'),           value: 'unanimous' },
+  { label: t('gatherings.matters.majorityTypes.simple'), value: 'simple' },
+  { label: t('gatherings.matters.majorityTypes.absolute'), value: 'absolute' },
+  {
+    label: t('gatherings.matters.majorityTypes.absolute_two_thirds'),
+    value: 'absolute_two_thirds',
+  },
+  { label: t('gatherings.matters.majorityTypes.qualified'), value: 'qualified' },
+  { label: t('gatherings.matters.majorityTypes.unanimous'), value: 'unanimous' },
 ])
 
 const needsOptions = computed(() =>
-  ['multiple_choice', 'single_choice', 'ranking'].includes(formData.voting_config.type)
+  ['multiple_choice', 'single_choice', 'ranking'].includes(formData.voting_config.type),
 )
 
-const needsMajorityThreshold = computed(() =>
-  formData.voting_config.required_majority === 'qualified'
+const needsMajorityThreshold = computed(
+  () => formData.voting_config.required_majority === 'qualified',
 )
 
 // Surveys (polls) have no pass/fail quota — majority field is locked
 const isSurvey = computed(() => formData.matter_type === 'poll')
 
 const rules: FormRules = {
-  title:         [{ required: true, message: t('gatherings.matters.titleRequired') }],
-  matter_type:   [{ required: true, message: t('gatherings.matters.typeRequired') }],
-  order_index:   [{ required: true, message: t('gatherings.matters.orderRequired'), type: 'number' }],
-  'voting_config.type':             [{ required: true, message: t('gatherings.matters.votingTypeRequired') }],
-  'voting_config.required_majority':[{ required: true, message: t('gatherings.matters.majorityTypeRequired') }]
+  title: [{ required: true, message: t('gatherings.matters.titleRequired') }],
+  matter_type: [{ required: true, message: t('gatherings.matters.typeRequired') }],
+  order_index: [{ required: true, message: t('gatherings.matters.orderRequired'), type: 'number' }],
+  'voting_config.type': [{ required: true, message: t('gatherings.matters.votingTypeRequired') }],
+  'voting_config.required_majority': [
+    { required: true, message: t('gatherings.matters.majorityTypeRequired') },
+  ],
 }
 
 const handleMatterTypeChange = (value: string) => {
@@ -315,7 +329,10 @@ const handleMatterTypeChange = (value: string) => {
 
 const handleVotingTypeChange = (value: VotingType) => {
   if (needsOptions.value && formData.voting_config.options.length === 0) {
-    formData.voting_config.options = [{ id: '1', text: '' }, { id: '2', text: '' }]
+    formData.voting_config.options = [
+      { id: '1', text: '' },
+      { id: '2', text: '' },
+    ]
   } else if (!['multiple_choice', 'single_choice', 'ranking'].includes(value)) {
     formData.voting_config.options = []
   }
@@ -352,8 +369,10 @@ const handleSubmit = async () => {
       ...formData,
       voting_config: {
         ...formData.voting_config,
-        options: needsOptions.value ? formData.voting_config.options.filter(opt => opt.text.trim()) : undefined
-      }
+        options: needsOptions.value
+          ? formData.voting_config.options.filter((opt) => opt.text.trim())
+          : undefined,
+      },
     }
 
     if (isEditMode.value) {
@@ -361,13 +380,13 @@ const handleSubmit = async () => {
         props.associationId,
         props.gathering.id,
         props.matter!.id,
-        requestData as VotingMatterUpdateRequest
+        requestData as VotingMatterUpdateRequest,
       )
     } else {
       await votingMatterApi.createVotingMatter(
         props.associationId,
         props.gathering.id,
-        requestData as VotingMatterCreateRequest
+        requestData as VotingMatterCreateRequest,
       )
     }
 
@@ -383,34 +402,41 @@ const handleCancel = () => {
   emit('cancelled')
 }
 
-watch(() => props.matter, (newMatter) => {
-  if (newMatter) {
-    Object.assign(formData, {
-      title:         newMatter.title,
-      title_ru:      newMatter.title_ru,
-      description:   newMatter.description,
-      description_ru: newMatter.description_ru,
-      matter_type:    newMatter.matter_type,
-      order_index:    newMatter.order_index,
-      is_informative: newMatter.is_informative,
-      voting_config: {
-        type:                    newMatter.voting_config.type,
-        options:                 newMatter.voting_config.options || [],
-        required_majority:       newMatter.voting_config.required_majority,
-        required_majority_value: newMatter.voting_config.required_majority_value,
-        is_anonymous:            newMatter.voting_config.is_anonymous,
-        allow_abstention:        newMatter.voting_config.allow_abstention
-      }
-    })
-  }
-}, { immediate: true })
+watch(
+  () => props.matter,
+  (newMatter) => {
+    if (newMatter) {
+      Object.assign(formData, {
+        title: newMatter.title,
+        title_ru: newMatter.title_ru,
+        description: newMatter.description,
+        description_ru: newMatter.description_ru,
+        matter_type: newMatter.matter_type,
+        order_index: newMatter.order_index,
+        is_informative: newMatter.is_informative,
+        voting_config: {
+          type: newMatter.voting_config.type,
+          options: newMatter.voting_config.options || [],
+          required_majority: newMatter.voting_config.required_majority,
+          required_majority_value: newMatter.voting_config.required_majority_value,
+          is_anonymous: newMatter.voting_config.is_anonymous,
+          allow_abstention: newMatter.voting_config.allow_abstention,
+        },
+      })
+    }
+  },
+  { immediate: true },
+)
 
 onMounted(async () => {
   if (!isEditMode.value) {
     try {
-      const response = await votingMatterApi.getVotingMatters(props.associationId, props.gathering.id)
+      const response = await votingMatterApi.getVotingMatters(
+        props.associationId,
+        props.gathering.id,
+      )
       const matters = response.data
-      const maxOrder = matters.length > 0 ? Math.max(...matters.map(m => m.order_index)) : 0
+      const maxOrder = matters.length > 0 ? Math.max(...matters.map((m) => m.order_index)) : 0
       formData.order_index = maxOrder + 1
     } catch {
       formData.order_index = 1

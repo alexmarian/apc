@@ -16,10 +16,7 @@ const buildingId = ref<number | null>(null)
 <template>
   <PageShell :title="t('expenses.distribution', 'Unit Expense Distribution Report')">
     <template #context>
-      <BuildingSelector
-        v-model:building-id="buildingId"
-        v-model:association-id="associationId"
-      />
+      <BuildingSelector v-model:building-id="buildingId" v-model:association-id="associationId" />
     </template>
 
     <UnitExpenseDistributionReport

@@ -17,7 +17,7 @@ import {
   NEmpty,
   NDataTable,
   NSkeleton,
-  type DataTableColumns
+  type DataTableColumns,
 } from 'naive-ui'
 import { useRouter, useRoute } from 'vue-router'
 import { expenseApi } from '@/services/api'
@@ -61,7 +61,7 @@ const expensesByType = computed(() => {
   // Group expenses by type
   const types: Record<string, number> = {}
 
-  expenses.value.forEach(expense => {
+  expenses.value.forEach((expense) => {
     const type = expense.category_type || t('expenses.uncategorized', 'Uncategorized')
 
     if (!types[type]) {
@@ -71,26 +71,34 @@ const expensesByType = computed(() => {
     types[type] += expense.amount
   })
 
-  return Object.entries(types).map(([name, value]) => ({
-    name,
-    value,
-    percentage: (value / yearlyTotal.value) * 100
-  })).sort((a, b) => b.value - a.value)
+  return Object.entries(types)
+    .map(([name, value]) => ({
+      name,
+      value,
+      percentage: (value / yearlyTotal.value) * 100,
+    }))
+    .sort((a, b) => b.value - a.value)
 })
 
 const expensesByMonth = computed(() => {
   return groupExpensesByMonth(expenses.value)
 })
 
-const byTypeColumns = computed<DataTableColumns<{ name: string; value: number; percentage: number }>>(() => [
+const byTypeColumns = computed<
+  DataTableColumns<{ name: string; value: number; percentage: number }>
+>(() => [
   { title: t('categories.type'), key: 'name' },
-  { title: t('charts.amount', 'Amount'), key: 'value', render: row => formatCurrency(row.value) },
-  { title: t('charts.percentage', 'Percentage'), key: 'percentage', render: row => `${row.percentage.toFixed(1)}%` }
+  { title: t('charts.amount', 'Amount'), key: 'value', render: (row) => formatCurrency(row.value) },
+  {
+    title: t('charts.percentage', 'Percentage'),
+    key: 'percentage',
+    render: (row) => `${row.percentage.toFixed(1)}%`,
+  },
 ])
 
 const byMonthColumns = computed<DataTableColumns<{ month: string; value: number }>>(() => [
   { title: t('expenses.month', 'Month'), key: 'month' },
-  { title: t('charts.amount', 'Amount'), key: 'value', render: row => formatCurrency(row.value) }
+  { title: t('charts.amount', 'Amount'), key: 'value', render: (row) => formatCurrency(row.value) },
 ])
 
 // Fetch expenses
@@ -110,7 +118,12 @@ const fetchExpenses = async () => {
       endDate = new Date(dateRange.value[1]).toISOString().split('T')[0]
     }
 
-    const response = await expenseApi.getExpenses(associationId.value, startDate, endDate, selectedCategory.value || undefined)
+    const response = await expenseApi.getExpenses(
+      associationId.value,
+      startDate,
+      endDate,
+      selectedCategory.value || undefined,
+    )
     expenses.value = response.data
   } catch (err) {
     error.value = err instanceof Error ? err.message : t('common.error', 'Unknown error occurred')
@@ -151,8 +164,8 @@ const resetFilters = () => {
   if (associationId.value) {
     router.replace({
       query: {
-        associationId: associationId.value.toString()
-      }
+        associationId: associationId.value.toString(),
+      },
     })
   }
 }
@@ -162,7 +175,7 @@ const updateUrlFromFilters = () => {
   if (!associationId.value) return
 
   const query: Record<string, string> = {
-    associationId: associationId.value.toString()
+    associationId: associationId.value.toString(),
   }
 
   if (dateRange.value) {
@@ -200,13 +213,13 @@ onMounted(() => {
   if (route.query.startDate && route.query.endDate) {
     dateRange.value = [
       parseInt(route.query.startDate as string),
-      parseInt(route.query.endDate as string)
+      parseInt(route.query.endDate as string),
     ]
   } else {
     const now = new Date()
     dateRange.value = [
       new Date(now.getFullYear(), 0, 1).getTime(),
-      new Date(now.getFullYear(), 11, 31).getTime()
+      new Date(now.getFullYear(), 11, 31).getTime(),
     ]
   }
 
@@ -220,17 +233,18 @@ onMounted(() => {
   <PageShell :title="t('reports.title', 'Expense Reports')">
     <FilterBar resettable @reset="resetFilters">
       <FilterField :label="t('expenses.dateRange', 'Date Range')">
-        <NDatePicker
-          v-model:value="dateRange"
-          type="daterange"
-          clearable
-          style="width: 240px"
-        />
+        <NDatePicker v-model:value="dateRange" type="daterange" clearable style="width: 240px" />
       </FilterField>
       <NSpace :size="8">
-        <NButton size="small" @click="selectPreviousMonth">{{ t('reports.previousMonth', 'Previous Month') }}</NButton>
-        <NButton size="small" @click="selectCurrentMonth">{{ t('reports.currentMonth', 'Current Month') }}</NButton>
-        <NButton size="small" @click="selectCurrentYear">{{ t('reports.currentYear', 'Current Year') }}</NButton>
+        <NButton size="small" @click="selectPreviousMonth">{{
+          t('reports.previousMonth', 'Previous Month')
+        }}</NButton>
+        <NButton size="small" @click="selectCurrentMonth">{{
+          t('reports.currentMonth', 'Current Month')
+        }}</NButton>
+        <NButton size="small" @click="selectCurrentYear">{{
+          t('reports.currentYear', 'Current Year')
+        }}</NButton>
       </NSpace>
       <FilterField :label="t('expenses.category', 'Category')">
         <CategorySelector
@@ -252,7 +266,11 @@ onMounted(() => {
 
         <template v-else-if="expenses.length === 0">
           <NCard>
-            <NEmpty :description="t('expenses.noExpensesFilters', 'No expenses found for the selected filters')" />
+            <NEmpty
+              :description="
+                t('expenses.noExpensesFilters', 'No expenses found for the selected filters')
+              "
+            />
           </NCard>
         </template>
 
@@ -265,13 +283,22 @@ onMounted(() => {
 
             <NGrid :cols="3" :x-gap="16">
               <NGridItem>
-                <NStatistic :label="t('expenses.totalExpenses', 'Total Expenses')" :value="formatCurrency(yearlyTotal)" />
+                <NStatistic
+                  :label="t('expenses.totalExpenses', 'Total Expenses')"
+                  :value="formatCurrency(yearlyTotal)"
+                />
               </NGridItem>
               <NGridItem>
-                <NStatistic :label="t('expenses.averageExpense', 'Monthly Average')" :value="formatCurrency(monthlyAverage)" />
+                <NStatistic
+                  :label="t('expenses.averageExpense', 'Monthly Average')"
+                  :value="formatCurrency(monthlyAverage)"
+                />
               </NGridItem>
               <NGridItem>
-                <NStatistic :label="t('expenses.numberOfExpenses', 'Number of Expenses')" :value="expenses.length" />
+                <NStatistic
+                  :label="t('expenses.numberOfExpenses', 'Number of Expenses')"
+                  :value="expenses.length"
+                />
               </NGridItem>
             </NGrid>
 
@@ -280,17 +307,13 @@ onMounted(() => {
             <NTabs type="line" animated>
               <NTabPane name="charts" :tab="t('charts.pieChart', 'Visual Reports')">
                 <template v-if="loading">
-                  <div style="padding: 20px;">
-                    <NSkeleton height="300px" style="margin-bottom: 20px;" />
-                    <NSkeleton height="300px" style="margin-bottom: 20px;" />
+                  <div style="padding: 20px">
+                    <NSkeleton height="300px" style="margin-bottom: 20px" />
+                    <NSkeleton height="300px" style="margin-bottom: 20px" />
                     <NSkeleton height="300px" />
                   </div>
                 </template>
-                <ExpenseCharts
-                  v-else
-                  :expenses="expenses"
-                  :dateRange="dateRange"
-                />
+                <ExpenseCharts v-else :expenses="expenses" :dateRange="dateRange" />
               </NTabPane>
 
               <NTabPane name="breakdown" :tab="t('expenses.expenseTypeBreakdown', 'Breakdown')">
@@ -300,7 +323,7 @@ onMounted(() => {
                 <NDataTable
                   :columns="byTypeColumns"
                   :data="expensesByType"
-                  :row-key="row => row.name"
+                  :row-key="(row) => row.name"
                   :bordered="false"
                   size="small"
                 />
@@ -313,7 +336,7 @@ onMounted(() => {
                 <NDataTable
                   :columns="byMonthColumns"
                   :data="expensesByMonth"
-                  :row-key="row => row.month"
+                  :row-key="(row) => row.month"
                   :bordered="false"
                   size="small"
                 />

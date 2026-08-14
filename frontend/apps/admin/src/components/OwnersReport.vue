@@ -11,7 +11,7 @@ import {
   NInputGroup,
   NInput,
   NSelect,
-  NText
+  NText,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { ownerApi } from '@/services/api'
@@ -46,13 +46,15 @@ const searchQuery = ref<string>((route.query.search as string) ?? '')
 const sortBy = ref<'name' | 'part'>((route.query.sortBy as 'name' | 'part') ?? 'part')
 const sortOrder = ref<'asc' | 'desc'>((route.query.sortOrder as 'asc' | 'desc') ?? 'desc')
 const unitTypeFilter = ref<string[]>(
-  route.query.unitTypes ? (route.query.unitTypes as string).split(',').filter(Boolean) : []
+  route.query.unitTypes ? (route.query.unitTypes as string).split(',').filter(Boolean) : [],
 )
 const currentPage = ref<number>(route.query.page ? parseInt(route.query.page as string) : 1)
 const pagination = computed(() => ({
   pageSize: 10,
   page: currentPage.value,
-  onUpdatePage: (p: number) => { currentPage.value = p }
+  onUpdatePage: (p: number) => {
+    currentPage.value = p
+  },
 }))
 
 // Unit data is required whenever filtering by type (client-side narrowing needs it).
@@ -60,15 +62,18 @@ const unitsNeeded = computed<boolean>(() => unitTypeFilter.value.length > 0)
 
 // Select options for the unit-type filters
 const unitTypeOptions = computed(() =>
-  Object.values(UnitType).map(value => ({
+  Object.values(UnitType).map((value) => ({
     label: t(`unitTypes.${value}`, value),
-    value
-  }))
+    value,
+  })),
 )
 
 // CSV-escape a single value
 const csvEscape = (value: string | number): string => {
-  if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+  if (
+    typeof value === 'string' &&
+    (value.includes(',') || value.includes('"') || value.includes('\n'))
+  ) {
     return `"${value.replace(/"/g, '""')}"`
   }
   return String(value)
@@ -76,19 +81,21 @@ const csvEscape = (value: string | number): string => {
 
 // When a unit-type filter is active, compute area/part/count from filtered units.
 // Falls back to server-side statistics when no filter is applied.
-const filteredStatsForRow = (row: OwnerReportItem): { area: number; part: number; count: number } => {
+const filteredStatsForRow = (
+  row: OwnerReportItem,
+): { area: number; part: number; count: number } => {
   if (unitTypeFilter.value.length === 0 || !row.units) {
     return {
       area: row.statistics.total_area,
       part: row.statistics.total_condo_part,
-      count: row.statistics.total_units
+      count: row.statistics.total_units,
     }
   }
-  const matching = row.units.filter(u => unitTypeFilter.value.includes(u.unit_type))
+  const matching = row.units.filter((u) => unitTypeFilter.value.includes(u.unit_type))
   return {
     area: matching.reduce((s, u) => s + u.area, 0),
     part: matching.reduce((s, u) => s + u.part, 0),
-    count: matching.length
+    count: matching.length,
   }
 }
 
@@ -97,34 +104,34 @@ const columns = computed<DataTableColumns<OwnerReportItem>>(() => {
   const cols: DataTableColumns<OwnerReportItem> = [
     {
       title: t('owners.name', 'Owner'),
-      key: 'owner.name'
+      key: 'owner.name',
     },
     {
       title: t('owners.identification', 'Identification'),
-      key: 'owner.identification_number'
+      key: 'owner.identification_number',
     },
     {
       title: t('owners.contactPhone', 'Contact Phone'),
-      key: 'owner.contact_phone'
+      key: 'owner.contact_phone',
     },
     {
       title: t('owners.contactEmail', 'Contact Email'),
-      key: 'owner.contact_email'
+      key: 'owner.contact_email',
     },
     {
       title: t('owners.totalArea', 'Total Area'),
       key: 'statistics.total_area',
-      render: (row: OwnerReportItem) => `${filteredStatsForRow(row).area.toFixed(2)} m²`
+      render: (row: OwnerReportItem) => `${filteredStatsForRow(row).area.toFixed(2)} m²`,
     },
     {
       title: t('owners.totalPart', 'Condo Part'),
       key: 'statistics.total_condo_part',
-      render: (row: OwnerReportItem) => formatPercentage(filteredStatsForRow(row).part, 4)
+      render: (row: OwnerReportItem) => formatPercentage(filteredStatsForRow(row).part, 4),
     },
     {
       title: t('units.title', 'Units'),
       key: 'statistics.total_units',
-      render: (row: OwnerReportItem) => String(filteredStatsForRow(row).count)
+      render: (row: OwnerReportItem) => String(filteredStatsForRow(row).count),
     },
     {
       title: t('common.actions', 'Actions'),
@@ -139,24 +146,24 @@ const columns = computed<DataTableColumns<OwnerReportItem>>(() => {
                 NButton,
                 {
                   size: 'small',
-                  onClick: () => handleViewOwnerDetails(row.owner.id)
+                  onClick: () => handleViewOwnerDetails(row.owner.id),
                 },
-                { default: () => t('common.details', 'Details') }
+                { default: () => t('common.details', 'Details') },
               ),
               h(
                 NButton,
                 {
                   size: 'small',
                   type: 'primary',
-                  onClick: () => handleEditOwner(row.owner.id)
+                  onClick: () => handleEditOwner(row.owner.id),
                 },
-                { default: () => t('common.edit', 'Edit') }
-              )
-            ]
-          }
+                { default: () => t('common.edit', 'Edit') },
+              ),
+            ],
+          },
         )
-      }
-    }
+      },
+    },
   ]
 
   return cols
@@ -173,12 +180,13 @@ const fetchOwnersReport = async (forceUnits = false): Promise<void> => {
     const response = await ownerApi.getOwnerReport(
       props.associationId,
       forceUnits || unitsNeeded.value,
-      false
+      false,
     )
 
     ownersData.value = response.data
   } catch (err) {
-    error.value = err instanceof Error ? err.message : t('owners.loadError', 'Failed to load owners report')
+    error.value =
+      err instanceof Error ? err.message : t('owners.loadError', 'Failed to load owners report')
     console.error('Error fetching owners report:', err)
   } finally {
     loading.value = false
@@ -189,7 +197,7 @@ const fetchOwnersReport = async (forceUnits = false): Promise<void> => {
 const handleViewOwnerDetails = (ownerId: number): void => {
   router.push({
     path: `/owners/${ownerId}`,
-    query: { from: route.fullPath }
+    query: { from: route.fullPath },
   })
 }
 
@@ -199,7 +207,9 @@ const handleEditOwner = (ownerId: number): void => {
 }
 
 // Aggregate an owner's units into per-type { area, part } keyed by unit type
-const unitTypeBreakdown = (item: OwnerReportItem): Record<string, { area: number; part: number }> => {
+const unitTypeBreakdown = (
+  item: OwnerReportItem,
+): Record<string, { area: number; part: number }> => {
   const breakdown: Record<string, { area: number; part: number }> = {}
   for (const type of Object.values(UnitType)) {
     breakdown[type] = { area: 0, part: 0 }
@@ -220,7 +230,7 @@ const exportToCSV = async (): Promise<void> => {
   }
 
   // CSV needs units + co-owners; fetch them if not already loaded.
-  if (!ownersData.value.some(item => item.units !== undefined)) {
+  if (!ownersData.value.some((item) => item.units !== undefined)) {
     const response = await ownerApi.getOwnerReport(props.associationId!, true, true)
     ownersData.value = response.data
   }
@@ -239,15 +249,20 @@ const exportToCSV = async (): Promise<void> => {
       t('owners.csvHeaders.area', 'Total Area (m²)'),
       t('owners.csvHeaders.part', 'Total Condo Part (%)'),
       // Per-unit-type surface columns followed by per-unit-type part columns
-      ...unitTypes.map(type => `${t(`unitTypes.${type}`, type)} ${t('owners.csvHeaders.areaShort', 'Area (m²)')}`),
-      ...unitTypes.map(type => `${t(`unitTypes.${type}`, type)} ${t('owners.csvHeaders.partShort', 'Part (%)')}`)
+      ...unitTypes.map(
+        (type) =>
+          `${t(`unitTypes.${type}`, type)} ${t('owners.csvHeaders.areaShort', 'Area (m²)')}`,
+      ),
+      ...unitTypes.map(
+        (type) => `${t(`unitTypes.${type}`, type)} ${t('owners.csvHeaders.partShort', 'Part (%)')}`,
+      ),
     ]
 
     headers.push(t('owners.csvHeaders.coOwners', 'Co-Owners'))
     headers.push(t('owners.csvHeaders.unitsList', 'Units'))
 
     // Create CSV rows
-    const rows: (string | number)[][] = filteredSortedData.value.map(item => {
+    const rows: (string | number)[][] = filteredSortedData.value.map((item) => {
       const breakdown = unitTypeBreakdown(item)
       const stats = filteredStatsForRow(item)
       const row: (string | number)[] = [
@@ -260,16 +275,22 @@ const exportToCSV = async (): Promise<void> => {
         parseFloat(stats.area.toFixed(2)),
         parseFloat((stats.part * 100).toFixed(4)),
         // Per-type surfaces, then per-type parts — same order as the headers
-        ...unitTypes.map(type => parseFloat(breakdown[type].area.toFixed(2))),
-        ...unitTypes.map(type => parseFloat((breakdown[type].part * 100).toFixed(4)))
+        ...unitTypes.map((type) => parseFloat(breakdown[type].area.toFixed(2))),
+        ...unitTypes.map((type) => parseFloat((breakdown[type].part * 100).toFixed(4))),
       ]
 
-      row.push(item.co_owners && item.co_owners.length > 0
-        ? item.co_owners.map(co => co.name).join(', ')
-        : '')
-      row.push(item.units && item.units.length > 0
-        ? item.units.map(unit => `${unit.building_name} - ${unit.unit_number} (${unit.area} m²)`).join('; ')
-        : '')
+      row.push(
+        item.co_owners && item.co_owners.length > 0
+          ? item.co_owners.map((co) => co.name).join(', ')
+          : '',
+      )
+      row.push(
+        item.units && item.units.length > 0
+          ? item.units
+              .map((unit) => `${unit.building_name} - ${unit.unit_number} (${unit.area} m²)`)
+              .join('; ')
+          : '',
+      )
 
       return row
     })
@@ -277,7 +298,7 @@ const exportToCSV = async (): Promise<void> => {
     // Create CSV content. Headers are translated, so they can contain commas
     // too and need the same escaping as the values.
     let csvContent = headers.map(csvEscape).join(',') + '\n'
-    rows.forEach(row => {
+    rows.forEach((row) => {
       csvContent += row.map(csvEscape).join(',') + '\n'
     })
 
@@ -286,13 +307,15 @@ const exportToCSV = async (): Promise<void> => {
     csvContent += t('owners.csvHeaders.reportSummary', 'Report Summary') + '\n'
     csvContent += `${t('owners.csvHeaders.totalOwners', 'Total Owners')},${filteredSortedData.value.length}\n`
 
-    const totalArea = filteredSortedData.value.reduce((sum, item) =>
-      sum + item.statistics.total_area, 0
+    const totalArea = filteredSortedData.value.reduce(
+      (sum, item) => sum + item.statistics.total_area,
+      0,
     )
     csvContent += `${t('owners.csvHeaders.totalArea', 'Total Area (m²)')},${totalArea.toFixed(2)}\n`
 
-    const totalPart = filteredSortedData.value.reduce((sum, item) =>
-      sum + item.statistics.total_condo_part, 0
+    const totalPart = filteredSortedData.value.reduce(
+      (sum, item) => sum + item.statistics.total_condo_part,
+      0,
     )
     csvContent += `${t('owners.csvHeaders.totalPart', 'Total Condo Part (%)')},${(totalPart * 100).toFixed(4)}\n`
 
@@ -322,19 +345,20 @@ const filteredSortedData = computed<OwnerReportItem[]>(() => {
 
   // Apply unit-type filter: keep owners holding at least one unit of the selected types.
   if (unitTypeFilter.value.length > 0) {
-    data = data.filter(item =>
-      item.units?.some(unit => unitTypeFilter.value.includes(unit.unit_type))
+    data = data.filter((item) =>
+      item.units?.some((unit) => unitTypeFilter.value.includes(unit.unit_type)),
     )
   }
 
   // Apply search filter
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    data = data.filter(item =>
-      item.owner.name.toLowerCase().includes(query) ||
-      item.owner.identification_number.toLowerCase().includes(query) ||
-      item.owner.contact_phone.toLowerCase().includes(query) ||
-      item.owner.contact_email.toLowerCase().includes(query)
+    data = data.filter(
+      (item) =>
+        item.owner.name.toLowerCase().includes(query) ||
+        item.owner.identification_number.toLowerCase().includes(query) ||
+        item.owner.contact_phone.toLowerCase().includes(query) ||
+        item.owner.contact_email.toLowerCase().includes(query),
     )
   }
 
@@ -364,15 +388,19 @@ watch([searchQuery, sortBy, sortOrder, unitTypeFilter, currentPage], () => {
       sortOrder: sortOrder.value !== 'desc' ? sortOrder.value : undefined,
       unitTypes: unitTypeFilter.value.length > 0 ? unitTypeFilter.value.join(',') : undefined,
       page: currentPage.value > 1 ? currentPage.value.toString() : undefined,
-    }
+    },
   })
 })
 
 // Refetch when the association changes or the unit-type filter crosses the
 // needs-units boundary (empty→some or some→empty).
-watch(() => props.associationId, (id) => {
-  if (id) fetchOwnersReport()
-}, { immediate: true })
+watch(
+  () => props.associationId,
+  (id) => {
+    if (id) fetchOwnersReport()
+  },
+  { immediate: true },
+)
 
 watch(unitsNeeded, () => {
   if (props.associationId) fetchOwnersReport()
@@ -382,7 +410,6 @@ watch(unitsNeeded, () => {
 <template>
   <div class="owners-report">
     <NCard>
-
       <div class="report-controls">
         <NSpace align="center" justify="space-between" wrap-item>
           <div class="report-filters">
@@ -396,7 +423,7 @@ watch(unitsNeeded, () => {
                 v-model:value="sortBy"
                 :options="[
                   { label: t('owners.sortByPart', 'Sort by Ownership Part'), value: 'part' },
-                  { label: t('owners.sortByName', 'Sort by Name'), value: 'name' }
+                  { label: t('owners.sortByName', 'Sort by Name'), value: 'name' },
                 ]"
                 style="width: 180px"
               />
@@ -404,7 +431,7 @@ watch(unitsNeeded, () => {
                 v-model:value="sortOrder"
                 :options="[
                   { label: t('common.descending', 'Descending'), value: 'desc' },
-                  { label: t('common.ascending', 'Ascending'), value: 'asc' }
+                  { label: t('common.ascending', 'Ascending'), value: 'asc' },
                 ]"
                 style="width: 120px"
               />
@@ -421,7 +448,7 @@ watch(unitsNeeded, () => {
 
           <div class="report-options">
             <NSpace align="center">
-              <NText depth="3" style="white-space: nowrap;">
+              <NText depth="3" style="white-space: nowrap">
                 {{ filteredSortedData.length }} {{ t('owners.totalOwners', 'owners') }}
               </NText>
               <NButton
@@ -437,7 +464,7 @@ watch(unitsNeeded, () => {
       </div>
 
       <NSpin :show="loading">
-        <NAlert v-if="error" type="error" style="margin-bottom: 16px;">
+        <NAlert v-if="error" type="error" style="margin-bottom: 16px">
           {{ error }}
           <NButton @click="() => fetchOwnersReport()">{{ t('common.retry', 'Retry') }}</NButton>
         </NAlert>
@@ -452,9 +479,19 @@ watch(unitsNeeded, () => {
           />
         </div>
 
-        <NEmpty v-else-if="!loading && (!ownersData || filteredSortedData.length === 0)" :description="t('owners.noOwnersFound', 'No owners found')">
+        <NEmpty
+          v-else-if="!loading && (!ownersData || filteredSortedData.length === 0)"
+          :description="t('owners.noOwnersFound', 'No owners found')"
+        >
           <template #extra>
-            <p>{{ t('owners.tryChangingFilters', 'Try changing your search filters or selecting a different association.') }}</p>
+            <p>
+              {{
+                t(
+                  'owners.tryChangingFilters',
+                  'Try changing your search filters or selecting a different association.',
+                )
+              }}
+            </p>
           </template>
         </NEmpty>
       </NSpin>
@@ -482,5 +519,4 @@ watch(unitsNeeded, () => {
   display: flex;
   gap: 16px;
 }
-
 </style>

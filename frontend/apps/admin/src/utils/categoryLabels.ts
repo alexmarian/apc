@@ -17,7 +17,7 @@ export async function syncCategoryLabels(associationId: number) {
     const overrides: Record<string, Record<string, string>> = {
       types: {},
       families: {},
-      names: {}
+      names: {},
     }
 
     for (const cat of categories) {
@@ -27,7 +27,7 @@ export async function syncCategoryLabels(associationId: number) {
       if (cat.original_labels.name) overrides.names[cat.name] = cat.original_labels.name
     }
 
-    const hasOverrides = Object.values(overrides).some(o => Object.keys(o).length > 0)
+    const hasOverrides = Object.values(overrides).some((o) => Object.keys(o).length > 0)
     if (!hasOverrides) {
       localStorage.removeItem('standalone_category_overrides')
       return
@@ -35,7 +35,7 @@ export async function syncCategoryLabels(associationId: number) {
 
     for (const locale of ['en', 'ro']) {
       i18n.global.mergeLocaleMessage(locale, {
-        categories: overrides
+        categories: overrides,
       })
     }
 

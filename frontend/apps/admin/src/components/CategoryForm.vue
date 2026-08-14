@@ -1,8 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import {
-  NForm, NFormItem, NButton, NSpace, NSpin, NAlert,
-  NSelect, NInput, NRadioGroup, NRadioButton, useMessage
+  NForm,
+  NFormItem,
+  NButton,
+  NSpace,
+  NSpin,
+  NAlert,
+  NSelect,
+  NInput,
+  NRadioGroup,
+  NRadioButton,
+  useMessage,
 } from 'naive-ui'
 import { categoryApi } from '@/services/api'
 import { apiErrorMessage } from '@/utils/apiError'
@@ -60,7 +69,7 @@ function generateI18nKey(label: string): string {
 }
 
 function ensureUniqueKey(baseKey: string, field: 'type' | 'family' | 'name'): string {
-  const existingKeys = new Set(allCategories.value.map(c => c[field]))
+  const existingKeys = new Set(allCategories.value.map((c) => c[field]))
   if (!existingKeys.has(baseKey)) return baseKey
   let i = 1
   while (existingKeys.has(`${baseKey}_${i}`)) i++
@@ -86,55 +95,57 @@ watch(nameLabel, (val) => {
 
 function uniqueStrings(values: string[]): string[] {
   const seen = new Set<string>()
-  return values.filter(v => v && !seen.has(v) && seen.add(v))
+  return values.filter((v) => v && !seen.has(v) && seen.add(v))
 }
 
 const typeSelectOptions = computed(() =>
-  uniqueStrings(allCategories.value.map(c => c.type)).map(v => ({
+  uniqueStrings(allCategories.value.map((c) => c.type)).map((v) => ({
     value: v,
-    label: t(`categories.types.${v}`, v)
-  }))
+    label: t(`categories.types.${v}`, v),
+  })),
 )
 
 const familySelectOptions = computed(() => {
   const resolvedType = typeMode.value === 'existing' ? typeExisting.value : typeKey.value
   const source = resolvedType
-    ? allCategories.value.filter(c => c.type === resolvedType)
+    ? allCategories.value.filter((c) => c.type === resolvedType)
     : allCategories.value
-  return uniqueStrings(source.map(c => c.family)).map(v => ({
+  return uniqueStrings(source.map((c) => c.family)).map((v) => ({
     value: v,
-    label: t(`categories.families.${v}`, v)
+    label: t(`categories.families.${v}`, v),
   }))
 })
 
 const resolvedType = computed(() =>
-  typeMode.value === 'existing' ? (typeExisting.value || '') : typeKey.value
+  typeMode.value === 'existing' ? typeExisting.value || '' : typeKey.value,
 )
 const resolvedFamily = computed(() =>
-  familyMode.value === 'existing' ? (familyExisting.value || '') : familyKey.value
+  familyMode.value === 'existing' ? familyExisting.value || '' : familyKey.value,
 )
 const resolvedName = computed(() => nameKey.value)
 
 const rules: FormRules = {
   type: [{ required: true, message: t('categories.validation.typeRequired'), trigger: 'blur' }],
   family: [{ required: true, message: t('categories.validation.familyRequired'), trigger: 'blur' }],
-  name: [{ required: true, message: t('categories.validation.nameRequired'), trigger: 'blur' }]
+  name: [{ required: true, message: t('categories.validation.nameRequired'), trigger: 'blur' }],
 }
 
 const formModel = computed(() => ({
   type: resolvedType.value,
   family: resolvedFamily.value,
-  name: resolvedName.value
+  name: resolvedName.value,
 }))
 
 const previewType = computed(() => {
   if (typeMode.value === 'new' && typeLabel.value) return typeLabel.value
-  if (typeMode.value === 'existing' && typeExisting.value) return t(`categories.types.${typeExisting.value}`, typeExisting.value)
+  if (typeMode.value === 'existing' && typeExisting.value)
+    return t(`categories.types.${typeExisting.value}`, typeExisting.value)
   return ''
 })
 const previewFamily = computed(() => {
   if (familyMode.value === 'new' && familyLabel.value) return familyLabel.value
-  if (familyMode.value === 'existing' && familyExisting.value) return t(`categories.families.${familyExisting.value}`, familyExisting.value)
+  if (familyMode.value === 'existing' && familyExisting.value)
+    return t(`categories.families.${familyExisting.value}`, familyExisting.value)
   return ''
 })
 const previewName = computed(() => {
@@ -218,7 +229,7 @@ const submitForm = async (e: MouseEvent) => {
         type: resolvedType.value,
         family: resolvedFamily.value,
         name: resolvedName.value,
-        original_labels: Object.keys(originalLabels).length > 0 ? originalLabels : undefined
+        original_labels: Object.keys(originalLabels).length > 0 ? originalLabels : undefined,
       }
       response = await categoryApi.updateCategory(props.associationId, props.categoryId, updateData)
       message.success(t('categories.categoryUpdated'))
@@ -227,7 +238,7 @@ const submitForm = async (e: MouseEvent) => {
         type: resolvedType.value,
         family: resolvedFamily.value,
         name: resolvedName.value,
-        original_labels: Object.keys(originalLabels).length > 0 ? originalLabels : undefined
+        original_labels: Object.keys(originalLabels).length > 0 ? originalLabels : undefined,
       }
       response = await categoryApi.createCategory(props.associationId, createData)
       message.success(t('categories.categoryCreated'))
@@ -257,11 +268,22 @@ onMounted(async () => {
 <template>
   <div class="category-form">
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" :title="t('common.error')" style="margin-bottom: 16px;" closable @close="error = null">
+      <NAlert
+        v-if="error"
+        type="error"
+        :title="t('common.error')"
+        style="margin-bottom: 16px"
+        closable
+        @close="error = null"
+      >
         {{ error }}
       </NAlert>
 
-      <NAlert v-if="previewType && previewFamily && previewName" type="info" style="margin-bottom: 16px;">
+      <NAlert
+        v-if="previewType && previewFamily && previewName"
+        type="info"
+        style="margin-bottom: 16px"
+      >
         <template #header>{{ t('categories.preview') }}</template>
         {{ previewType }} → {{ previewFamily }} → {{ previewName }}
       </NAlert>
@@ -281,7 +303,7 @@ onMounted(async () => {
         <!-- Type -->
         <NFormItem :label="t('categories.type')" path="type">
           <div style="width: 100%">
-            <NRadioGroup v-model:value="typeMode" size="small" style="margin-bottom: 8px;">
+            <NRadioGroup v-model:value="typeMode" size="small" style="margin-bottom: 8px">
               <NRadioButton value="existing">{{ t('categories.selectExisting') }}</NRadioButton>
               <NRadioButton value="new">{{ t('categories.createNewOption') }}</NRadioButton>
             </NRadioGroup>
@@ -297,7 +319,7 @@ onMounted(async () => {
               <NInput
                 v-model:value="typeLabel"
                 :placeholder="t('categories.labelPlaceholder')"
-                style="margin-bottom: 4px;"
+                style="margin-bottom: 4px"
               />
               <NInput
                 v-model:value="typeKey"
@@ -307,7 +329,9 @@ onMounted(async () => {
                 @click="typeKeyManuallyEdited = true"
               >
                 <template #prefix>
-                  <span style="color: #999; font-size: var(--text-sm);">{{ t('categories.i18nKey') }}:</span>
+                  <span style="color: #999; font-size: var(--text-sm)"
+                    >{{ t('categories.i18nKey') }}:</span
+                  >
                 </template>
               </NInput>
             </div>
@@ -317,7 +341,7 @@ onMounted(async () => {
         <!-- Family -->
         <NFormItem :label="t('categories.family')" path="family">
           <div style="width: 100%">
-            <NRadioGroup v-model:value="familyMode" size="small" style="margin-bottom: 8px;">
+            <NRadioGroup v-model:value="familyMode" size="small" style="margin-bottom: 8px">
               <NRadioButton value="existing">{{ t('categories.selectExisting') }}</NRadioButton>
               <NRadioButton value="new">{{ t('categories.createNewOption') }}</NRadioButton>
             </NRadioGroup>
@@ -333,7 +357,7 @@ onMounted(async () => {
               <NInput
                 v-model:value="familyLabel"
                 :placeholder="t('categories.labelPlaceholder')"
-                style="margin-bottom: 4px;"
+                style="margin-bottom: 4px"
               />
               <NInput
                 v-model:value="familyKey"
@@ -343,7 +367,9 @@ onMounted(async () => {
                 @click="familyKeyManuallyEdited = true"
               >
                 <template #prefix>
-                  <span style="color: #999; font-size: var(--text-sm);">{{ t('categories.i18nKey') }}:</span>
+                  <span style="color: #999; font-size: var(--text-sm)"
+                    >{{ t('categories.i18nKey') }}:</span
+                  >
                 </template>
               </NInput>
             </div>
@@ -356,7 +382,7 @@ onMounted(async () => {
             <NInput
               v-model:value="nameLabel"
               :placeholder="t('categories.labelPlaceholder')"
-              style="margin-bottom: 4px;"
+              style="margin-bottom: 4px"
             />
             <NInput
               v-model:value="nameKey"
@@ -366,13 +392,15 @@ onMounted(async () => {
               @click="nameKeyManuallyEdited = true"
             >
               <template #prefix>
-                <span style="color: #999; font-size: var(--text-sm);">{{ t('categories.i18nKey') }}:</span>
+                <span style="color: #999; font-size: var(--text-sm)"
+                  >{{ t('categories.i18nKey') }}:</span
+                >
               </template>
             </NInput>
           </div>
         </NFormItem>
 
-        <div style="margin-top: 24px;">
+        <div style="margin-top: 24px">
           <NSpace justify="end">
             <NButton @click="cancelForm" :disabled="submitting">
               {{ t('common.cancel') }}

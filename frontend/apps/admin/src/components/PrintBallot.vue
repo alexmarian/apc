@@ -39,11 +39,11 @@ const LABELS = {
 } as const
 
 function matterTitle(m: VotingMatter): string {
-  return props.lang === 'ru' ? (m.title_ru || m.title) : m.title
+  return props.lang === 'ru' ? m.title_ru || m.title : m.title
 }
 
 function matterDescription(m: VotingMatter): string {
-  return props.lang === 'ru' ? (m.description_ru || m.description) : m.description
+  return props.lang === 'ru' ? m.description_ru || m.description : m.description
 }
 
 function renderMatterInputs(m: VotingMatter): string {
@@ -67,9 +67,9 @@ function renderMatterInputs(m: VotingMatter): string {
   }
 
   if (cfg.type === VotingType.SingleChoice || cfg.type === VotingType.MultipleChoice) {
-    const options = (cfg.options ?? []).map(o =>
-      `<label class="option block"><span class="box"></span>${o.text}</label>`
-    ).join('')
+    const options = (cfg.options ?? [])
+      .map((o) => `<label class="option block"><span class="box"></span>${o.text}</label>`)
+      .join('')
     const abstainBox = cfg.allow_abstention
       ? `<label class="option block"><span class="box"></span>${L.abstain}</label>`
       : ''
@@ -77,9 +77,12 @@ function renderMatterInputs(m: VotingMatter): string {
   }
 
   if (cfg.type === VotingType.Ranking) {
-    const options = (cfg.options ?? []).map((o, i) =>
-      `<div class="rank-row"><span class="rank-label">${L.rankPrefix} ${i + 1}</span><span class="rank-line"></span><span class="rank-option">${o.text}</span></div>`
-    ).join('')
+    const options = (cfg.options ?? [])
+      .map(
+        (o, i) =>
+          `<div class="rank-row"><span class="rank-label">${L.rankPrefix} ${i + 1}</span><span class="rank-line"></span><span class="rank-option">${o.text}</span></div>`,
+      )
+      .join('')
     return `<div class="ranking">${options}</div>`
   }
 
@@ -89,18 +92,24 @@ function renderMatterInputs(m: VotingMatter): string {
 function buildHtml(matters: VotingMatter[], associationName: string): string {
   const L = LABELS[props.lang]
   const date = props.gathering.scheduled_date
-    ? new Date(props.gathering.scheduled_date).toLocaleDateString(props.lang === 'ru' ? 'ru-RU' : 'ro-RO', { day: '2-digit', month: 'long', year: 'numeric' })
+    ? new Date(props.gathering.scheduled_date).toLocaleDateString(
+        props.lang === 'ru' ? 'ru-RU' : 'ro-RO',
+        { day: '2-digit', month: 'long', year: 'numeric' },
+      )
     : ''
 
   const mattersHtml = matters
     .sort((a, b) => a.order_index - b.order_index)
-    .map((m, i) => `
+    .map(
+      (m, i) => `
       <div class="matter">
         <div class="matter-header">${i + 1}. ${matterTitle(m)}</div>
         ${matterDescription(m) ? `<div class="matter-desc">${matterDescription(m)}</div>` : ''}
         ${renderMatterInputs(m)}
       </div>
-    `).join('')
+    `,
+    )
+    .join('')
 
   return `<!DOCTYPE html>
 <html lang="${props.lang}">

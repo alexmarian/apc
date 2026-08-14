@@ -1,10 +1,6 @@
 <template>
   <div>
-    <div
-      v-for="matter in matters"
-      :key="matter.id"
-      class="bf-matter"
-    >
+    <div v-for="matter in matters" :key="matter.id" class="bf-matter">
       <NCard size="small">
         <template #header>{{ matterTitle(matter) }}</template>
 
@@ -69,19 +65,18 @@
           <NText :depth="3" class="bf-hint">
             {{ t('rankingHint') }}
           </NText>
-          <div
-            v-for="(optId, idx) in rankValue(matter.id)"
-            :key="optId"
-            class="bf-rank-row"
-          >
+          <div v-for="(optId, idx) in rankValue(matter.id)" :key="optId" class="bf-rank-row">
             <NText :depth="3" class="bf-rank-row__index">{{ idx + 1 }}</NText>
             <NText class="bf-rank-row__label">{{ optionText(matter, optId) }}</NText>
-            <NButton size="tiny" :disabled="idx === 0" @click="moveRank(matter.id, idx, -1)">↑</NButton>
+            <NButton size="tiny" :disabled="idx === 0" @click="moveRank(matter.id, idx, -1)"
+              >↑</NButton
+            >
             <NButton
               size="tiny"
               :disabled="idx === rankValue(matter.id).length - 1"
               @click="moveRank(matter.id, idx, 1)"
-            >↓</NButton>
+              >↓</NButton
+            >
           </div>
         </div>
       </NCard>
@@ -100,7 +95,7 @@ import {
   NRadio,
   NRadioGroup,
   NSpace,
-  NText
+  NText,
 } from 'naive-ui'
 import type { MatterInfo } from './types'
 
@@ -117,15 +112,17 @@ const { t, locale } = useI18n({
       yes: 'Da',
       no: 'Nu',
       abstain: 'Abținere',
-      rankingHint: 'Ordonați opțiunile de la cea mai preferată (sus) la cea mai puțin preferată (jos).',
+      rankingHint:
+        'Ordonați opțiunile de la cea mai preferată (sus) la cea mai puțin preferată (jos).',
     },
     ru: {
       yes: 'Да',
       no: 'Нет',
       abstain: 'Воздержаться',
-      rankingHint: 'Упорядочьте варианты от наиболее предпочтительного (вверху) до наименее предпочтительного (внизу).',
+      rankingHint:
+        'Упорядочьте варианты от наиболее предпочтительного (вверху) до наименее предпочтительного (внизу).',
     },
-  }
+  },
 })
 
 const props = defineProps<{
@@ -146,15 +143,14 @@ watch(
     for (const m of matters) {
       const key = String(m.id)
       if (current[key] === undefined) {
-        current[key] = m.voting_config.type === 'ranking'
-          ? (m.voting_config.options ?? []).map(o => o.id)
-          : []
+        current[key] =
+          m.voting_config.type === 'ranking' ? (m.voting_config.options ?? []).map((o) => o.id) : []
         changed = true
       }
     }
     if (changed) emit('update:modelValue', current)
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 function singleValue(matterId: number): string {
@@ -198,7 +194,7 @@ function matterDescription(matter: MatterInfo): string {
 }
 
 function optionText(matter: MatterInfo, optId: string): string {
-  return matter.voting_config.options?.find(o => o.id === optId)?.text ?? optId
+  return matter.voting_config.options?.find((o) => o.id === optId)?.text ?? optId
 }
 </script>
 

@@ -8,15 +8,15 @@
 export const formatCurrency = (
   value: number,
   locale: string = 'en-US',
-  currency: string = 'MDL'
+  currency: string = 'MDL',
 ): string => {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currency,
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(value);
-};
+    maximumFractionDigits: 2,
+  }).format(value)
+}
 
 /**
  * Format a number as a percentage
@@ -24,12 +24,9 @@ export const formatCurrency = (
  * @param decimals Number of decimal places (defaults to 2)
  * @returns Formatted percentage string
  */
-export const formatPercentage = (
-  value: number,
-  decimals: number = 2
-): string => {
-  return `${(value * 100).toFixed(decimals)}%`;
-};
+export const formatPercentage = (value: number, decimals: number = 2): string => {
+  return `${(value * 100).toFixed(decimals)}%`
+}
 
 /**
  * Format a date to a localized string
@@ -41,11 +38,11 @@ export const formatPercentage = (
 export const formatDate = (
   date: Date | string | number,
   format: 'short' | 'medium' | 'long' | 'full' = 'short',
-  locale?: string
+  locale?: string,
 ): string => {
-  const dateObj = date instanceof Date ? date : new Date(date);
-  return dateObj.toLocaleDateString(locale, { dateStyle: format });
-};
+  const dateObj = date instanceof Date ? date : new Date(date)
+  return dateObj.toLocaleDateString(locale, { dateStyle: format })
+}
 
 /**
  * Format a file size in bytes to a human-readable string
@@ -53,15 +50,12 @@ export const formatDate = (
  * @param decimals Number of decimal places (defaults to 2)
  * @returns Formatted file size string
  */
-export const formatFileSize = (
-  bytes: number,
-  decimals: number = 2
-): string => {
-  if (bytes === 0) return '0 Bytes';
+export const formatFileSize = (bytes: number, decimals: number = 2): string => {
+  if (bytes === 0) return '0 Bytes'
 
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + ' ' + sizes[i];
-};
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + ' ' + sizes[i]
+}

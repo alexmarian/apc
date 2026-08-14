@@ -1,15 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import {
-  NForm,
-  NFormItem,
-  NInput,
-  NButton,
-  NAlert,
-  NSpace,
-  NResult
-} from 'naive-ui'
+import { NForm, NFormItem, NInput, NButton, NAlert, NSpace, NResult } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import tokenService from '@/services/tokenService'
 import { apiErrorMessage } from '@/utils/apiError'
@@ -25,7 +17,7 @@ const formData = reactive({
   login: '',
   password: '',
   confirmPassword: '',
-  token: ''
+  token: '',
 })
 
 // State
@@ -54,65 +46,66 @@ const rules: FormRules = {
     {
       required: true,
       message: t('validation.required', {
-        field: t('auth.username', 'Username')
+        field: t('auth.username', 'Username'),
       }),
-      trigger: 'blur'
+      trigger: 'blur',
     },
     {
       min: 4,
       message: t('validation.minLength', {
         field: t('auth.username', 'Username'),
-        min: 4
+        min: 4,
       }),
-      trigger: 'blur'
-    }
+      trigger: 'blur',
+    },
   ],
   password: [
     {
       required: true,
       message: t('validation.required', {
-        field: t('auth.password', 'Password')
+        field: t('auth.password', 'Password'),
       }),
-      trigger: 'blur'
+      trigger: 'blur',
     },
     {
       min: 8,
       message: t('validation.minLength', {
         field: t('auth.password', 'Password'),
-        min: 8
+        min: 8,
       }),
-      trigger: 'blur'
-    }
+      trigger: 'blur',
+    },
   ],
   confirmPassword: [
     {
       required: true,
       message: t('validation.required', {
-        field: t('auth.confirmPassword', 'Confirm Password')
+        field: t('auth.confirmPassword', 'Confirm Password'),
       }),
-      trigger: 'blur'
+      trigger: 'blur',
     },
     {
       validator: validatePasswordMatch,
-      message: t('validation.passwordMatch', 'Passwords do not match')
-    }
+      message: t('validation.passwordMatch', 'Passwords do not match'),
+    },
   ],
   token: [
     {
       required: true,
       message: t('validation.required', {
-        field: t('auth.token', 'Registration Token')
+        field: t('auth.token', 'Registration Token'),
       }),
-      trigger: 'blur'
-    }, {
+      trigger: 'blur',
+    },
+    {
       min: 8,
       message: t('validation.minLength', {
         field: t('auth.token', 'Registration Token'),
-        min: 8
+        min: 8,
       }),
-      trigger: 'blur'
-    }
-  ]
+      trigger: 'blur',
+    },
+  ],
 }
 
 // Validate password match
@@ -135,7 +128,7 @@ async function handleRegister(e: MouseEvent) {
     const response = await tokenService.registerWithToken({
       login: formData.login,
       password: formData.password,
-      token: formData.token
+      token: formData.token,
     })
 
     // Store QR code for TOTP setup
@@ -144,7 +137,13 @@ async function handleRegister(e: MouseEvent) {
       registrationComplete.value = true
     }
   } catch (err) {
-    error.value = apiErrorMessage(err, t('errors.registrationFailed', 'Registration failed. Please check your details and try again.'))
+    error.value = apiErrorMessage(
+      err,
+      t(
+        'errors.registrationFailed',
+        'Registration failed. Please check your details and try again.',
+      ),
+    )
     console.error('Registration failed:', err)
   } finally {
     loading.value = false
@@ -161,16 +160,11 @@ function goToLogin() {
   <AuthLayout :title="registrationComplete ? undefined : t('auth.register', 'Register')">
     <!-- Registration Form -->
     <div v-if="!registrationComplete">
-      <NAlert v-if="error" type="error" style="margin-bottom: 16px;">
+      <NAlert v-if="error" type="error" style="margin-bottom: 16px">
         {{ error }}
       </NAlert>
 
-      <NForm
-        ref="formRef"
-        :model="formData"
-        :rules="rules"
-        label-placement="top"
-      >
+      <NForm ref="formRef" :model="formData" :rules="rules" label-placement="top">
         <NFormItem :label="t('auth.username', 'Username')" path="login">
           <NInput
             id="login-input"
@@ -210,15 +204,9 @@ function goToLogin() {
           </template>
         </NFormItem>
 
-        <div style="margin-top: 24px;">
+        <div style="margin-top: 24px">
           <NSpace vertical align="center">
-            <NButton
-              type="primary"
-              size="large"
-              block
-              @click="handleRegister"
-              :loading="loading"
-            >
+            <NButton type="primary" size="large" block @click="handleRegister" :loading="loading">
               {{ t('auth.register', 'Register') }}
             </NButton>
 
@@ -235,7 +223,12 @@ function goToLogin() {
       <NResult
         status="success"
         :title="t('auth.registrationComplete', 'Registration Complete')"
-        :description="t('auth.scanQRDescription', 'Please scan this QR code with your authenticator app to set up two-factor authentication. You will need this for logging in.')"
+        :description="
+          t(
+            'auth.scanQRDescription',
+            'Please scan this QR code with your authenticator app to set up two-factor authentication. You will need this for logging in.',
+          )
+        "
       >
         <template #icon>
           <div class="qr-code-container">

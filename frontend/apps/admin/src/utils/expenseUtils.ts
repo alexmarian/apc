@@ -13,7 +13,7 @@ export interface MonthlyExpenseData {
 export function groupExpensesByMonth(expenses: Expense[]): MonthlyExpenseData[] {
   const months: Record<string, number> = {}
 
-  expenses.forEach(expense => {
+  expenses.forEach((expense) => {
     const date = new Date(expense.date)
     const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 
@@ -24,10 +24,12 @@ export function groupExpensesByMonth(expenses: Expense[]): MonthlyExpenseData[] 
     months[monthYear] += expense.amount
   })
 
-  return Object.entries(months).map(([month, value]) => ({
-    month,
-    value
-  })).sort((a, b) => a.month.localeCompare(b.month))
+  return Object.entries(months)
+    .map(([month, value]) => ({
+      month,
+      value,
+    }))
+    .sort((a, b) => a.month.localeCompare(b.month))
 }
 
 /**
@@ -63,7 +65,11 @@ export function getDefaultLastMonthRange(): [number, number] {
  * @param locale - Optional locale for formatting
  * @returns Formatted date range string
  */
-export function formatDateRange(startTimestamp: number, endTimestamp: number, locale?: string): string {
+export function formatDateRange(
+  startTimestamp: number,
+  endTimestamp: number,
+  locale?: string,
+): string {
   const start = new Date(startTimestamp).toLocaleDateString(locale)
   const end = new Date(endTimestamp).toLocaleDateString(locale)
   return `${start} - ${end}`

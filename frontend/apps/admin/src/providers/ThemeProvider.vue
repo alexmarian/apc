@@ -1,11 +1,7 @@
 <!-- src/providers/ThemeProvider.vue -->
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import {
-  darkTheme,
-  lightTheme,
-  NGlobalStyle
-} from 'naive-ui'
+import { darkTheme, lightTheme, NGlobalStyle } from 'naive-ui'
 import { usePreferences } from '@/stores/preferences.ts'
 import ThemeTokens from '@/providers/ThemeTokens.vue'
 
@@ -22,7 +18,7 @@ const themes: Record<string, typeof darkTheme> = {
 const currentTheme = computed(() => {
   if (props.theme && themes[props.theme]) {
     return themes[props.theme]
-  }else if (preferences.theme && themes[preferences.theme]) {
+  } else if (preferences.theme && themes[preferences.theme]) {
     return themes[preferences.theme]
   }
   return darkTheme
@@ -37,9 +33,7 @@ watch(currentTheme, () => {
 </script>
 
 <template>
-  <NConfigProvider
-    :theme="currentTheme"
-  >
+  <NConfigProvider :theme="currentTheme">
     <NGlobalStyle />
     <ThemeTokens>
       <NLoadingBarProvider>

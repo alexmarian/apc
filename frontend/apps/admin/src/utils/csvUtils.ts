@@ -20,9 +20,7 @@ export function arrayToCsv(rows: (string | number)[][]): string {
   // Add BOM for UTF-8 Excel compatibility
   const BOM = '\uFEFF'
 
-  const csvContent = rows
-    .map(row => row.map(escapeCsvField).join(','))
-    .join('\n')
+  const csvContent = rows.map((row) => row.map(escapeCsvField).join(',')).join('\n')
 
   return BOM + csvContent
 }

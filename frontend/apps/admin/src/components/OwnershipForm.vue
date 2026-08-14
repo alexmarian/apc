@@ -13,7 +13,7 @@ import {
   NSelect,
   NCheckbox,
   NDivider,
-  useMessage
+  useMessage,
 } from 'naive-ui'
 import { ownerApi, ownershipApi } from '@/services/api'
 import type { Owner } from '@/types/api'
@@ -41,7 +41,7 @@ const formData = reactive({
     name: '',
     identification_number: '',
     contact_phone: '',
-    contact_email: ''
+    contact_email: '',
   },
   // Owner selection (for select mode)
   owner_id: null as number | null,
@@ -51,7 +51,7 @@ const formData = reactive({
   registration_document: '',
   registration_date: Date.now(),
   // Is this an exclusive ownership (replaces all others)?
-  is_exclusive: false
+  is_exclusive: false,
 })
 
 // State
@@ -64,28 +64,68 @@ const message = useMessage()
 // Form validation rules
 const rules: FormRules = {
   'owner.name': [
-    { required: props.mode === 'create', message: t('validation.required', { field: t('owners.name', 'Owner name') }, '{field} is required'), trigger: 'blur' }
+    {
+      required: props.mode === 'create',
+      message: t(
+        'validation.required',
+        { field: t('owners.name', 'Owner name') },
+        '{field} is required',
+      ),
+      trigger: 'blur',
+    },
   ],
   'owner.identification_number': [
-    { required: props.mode === 'create', message: t('validation.required', { field: t('owners.identification', 'Identification number') }, '{field} is required'), trigger: 'blur' }
+    {
+      required: props.mode === 'create',
+      message: t(
+        'validation.required',
+        { field: t('owners.identification', 'Identification number') },
+        '{field} is required',
+      ),
+      trigger: 'blur',
+    },
   ],
   owner_id: [
     {
       required: props.mode === 'select',
       type: 'number',
       message: t('units.ownership.selectOwnerRequired', 'Please select an owner'),
-      trigger: 'change'
-    }
+      trigger: 'change',
+    },
   ],
   start_date: [
-    { required: true, message: t('validation.required', { field: t('units.ownership.startDate', 'Start date') }, '{field} is required'), trigger: 'blur' }
+    {
+      required: true,
+      message: t(
+        'validation.required',
+        { field: t('units.ownership.startDate', 'Start date') },
+        '{field} is required',
+      ),
+      trigger: 'blur',
+    },
   ],
   registration_document: [
-    { required: true, message: t('validation.required', { field: t('units.ownership.registrationDoc', 'Registration document') }, '{field} is required'), trigger: 'blur' }
+    {
+      required: true,
+      message: t(
+        'validation.required',
+        { field: t('units.ownership.registrationDoc', 'Registration document') },
+        '{field} is required',
+      ),
+      trigger: 'blur',
+    },
   ],
   registration_date: [
-    { required: true, message: t('validation.required', { field: t('units.ownership.registrationDate', 'Registration date') }, '{field} is required'), trigger: 'blur' }
-  ]
+    {
+      required: true,
+      message: t(
+        'validation.required',
+        { field: t('units.ownership.registrationDate', 'Registration date') },
+        '{field} is required',
+      ),
+      trigger: 'blur',
+    },
+  ],
 }
 
 // Fetch existing owners for selection mode
@@ -108,9 +148,9 @@ const fetchOwners = async () => {
 
 // Owner options for select dropdown
 const ownerOptions = computed(() => {
-  return owners.value.map(owner => ({
+  return owners.value.map((owner) => ({
     label: `${owner.name} (${owner.identification_number})`,
-    value: owner.id
+    value: owner.id,
   }))
 })
 
@@ -120,51 +160,44 @@ const handleSubmit = async () => {
     submitting.value = true
     error.value = null
 
-    let ownerId: number;
+    let ownerId: number
 
     // If in create mode, create the owner first
     if (props.mode === 'create') {
-      const createOwnerResponse = await ownerApi.createOwner(
-        props.associationId,
-        {
-          name: formData.owner.name,
-          identification_number: formData.owner.identification_number,
-          contact_phone: formData.owner.contact_phone,
-          contact_email: formData.owner.contact_email
-        }
-      );
-      ownerId = createOwnerResponse.data.id;
+      const createOwnerResponse = await ownerApi.createOwner(props.associationId, {
+        name: formData.owner.name,
+        identification_number: formData.owner.identification_number,
+        contact_phone: formData.owner.contact_phone,
+        contact_email: formData.owner.contact_email,
+      })
+      ownerId = createOwnerResponse.data.id
     } else {
       // In select mode, use the selected owner ID
       if (!formData.owner_id) {
-        error.value = t('units.ownership.selectOwnerRequired', 'Please select an owner');
-        return;
+        error.value = t('units.ownership.selectOwnerRequired', 'Please select an owner')
+        return
       }
-      ownerId = formData.owner_id;
+      ownerId = formData.owner_id
     }
 
     // Create the ownership
-    await ownershipApi.createUnitOwnership(
-      props.associationId,
-      props.buildingId,
-      props.unitId,
-      {
-        owner_id: ownerId,
-        start_date: new Date(formData.start_date).toISOString(),
-        end_date: formData.end_date ? new Date(formData.end_date).toISOString() : null,
-        registration_document: formData.registration_document,
-        registration_date: new Date(formData.registration_date).toISOString(),
-        is_exclusive: formData.is_exclusive
-      }
-    );
+    await ownershipApi.createUnitOwnership(props.associationId, props.buildingId, props.unitId, {
+      owner_id: ownerId,
+      start_date: new Date(formData.start_date).toISOString(),
+      end_date: formData.end_date ? new Date(formData.end_date).toISOString() : null,
+      registration_document: formData.registration_document,
+      registration_date: new Date(formData.registration_date).toISOString(),
+      is_exclusive: formData.is_exclusive,
+    })
 
-    message.success(t('units.ownership.savedSuccess', 'Ownership saved successfully'));
-    emit('saved');
+    message.success(t('units.ownership.savedSuccess', 'Ownership saved successfully'))
+    emit('saved')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : t('common.error', 'An error occurred while saving');
-    console.error('Error submitting form:', err);
+    error.value =
+      err instanceof Error ? err.message : t('common.error', 'An error occurred while saving')
+    console.error('Error submitting form:', err)
   } finally {
-    submitting.value = false;
+    submitting.value = false
   }
 }
 
@@ -178,7 +211,7 @@ onMounted(() => {
   <FormShell>
     <!-- No title here: the modal that opens this form supplies it. -->
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" style="margin-bottom: 16px;">
+      <NAlert v-if="error" type="error" style="margin-bottom: 16px">
         {{ error }}
       </NAlert>
 
@@ -192,7 +225,10 @@ onMounted(() => {
             />
           </NFormItem>
 
-          <NFormItem :label="t('owners.identification', 'Identification Number')" path="owner.identification_number">
+          <NFormItem
+            :label="t('owners.identification', 'Identification Number')"
+            path="owner.identification_number"
+          >
             <NInput
               v-model:value="formData.owner.identification_number"
               :placeholder="t('owners.enterIdentification', 'Enter ID number')"
@@ -247,14 +283,22 @@ onMounted(() => {
           />
         </NFormItem>
 
-        <NFormItem :label="t('units.ownership.registrationDoc', 'Registration Document')" path="registration_document">
+        <NFormItem
+          :label="t('units.ownership.registrationDoc', 'Registration Document')"
+          path="registration_document"
+        >
           <NInput
             v-model:value="formData.registration_document"
-            :placeholder="t('units.ownership.enterRegistrationDoc', 'Enter registration document number')"
+            :placeholder="
+              t('units.ownership.enterRegistrationDoc', 'Enter registration document number')
+            "
           />
         </NFormItem>
 
-        <NFormItem :label="t('units.ownership.registrationDate', 'Registration Date')" path="registration_date">
+        <NFormItem
+          :label="t('units.ownership.registrationDate', 'Registration Date')"
+          path="registration_date"
+        >
           <NDatePicker
             v-model:value="formData.registration_date"
             type="date"
@@ -265,12 +309,17 @@ onMounted(() => {
 
         <NFormItem path="is_exclusive">
           <NCheckbox v-model:checked="formData.is_exclusive">
-            {{ t('units.ownership.exclusiveOwnership', 'Exclusive Ownership (deactivates all other current ownerships)') }}
+            {{
+              t(
+                'units.ownership.exclusiveOwnership',
+                'Exclusive Ownership (deactivates all other current ownerships)',
+              )
+            }}
           </NCheckbox>
         </NFormItem>
 
         <!-- Form actions -->
-        <div style="margin-top: 24px;">
+        <div style="margin-top: 24px">
           <NSpace justify="end">
             <NButton @click="emit('cancelled')" :disabled="submitting">
               {{ t('common.cancel', 'Cancel') }}
@@ -285,4 +334,3 @@ onMounted(() => {
     </NSpin>
   </FormShell>
 </template>
-

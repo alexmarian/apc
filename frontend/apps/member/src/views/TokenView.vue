@@ -13,11 +13,23 @@
   </NAlert>
 
   <template v-else-if="context">
-    <VotingWidget v-if="context.gathering.status === 'active'" :service="service" :initial-context="context" />
-    <VotingResultsWidget v-else-if="context.gathering.status === 'tallied'" :service="service" :initial-context="context" />
+    <VotingWidget
+      v-if="context.gathering.status === 'active'"
+      :service="service"
+      :initial-context="context"
+    />
+    <VotingResultsWidget
+      v-else-if="context.gathering.status === 'tallied'"
+      :service="service"
+      :initial-context="context"
+    />
 
     <NResult
-      v-else-if="context.gathering.status === 'draft' || context.gathering.status === 'published' || context.gathering.status === 'scheduled'"
+      v-else-if="
+        context.gathering.status === 'draft' ||
+        context.gathering.status === 'published' ||
+        context.gathering.status === 'scheduled'
+      "
       status="info"
       :title="t('notStartedTitle')"
       :description="t('notStartedDesc', { status: context.gathering.status })"

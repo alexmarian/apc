@@ -10,7 +10,7 @@ import {
   NSpace,
   NCheckbox,
   NResult,
-  NText
+  NText,
 } from 'naive-ui'
 import type { FormInst } from 'naive-ui'
 import AuthLayout from '@/layouts/AuthLayout.vue'
@@ -27,7 +27,7 @@ const formData = reactive({
   token: '',
   newPassword: '',
   confirmPassword: '',
-  resetTOTPSecret: false
+  resetTOTPSecret: false,
 })
 
 // State
@@ -65,7 +65,7 @@ const handleResetPassword = async (e: MouseEvent) => {
     const response = await authApi.resetPassword({
       token: formData.token,
       new_password: formData.newPassword,
-      reset_totp_secret: formData.resetTOTPSecret
+      reset_totp_secret: formData.resetTOTPSecret,
     })
 
     success.value = true
@@ -100,7 +100,9 @@ const goToLogin = () => {
         <template #icon v-if="qrCode">
           <div class="qr-code-container">
             <NText>
-              {{ t('auth.scanQRDescription', 'Please scan this QR code with your authenticator app') }}
+              {{
+                t('auth.scanQRDescription', 'Please scan this QR code with your authenticator app')
+              }}
             </NText>
             <img :src="'data:image/png;base64,' + qrCode" alt="QR Code for TOTP" class="qr-code" />
           </div>
@@ -115,15 +117,11 @@ const goToLogin = () => {
 
     <!-- Reset Form -->
     <div v-else>
-      <NAlert v-if="error" type="error" style="margin-bottom: 16px;">
+      <NAlert v-if="error" type="error" style="margin-bottom: 16px">
         {{ error }}
       </NAlert>
 
-      <NForm
-        ref="formRef"
-        :model="formData"
-        label-placement="top"
-      >
+      <NForm ref="formRef" :model="formData" label-placement="top">
         <NFormItem :label="t('auth.newPassword', 'New Password')" path="newPassword">
           <NInput
             v-model:value="formData.newPassword"
@@ -147,12 +145,16 @@ const goToLogin = () => {
             {{ t('auth.resetTOTP', 'Reset two-factor authentication (2FA)') }}
           </NCheckbox>
           <div class="help-text">
-            {{ t('auth.resetTOTPHelp', 'Check this if you have lost access to your authenticator app')
+            {{
+              t(
+                'auth.resetTOTPHelp',
+                'Check this if you have lost access to your authenticator app',
+              )
             }}
           </div>
         </NFormItem>
 
-        <div style="margin-top: 24px;">
+        <div style="margin-top: 24px">
           <NSpace vertical align="center">
             <NButton
               type="primary"

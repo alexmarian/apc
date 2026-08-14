@@ -1,8 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted, h, watch, computed } from 'vue'
 import {
-  NDataTable, NButton, NSpace, NTag, NEmpty, NSpin, NAlert, NInput,
-  NCheckbox, NCard, NSelect, NFlex, useMessage
+  NDataTable,
+  NButton,
+  NSpace,
+  NTag,
+  NEmpty,
+  NSpin,
+  NAlert,
+  NInput,
+  NCheckbox,
+  NCard,
+  NSelect,
+  NFlex,
+  useMessage,
 } from 'naive-ui'
 import type { DataTableColumns, DataTableRowKey } from 'naive-ui'
 import { categoryApi } from '@/services/api'
@@ -35,7 +46,10 @@ const confirm = useConfirm()
 const hasInitialized = ref(false)
 
 const normalize = (s: string) =>
-  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
 
 // Filter state
 const searchQuery = ref('')
@@ -46,16 +60,16 @@ const familyFilter = ref<string | null>(null)
 
 // Get unique types for filter dropdown
 const uniqueTypes = computed(() => {
-  const types = [...new Set(categories.value.map(c => c.type))]
+  const types = [...new Set(categories.value.map((c) => c.type))]
   return types.sort()
 })
 
 // Get unique families for filter dropdown (filtered by selected type if applicable)
 const uniqueFamilies = computed(() => {
   const cats = typeFilter.value
-    ? categories.value.filter(c => c.type === typeFilter.value)
+    ? categories.value.filter((c) => c.type === typeFilter.value)
     : categories.value
-  const families = [...new Set(cats.map(c => c.family))]
+  const families = [...new Set(cats.map((c) => c.family))]
   return families.sort()
 })
 
@@ -65,21 +79,22 @@ const filteredCategories = computed(() => {
 
   // Apply type filter
   if (typeFilter.value) {
-    result = result.filter(category => category.type === typeFilter.value)
+    result = result.filter((category) => category.type === typeFilter.value)
   }
 
   // Apply family filter
   if (familyFilter.value) {
-    result = result.filter(category => category.family === familyFilter.value)
+    result = result.filter((category) => category.family === familyFilter.value)
   }
 
   // Apply search query
   if (searchQuery.value) {
     const query = normalize(searchQuery.value)
-    result = result.filter(category =>
-      normalize(t(`categories.types.${category.type}`, category.type)).includes(query) ||
-      normalize(t(`categories.families.${category.family}`, category.family)).includes(query) ||
-      normalize(t(`categories.names.${category.name}`, category.name)).includes(query)
+    result = result.filter(
+      (category) =>
+        normalize(t(`categories.types.${category.type}`, category.type)).includes(query) ||
+        normalize(t(`categories.families.${category.family}`, category.family)).includes(query) ||
+        normalize(t(`categories.names.${category.name}`, category.name)).includes(query),
     )
   }
 
@@ -88,15 +103,15 @@ const filteredCategories = computed(() => {
 
 // Check if any selected categories are active or inactive
 const hasSelectedActive = computed(() => {
-  return selectedRowKeys.value.some(key => {
-    const category = categories.value.find(c => c.id === key)
+  return selectedRowKeys.value.some((key) => {
+    const category = categories.value.find((c) => c.id === key)
     return category && !category.is_deleted
   })
 })
 
 const hasSelectedInactive = computed(() => {
-  return selectedRowKeys.value.some(key => {
-    const category = categories.value.find(c => c.id === key)
+  return selectedRowKeys.value.some((key) => {
+    const category = categories.value.find((c) => c.id === key)
     return category && category.is_deleted
   })
 })
@@ -104,13 +119,13 @@ const hasSelectedInactive = computed(() => {
 // Table columns definition
 const columns = computed<DataTableColumns<Category>>(() => [
   {
-    type: 'selection'
+    type: 'selection',
   },
   {
     title: 'ID',
     key: 'id',
     width: 80,
-    sorter: (a, b) => a.id - b.id
+    sorter: (a, b) => a.id - b.id,
   },
   {
     title: t('categories.fullPath'),
@@ -122,7 +137,7 @@ const columns = computed<DataTableColumns<Category>>(() => [
     },
     render(row) {
       return `${t(`categories.types.${row.type}`, row.type)} → ${t(`categories.families.${row.family}`, row.family)} → ${t(`categories.names.${row.name}`, row.name)}`
-    }
+    },
   },
   {
     title: t('categories.type'),
@@ -131,7 +146,7 @@ const columns = computed<DataTableColumns<Category>>(() => [
     sorter: 'default',
     render(row) {
       return t(`categories.types.${row.type}`, row.type)
-    }
+    },
   },
   {
     title: t('categories.family'),
@@ -140,7 +155,7 @@ const columns = computed<DataTableColumns<Category>>(() => [
     sorter: 'default',
     render(row) {
       return t(`categories.families.${row.family}`, row.family)
-    }
+    },
   },
   {
     title: t('categories.name'),
@@ -149,7 +164,7 @@ const columns = computed<DataTableColumns<Category>>(() => [
     sorter: 'default',
     render(row) {
       return t(`categories.names.${row.name}`, row.name)
-    }
+    },
   },
   {
     title: t('categories.status'),
@@ -160,11 +175,11 @@ const columns = computed<DataTableColumns<Category>>(() => [
         NTag,
         {
           type: !row.is_deleted ? 'success' : 'error',
-          bordered: false
+          bordered: false,
         },
-        { default: () => !row.is_deleted ? t('categories.active') : t('categories.inactive') }
+        { default: () => (!row.is_deleted ? t('categories.active') : t('categories.inactive')) },
       )
-    }
+    },
   },
   {
     title: t('common.actions'),
@@ -175,7 +190,7 @@ const columns = computed<DataTableColumns<Category>>(() => [
         NSpace,
         {
           justify: 'center',
-          align: 'center'
+          align: 'center',
         },
         {
           default: () => [
@@ -187,36 +202,38 @@ const columns = computed<DataTableColumns<Category>>(() => [
                 type: 'info',
                 size: 'small',
                 disabled: row.is_deleted,
-                onClick: () => emit('edit', row.id)
+                onClick: () => emit('edit', row.id),
               },
-              { default: () => t('common.edit') }
+              { default: () => t('common.edit') },
             ),
-            !row.is_deleted ? h(
-              NButton,
-              {
-                strong: true,
-                secondary: true,
-                type: 'error',
-                size: 'small',
-                onClick: () => deactivateCategory(row.id)
-              },
-              { default: () => t('categories.deactivate') }
-            ) : h(
-              NButton,
-              {
-                strong: true,
-                secondary: true,
-                type: 'success',
-                size: 'small',
-                onClick: () => reactivateCategory(row.id)
-              },
-              { default: () => t('categories.reactivate') }
-            )
-          ]
-        }
+            !row.is_deleted
+              ? h(
+                  NButton,
+                  {
+                    strong: true,
+                    secondary: true,
+                    type: 'error',
+                    size: 'small',
+                    onClick: () => deactivateCategory(row.id),
+                  },
+                  { default: () => t('categories.deactivate') },
+                )
+              : h(
+                  NButton,
+                  {
+                    strong: true,
+                    secondary: true,
+                    type: 'success',
+                    size: 'small',
+                    onClick: () => reactivateCategory(row.id),
+                  },
+                  { default: () => t('categories.reactivate') },
+                ),
+          ],
+        },
       )
-    }
-  }
+    },
+  },
 ])
 
 // Fetch categories
@@ -251,7 +268,7 @@ const fetchCategories = async () => {
 
 // Method to update a single category in the list
 const updateCategory = (updatedCategory: Category) => {
-  const index = categories.value.findIndex(category => category.id === updatedCategory.id)
+  const index = categories.value.findIndex((category) => category.id === updatedCategory.id)
   if (index !== -1) {
     categories.value.splice(index, 1, updatedCategory)
     console.log('Category updated in list:', updatedCategory)
@@ -268,7 +285,7 @@ const addCategory = (newCategory: Category) => {
 defineExpose({
   updateCategory,
   addCategory,
-  refreshData: fetchCategories
+  refreshData: fetchCategories,
 })
 
 // Deactivate single category
@@ -282,7 +299,7 @@ const deactivateCategory = (categoryId: number) => {
         await categoryApi.deactivateCategory(props.associationId!, categoryId)
 
         // Update the local state
-        const index = categories.value.findIndex(cat => cat.id === categoryId)
+        const index = categories.value.findIndex((cat) => cat.id === categoryId)
         if (index !== -1) {
           categories.value[index].is_deleted = true
         }
@@ -294,7 +311,7 @@ const deactivateCategory = (categoryId: number) => {
         console.error('Error deactivating category:', err)
         message.error(t('common.error') + ': ' + errorMessage)
       }
-    }
+    },
   })
 }
 
@@ -304,7 +321,7 @@ const reactivateCategory = async (categoryId: number) => {
     await categoryApi.reactivateCategory(props.associationId!, categoryId)
 
     // Update the local state
-    const index = categories.value.findIndex(cat => cat.id === categoryId)
+    const index = categories.value.findIndex((cat) => cat.id === categoryId)
     if (index !== -1) {
       categories.value[index].is_deleted = false
     }
@@ -328,12 +345,12 @@ const bulkDeactivate = () => {
     positiveText: t('categories.deactivate'),
     onConfirm: async () => {
       try {
-        const categoryIds = selectedRowKeys.value.map(key => Number(key))
+        const categoryIds = selectedRowKeys.value.map((key) => Number(key))
         await categoryApi.bulkDeactivate(props.associationId!, categoryIds)
 
         // Update local state
-        categoryIds.forEach(id => {
-          const index = categories.value.findIndex(cat => cat.id === id)
+        categoryIds.forEach((id) => {
+          const index = categories.value.findIndex((cat) => cat.id === id)
           if (index !== -1) {
             categories.value[index].is_deleted = true
           }
@@ -347,7 +364,7 @@ const bulkDeactivate = () => {
         console.error('Error bulk deactivating categories:', err)
         message.error(t('common.error') + ': ' + errorMessage)
       }
-    }
+    },
   })
 }
 
@@ -356,12 +373,12 @@ const bulkReactivate = async () => {
   if (selectedRowKeys.value.length === 0) return
 
   try {
-    const categoryIds = selectedRowKeys.value.map(key => Number(key))
+    const categoryIds = selectedRowKeys.value.map((key) => Number(key))
     await categoryApi.bulkReactivate(props.associationId!, categoryIds)
 
     // Update local state
-    categoryIds.forEach(id => {
-      const index = categories.value.findIndex(cat => cat.id === id)
+    categoryIds.forEach((id) => {
+      const index = categories.value.findIndex((cat) => cat.id === id)
       if (index !== -1) {
         categories.value[index].is_deleted = false
       }
@@ -385,7 +402,8 @@ const resetFilters = () => {
 }
 
 // Watch for associationId changes
-watch(() => props.associationId,
+watch(
+  () => props.associationId,
   (newAssocId, oldAssocId) => {
     console.log('Association ID changed:', { newAssocId, oldAssocId })
 
@@ -396,7 +414,7 @@ watch(() => props.associationId,
       fetchCategories()
     }
   },
-  { immediate: false }
+  { immediate: false },
 )
 
 // Watch for includeInactive changes
@@ -425,7 +443,9 @@ onMounted(() => {
       <FilterField :label="t('categories.type')">
         <NSelect
           v-model:value="typeFilter"
-          :options="uniqueTypes.map(type => ({ label: t(`categories.types.${type}`, type), value: type }))"
+          :options="
+            uniqueTypes.map((type) => ({ label: t(`categories.types.${type}`, type), value: type }))
+          "
           :placeholder="t('categories.allTypes')"
           clearable
           style="width: 200px"
@@ -434,7 +454,12 @@ onMounted(() => {
       <FilterField :label="t('categories.family')">
         <NSelect
           v-model:value="familyFilter"
-          :options="uniqueFamilies.map(family => ({ label: t(`categories.families.${family}`, family), value: family }))"
+          :options="
+            uniqueFamilies.map((family) => ({
+              label: t(`categories.families.${family}`, family),
+              value: family,
+            }))
+          "
           :placeholder="t('categories.allFamilies')"
           clearable
           style="width: 200px"
@@ -455,20 +480,10 @@ onMounted(() => {
         <!-- Actions on the current selection stay next to the table; the page
              header carries actions that apply to the page as a whole. -->
         <NFlex v-if="selectedRowKeys.length > 0" justify="end">
-          <NButton
-            v-if="hasSelectedActive"
-            type="error"
-            secondary
-            @click="bulkDeactivate"
-          >
+          <NButton v-if="hasSelectedActive" type="error" secondary @click="bulkDeactivate">
             {{ t('categories.bulkDeactivate') }} ({{ selectedRowKeys.length }})
           </NButton>
-          <NButton
-            v-if="hasSelectedInactive"
-            type="success"
-            secondary
-            @click="bulkReactivate"
-          >
+          <NButton v-if="hasSelectedInactive" type="success" secondary @click="bulkReactivate">
             {{ t('categories.bulkReactivate') }} ({{ selectedRowKeys.length }})
           </NButton>
         </NFlex>
@@ -480,7 +495,7 @@ onMounted(() => {
             :row-key="(row: Category) => row.id"
             v-model:checked-row-keys="selectedRowKeys"
             :pagination="{
-              pageSize: 50
+              pageSize: 50,
             }"
           >
             <template #empty>

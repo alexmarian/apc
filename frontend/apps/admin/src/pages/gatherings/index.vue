@@ -72,7 +72,7 @@ import {
   NSpin,
   NModal,
   NTag,
-  type DataTableColumns
+  type DataTableColumns,
 } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { gatheringApi } from '@/services/api'
@@ -97,7 +97,7 @@ const showCreateModal = ref(false)
 const pagination = {
   pageSize: 10,
   showSizePicker: true,
-  pageSizes: [10, 20, 50]
+  pageSizes: [10, 20, 50],
 }
 
 const statusOptions = computed(() => [
@@ -105,12 +105,12 @@ const statusOptions = computed(() => [
   { label: t('gatherings.status.published'), value: 'published' },
   { label: t('gatherings.status.active'), value: 'active' },
   { label: t('gatherings.status.closed'), value: 'closed' },
-  { label: t('gatherings.status.tallied'), value: 'tallied' }
+  { label: t('gatherings.status.tallied'), value: 'tallied' },
 ])
 
 const filteredGatherings = computed(() => {
   if (!statusFilter.value) return gatherings.value
-  return gatherings.value.filter(gathering => gathering.status === statusFilter.value)
+  return gatherings.value.filter((gathering) => gathering.status === statusFilter.value)
 })
 
 const getStatusType = (status: GatheringStatus) => {
@@ -136,64 +136,75 @@ const columns: DataTableColumns<Gathering> = [
     key: 'title',
     width: 200,
     ellipsis: {
-      tooltip: true
-    }
+      tooltip: true,
+    },
   },
   {
     title: t('gatherings.scheduledDate'),
     key: 'scheduled_date',
     width: 150,
-    render: (row) => new Date(row.scheduled_date).toLocaleDateString()
+    render: (row) => new Date(row.scheduled_date).toLocaleDateString(),
   },
   {
     title: t('gatherings.status.title'),
     key: 'status',
     width: 120,
-    render: (row) => h(NTag, {
-      type: getStatusType(row.status),
-      size: 'small'
-    }, {
-      default: () => t(`gatherings.status.${row.status}`)
-    })
+    render: (row) =>
+      h(
+        NTag,
+        {
+          type: getStatusType(row.status),
+          size: 'small',
+        },
+        {
+          default: () => t(`gatherings.status.${row.status}`),
+        },
+      ),
   },
   {
     title: t('gatherings.type.title'),
     key: 'type',
     width: 100,
-    render: (row) => t(`gatherings.type.${row.type}`)
+    render: (row) => t(`gatherings.type.${row.type}`),
   },
   {
     title: t('gatherings.participants'),
     key: 'participating_units',
     width: 120,
-    render: (row) => `${row.participating_units}/${row.qualified_units}`
+    render: (row) => `${row.participating_units}/${row.qualified_units}`,
   },
   {
     title: t('gatherings.participation'),
     key: 'participation_rate',
     width: 120,
     render: (row) => {
-      const rate = row.qualified_units > 0 ? (row.participating_units / row.qualified_units * 100) : 0
+      const rate =
+        row.qualified_units > 0 ? (row.participating_units / row.qualified_units) * 100 : 0
       return `${rate.toFixed(1)}%`
-    }
+    },
   },
   {
     title: t('common.actions'),
     key: 'actions',
     width: 100,
-    render: (row) => h(NButton, {
-      size: 'small',
-      onClick: () => router.push(`/gatherings/${row.id}`)
-    }, { default: () => t('common.view') })
-  }
+    render: (row) =>
+      h(
+        NButton,
+        {
+          size: 'small',
+          onClick: () => router.push(`/gatherings/${row.id}`),
+        },
+        { default: () => t('common.view') },
+      ),
+  },
 ]
 
 const loadGatherings = async () => {
   if (!associationId.value) return
-  
+
   loading.value = true
   error.value = null
-  
+
   try {
     const response = await gatheringApi.getGatherings(associationId.value!)
     gatherings.value = response.data
@@ -209,9 +220,12 @@ const handleGatheringSaved = () => {
   loadGatherings()
 }
 
-watch(associationId, (val) => {
-  if (val) loadGatherings()
-  else gatherings.value = []
-}, { immediate: true })
+watch(
+  associationId,
+  (val) => {
+    if (val) loadGatherings()
+    else gatherings.value = []
+  },
+  { immediate: true },
+)
 </script>
-

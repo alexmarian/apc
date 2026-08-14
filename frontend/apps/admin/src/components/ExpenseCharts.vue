@@ -10,7 +10,7 @@ import {
   NButton,
   NSpace,
   NTooltip,
-  NIcon
+  NIcon,
 } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { OpenInNewRound } from '@vicons/material'
@@ -24,7 +24,7 @@ import type { StackedChartItem, StackedChartSeries } from '@/components/charts/S
 
 // Props
 const props = defineProps<{
-  expenses: Expense[],
+  expenses: Expense[]
   dateRange?: [number, number] | null
 }>()
 
@@ -40,47 +40,60 @@ const selectedType = ref<string | null>(null)
 
 // Generate a color palette for the charts
 const COLORS = [
-  '#3366FF', '#FF6633', '#33CC99', '#FFCC33', '#FF33CC',
-  '#33CCFF', '#CC99FF', '#99CC33', '#FF9966', '#6699FF'
+  '#3366FF',
+  '#FF6633',
+  '#33CC99',
+  '#FFCC33',
+  '#FF33CC',
+  '#33CCFF',
+  '#CC99FF',
+  '#99CC33',
+  '#FF9966',
+  '#6699FF',
 ]
 
 // Computed data for the charts
 const expensesByType = computed<ChartDataItem[]>(() => {
   if (!props.expenses || props.expenses.length === 0) return []
 
-  const grouped = props.expenses.reduce((acc, expense) => {
-    const type = expense.category_type || 'Uncategorized'
+  const grouped = props.expenses.reduce(
+    (acc, expense) => {
+      const type = expense.category_type || 'Uncategorized'
 
-    if (!acc[type]) {
-      acc[type] = {
-        name: t(`categories.types.${type}`, type),
-        rawName: type, // Store original value for lookup
-        value: 0,
-        count: 0
+      if (!acc[type]) {
+        acc[type] = {
+          name: t(`categories.types.${type}`, type),
+          rawName: type, // Store original value for lookup
+          value: 0,
+          count: 0,
+        }
       }
-    }
 
-    acc[type].value += expense.amount
-    acc[type].count += 1
+      acc[type].value += expense.amount
+      acc[type].count += 1
 
-    return acc
-  }, {} as Record<string, ChartDataItem & { rawName: string }>)
+      return acc
+    },
+    {} as Record<string, ChartDataItem & { rawName: string }>,
+  )
 
   return Object.values(grouped).map((item, index) => ({
     ...item,
     color: COLORS[index % COLORS.length],
-    percentage: (item.value / props.expenses.reduce((sum, exp) => sum + exp.amount, 0)) * 100
+    percentage: (item.value / props.expenses.reduce((sum, exp) => sum + exp.amount, 0)) * 100,
   }))
 })
 
 // Family categorization - group expenses within each type by family
-const expensesByTypeAndFamily = computed<Record<string, Record<string, ChartDataItem & { rawName: string }>>>(() => {
+const expensesByTypeAndFamily = computed<
+  Record<string, Record<string, ChartDataItem & { rawName: string }>>
+>(() => {
   if (!props.expenses || props.expenses.length === 0) return {}
 
   const typeAndFamily: Record<string, Record<string, ChartDataItem & { rawName: string }>> = {}
 
   // First pass - group by type and family
-  props.expenses.forEach(expense => {
+  props.expenses.forEach((expense) => {
     const type = expense.category_type || 'Uncategorized'
     const family = expense.category_family || 'General'
 
@@ -93,7 +106,7 @@ const expensesByTypeAndFamily = computed<Record<string, Record<string, ChartData
         name: t(`categories.families.${family}`, family),
         rawName: family, // Store original value for lookup
         value: 0,
-        count: 0
+        count: 0,
       }
     }
 
@@ -102,9 +115,11 @@ const expensesByTypeAndFamily = computed<Record<string, Record<string, ChartData
   })
 
   // Second pass - calculate percentages and add colors
-  Object.keys(typeAndFamily).forEach(type => {
-    const totalForType = Object.values(typeAndFamily[type])
-      .reduce((sum, family) => sum + family.value, 0)
+  Object.keys(typeAndFamily).forEach((type) => {
+    const totalForType = Object.values(typeAndFamily[type]).reduce(
+      (sum, family) => sum + family.value,
+      0,
+    )
 
     Object.keys(typeAndFamily[type]).forEach((family, index) => {
       typeAndFamily[type][family].color = COLORS[index % COLORS.length]
@@ -124,7 +139,7 @@ const getFamiliesForType = (type: string): ChartDataItem[] => {
     .sort((a, b) => b.value - a.value)
     .map((family, index) => ({
       ...family,
-      color: COLORS[index % COLORS.length]
+      color: COLORS[index % COLORS.length],
     }))
 }
 
@@ -133,28 +148,31 @@ const getCategoriesForTypeAndFamily = (type: string, family: string): ChartDataI
   if (!props.expenses || props.expenses.length === 0) return []
 
   const filteredExpenses = props.expenses.filter(
-    expense => expense.category_type === type &&
-      (expense.category_family === family ||
-        (!expense.category_family && family === 'General'))
+    (expense) =>
+      expense.category_type === type &&
+      (expense.category_family === family || (!expense.category_family && family === 'General')),
   )
 
-  const grouped = filteredExpenses.reduce((acc, expense) => {
-    const category = expense.category_name || 'Uncategorized'
+  const grouped = filteredExpenses.reduce(
+    (acc, expense) => {
+      const category = expense.category_name || 'Uncategorized'
 
-    if (!acc[category]) {
-      acc[category] = {
-        name: t(`categories.names.${category}`, category),
-        rawName: category,
-        value: 0,
-        count: 0
+      if (!acc[category]) {
+        acc[category] = {
+          name: t(`categories.names.${category}`, category),
+          rawName: category,
+          value: 0,
+          count: 0,
+        }
       }
-    }
 
-    acc[category].value += expense.amount
-    acc[category].count += 1
+      acc[category].value += expense.amount
+      acc[category].count += 1
 
-    return acc
-  }, {} as Record<string, ChartDataItem & { rawName: string }>)
+      return acc
+    },
+    {} as Record<string, ChartDataItem & { rawName: string }>,
+  )
 
   const totalForFamily = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0)
 
@@ -162,75 +180,79 @@ const getCategoriesForTypeAndFamily = (type: string, family: string): ChartDataI
     .map((item, index) => ({
       ...item,
       color: COLORS[index % COLORS.length],
-      percentage: (item.value / totalForFamily) * 100
+      percentage: (item.value / totalForFamily) * 100,
     }))
     .sort((a, b) => b.value - a.value)
 }
 
 // Get all unique expense types
 const expenseTypes = computed<string[]>(() => {
-  return [...new Set(props.expenses
-    .map(e => e.category_type || 'Uncategorized')
-    .filter(Boolean) as string[])]
+  return [
+    ...new Set(
+      props.expenses.map((e) => e.category_type || 'Uncategorized').filter(Boolean) as string[],
+    ),
+  ]
 })
 
 // Monthly expenses data for stacked chart
-const monthlyExpensesData = computed<{items: StackedChartItem[], series: StackedChartSeries[]}>(() => {
-  if (!props.expenses || props.expenses.length === 0) {
-    return { items: [], series: [] }
-  }
-
-  // Create a map to store expenses by month
-  const monthlyData: Record<string, Record<string, number>> = {}
-
-  // Process each expense
-  props.expenses.forEach(expense => {
-    const date = new Date(expense.date)
-    const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-    const category = expense.category_type || 'Uncategorized'
-
-    if (!monthlyData[monthYear]) {
-      monthlyData[monthYear] = {}
+const monthlyExpensesData = computed<{ items: StackedChartItem[]; series: StackedChartSeries[] }>(
+  () => {
+    if (!props.expenses || props.expenses.length === 0) {
+      return { items: [], series: [] }
     }
 
-    if (!monthlyData[monthYear][category]) {
-      monthlyData[monthYear][category] = 0
-    }
+    // Create a map to store expenses by month
+    const monthlyData: Record<string, Record<string, number>> = {}
 
-    monthlyData[monthYear][category] += expense.amount
-  })
+    // Process each expense
+    props.expenses.forEach((expense) => {
+      const date = new Date(expense.date)
+      const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const category = expense.category_type || 'Uncategorized'
 
-  // Convert to array format for the chart
-  const months = Object.keys(monthlyData).sort()
-  const uniqueCategories = expenseTypes.value
+      if (!monthlyData[monthYear]) {
+        monthlyData[monthYear] = {}
+      }
 
-  // Create series data
-  const series: StackedChartSeries[] = uniqueCategories.map((category, index) => ({
-    name: category,
-    color: COLORS[index % COLORS.length]
-  }))
+      if (!monthlyData[monthYear][category]) {
+        monthlyData[monthYear][category] = 0
+      }
 
-  // Create items data
-  const items: StackedChartItem[] = months.map(month => {
-    const values: Record<string, number> = {}
-    let total = 0
-
-    // Add data for each category
-    uniqueCategories.forEach(category => {
-      const value = monthlyData[month][category] || 0
-      values[category] = value
-      total += value
+      monthlyData[monthYear][category] += expense.amount
     })
 
-    return {
-      label: month,
-      values,
-      total
-    }
-  })
+    // Convert to array format for the chart
+    const months = Object.keys(monthlyData).sort()
+    const uniqueCategories = expenseTypes.value
 
-  return { items, series }
-})
+    // Create series data
+    const series: StackedChartSeries[] = uniqueCategories.map((category, index) => ({
+      name: category,
+      color: COLORS[index % COLORS.length],
+    }))
+
+    // Create items data
+    const items: StackedChartItem[] = months.map((month) => {
+      const values: Record<string, number> = {}
+      let total = 0
+
+      // Add data for each category
+      uniqueCategories.forEach((category) => {
+        const value = monthlyData[month][category] || 0
+        values[category] = value
+        total += value
+      })
+
+      return {
+        label: month,
+        values,
+        total,
+      }
+    })
+
+    return { items, series }
+  },
+)
 
 // Format date range as string for display
 const formattedDateRange = computed(() => {
@@ -243,59 +265,69 @@ const formattedDateRange = computed(() => {
 })
 
 // When expenses change, set the default selected type
-watch(() => props.expenses, () => {
-  if (expensesByType.value.length > 0 && (!selectedType.value || !expensesByType.value.find(t => t.name === selectedType.value))) {
-    selectedType.value = expensesByType.value[0].name
-  }
-}, { immediate: true })
+watch(
+  () => props.expenses,
+  () => {
+    if (
+      expensesByType.value.length > 0 &&
+      (!selectedType.value || !expensesByType.value.find((t) => t.name === selectedType.value))
+    ) {
+      selectedType.value = expensesByType.value[0].name
+    }
+  },
+  { immediate: true },
+)
 
 const openStandaloneChartsPage = () => {
   try {
     // Prepare data for standalone view
-    const typeDetails = expensesByType.value.map(type => {
+    const typeDetails = expensesByType.value.map((type) => {
       // Get the families for this type
-      const families = getFamiliesForType(type.rawName);
+      const families = getFamiliesForType(type.rawName)
 
       return {
         type: type.name,
         rawName: type.rawName, // Important: Include the raw name for translation
         value: type.value,
-        families: families.map(family => ({
+        families: families.map((family) => ({
           ...family,
           // Ensure rawName is preserved for each family
-          rawName: family.rawName
-        }))
-      };
-    });
+          rawName: family.rawName,
+        })),
+      }
+    })
 
     // Create the data object to pass to the standalone page with rawNames
     const chartData = {
       expenses: props.expenses,
-      expensesByType: expensesByType.value.map(item => ({
+      expensesByType: expensesByType.value.map((item) => ({
         ...item,
         // Ensure rawName is preserved for each type
-        rawName: item.rawName
+        rawName: item.rawName,
       })),
       expensesByMonth: monthlyExpensesData.value,
       typeDetails,
-      generatedAt: new Date().toISOString() // Add timestamp
-    };
+      generatedAt: new Date().toISOString(), // Add timestamp
+    }
 
     // Store data in localStorage so the new window can access it
-    localStorage.setItem('standalone_chart_data', JSON.stringify(chartData));
-    localStorage.setItem('standalone_chart_title', t('expenses.expenseAnalysis', 'Expense Analysis'));
-    localStorage.setItem('standalone_chart_date_range', formattedDateRange.value);
-    localStorage.setItem('standalone_chart_language', locale.value);
+    localStorage.setItem('standalone_chart_data', JSON.stringify(chartData))
+    localStorage.setItem(
+      'standalone_chart_title',
+      t('expenses.expenseAnalysis', 'Expense Analysis'),
+    )
+    localStorage.setItem('standalone_chart_date_range', formattedDateRange.value)
+    localStorage.setItem('standalone_chart_language', locale.value)
 
     // Open a new window with the standalone HTML page (not a route)
-    const standaloneWindow = window.open('/standalone-charts.html', '_blank');
+    const standaloneWindow = window.open('/standalone-charts.html', '_blank')
 
     if (!standaloneWindow) {
-      alert(t('expenses.allowPopups', 'Please allow pop-ups to open the charts in a new window'));
+      alert(t('expenses.allowPopups', 'Please allow pop-ups to open the charts in a new window'))
     }
   } catch (error) {
-    console.error('Error opening standalone charts page:', error);
-    alert(t('expenses.chartError', 'There was an error opening the charts page. Please try again.'));
+    console.error('Error opening standalone charts page:', error)
+    alert(t('expenses.chartError', 'There was an error opening the charts page. Please try again.'))
   }
 }
 
@@ -308,7 +340,9 @@ const formatCategoryAndValue = (categoryName: string, value: number) => {
 <template>
   <div class="expense-charts">
     <template v-if="props.expenses.length === 0">
-      <NEmpty :description="t('expenses.noExpensesFilters', 'No expenses found for the selected filters')" />
+      <NEmpty
+        :description="t('expenses.noExpensesFilters', 'No expenses found for the selected filters')"
+      />
     </template>
 
     <template v-else>
@@ -332,7 +366,7 @@ const formatCategoryAndValue = (categoryName: string, value: number) => {
       </div>
 
       <!-- Section 1: Expenses by Type -->
-      <NCard :title="t('expenses.expensesByType', 'Expenses by Type')" style="margin-bottom: 24px;">
+      <NCard :title="t('expenses.expensesByType', 'Expenses by Type')" style="margin-bottom: 24px">
         <NRadioGroup v-model:value="typeChartMode" class="mode-selector">
           <NRadio value="pie">{{ t('charts.pieChart', 'Pie Chart') }}</NRadio>
           <NRadio value="bar">{{ t('charts.barChart', 'Bar Chart') }}</NRadio>
@@ -357,7 +391,10 @@ const formatCategoryAndValue = (categoryName: string, value: number) => {
       </NCard>
 
       <!-- Section 2: Monthly Trends -->
-      <NCard :title="t('expenses.monthlyTrends', 'Monthly Expense Trends')" style="margin-bottom: 24px;">
+      <NCard
+        :title="t('expenses.monthlyTrends', 'Monthly Expense Trends')"
+        style="margin-bottom: 24px"
+      >
         <div class="chart-container">
           <StackedBarChart
             v-if="monthlyExpensesData.items.length > 0"
@@ -371,7 +408,10 @@ const formatCategoryAndValue = (categoryName: string, value: number) => {
       </NCard>
 
       <!-- Section 3: Expense Type Breakdown -->
-      <NCard :title="t('expenses.expenseTypeBreakdown', 'Expense Type Breakdown')" style="margin-bottom: 24px;">
+      <NCard
+        :title="t('expenses.expenseTypeBreakdown', 'Expense Type Breakdown')"
+        style="margin-bottom: 24px"
+      >
         <NRadioGroup v-model:value="categoryChartMode" class="mode-selector">
           <NRadio value="pie">{{ t('charts.pieChart', 'Pie Chart') }}</NRadio>
           <NRadio value="bar">{{ t('charts.barChart', 'Bar Chart') }}</NRadio>
@@ -385,7 +425,11 @@ const formatCategoryAndValue = (categoryName: string, value: number) => {
           >
             <!-- Families within this type section -->
             <div class="chart-container">
-              <NCard :title="t('expenses.familyBreakdown', 'Family Breakdown')" size="small" style="margin-bottom: 16px;">
+              <NCard
+                :title="t('expenses.familyBreakdown', 'Family Breakdown')"
+                size="small"
+                style="margin-bottom: 16px"
+              >
                 <template v-if="getFamiliesForType(type.rawName).length > 0">
                   <PieChart
                     v-if="categoryChartMode === 'pie'"
@@ -394,14 +438,12 @@ const formatCategoryAndValue = (categoryName: string, value: number) => {
                     :height="300"
                   />
 
-                  <BarChart
-                    v-else
-                    :data="getFamiliesForType(type.rawName)"
-                    :height="300"
-                  />
+                  <BarChart v-else :data="getFamiliesForType(type.rawName)" :height="300" />
                 </template>
                 <template v-else>
-                  <NEmpty :description="t('expenses.noFamiliesFound', 'No families found for this type')" />
+                  <NEmpty
+                    :description="t('expenses.noFamiliesFound', 'No families found for this type')"
+                  />
                 </template>
               </NCard>
 
@@ -413,7 +455,9 @@ const formatCategoryAndValue = (categoryName: string, value: number) => {
                   :title="formatCategoryAndValue(family.name, family.value)"
                 >
                   <div class="chart-container">
-                    <template v-if="getCategoriesForTypeAndFamily(type.rawName, family.rawName).length > 0">
+                    <template
+                      v-if="getCategoriesForTypeAndFamily(type.rawName, family.rawName).length > 0"
+                    >
                       <PieChart
                         v-if="categoryChartMode === 'pie'"
                         :data="getCategoriesForTypeAndFamily(type.rawName, family.rawName)"
@@ -428,7 +472,11 @@ const formatCategoryAndValue = (categoryName: string, value: number) => {
                       />
                     </template>
                     <template v-else>
-                      <NEmpty :description="t('expenses.noCategoriesFound', 'No categories found for this family')" />
+                      <NEmpty
+                        :description="
+                          t('expenses.noCategoriesFound', 'No categories found for this family')
+                        "
+                      />
                     </template>
                   </div>
                 </NCollapseItem>

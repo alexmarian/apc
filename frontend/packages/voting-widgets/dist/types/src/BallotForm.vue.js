@@ -1,6 +1,6 @@
 import { watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { NButton, NCard, NCheckbox, NCheckboxGroup, NRadio, NRadioGroup, NSpace, NText } from 'naive-ui';
+import { NButton, NCard, NCheckbox, NCheckboxGroup, NRadio, NRadioGroup, NSpace, NText, } from 'naive-ui';
 const { t, locale } = useI18n({
     useScope: 'local',
     messages: {
@@ -22,7 +22,7 @@ const { t, locale } = useI18n({
             abstain: 'Воздержаться',
             rankingHint: 'Упорядочьте варианты от наиболее предпочтительного (вверху) до наименее предпочтительного (внизу).',
         },
-    }
+    },
 });
 const props = defineProps();
 const emit = defineEmits();
@@ -33,9 +33,8 @@ watch(() => props.matters, (matters) => {
     for (const m of matters) {
         const key = String(m.id);
         if (current[key] === undefined) {
-            current[key] = m.voting_config.type === 'ranking'
-                ? (m.voting_config.options ?? []).map(o => o.id)
-                : [];
+            current[key] =
+                m.voting_config.type === 'ranking' ? (m.voting_config.options ?? []).map((o) => o.id) : [];
             changed = true;
         }
     }
@@ -78,7 +77,7 @@ function matterDescription(matter) {
     return matter.description;
 }
 function optionText(matter, optId) {
-    return matter.voting_config.options?.find(o => o.id === optId)?.text ?? optId;
+    return matter.voting_config.options?.find((o) => o.id === optId)?.text ?? optId;
 }
 debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};

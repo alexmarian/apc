@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Bar } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js'
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+} from 'chart.js'
 import type { ChartData, ChartOptions } from 'chart.js'
 import { NSpace, NTooltip } from 'naive-ui'
 import { formatCurrency } from '@/utils/formatters'
@@ -11,41 +19,41 @@ ChartJS.register(Title, Tooltip, Legend, CategoryScale, LinearScale, BarElement)
 
 // Type for stacked data series
 export interface StackedChartSeries {
-  name: string;
-  color: string;
+  name: string
+  color: string
 }
 
 export interface StackedChartItem {
-  label: string;
-  values: Record<string, number>;
-  total: number;
+  label: string
+  values: Record<string, number>
+  total: number
 }
 
 // Props
 const props = defineProps<{
-  data: StackedChartItem[];
-  series: StackedChartSeries[];
-  title?: string;
-  height?: number;
+  data: StackedChartItem[]
+  series: StackedChartSeries[]
+  title?: string
+  height?: number
 }>()
 
 // Generate chart data for Chart.js
 const stackedBarChartData = computed<ChartData<'bar'>>(() => {
-  const labels = props.data.map(item => item.label);
+  const labels = props.data.map((item) => item.label)
 
   // Create a dataset for each series
   const datasets = props.series.map((serie) => {
     return {
       label: serie.name,
-      data: props.data.map(item => item.values[serie.name] || 0),
+      data: props.data.map((item) => item.values[serie.name] || 0),
       backgroundColor: serie.color,
-      borderWidth: 1
+      borderWidth: 1,
     }
-  });
+  })
 
   return {
     labels,
-    datasets
+    datasets,
   }
 })
 
@@ -55,36 +63,36 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => ({
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      display: false // We're using our custom legend
+      display: false, // We're using our custom legend
     },
     tooltip: {
       callbacks: {
         label: (context) => {
-          const label = context.dataset.label || '';
-          const value = context.raw as number;
-          return `${label}: ${formatCurrency(value)}`;
-        }
-      }
-    }
+          const label = context.dataset.label || ''
+          const value = context.raw as number
+          return `${label}: ${formatCurrency(value)}`
+        },
+      },
+    },
   },
   scales: {
     x: {
       stacked: true,
       ticks: {
         maxRotation: 45,
-        minRotation: 45
-      }
+        minRotation: 45,
+      },
     },
     y: {
       stacked: true,
       beginAtZero: true,
       ticks: {
         callback: (value) => {
-          return formatCurrency(value as number);
-        }
-      }
-    }
-  }
+          return formatCurrency(value as number)
+        },
+      },
+    },
+  },
 }))
 </script>
 
@@ -93,11 +101,7 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => ({
     <h4 v-if="title" class="chart-title">{{ title }}</h4>
 
     <div class="chart-container">
-      <Bar
-        :data="stackedBarChartData"
-        :options="chartOptions"
-        :height="height || 300"
-      />
+      <Bar :data="stackedBarChartData" :options="chartOptions" :height="height || 300" />
     </div>
 
     <!-- Legend for series -->

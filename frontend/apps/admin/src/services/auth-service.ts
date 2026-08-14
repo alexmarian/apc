@@ -24,7 +24,7 @@ export function onLogout(callback: () => void) {
 
 // Remove logout callback
 export function offLogout(callback: () => void) {
-  logoutCallbacks = logoutCallbacks.filter(cb => cb !== callback)
+  logoutCallbacks = logoutCallbacks.filter((cb) => cb !== callback)
 }
 
 // Perform logout with proper cleanup
@@ -42,7 +42,7 @@ export function performLogout() {
     localStorage.removeItem('user')
 
     // Notify all listeners
-    logoutCallbacks.forEach(callback => {
+    logoutCallbacks.forEach((callback) => {
       try {
         callback()
       } catch (error) {
@@ -68,7 +68,7 @@ export function performLogout() {
 // Attempt to refresh token without circular dependencies
 export async function attemptTokenRefresh(): Promise<boolean> {
   const refreshToken = localStorage.getItem(config.refreshTokenKey)
-  
+
   if (!refreshToken) {
     return false
   }
@@ -77,14 +77,14 @@ export async function attemptTokenRefresh(): Promise<boolean> {
     const response = await axios.post<{ token: string }>(`${config.apiBaseUrl}/refresh`, null, {
       headers: {
         Authorization: `Bearer ${refreshToken}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      timeout: config.apiTimeout
+      timeout: config.apiTimeout,
     })
 
     const newToken = response.data.token
     localStorage.setItem(config.authTokenKey, newToken)
-    
+
     return true
   } catch (error) {
     console.error('Token refresh failed:', error)

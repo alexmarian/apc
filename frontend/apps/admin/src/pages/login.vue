@@ -16,7 +16,7 @@ const { t } = useI18n()
 const formData = reactive({
   login: '',
   password: '',
-  totp: ''
+  totp: '',
 })
 
 // Form validation rules
@@ -25,38 +25,40 @@ const rules: FormRules = {
     {
       required: true,
       message: t('validation.required', {
-        field: t('auth.username', 'Username')
+        field: t('auth.username', 'Username'),
       }),
-      trigger: 'blur'
-    }
+      trigger: 'blur',
+    },
   ],
   password: [
     {
       required: true,
       message: t('validation.required', {
-        field: t('auth.password', 'Password')
+        field: t('auth.password', 'Password'),
       }),
-      trigger: 'blur'
-    }
+      trigger: 'blur',
+    },
   ],
   totp: [
     {
       required: true,
       message: t('validation.required', {
-        field: t('auth.totp', 'TOTP code')
+        field: t('auth.totp', 'TOTP code'),
       }),
-      trigger: 'blur'
-    }, {
+      trigger: 'blur',
+    },
+    {
       type: 'string',
       len: 6,
       message: t('auth.totpLength', 'TOTP code must be 6 digits'),
-      trigger: 'blur'
-    }, {
+      trigger: 'blur',
+    },
+    {
       pattern: /^\d{6}$/,
       message: t('auth.totpNumeric', 'TOTP code must be 6 numeric digits'),
-      trigger: 'blur'
-    }
-  ]
+      trigger: 'blur',
+    },
+  ],
 }
 
 // State
@@ -84,16 +86,11 @@ const handleLogin = async (e: MouseEvent) => {
 
 <template>
   <AuthLayout :title="t('auth.login', 'Login')">
-    <NAlert v-if="auth.error" type="error" style="margin-bottom: 24px;">
+    <NAlert v-if="auth.error" type="error" style="margin-bottom: 24px">
       {{ auth.error }}
     </NAlert>
 
-    <NForm
-      ref="formRef"
-      :model="formData"
-      :rules="rules"
-      label-placement="top"
-    >
+    <NForm ref="formRef" :model="formData" :rules="rules" label-placement="top">
       <NFormItem :label="t('auth.username', 'Username')" path="login">
         <NInput
           v-model:value="formData.login"
@@ -118,15 +115,9 @@ const handleLogin = async (e: MouseEvent) => {
         />
       </NFormItem>
 
-      <div style="margin-top: 24px;">
+      <div style="margin-top: 24px">
         <NSpace vertical align="center">
-          <NButton
-            type="primary"
-            size="large"
-            block
-            @click="handleLogin"
-            :loading="auth.loading"
-          >
+          <NButton type="primary" size="large" block @click="handleLogin" :loading="auth.loading">
             {{ t('auth.login', 'Login') }}
           </NButton>
         </NSpace>

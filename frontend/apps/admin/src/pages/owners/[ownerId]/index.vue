@@ -15,7 +15,7 @@ import {
   NGridItem,
   NDivider,
   NBreadcrumb,
-  NBreadcrumbItem
+  NBreadcrumbItem,
 } from 'naive-ui'
 import PageShell from '@/components/PageShell.vue'
 import type { DataTableColumns } from 'naive-ui'
@@ -41,7 +41,10 @@ const ownerData = ref<OwnerReportItem | null>(null)
 const selectedUnitTypes = ref<string[]>([])
 
 // Breadcrumb chain: array of {id, name} read from query param, plus the current owner appended once loaded
-interface BreadcrumbEntry { id: number; name: string }
+interface BreadcrumbEntry {
+  id: number
+  name: string
+}
 const breadcrumbChain = computed<BreadcrumbEntry[]>(() => {
   const raw = route.query.chain
   if (!raw) return []
@@ -69,7 +72,8 @@ const fetchOwnerDetail = async () => {
       error.value = t('owners.detail.notFound', 'Owner not found')
     }
   } catch (err) {
-    error.value = err instanceof Error ? err.message : t('owners.loadError', 'Failed to load owner data')
+    error.value =
+      err instanceof Error ? err.message : t('owners.loadError', 'Failed to load owner data')
   } finally {
     loading.value = false
   }
@@ -87,7 +91,12 @@ const unitTypeSummary = computed(() => {
   if (!units) return []
   const byType = new Map<string, { unit_type: string; count: number; area: number; part: number }>()
   for (const unit of units) {
-    const entry = byType.get(unit.unit_type) ?? { unit_type: unit.unit_type, count: 0, area: 0, part: 0 }
+    const entry = byType.get(unit.unit_type) ?? {
+      unit_type: unit.unit_type,
+      count: 0,
+      area: 0,
+      part: 0,
+    }
     entry.count += 1
     entry.area += unit.area
     entry.part += unit.part
@@ -99,7 +108,7 @@ const unitTypeSummary = computed(() => {
 const filteredUnits = computed<OwnerUnit[]>(() => {
   const units = ownerData.value?.units ?? []
   if (selectedUnitTypes.value.length === 0) return units
-  return units.filter(u => selectedUnitTypes.value.includes(u.unit_type))
+  return units.filter((u) => selectedUnitTypes.value.includes(u.unit_type))
 })
 
 const handleSelectUnitType = (unitType: string) => {
@@ -107,7 +116,7 @@ const handleSelectUnitType = (unitType: string) => {
   if (idx === -1) {
     selectedUnitTypes.value = [...selectedUnitTypes.value, unitType]
   } else {
-    selectedUnitTypes.value = selectedUnitTypes.value.filter(t => t !== unitType)
+    selectedUnitTypes.value = selectedUnitTypes.value.filter((t) => t !== unitType)
   }
 }
 
@@ -115,51 +124,53 @@ const unitsColumns = computed<DataTableColumns<OwnerUnit>>(() => [
   {
     title: t('units.building', 'Building'),
     key: 'building_name',
-    sorter: (a, b) => a.building_name.localeCompare(b.building_name)
+    sorter: (a, b) => a.building_name.localeCompare(b.building_name),
   },
   { title: t('units.cadastralNumber', 'Cadastral Number'), key: 'unit_cadastral_number' },
   { title: t('units.address', 'Address'), key: 'unit_address' },
   {
     title: t('units.unit', 'Unit'),
     key: 'unit_number',
-    sorter: (a, b) => a.unit_number.localeCompare(b.unit_number, undefined, { numeric: true })
+    sorter: (a, b) => a.unit_number.localeCompare(b.unit_number, undefined, { numeric: true }),
   },
   {
     title: t('units.area', 'Area'),
     key: 'area',
     sorter: (a, b) => a.area - b.area,
-    render: (row) => `${row.area.toFixed(2)} m²`
+    render: (row) => `${row.area.toFixed(2)} m²`,
   },
   {
     title: t('units.part', 'Part'),
     key: 'part',
     sorter: (a, b) => a.part - b.part,
-    render: (row) => formatPercentage(row.part, 4)
+    render: (row) => formatPercentage(row.part, 4),
   },
   {
     title: t('units.type', 'Type'),
     key: 'unit_type',
-    render: (row) => t(`unitTypes.${row.unit_type}`, row.unit_type)
+    render: (row) => t(`unitTypes.${row.unit_type}`, row.unit_type),
   },
   {
     title: t('common.actions', 'Actions'),
     key: 'actions',
-    render: (row) => h(
-      NButton,
-      {
-        size: 'small',
-        onClick: () => router.push({
-          path: `/units/${row.unit_id}`,
-          query: {
-            associationId: associationId.value?.toString(),
-            buildingId: row.building_id.toString(),
-            from: route.fullPath
-          }
-        })
-      },
-      { default: () => t('common.view', 'View') }
-    )
-  }
+    render: (row) =>
+      h(
+        NButton,
+        {
+          size: 'small',
+          onClick: () =>
+            router.push({
+              path: `/units/${row.unit_id}`,
+              query: {
+                associationId: associationId.value?.toString(),
+                buildingId: row.building_id.toString(),
+                from: route.fullPath,
+              },
+            }),
+        },
+        { default: () => t('common.view', 'View') },
+      ),
+  },
 ])
 
 const downloadFilteredUnits = () => {
@@ -172,16 +183,16 @@ const downloadFilteredUnits = () => {
     t('units.unit', 'Unit'),
     t('units.area', 'Area (m²)'),
     t('units.part', 'Part (%)'),
-    t('units.type', 'Type')
+    t('units.type', 'Type'),
   ]
-  const rows = units.map(u => [
+  const rows = units.map((u) => [
     u.building_name,
     u.unit_cadastral_number,
     u.unit_address,
     u.unit_number,
     u.area.toFixed(2),
     (u.part * 100).toFixed(4),
-    t(`unitTypes.${u.unit_type}`, u.unit_type)
+    t(`unitTypes.${u.unit_type}`, u.unit_type),
   ])
   const ownerName = ownerData.value?.owner.name ?? 'owner'
   const filename = `${ownerName.replace(/\s+/g, '_')}_units.csv`
@@ -190,11 +201,14 @@ const downloadFilteredUnits = () => {
 
 const navigateToCoOwner = (coOwner: OwnerCoOwner) => {
   // Build the new breadcrumb chain: existing chain + current owner
-  const currentEntry: BreadcrumbEntry = { id: ownerId.value, name: ownerData.value?.owner.name ?? String(ownerId.value) }
+  const currentEntry: BreadcrumbEntry = {
+    id: ownerId.value,
+    name: ownerData.value?.owner.name ?? String(ownerId.value),
+  }
   const newChain = [...breadcrumbChain.value, currentEntry].slice(-3) // cap at 3 ancestors
   router.push({
     path: `/owners/${coOwner.id}`,
-    query: { chain: JSON.stringify(newChain) }
+    query: { chain: JSON.stringify(newChain) },
   })
 }
 
@@ -206,17 +220,18 @@ const coOwnersColumns = computed<DataTableColumns<OwnerCoOwner>>(() => [
   {
     title: t('owners.sharedUnits', 'Shared Units'),
     key: 'shared_unit_nums',
-    render: (row: OwnerCoOwner) => row.shared_unit_nums.join(', ')
+    render: (row: OwnerCoOwner) => row.shared_unit_nums.join(', '),
   },
   {
     title: t('common.actions', 'Actions'),
     key: 'actions',
-    render: (row: OwnerCoOwner) => h(
-      NButton,
-      { size: 'small', onClick: () => navigateToCoOwner(row) },
-      { default: () => t('common.details', 'Details') }
-    )
-  }
+    render: (row: OwnerCoOwner) =>
+      h(
+        NButton,
+        { size: 'small', onClick: () => navigateToCoOwner(row) },
+        { default: () => t('common.details', 'Details') },
+      ),
+  },
 ])
 
 const handleBack = () => {
@@ -225,7 +240,7 @@ const handleBack = () => {
     const parentChain = breadcrumbChain.value.slice(0, -1)
     router.push({
       path: `/owners/${prev.id}`,
-      query: parentChain.length > 0 ? { chain: JSON.stringify(parentChain) } : {}
+      query: parentChain.length > 0 ? { chain: JSON.stringify(parentChain) } : {},
     })
   } else {
     router.push('/owners/report')
@@ -236,7 +251,7 @@ const navigateToBreadcrumb = (entry: BreadcrumbEntry, index: number) => {
   const parentChain = breadcrumbChain.value.slice(0, index)
   router.push({
     path: `/owners/${entry.id}`,
-    query: parentChain.length > 0 ? { chain: JSON.stringify(parentChain) } : {}
+    query: parentChain.length > 0 ? { chain: JSON.stringify(parentChain) } : {},
   })
 }
 
@@ -252,14 +267,14 @@ onMounted(fetchOwnerDetail)
   >
     <template #context>
       <NBreadcrumb>
-        <NBreadcrumbItem @click="router.push('/owners/report')" style="cursor:pointer">
+        <NBreadcrumbItem @click="router.push('/owners/report')" style="cursor: pointer">
           {{ t('owners.report', 'Owners Report') }}
         </NBreadcrumbItem>
         <NBreadcrumbItem
           v-for="(entry, idx) in breadcrumbChain"
           :key="entry.id"
           @click="navigateToBreadcrumb(entry, idx)"
-          style="cursor:pointer"
+          style="cursor: pointer"
         >
           {{ entry.name }}
         </NBreadcrumbItem>
@@ -272,7 +287,9 @@ onMounted(fetchOwnerDetail)
     <NSpin :show="loading">
       <NAlert v-if="error" type="error">
         {{ error }}
-        <NButton style="margin-left: 12px;" @click="fetchOwnerDetail">{{ t('common.retry', 'Retry') }}</NButton>
+        <NButton style="margin-left: 12px" @click="fetchOwnerDetail">{{
+          t('common.retry', 'Retry')
+        }}</NButton>
       </NAlert>
 
       <div v-else-if="ownerData" class="detail-content">
@@ -295,7 +312,7 @@ onMounted(fetchOwnerDetail)
         </NCard>
 
         <!-- Summary Stats -->
-        <NCard style="margin-top: 16px;">
+        <NCard style="margin-top: 16px">
           <NGrid :cols="3" :x-gap="24">
             <NGridItem>
               <NStatistic
@@ -322,7 +339,7 @@ onMounted(fetchOwnerDetail)
         <!-- Holdings by type -->
         <NCard
           v-if="unitTypeSummary.length > 0"
-          style="margin-top: 16px;"
+          style="margin-top: 16px"
           :title="t('owners.holdingsByType', 'Holdings by unit type')"
         >
           <div class="type-cards-row">
@@ -333,7 +350,9 @@ onMounted(fetchOwnerDetail)
               :class="{ 'type-card--active': selectedUnitTypes.includes(entry.unit_type) }"
               @click="handleSelectUnitType(entry.unit_type)"
             >
-              <div class="type-card__label">{{ t(`unitTypes.${entry.unit_type}`, entry.unit_type) }}</div>
+              <div class="type-card__label">
+                {{ t(`unitTypes.${entry.unit_type}`, entry.unit_type) }}
+              </div>
               <div class="type-card__row">
                 <span class="type-card__key">{{ t('owners.unitCount', 'Number') }}</span>
                 <span class="type-card__val">{{ entry.count }}</span>
@@ -351,7 +370,7 @@ onMounted(fetchOwnerDetail)
         </NCard>
 
         <!-- Units table -->
-        <NCard style="margin-top: 16px;" :title="t('owners.unitsDetails', 'Owner\'s Units')">
+        <NCard style="margin-top: 16px" :title="t('owners.unitsDetails', 'Owner\'s Units')">
           <template #header-extra>
             <NSpace align="center">
               <NTag
@@ -380,7 +399,7 @@ onMounted(fetchOwnerDetail)
         <!-- Co-owners table -->
         <NCard
           v-if="ownerData.co_owners && ownerData.co_owners.length > 0"
-          style="margin-top: 16px;"
+          style="margin-top: 16px"
           :title="t('owners.coOwners', 'Co-Owners')"
         >
           <NDataTable
@@ -418,7 +437,9 @@ onMounted(fetchOwnerDetail)
   border-radius: 6px;
   border: 1px solid var(--border-color, #e0e0e6);
   cursor: pointer;
-  transition: border-color 0.15s, background-color 0.15s;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
 }
 
 .type-card:hover {
@@ -455,5 +476,4 @@ onMounted(fetchOwnerDetail)
   font-weight: 500;
   white-space: nowrap;
 }
-
 </style>

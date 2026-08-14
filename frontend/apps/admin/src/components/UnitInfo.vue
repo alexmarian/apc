@@ -11,7 +11,6 @@ const props = defineProps<{
   showDetails?: boolean
 }>()
 
-
 // Get appropriate color for unit type
 const unitTypeColor = computed(() => {
   switch (props.unit.unit_type.toLowerCase()) {
@@ -46,9 +45,7 @@ const unitTypeColor = computed(() => {
       <NDescriptionsItem :label="t('units.type', 'Type')">
         <NTag :type="unitTypeColor">{{ t(`unitTypes.${unit.unit_type}`) }}</NTag>
       </NDescriptionsItem>
-      <NDescriptionsItem :label="t('units.area', 'Area')">
-        {{ unit.area }} m²
-      </NDescriptionsItem>
+      <NDescriptionsItem :label="t('units.area', 'Area')"> {{ unit.area }} m² </NDescriptionsItem>
       <NDescriptionsItem :label="t('units.floor', 'Floor')">
         {{ unit.floor }}
       </NDescriptionsItem>

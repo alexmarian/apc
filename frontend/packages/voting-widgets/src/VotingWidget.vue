@@ -20,12 +20,18 @@
         <NDescriptions :column="3" label-placement="top" size="small">
           <NDescriptionsItem :label="t('owner')">{{ context.owner.name }}</NDescriptionsItem>
           <NDescriptionsItem :label="t('units')">{{ context.units.length }}</NDescriptionsItem>
-          <NDescriptionsItem :label="context.gathering.voting_mode === 'by_weight' ? t('votingWeight') : t('votingUnits')">
+          <NDescriptionsItem
+            :label="
+              context.gathering.voting_mode === 'by_weight' ? t('votingWeight') : t('votingUnits')
+            "
+          >
             {{ votingShare.toFixed(2) }}%
           </NDescriptionsItem>
         </NDescriptions>
         <div class="vw-status">
-          <NTag :type="statusTagType" size="small">{{ context.gathering.status.toUpperCase() }}</NTag>
+          <NTag :type="statusTagType" size="small">{{
+            context.gathering.status.toUpperCase()
+          }}</NTag>
         </div>
       </NCard>
 
@@ -73,7 +79,7 @@
           <NDivider title-placement="left">{{ t('yourVotes') }}</NDivider>
 
           <div
-            v-for="matter in context.matters.filter(m => !m.is_informative)"
+            v-for="matter in context.matters.filter((m) => !m.is_informative)"
             :key="matter.id"
             class="vw-voted"
           >
@@ -88,21 +94,21 @@
         <NCard v-else>
           <template #header>
             <span>{{ t('yourBallot') }}</span>
-            <NText :depth="3" class="vw-header-note">
-              — {{ context.gathering.title }}
-            </NText>
+            <NText :depth="3" class="vw-header-note"> — {{ context.gathering.title }} </NText>
           </template>
 
-          <NAlert v-if="submitError" type="error" closable class="vw-block" @close="submitError = null">
+          <NAlert
+            v-if="submitError"
+            type="error"
+            closable
+            class="vw-block"
+            @close="submitError = null"
+          >
             {{ submitError }}
           </NAlert>
 
           <!-- Informative matters -->
-          <div
-            v-for="matter in informativeMatters"
-            :key="matter.id"
-            class="vw-block"
-          >
+          <div v-for="matter in informativeMatters" :key="matter.id" class="vw-block">
             <NCard size="small" embedded>
               <template #header>
                 <NText class="vw-body-text">{{ matterTitle(matter) }}</NText>
@@ -144,7 +150,7 @@ import {
   NSpace,
   NSpin,
   NTag,
-  NText
+  NText,
 } from 'naive-ui'
 import BallotForm from './BallotForm.vue'
 import type { VotingService, MemberContext, MatterInfo, BallotVote } from './types'
@@ -166,13 +172,16 @@ const { t, locale } = useI18n({
       submittedAt: 'Submitted at',
       yourVotes: 'Your votes',
       informational: 'Informational',
-      yes: 'Yes', no: 'No', abstain: 'Abstain',
+      yes: 'Yes',
+      no: 'No',
+      abstain: 'Abstain',
       statusNotStarted: 'Voting has not started yet. Please check back later.',
       statusTallied: 'Voting has closed. Results are being tallied.',
       statusClosed: 'Voting is closed.',
       errAlreadySubmitted: 'A ballot has already been submitted for this gathering.',
       errInvalidBallot: 'Invalid ballot.',
-      unitsAlreadyVoted: 'The voting rights for your unit(s) have already been exercised by another co-owner.',
+      unitsAlreadyVoted:
+        'The voting rights for your unit(s) have already been exercised by another co-owner.',
     },
     ro: {
       owner: 'Proprietar',
@@ -187,13 +196,16 @@ const { t, locale } = useI18n({
       submittedAt: 'Trimis la',
       yourVotes: 'Voturile dvs.',
       informational: 'Informativ',
-      yes: 'Da', no: 'Nu', abstain: 'Abținere',
+      yes: 'Da',
+      no: 'Nu',
+      abstain: 'Abținere',
       statusNotStarted: 'Votul nu a început încă. Verificați mai târziu.',
       statusTallied: 'Votul s-a încheiat. Rezultatele sunt în curs de numărare.',
       statusClosed: 'Votul este închis.',
       errAlreadySubmitted: 'Un buletin de vot a fost deja trimis pentru această adunare.',
       errInvalidBallot: 'Buletin de vot invalid.',
-      unitsAlreadyVoted: 'Dreptul de vot pentru unitatea dvs. a fost deja exercitat de un alt coproprietar.',
+      unitsAlreadyVoted:
+        'Dreptul de vot pentru unitatea dvs. a fost deja exercitat de un alt coproprietar.',
     },
     ru: {
       owner: 'Владелец',
@@ -208,7 +220,9 @@ const { t, locale } = useI18n({
       submittedAt: 'Подан в',
       yourVotes: 'Ваши голоса',
       informational: 'Информационный',
-      yes: 'Да', no: 'Нет', abstain: 'Воздержаться',
+      yes: 'Да',
+      no: 'Нет',
+      abstain: 'Воздержаться',
       statusNotStarted: 'Голосование ещё не началось. Загляните позже.',
       statusTallied: 'Голосование завершено. Результаты подсчитываются.',
       statusClosed: 'Голосование закрыто.',
@@ -216,7 +230,7 @@ const { t, locale } = useI18n({
       errInvalidBallot: 'Недействительный бюллетень.',
       unitsAlreadyVoted: 'Право голоса за вашу единицу уже было реализовано другим совладельцем.',
     },
-  }
+  },
 })
 
 const props = defineProps<{
@@ -229,12 +243,17 @@ const submitting = ref(false)
 const fetchError = ref<string | null>(null)
 const submitError = ref<string | null>(null)
 const context = ref<MemberContext | null>(null)
-const receipt = ref<{ ballot_id: number; ballot_hash: string; submitted_at: string | null; ballot_content: Record<string, BallotVote> } | null>(null)
+const receipt = ref<{
+  ballot_id: number
+  ballot_hash: string
+  submitted_at: string | null
+  ballot_content: Record<string, BallotVote>
+} | null>(null)
 
 const ballotVotes = ref<Record<string, string[]>>({})
 
-const ownerPartSum = computed(() =>
-  context.value?.units.reduce((sum, u) => sum + u.voting_weight, 0) ?? 0
+const ownerPartSum = computed(
+  () => context.value?.units.reduce((sum, u) => sum + u.voting_weight, 0) ?? 0,
 )
 
 const votingShare = computed(() => {
@@ -249,31 +268,37 @@ const votingShare = computed(() => {
   }
 })
 
-const allUnitsUnavailable = computed(() =>
-  (context.value?.units.length ?? 0) > 0 &&
-  context.value!.units.every(u => !u.is_available)
+const allUnitsUnavailable = computed(
+  () =>
+    (context.value?.units.length ?? 0) > 0 && context.value!.units.every((u) => !u.is_available),
 )
 
 const votableMatters = computed(() =>
-  (context.value?.matters ?? []).filter(m => !m.is_informative)
+  (context.value?.matters ?? []).filter((m) => !m.is_informative),
 )
 
 const informativeMatters = computed(() =>
-  (context.value?.matters ?? []).filter(m => m.is_informative)
+  (context.value?.matters ?? []).filter((m) => m.is_informative),
 )
 
-const canSubmit = computed(() =>
-  votableMatters.value.length > 0 &&
-  votableMatters.value.every(m => (ballotVotes.value[String(m.id)]?.length ?? 0) > 0)
+const canSubmit = computed(
+  () =>
+    votableMatters.value.length > 0 &&
+    votableMatters.value.every((m) => (ballotVotes.value[String(m.id)]?.length ?? 0) > 0),
 )
 
 const statusTagType = computed((): 'success' | 'warning' | 'error' | 'info' | 'default' => {
   switch (context.value?.gathering.status) {
-    case 'active': return 'success'
-    case 'scheduled': return 'info'
-    case 'tallied': return 'info'
-    case 'closed': return 'error'
-    default: return 'default'
+    case 'active':
+      return 'success'
+    case 'scheduled':
+      return 'info'
+    case 'tallied':
+      return 'info'
+    case 'closed':
+      return 'error'
+    default:
+      return 'default'
   }
 })
 
@@ -306,17 +331,17 @@ function formatVotedValues(matter: MatterInfo): string {
   if (matter.voting_config.type === 'ranking') {
     return vote.values
       .map((v, i) => {
-        const opt = matter.voting_config.options?.find(o => o.id === v)
+        const opt = matter.voting_config.options?.find((o) => o.id === v)
         return `${i + 1}. ${opt ? opt.text : v}`
       })
       .join(', ')
   }
 
   return vote.values
-    .map(v => {
+    .map((v) => {
       if (v === 'abstain') return t('abstain')
       if (matter.voting_config.type === 'yes_no') return v === 'yes' ? t('yes') : t('no')
-      const opt = matter.voting_config.options?.find(o => o.id === v)
+      const opt = matter.voting_config.options?.find((o) => o.id === v)
       return opt ? opt.text : v
     })
     .join(', ')
@@ -330,7 +355,7 @@ async function fetchContext() {
         ballot_id: props.initialContext.ballot.ballot_id,
         ballot_hash: props.initialContext.ballot.ballot_hash,
         submitted_at: props.initialContext.ballot.submitted_at,
-        ballot_content: props.initialContext.ballot.ballot_content
+        ballot_content: props.initialContext.ballot.ballot_content,
       }
     }
     return
@@ -345,7 +370,7 @@ async function fetchContext() {
         ballot_id: data.ballot.ballot_id,
         ballot_hash: data.ballot.ballot_hash,
         submitted_at: data.ballot.submitted_at,
-        ballot_content: data.ballot.ballot_content
+        ballot_content: data.ballot.ballot_content,
       }
     }
   } catch (err) {
@@ -366,7 +391,7 @@ async function handleSubmit() {
       ballot_id: data.ballot_id,
       ballot_hash: data.ballot_hash,
       submitted_at: data.submitted_at,
-      ballot_content: data.ballot_content ?? ballotContent
+      ballot_content: data.ballot_content ?? ballotContent,
     }
   } catch (err) {
     if (err instanceof HttpError) {

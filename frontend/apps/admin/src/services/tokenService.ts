@@ -65,7 +65,7 @@ const tokenService = {
   }): Promise<{ login: string; qrCode: string; createdAt: string }> => {
     const response = await api.post('/users', userData)
     return response.data
-  }
+  },
 }
 
 export default tokenService

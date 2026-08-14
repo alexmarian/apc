@@ -20,9 +20,9 @@ const userMenuOptions = [
     label: t('auth.logout', 'Logout'),
     key: 'logout',
     props: {
-      onClick: () => handleLogout()
-    }
-  }
+      onClick: () => handleLogout(),
+    },
+  },
 ]
 
 // Handle logout

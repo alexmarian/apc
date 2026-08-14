@@ -34,12 +34,12 @@ const options = computed(() => {
 
   // Filter to only active accounts if activeOnly is true
   if (props.activeOnly) {
-    filteredAccounts = filteredAccounts.filter(account => account.is_active)
+    filteredAccounts = filteredAccounts.filter((account) => account.is_active)
   }
 
-  return filteredAccounts.map(account => ({
+  return filteredAccounts.map((account) => ({
     label: `${account.number} - ${account.description}`,
-    value: account.id
+    value: account.id,
   }))
 })
 
@@ -58,7 +58,7 @@ const fetchAccounts = async () => {
     if (!props.modelValue && accounts.value.length > 0 && !props.disabled) {
       // If activeOnly is true, find the first active account
       if (props.activeOnly) {
-        const firstActiveAccount = accounts.value.find(account => account.is_active)
+        const firstActiveAccount = accounts.value.find((account) => account.is_active)
         if (firstActiveAccount) {
           emit('update:modelValue', firstActiveAccount.id)
         }

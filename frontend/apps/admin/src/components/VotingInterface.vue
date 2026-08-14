@@ -36,10 +36,7 @@
                   <p>{{ matter.description }}</p>
                 </template>
 
-                <NFormItem
-                  :label="$t('gatherings.voting.choice')"
-                  :path="`votes.${matter.id}`"
-                >
+                <NFormItem :label="$t('gatherings.voting.choice')" :path="`votes.${matter.id}`">
                   <div v-if="matter.voting_config.type === 'yes_no'" class="vote-options">
                     <NRadioGroup v-model:value="formData.votes[matter.id]">
                       <NSpace>
@@ -52,8 +49,10 @@
                     </NRadioGroup>
                   </div>
 
-                  <div v-else-if="matter.voting_config.type === 'single_choice'"
-                       class="vote-options">
+                  <div
+                    v-else-if="matter.voting_config.type === 'single_choice'"
+                    class="vote-options"
+                  >
                     <NRadioGroup v-model:value="formData.votes[matter.id]">
                       <NSpace vertical>
                         <NRadio
@@ -70,8 +69,10 @@
                     </NRadioGroup>
                   </div>
 
-                  <div v-else-if="matter.voting_config.type === 'multiple_choice'"
-                       class="vote-options">
+                  <div
+                    v-else-if="matter.voting_config.type === 'multiple_choice'"
+                    class="vote-options"
+                  >
                     <NCheckboxGroup v-model:value="formData.votes[matter.id]">
                       <NSpace vertical>
                         <NCheckbox
@@ -157,16 +158,11 @@ import {
   NDescriptions,
   NDescriptionsItem,
   type FormInst,
-  type FormRules
+  type FormRules,
 } from 'naive-ui'
 import { votingMatterApi, participantApi, votingApi } from '@/services/api'
 import { apiErrorMessage } from '@/utils/apiError'
-import type {
-  Gathering,
-  VotingMatter,
-  GatheringParticipant,
-  Vote
-} from '@/types/api'
+import type { Gathering, VotingMatter, GatheringParticipant, Vote } from '@/types/api'
 
 interface Props {
   associationId: number
@@ -187,7 +183,7 @@ const participant = ref<GatheringParticipant | null>(null)
 const formData = reactive<{
   votes: Record<number, any>
 }>({
-  votes: {}
+  votes: {},
 })
 
 const totalWeight = computed(() => {
@@ -195,8 +191,8 @@ const totalWeight = computed(() => {
 })
 
 const canSubmit = computed(() => {
-  return matters.value.every(matter =>
-    formData.votes[matter.id] !== undefined && formData.votes[matter.id] !== null
+  return matters.value.every(
+    (matter) => formData.votes[matter.id] !== undefined && formData.votes[matter.id] !== null,
   )
 })
 
@@ -205,15 +201,16 @@ const rules: FormRules = {
 }
 
 const getMatterOptions = (matter: VotingMatter) => {
-  const options = matter.voting_config.options?.map(option => ({
-    label: option.text,
-    value: option.id
-  })) || []
+  const options =
+    matter.voting_config.options?.map((option) => ({
+      label: option.text,
+      value: option.id,
+    })) || []
 
   if (matter.voting_config.allow_abstention) {
     options.push({
       label: t('gatherings.voting.abstain'),
-      value: 'abstain'
+      value: 'abstain',
     })
   }
 
@@ -226,19 +223,24 @@ const loadData = async () => {
 
   try {
     // Load matters
-    const mattersResponse = await votingMatterApi.getVotingMatters(props.associationId, props.gathering.id)
+    const mattersResponse = await votingMatterApi.getVotingMatters(
+      props.associationId,
+      props.gathering.id,
+    )
     matters.value = mattersResponse.data.sort((a, b) => a.order_index - b.order_index)
 
     // Load participants to find current user's participant record
-    const participantsResponse = await participantApi.getParticipants(props.associationId, props.gathering.id)
+    const participantsResponse = await participantApi.getParticipants(
+      props.associationId,
+      props.gathering.id,
+    )
     // In a real app, you would filter by current user
     participant.value = participantsResponse.data[0] || null
 
     // Initialize form data
-    matters.value.forEach(matter => {
+    matters.value.forEach((matter) => {
       formData.votes[matter.id] = matter.voting_config.type === 'multiple_choice' ? [] : null
     })
-
   } catch (err) {
     error.value = apiErrorMessage(err, t('common.error'))
   } finally {
@@ -247,7 +249,7 @@ const loadData = async () => {
 }
 
 const resetForm = () => {
-  matters.value.forEach(matter => {
+  matters.value.forEach((matter) => {
     formData.votes[matter.id] = matter.voting_config.type === 'multiple_choice' ? [] : null
   })
 }
@@ -259,21 +261,20 @@ const handleSubmit = async () => {
     submitting.value = true
     error.value = null
 
-    const votes: Vote[] = matters.value.map(matter => ({
+    const votes: Vote[] = matters.value.map((matter) => ({
       matter_id: matter.id,
       choice: formData.votes[matter.id],
-      weight: totalWeight.value
+      weight: totalWeight.value,
     }))
 
     await votingApi.submitBallot(props.associationId, props.gathering.id, {
       participantId: participant.value.id,
-      votes
+      votes,
     })
 
     // Show success message
     error.value = null
     // In a real app, you might redirect or show a success modal
-
   } catch (err) {
     error.value = apiErrorMessage(err, t('common.error'))
   } finally {

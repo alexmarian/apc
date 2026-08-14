@@ -11,7 +11,7 @@ import {
   NAlert,
   NInputNumber,
   NSelect,
-  useMessage
+  useMessage,
 } from 'naive-ui'
 import { unitApi } from '@/services/api'
 import type { Unit } from '@/types/api'
@@ -29,7 +29,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  saved: [unit: Unit]  // Pass the updated unit data
+  saved: [unit: Unit] // Pass the updated unit data
   cancelled: []
 }>()
 
@@ -45,10 +45,10 @@ interface UnitFormData {
 }
 
 const unitTypeOptions = computed(() =>
-  Object.values(UnitType).map(value => ({
+  Object.values(UnitType).map((value) => ({
     label: t(`unitTypes.${value}`),
-    value
-  }))
+    value,
+  })),
 )
 
 const formData = reactive<UnitFormData>({
@@ -59,7 +59,7 @@ const formData = reactive<UnitFormData>({
   part: 0,
   unit_type: 'apartment',
   floor: 1,
-  room_count: 1
+  room_count: 1,
 })
 
 const rules: FormRules = {
@@ -67,15 +67,15 @@ const rules: FormRules = {
     {
       required: true,
       message: t('validation.required', { field: t('units.unit') }),
-      trigger: 'blur'
-    }
+      trigger: 'blur',
+    },
   ],
   address: [
     {
       required: true,
       message: t('validation.required', { field: t('units.address') }),
-      trigger: 'blur'
-    }
+      trigger: 'blur',
+    },
   ],
   entrance: [
     {
@@ -83,8 +83,8 @@ const rules: FormRules = {
       type: 'number',
       min: -2,
       message: t('units.entranceMin'),
-      trigger: 'blur'
-    }
+      trigger: 'blur',
+    },
   ],
   area: [
     {
@@ -92,8 +92,8 @@ const rules: FormRules = {
       type: 'number',
       min: 0.01,
       message: t('units.areaPositive'),
-      trigger: 'blur'
-    }
+      trigger: 'blur',
+    },
   ],
   part: [
     {
@@ -102,23 +102,23 @@ const rules: FormRules = {
       min: 0,
       max: 1,
       message: t('units.partRange'),
-      trigger: 'blur'
-    }
+      trigger: 'blur',
+    },
   ],
   unit_type: [
     {
       required: true,
       message: t('validation.required', { field: t('units.type') }),
-      trigger: 'blur'
-    }
+      trigger: 'blur',
+    },
   ],
   floor: [
     {
       required: true,
       type: 'number',
       message: t('validation.required', { field: t('units.floor') }),
-      trigger: ['blur', 'change']
-    }
+      trigger: ['blur', 'change'],
+    },
   ],
   room_count: [
     {
@@ -126,9 +126,9 @@ const rules: FormRules = {
       type: 'number',
       min: 0,
       message: t('units.roomCountMin'),
-      trigger: 'blur'
-    }
-  ]
+      trigger: 'blur',
+    },
+  ],
 }
 
 const loading = ref(false)
@@ -165,7 +165,7 @@ const fetchUnitDetails = async () => {
       part: unitData.part || 0,
       unit_type: unitData.unit_type || 'apartment',
       floor: unitData.floor || 1,
-      room_count: unitData.room_count || 1
+      room_count: unitData.room_count || 1,
     })
 
     await nextTick()
@@ -202,7 +202,7 @@ const handleSubmit = async () => {
       room_count: formData.room_count,
       // Include area and part if they're editable in the future
       area: formData.area,
-      part: formData.part
+      part: formData.part,
     }
 
     // Update only: the API exposes no POST for units, so this form never creates.
@@ -210,7 +210,7 @@ const handleSubmit = async () => {
       props.associationId,
       props.buildingId,
       props.unitId!,
-      updateData
+      updateData,
     )
 
     // Show success message
@@ -341,18 +341,11 @@ onMounted(() => {
 
         <div class="unit-form__actions">
           <NSpace justify="end">
-            <NButton
-              @click="handleCancel"
-              :disabled="submitting"
-            >
+            <NButton @click="handleCancel" :disabled="submitting">
               {{ t('common.cancel') }}
             </NButton>
 
-            <NButton
-              type="primary"
-              @click="handleSubmit"
-              :loading="submitting"
-            >
+            <NButton type="primary" @click="handleSubmit" :loading="submitting">
               {{ t('common.update') }}
             </NButton>
           </NSpace>

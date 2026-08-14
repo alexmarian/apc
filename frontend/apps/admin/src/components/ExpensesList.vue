@@ -11,7 +11,7 @@ import {
   NDatePicker,
   NCard,
   NFlex,
-  NText
+  NText,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { expenseApi } from '@/services/api'
@@ -53,7 +53,7 @@ const hasInitialized = ref(false)
 
 const filteredExpenses = computed<Expense[]>(() => {
   if (selectedCategory.value) {
-    return expenses.value.filter(expense => expense.category_id === selectedCategory.value)
+    return expenses.value.filter((expense) => expense.category_id === selectedCategory.value)
   } else {
     return expenses.value
   }
@@ -101,7 +101,7 @@ const fetchExpenses = async (): Promise<void> => {
 
 // Method to update a single expense in the list (called when expense is updated)
 const updateExpense = (updatedExpense: Expense) => {
-  const index = expenses.value.findIndex(expense => expense.id === updatedExpense.id)
+  const index = expenses.value.findIndex((expense) => expense.id === updatedExpense.id)
   if (index !== -1) {
     // Find the original expense to get the missing joined data
     const originalExpense = expenses.value[index]
@@ -114,7 +114,7 @@ const updateExpense = (updatedExpense: Expense) => {
       category_family: originalExpense.category_family,
       category_name: originalExpense.category_name,
       account_number: originalExpense.account_number,
-      account_name: originalExpense.account_name
+      account_name: originalExpense.account_name,
     }
 
     // Replace the expense in the array while maintaining reactivity
@@ -133,7 +133,7 @@ const addExpense = (newExpense: Expense) => {
 defineExpose({
   updateExpense,
   addExpense,
-  refreshData: fetchExpenses
+  refreshData: fetchExpenses,
 })
 
 // Table columns definition
@@ -142,7 +142,7 @@ const columns = ref<DataTableColumns<Expense>>([
     title: 'ID',
     key: 'id',
     width: 80,
-    sorter: (a, b) => a.id - b.id
+    sorter: (a, b) => a.id - b.id,
   },
   {
     title: t('expenses.date'),
@@ -150,7 +150,7 @@ const columns = ref<DataTableColumns<Expense>>([
     sorter: 'default',
     render(row: Expense) {
       return new Date(row.date).toLocaleDateString()
-    }
+    },
   },
   {
     title: t('expenses.amount'),
@@ -158,40 +158,42 @@ const columns = ref<DataTableColumns<Expense>>([
     sorter: (a: Expense, b: Expense) => a.amount - b.amount,
     render(row: Expense) {
       return formatCurrency(row.amount)
-    }
+    },
   },
   {
     title: t('expenses.documentRef'),
-    key: 'document_ref'
+    key: 'document_ref',
   },
   {
     title: t('expenses.description'),
-    key: 'description'
+    key: 'description',
   },
   {
     title: t('expenses.destination'),
-    key: 'destination'
+    key: 'destination',
   },
   {
     title: t('categories.type'),
     key: 'category_type',
     render(row: Expense) {
       return row.category_type ? t(`categories.types.${row.category_type}`, row.category_type) : '-'
-    }
+    },
   },
   {
     title: t('categories.family'),
     key: 'category_family',
     render(row: Expense) {
-      return row.category_family ? t(`categories.families.${row.category_family}`, row.category_family) : '-'
-    }
+      return row.category_family
+        ? t(`categories.families.${row.category_family}`, row.category_family)
+        : '-'
+    },
   },
   {
     title: t('categories.name'),
     key: 'category_name',
     render(row: Expense) {
       return row.category_name ? t(`categories.names.${row.category_name}`, row.category_name) : '-'
-    }
+    },
   },
   {
     title: t('expenses.account'),
@@ -201,7 +203,7 @@ const columns = ref<DataTableColumns<Expense>>([
         return row.account_name ? `${row.account_number} - ${row.account_name}` : row.account_number
       }
       return '-'
-    }
+    },
   },
   {
     title: t('common.actions'),
@@ -211,7 +213,7 @@ const columns = ref<DataTableColumns<Expense>>([
         NSpace,
         {
           justify: 'center',
-          align: 'center'
+          align: 'center',
         },
         {
           default: () => [
@@ -222,9 +224,9 @@ const columns = ref<DataTableColumns<Expense>>([
                 secondary: true,
                 type: 'info',
                 size: 'small',
-                onClick: () => emit('edit', row.id)
+                onClick: () => emit('edit', row.id),
               },
-              { default: () => t('common.edit') }
+              { default: () => t('common.edit') },
             ),
             h(
               NButton,
@@ -233,15 +235,15 @@ const columns = ref<DataTableColumns<Expense>>([
                 secondary: true,
                 type: 'error',
                 size: 'small',
-                onClick: () => confirmDeleteExpense(row.id)
+                onClick: () => confirmDeleteExpense(row.id),
               },
-              { default: () => t('common.delete') }
-            )
-          ]
-        }
+              { default: () => t('common.delete') },
+            ),
+          ],
+        },
       )
-    }
-  }
+    },
+  },
 ])
 
 // Format date range for display
@@ -260,7 +262,7 @@ const confirmDeleteExpense = (expenseId: number): void => {
     title: t('common.delete'),
     content: t('expenses.confirmDelete'),
     positiveText: t('common.delete'),
-    onConfirm: () => deleteExpense(expenseId)
+    onConfirm: () => deleteExpense(expenseId),
   })
 }
 
@@ -269,7 +271,7 @@ const deleteExpense = async (expenseId: number): Promise<void> => {
     await expenseApi.deleteExpense(props.associationId!, expenseId)
 
     // Remove from local array
-    expenses.value = expenses.value.filter(expense => expense.id !== expenseId)
+    expenses.value = expenses.value.filter((expense) => expense.id !== expenseId)
 
     message.success(t('expenses.expenseDeleted'))
   } catch (err) {
@@ -293,14 +295,19 @@ watch(dateRange, () => {
 })
 
 // Watch filtered expenses and emit changes, but only after initialization
-watch(filteredExpenses, (newFilteredExpenses) => {
-  if (hasInitialized.value) {
-    emit('expenses-rendered', newFilteredExpenses)
-  }
-}, { deep: true })
+watch(
+  filteredExpenses,
+  (newFilteredExpenses) => {
+    if (hasInitialized.value) {
+      emit('expenses-rendered', newFilteredExpenses)
+    }
+  },
+  { deep: true },
+)
 
 // Watch for associationId changes and refetch only when necessary
-watch(() => props.associationId,
+watch(
+  () => props.associationId,
   (newAssocId, oldAssocId) => {
     console.log('Association ID changed:', { newAssocId, oldAssocId })
 
@@ -311,7 +318,7 @@ watch(() => props.associationId,
       fetchExpenses()
     }
   },
-  { immediate: false }
+  { immediate: false },
 )
 
 // Reset filters
@@ -332,12 +339,7 @@ onMounted(() => {
   <div>
     <FilterBar resettable @reset="resetFilters">
       <FilterField :label="t('expenses.dateRange')">
-        <NDatePicker
-          v-model:value="dateRange"
-          type="daterange"
-          clearable
-          style="width: 240px"
-        />
+        <NDatePicker v-model:value="dateRange" type="daterange" clearable style="width: 240px" />
       </FilterField>
       <FilterField :label="t('expenses.category')">
         <CategorySelector
@@ -357,7 +359,12 @@ onMounted(() => {
           <NButton @click="fetchExpenses">{{ t('common.retry') }}</NButton>
         </NAlert>
 
-        <NFlex v-if="expenses.length > 0" justify="space-between" align="center" class="expenses-list__summary">
+        <NFlex
+          v-if="expenses.length > 0"
+          justify="space-between"
+          align="center"
+          class="expenses-list__summary"
+        >
           <NText depth="3">{{ t('expenses.period', 'Period') }}: {{ formattedDateRange }}</NText>
           <NText strong>{{ t('expenses.totalAmount') }}: {{ formatCurrency(totalAmount) }}</NText>
         </NFlex>
@@ -368,7 +375,7 @@ onMounted(() => {
           :bordered="false"
           :single-line="false"
           :pagination="{
-            pageSize: 10
+            pageSize: 10,
           }"
         >
           <template #empty>

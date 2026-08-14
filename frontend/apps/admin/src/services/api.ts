@@ -40,7 +40,7 @@ import type {
   NotificationCreateRequest,
   MemberInvitation,
   CreateInvitationRequest,
-  CreateInvitationResponse
+  CreateInvitationResponse,
 } from '@/types/api'
 import config from '@/config'
 import { attemptTokenRefresh, performLogout, getAuthToken } from '@/services/auth-service'
@@ -52,17 +52,14 @@ const api = axios.create({
   baseURL: config.apiBaseUrl,
   timeout: config.apiTimeout,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 })
 
 // Request interceptor
 api.interceptors.request.use(
   (reqConfig: InternalAxiosRequestConfig) => {
-    if (
-      reqConfig.url &&
-      (reqConfig.url.includes('/login') || reqConfig.url.includes('/refresh'))
-    ) {
+    if (reqConfig.url && (reqConfig.url.includes('/login') || reqConfig.url.includes('/refresh'))) {
       return reqConfig
     }
     const token = getAuthToken()
@@ -73,7 +70,7 @@ api.interceptors.request.use(
   },
   (error: AxiosError) => {
     return Promise.reject(error)
-  }
+  },
 )
 
 // Flag to prevent multiple simultaneous logout attempts
@@ -116,7 +113,7 @@ api.interceptors.response.use(
       if (!isRefreshing) {
         isRefreshing = true
         refreshPromise = attemptTokenRefresh()
-        
+
         try {
           const success = await refreshPromise
           if (success) {
@@ -139,32 +136,29 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error)
-  }
+  },
 )
 
 // Auth APIs
 export const authApi = {
-  login: (credentials: LoginRequest) =>
-    api.post<LoginResponse>(`/login`, credentials),
+  login: (credentials: LoginRequest) => api.post<LoginResponse>(`/login`, credentials),
 
   refreshToken: (refreshToken: string) =>
     api.post<{ token: string }>(`/refresh`, null, {
       headers: {
-        Authorization: `Bearer ${refreshToken}`
-      }
+        Authorization: `Bearer ${refreshToken}`,
+      },
     }),
 
   resetPassword: (payload: ResetPasswordRequest) =>
-    api.post<ResetPasswordResponse>('/password-reset/reset', payload)
+    api.post<ResetPasswordResponse>('/password-reset/reset', payload),
 }
 
 // Association APIs
 export const associationApi = {
-  getAssociations: () =>
-    api.get<Association[]>(`/associations`),
+  getAssociations: () => api.get<Association[]>(`/associations`),
 
-  getAssociation: (associationId: number) =>
-    api.get<Association>(`/associations/${associationId}`)
+  getAssociation: (associationId: number) => api.get<Association>(`/associations/${associationId}`),
 }
 
 // Building APIs
@@ -173,7 +167,7 @@ export const buildingApi = {
     api.get<Building[]>(`/associations/${associationId}/buildings`),
 
   getBuilding: (associationId: number, buildingId: number) =>
-    api.get<Building>(`/associations/${associationId}/buildings/${buildingId}`)
+    api.get<Building>(`/associations/${associationId}/buildings/${buildingId}`),
 }
 
 // Unit APIs
@@ -184,17 +178,31 @@ export const unitApi = {
   getUnit: (associationId: number, buildingId: number, unitId: number) =>
     api.get<Unit>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}`),
 
-  updateUnit: (associationId: number, buildingId: number, unitId: number, unitData: Partial<Unit>) =>
-    api.put<Unit>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}`, unitData),
+  updateUnit: (
+    associationId: number,
+    buildingId: number,
+    unitId: number,
+    unitData: Partial<Unit>,
+  ) =>
+    api.put<Unit>(
+      `/associations/${associationId}/buildings/${buildingId}/units/${unitId}`,
+      unitData,
+    ),
 
   getUnitReport: (associationId: number, buildingId: number, unitId: number) =>
-    api.get<UnitReportDetails>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}/report`),
+    api.get<UnitReportDetails>(
+      `/associations/${associationId}/buildings/${buildingId}/units/${unitId}/report`,
+    ),
 
   getUnitOwners: (associationId: number, buildingId: number, unitId: number) =>
-    api.get<Owner[]>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}/owners`),
+    api.get<Owner[]>(
+      `/associations/${associationId}/buildings/${buildingId}/units/${unitId}/owners`,
+    ),
 
   getUnitOwnerships: (associationId: number, buildingId: number, unitId: number) =>
-    api.get<any[]>(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}/ownerships`)
+    api.get<any[]>(
+      `/associations/${associationId}/buildings/${buildingId}/units/${unitId}/ownerships`,
+    ),
 }
 
 // Account APIs
@@ -217,52 +225,71 @@ export const accountApi = {
 
   // Disable an account
   disableAccount: (associationId: number, accountId: number) =>
-    api.put<ApiResponse<null>>(`/associations/${associationId}/accounts/${accountId}/disable`)
+    api.put<ApiResponse<null>>(`/associations/${associationId}/accounts/${accountId}/disable`),
 }
 
 // Owner APIs
 export const ownerApi = {
-  getOwners: (associationId: number) =>
-    api.get<Owner[]>(`/associations/${associationId}/owners`),
+  getOwners: (associationId: number) => api.get<Owner[]>(`/associations/${associationId}/owners`),
   getOwner: (associationId: number, ownerId: number) =>
     api.get<Owner>(`/associations/${associationId}/owners/${ownerId}`),
 
-  updateOwner: (associationId: number, ownerId: number, ownerData: {
-    name: string;
-    identification_number: string;
-    contact_phone: string;
-    contact_email: string;
-  }) =>
-    api.put<Owner>(`/associations/${associationId}/owners/${ownerId}`, ownerData),
-  getOwnerReport: (associationId: number, includeUnits: boolean = false, includeCoOwners: boolean = false, ownerId?: number) =>
+  updateOwner: (
+    associationId: number,
+    ownerId: number,
+    ownerData: {
+      name: string
+      identification_number: string
+      contact_phone: string
+      contact_email: string
+    },
+  ) => api.put<Owner>(`/associations/${associationId}/owners/${ownerId}`, ownerData),
+  getOwnerReport: (
+    associationId: number,
+    includeUnits: boolean = false,
+    includeCoOwners: boolean = false,
+    ownerId?: number,
+  ) =>
     api.get(`/associations/${associationId}/owners/report`, {
       params: {
         units: includeUnits ? 'true' : 'false',
         co_owners: includeCoOwners ? 'true' : 'false',
-        ...(ownerId != null ? { owner_id: ownerId } : {})
-      }
+        ...(ownerId != null ? { owner_id: ownerId } : {}),
+      },
     }),
-  getVotingOwners: (associationId: number, filters?: {
-    unit_types?: string;     // comma-separated list: "apartment,parking"
-    floor?: number;          // specific floor number
-    entrance?: number;       // specific entrance number
-  }) =>
+  getVotingOwners: (
+    associationId: number,
+    filters?: {
+      unit_types?: string // comma-separated list: "apartment,parking"
+      floor?: number // specific floor number
+      entrance?: number // specific entrance number
+    },
+  ) =>
     api.get<VotingOwner[]>(`/associations/${associationId}/owners/voters`, {
-      params: filters || {}
+      params: filters || {},
     }),
-  createOwner: (associationId: number, ownerData: {
-    name: string;
-    identification_number: string;
-    contact_phone: string;
-    contact_email: string;
-  }) =>
-    api.post<Owner>(`/associations/${associationId}/owners`, ownerData)
+  createOwner: (
+    associationId: number,
+    ownerData: {
+      name: string
+      identification_number: string
+      contact_phone: string
+      contact_email: string
+    },
+  ) => api.post<Owner>(`/associations/${associationId}/owners`, ownerData),
 }
 // Ownership APIs
 export const ownershipApi = {
   // Disable an existing ownership
-  setOwnershipVoting: (associationId: number, buildingId: number, unitId: number, ownershipId: number) =>
-    api.post(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}/ownerships/${ownershipId}/voting`),
+  setOwnershipVoting: (
+    associationId: number,
+    buildingId: number,
+    unitId: number,
+    ownershipId: number,
+  ) =>
+    api.post(
+      `/associations/${associationId}/buildings/${buildingId}/units/${unitId}/ownerships/${ownershipId}/voting`,
+    ),
 
   disableOwnership: (associationId: number, ownershipId: number, endDate?: Date) => {
     const payload = endDate ? { end_date: endDate.toISOString() } : {}
@@ -274,15 +301,23 @@ export const ownershipApi = {
     api.get(`/associations/${associationId}/ownerships/${ownershipId}`),
 
   // Create a new ownership for a unit
-  createUnitOwnership: (associationId: number, buildingId: number, unitId: number, ownershipData: {
-    owner_id: number;
-    start_date: string;
-    end_date?: string | null;
-    registration_document: string;
-    registration_date: string;
-    is_exclusive?: boolean;
-  }) =>
-    api.post(`/associations/${associationId}/buildings/${buildingId}/units/${unitId}/ownerships`, ownershipData)
+  createUnitOwnership: (
+    associationId: number,
+    buildingId: number,
+    unitId: number,
+    ownershipData: {
+      owner_id: number
+      start_date: string
+      end_date?: string | null
+      registration_document: string
+      registration_date: string
+      is_exclusive?: boolean
+    },
+  ) =>
+    api.post(
+      `/associations/${associationId}/buildings/${buildingId}/units/${unitId}/ownerships`,
+      ownershipData,
+    ),
 }
 
 // Category APIs
@@ -294,7 +329,7 @@ export const categoryApi = {
   // Get all categories with optional inactive filter
   getAllCategories: (associationId: number, includeInactive: boolean = false) =>
     api.get<Category[]>(`/associations/${associationId}/categories/all`, {
-      params: { include_inactive: includeInactive }
+      params: { include_inactive: includeInactive },
     }),
 
   // Get single category
@@ -306,16 +341,23 @@ export const categoryApi = {
     api.post<Category>(`/associations/${associationId}/categories`, categoryData),
 
   // Update existing category
-  updateCategory: (associationId: number, categoryId: number, categoryData: CategoryUpdateRequest) =>
-    api.put<Category>(`/associations/${associationId}/categories/${categoryId}`, categoryData),
+  updateCategory: (
+    associationId: number,
+    categoryId: number,
+    categoryData: CategoryUpdateRequest,
+  ) => api.put<Category>(`/associations/${associationId}/categories/${categoryId}`, categoryData),
 
   // Deactivate category (soft delete)
   deactivateCategory: (associationId: number, categoryId: number) =>
-    api.put<ApiResponse<null>>(`/associations/${associationId}/categories/${categoryId}/deactivate`),
+    api.put<ApiResponse<null>>(
+      `/associations/${associationId}/categories/${categoryId}/deactivate`,
+    ),
 
   // Reactivate category
   reactivateCategory: (associationId: number, categoryId: number) =>
-    api.put<ApiResponse<null>>(`/associations/${associationId}/categories/${categoryId}/reactivate`),
+    api.put<ApiResponse<null>>(
+      `/associations/${associationId}/categories/${categoryId}/reactivate`,
+    ),
 
   // Get category usage statistics
   getCategoryUsage: (associationId: number, categoryId: number) =>
@@ -324,14 +366,14 @@ export const categoryApi = {
   // Bulk deactivate categories
   bulkDeactivate: (associationId: number, categoryIds: number[]) =>
     api.post<ApiResponse<null>>(`/associations/${associationId}/categories/bulk-deactivate`, {
-      ids: categoryIds
+      ids: categoryIds,
     }),
 
   // Bulk reactivate categories
   bulkReactivate: (associationId: number, categoryIds: number[]) =>
     api.post<ApiResponse<null>>(`/associations/${associationId}/categories/bulk-reactivate`, {
-      ids: categoryIds
-    })
+      ids: categoryIds,
+    }),
 }
 
 // Expense APIs
@@ -341,8 +383,8 @@ export const expenseApi = {
       params: {
         start_date: startDate,
         end_date: endDate,
-        category_id: categoryId
-      }
+        category_id: categoryId,
+      },
     }),
 
   getExpense: (associationId: number, expenseId: number) =>
@@ -351,8 +393,11 @@ export const expenseApi = {
   createExpense: (associationId: number, expenseData: ExpenseCreateRequest) =>
     api.post<Expense>(`/associations/${associationId}/expenses`, expenseData),
 
-  updateExpense: (associationId: number, expenseId: number, expenseData: Partial<ExpenseCreateRequest>) =>
-    api.put<Expense>(`/associations/${associationId}/expenses/${expenseId}`, expenseData),
+  updateExpense: (
+    associationId: number,
+    expenseId: number,
+    expenseData: Partial<ExpenseCreateRequest>,
+  ) => api.put<Expense>(`/associations/${associationId}/expenses/${expenseId}`, expenseData),
 
   deleteExpense: (associationId: number, expenseId: number) =>
     api.delete(`/associations/${associationId}/expenses/${expenseId}`),
@@ -360,16 +405,19 @@ export const expenseApi = {
   getDestinations: (associationId: number) =>
     api.get<string[]>(`/associations/${associationId}/expenses/destinations`),
 
-  getExpenseDistribution: (associationId: number, params: {
-    start_date?: string;
-    end_date?: string;
-    category_id?: number | null;
-    category_type?: string | null;
-    category_family?: string | null;
-    distribution_method?: 'area' | 'count' | 'equal';
-    unit_type?: string | null;
-    include_details?: boolean;
-  }) =>
+  getExpenseDistribution: (
+    associationId: number,
+    params: {
+      start_date?: string
+      end_date?: string
+      category_id?: number | null
+      category_type?: string | null
+      category_family?: string | null
+      distribution_method?: 'area' | 'count' | 'equal'
+      unit_type?: string | null
+      include_details?: boolean
+    },
+  ) =>
     api.get<ExpenseDistributionResponse>(`/associations/${associationId}/expenses/distribution`, {
       params: {
         start_date: params.start_date,
@@ -379,9 +427,9 @@ export const expenseApi = {
         category_family: params.category_family || undefined,
         distribution_method: params.distribution_method || 'area',
         unit_type: params.unit_type || undefined,
-        include_details: params.include_details ? 'true' : undefined
-      }
-    })
+        include_details: params.include_details ? 'true' : undefined,
+      },
+    }),
 }
 
 // Gathering APIs
@@ -399,12 +447,23 @@ export const gatheringApi = {
     api.post<Gathering>(`/associations/${associationId}/gatherings`, gatheringData),
 
   // Update an existing gathering
-  updateGathering: (associationId: number, gatheringId: number, gatheringData: GatheringUpdateRequest) =>
+  updateGathering: (
+    associationId: number,
+    gatheringId: number,
+    gatheringData: GatheringUpdateRequest,
+  ) =>
     api.put<Gathering>(`/associations/${associationId}/gatherings/${gatheringId}`, gatheringData),
 
   // Update gathering status
-  updateGatheringStatus: (associationId: number, gatheringId: number, statusData: GatheringStatusUpdateRequest) =>
-    api.put<Gathering>(`/associations/${associationId}/gatherings/${gatheringId}/status`, statusData),
+  updateGatheringStatus: (
+    associationId: number,
+    gatheringId: number,
+    statusData: GatheringStatusUpdateRequest,
+  ) =>
+    api.put<Gathering>(
+      `/associations/${associationId}/gatherings/${gatheringId}/status`,
+      statusData,
+    ),
 
   // Get gathering statistics
   getGatheringStats: (associationId: number, gatheringId: number) =>
@@ -412,11 +471,15 @@ export const gatheringApi = {
 
   // Get qualified units for a gathering
   getQualifiedUnits: (associationId: number, gatheringId: number) =>
-    api.get<QualifiedUnit[]>(`/associations/${associationId}/gatherings/${gatheringId}/qualified-units`),
+    api.get<QualifiedUnit[]>(
+      `/associations/${associationId}/gatherings/${gatheringId}/qualified-units`,
+    ),
 
   // Get non-participating owners
   getNonParticipatingOwners: (associationId: number, gatheringId: number) =>
-    api.get<NonParticipatingOwner[]>(`/associations/${associationId}/gatherings/${gatheringId}/non-participating-owners`),
+    api.get<NonParticipatingOwner[]>(
+      `/associations/${associationId}/gatherings/${gatheringId}/non-participating-owners`,
+    ),
 
   // Get eligible voters with their available units
   getEligibleVoters: (associationId: number, gatheringId: number) =>
@@ -424,11 +487,20 @@ export const gatheringApi = {
 
   // Get audit logs for a gathering
   getAuditLogs: (associationId: number, gatheringId: number) =>
-    api.get<VotingAuditLog[]>(`/associations/${associationId}/gatherings/${gatheringId}/audit-logs`),
+    api.get<VotingAuditLog[]>(
+      `/associations/${associationId}/gatherings/${gatheringId}/audit-logs`,
+    ),
 
   // Send notifications
-  sendNotification: (associationId: number, gatheringId: number, notificationData: NotificationCreateRequest) =>
-    api.post<ApiResponse<null>>(`/associations/${associationId}/gatherings/${gatheringId}/notifications`, notificationData)
+  sendNotification: (
+    associationId: number,
+    gatheringId: number,
+    notificationData: NotificationCreateRequest,
+  ) =>
+    api.post<ApiResponse<null>>(
+      `/associations/${associationId}/gatherings/${gatheringId}/notifications`,
+      notificationData,
+    ),
 }
 
 // Voting Matter APIs
@@ -439,46 +511,92 @@ export const votingMatterApi = {
 
   // Get a specific voting matter
   getVotingMatter: (associationId: number, gatheringId: number, matterId: number) =>
-    api.get<VotingMatter>(`/associations/${associationId}/gatherings/${gatheringId}/matters/${matterId}`),
+    api.get<VotingMatter>(
+      `/associations/${associationId}/gatherings/${gatheringId}/matters/${matterId}`,
+    ),
 
   // Create a new voting matter
-  createVotingMatter: (associationId: number, gatheringId: number, matterData: VotingMatterCreateRequest) =>
-    api.post<VotingMatter>(`/associations/${associationId}/gatherings/${gatheringId}/matters`, matterData),
+  createVotingMatter: (
+    associationId: number,
+    gatheringId: number,
+    matterData: VotingMatterCreateRequest,
+  ) =>
+    api.post<VotingMatter>(
+      `/associations/${associationId}/gatherings/${gatheringId}/matters`,
+      matterData,
+    ),
 
   // Update an existing voting matter
-  updateVotingMatter: (associationId: number, gatheringId: number, matterId: number, matterData: VotingMatterUpdateRequest) =>
-    api.put<VotingMatter>(`/associations/${associationId}/gatherings/${gatheringId}/matters/${matterId}`, matterData),
+  updateVotingMatter: (
+    associationId: number,
+    gatheringId: number,
+    matterId: number,
+    matterData: VotingMatterUpdateRequest,
+  ) =>
+    api.put<VotingMatter>(
+      `/associations/${associationId}/gatherings/${gatheringId}/matters/${matterId}`,
+      matterData,
+    ),
 
   // Delete a voting matter
   deleteVotingMatter: (associationId: number, gatheringId: number, matterId: number) =>
-    api.delete(`/associations/${associationId}/gatherings/${gatheringId}/matters/${matterId}`)
+    api.delete(`/associations/${associationId}/gatherings/${gatheringId}/matters/${matterId}`),
 }
 
 // Participant APIs
 export const participantApi = {
   // Get all participants for a gathering
   getParticipants: (associationId: number, gatheringId: number) =>
-    api.get<GatheringParticipant[]>(`/associations/${associationId}/gatherings/${gatheringId}/participants`),
+    api.get<GatheringParticipant[]>(
+      `/associations/${associationId}/gatherings/${gatheringId}/participants`,
+    ),
 
   // Get a specific participant
   getParticipant: (associationId: number, gatheringId: number, participantId: number) =>
-    api.get<GatheringParticipant>(`/associations/${associationId}/gatherings/${gatheringId}/participants/${participantId}`),
+    api.get<GatheringParticipant>(
+      `/associations/${associationId}/gatherings/${gatheringId}/participants/${participantId}`,
+    ),
 
   // Add a new participant
-  addParticipant: (associationId: number, gatheringId: number, participantData: ParticipantCreateRequest) =>
-    api.post<GatheringParticipant>(`/associations/${associationId}/gatherings/${gatheringId}/participants`, participantData),
+  addParticipant: (
+    associationId: number,
+    gatheringId: number,
+    participantData: ParticipantCreateRequest,
+  ) =>
+    api.post<GatheringParticipant>(
+      `/associations/${associationId}/gatherings/${gatheringId}/participants`,
+      participantData,
+    ),
 
   // Update a participant
-  updateParticipant: (associationId: number, gatheringId: number, participantId: number, participantData: Partial<ParticipantCreateRequest>) =>
-    api.put<GatheringParticipant>(`/associations/${associationId}/gatherings/${gatheringId}/participants/${participantId}`, participantData),
+  updateParticipant: (
+    associationId: number,
+    gatheringId: number,
+    participantId: number,
+    participantData: Partial<ParticipantCreateRequest>,
+  ) =>
+    api.put<GatheringParticipant>(
+      `/associations/${associationId}/gatherings/${gatheringId}/participants/${participantId}`,
+      participantData,
+    ),
 
   // Remove a participant
   removeParticipant: (associationId: number, gatheringId: number, participantId: number) =>
-    api.delete(`/associations/${associationId}/gatherings/${gatheringId}/participants/${participantId}`),
+    api.delete(
+      `/associations/${associationId}/gatherings/${gatheringId}/participants/${participantId}`,
+    ),
 
   // Check in a participant
-  checkInParticipant: (associationId: number, gatheringId: number, participantId: number, checkInData: ParticipantCheckInRequest) =>
-    api.post<GatheringParticipant>(`/associations/${associationId}/gatherings/${gatheringId}/participants/${participantId}/checkin`, checkInData)
+  checkInParticipant: (
+    associationId: number,
+    gatheringId: number,
+    participantId: number,
+    checkInData: ParticipantCheckInRequest,
+  ) =>
+    api.post<GatheringParticipant>(
+      `/associations/${associationId}/gatherings/${gatheringId}/participants/${participantId}/checkin`,
+      checkInData,
+    ),
 }
 
 // Voting APIs
@@ -498,30 +616,39 @@ export const votingApi = {
   // Download voting results as markdown
   downloadResults: (associationId: number, gatheringId: number) =>
     api.get(`/associations/${associationId}/gatherings/${gatheringId}/download/results`, {
-      responseType: 'blob'
+      responseType: 'blob',
     }),
 
   // Download ballots as markdown
   downloadBallots: (associationId: number, gatheringId: number) =>
     api.get(`/associations/${associationId}/gatherings/${gatheringId}/download/ballots`, {
-      responseType: 'blob'
+      responseType: 'blob',
     }),
 
   // Verify a ballot hash
   verifyBallot: (ballotHash: string) =>
-    api.post<ApiResponse<{ valid: boolean; details?: any }>>(`/ballot/verify`, { hash: ballotHash })
+    api.post<ApiResponse<{ valid: boolean; details?: any }>>(`/ballot/verify`, {
+      hash: ballotHash,
+    }),
 }
 
 // Member Invitation APIs
 export const invitationApi = {
   list: (associationId: number, gatheringId: number) =>
-    api.get<MemberInvitation[]>(`/associations/${associationId}/gatherings/${gatheringId}/invitations`),
+    api.get<MemberInvitation[]>(
+      `/associations/${associationId}/gatherings/${gatheringId}/invitations`,
+    ),
 
   create: (associationId: number, gatheringId: number, data: CreateInvitationRequest) =>
-    api.post<CreateInvitationResponse>(`/associations/${associationId}/gatherings/${gatheringId}/invitations`, data),
+    api.post<CreateInvitationResponse>(
+      `/associations/${associationId}/gatherings/${gatheringId}/invitations`,
+      data,
+    ),
 
   revoke: (associationId: number, gatheringId: number, invitationId: number) =>
-    api.delete(`/associations/${associationId}/gatherings/${gatheringId}/invitations/${invitationId}`)
+    api.delete(
+      `/associations/${associationId}/gatherings/${gatheringId}/invitations/${invitationId}`,
+    ),
 }
 
 export default api

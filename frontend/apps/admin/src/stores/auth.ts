@@ -11,7 +11,9 @@ export const useAuthStore = defineStore('auth', () => {
   // State
   const token = ref<string | null>(localStorage.getItem(config.authTokenKey))
   const refreshToken = ref<string | null>(localStorage.getItem(config.refreshTokenKey))
-  const user = ref<string | null>(localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null)
+  const user = ref<string | null>(
+    localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null,
+  )
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -57,7 +59,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     try {
       const success = await attemptTokenRefresh()
-      
+
       if (success) {
         // Update token in store
         token.value = localStorage.getItem(config.authTokenKey)
@@ -117,6 +119,6 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     refreshAccessToken,
     logout,
-    dispose
+    dispose,
   }
 })

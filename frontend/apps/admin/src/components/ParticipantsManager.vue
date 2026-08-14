@@ -3,11 +3,7 @@
     <NCard :title="$t('gatherings.participants.title')">
       <template #header-extra>
         <NSpace>
-          <NButton
-            v-if="canEdit"
-            type="primary"
-            @click="showAddModal = true"
-          >
+          <NButton v-if="canEdit" type="primary" @click="showAddModal = true">
             {{ $t('gatherings.participants.add') }}
           </NButton>
           <NButton @click="loadParticipants">
@@ -24,11 +20,7 @@
         <div v-if="participants.length === 0" class="no-participants">
           <NEmpty :description="$t('gatherings.participants.noParticipants')">
             <template #extra>
-              <NButton 
-                v-if="canEdit" 
-                type="primary" 
-                @click="showAddModal = true"
-              >
+              <NButton v-if="canEdit" type="primary" @click="showAddModal = true">
                 {{ $t('gatherings.participants.add') }}
               </NButton>
             </template>
@@ -46,14 +38,8 @@
         </div>
 
         <div class="participants-stats">
-          <NStatistic
-            :label="$t('gatherings.participants.total')"
-            :value="participants.length"
-          />
-          <NStatistic
-            :label="$t('gatherings.participants.checkedIn')"
-            :value="checkedInCount"
-          />
+          <NStatistic :label="$t('gatherings.participants.total')" :value="participants.length" />
+          <NStatistic :label="$t('gatherings.participants.checkedIn')" :value="checkedInCount" />
           <NStatistic
             :label="$t('gatherings.participants.checkInRate')"
             :value="checkInRate"
@@ -96,7 +82,7 @@ import {
   NEmpty,
   NTag,
   NStatistic,
-  type DataTableColumns
+  type DataTableColumns,
 } from 'naive-ui'
 import { participantApi } from '@/services/api'
 import { apiErrorMessage } from '@/utils/apiError'
@@ -128,7 +114,7 @@ const canEdit = computed(() => {
 })
 
 const checkedInCount = computed(() => {
-  return participants.value.filter(p => p.checked_in_at).length
+  return participants.value.filter((p) => p.checked_in_at).length
 })
 
 const checkInRate = computed(() => {
@@ -145,71 +131,100 @@ const columns: DataTableColumns<GatheringParticipant> = [
     title: t('gatherings.participants.owner'),
     key: 'owner_name',
     width: 200,
-    ellipsis: { tooltip: true }
+    ellipsis: { tooltip: true },
   },
   {
     title: t('gatherings.participants.participantType'),
     key: 'type',
     width: 120,
-    render: (row) => h(NTag, {
-      type: getParticipantTypeColor(row.type),
-      size: 'small'
-    }, {
-      default: () => t(`gatherings.participants.types.${row.type}`)
-    })
+    render: (row) =>
+      h(
+        NTag,
+        {
+          type: getParticipantTypeColor(row.type),
+          size: 'small',
+        },
+        {
+          default: () => t(`gatherings.participants.types.${row.type}`),
+        },
+      ),
   },
   {
     title: t('gatherings.participants.units'),
     key: 'unit_ids',
     width: 120,
-    render: (row) => row.unit_ids.length
+    render: (row) => row.unit_ids.length,
   },
   {
     title: t('gatherings.participants.contact'),
     key: 'contact_phone',
-    width: 150
+    width: 150,
   },
   {
     title: t('gatherings.participants.status'),
     key: 'checked_in_at',
     width: 120,
-    render: (row) => h(NTag, {
-      type: row.checked_in_at ? 'success' : 'default',
-      size: 'small'
-    }, {
-      default: () => row.checked_in_at ? t('gatherings.participants.checkedIn') : t('gatherings.participants.checkedOut')
-    })
+    render: (row) =>
+      h(
+        NTag,
+        {
+          type: row.checked_in_at ? 'success' : 'default',
+          size: 'small',
+        },
+        {
+          default: () =>
+            row.checked_in_at
+              ? t('gatherings.participants.checkedIn')
+              : t('gatherings.participants.checkedOut'),
+        },
+      ),
   },
   {
     title: t('common.actions'),
     key: 'actions',
     width: 200,
-    render: (row) => h(NSpace, {}, {
-      default: () => [
-        h(NButton, {
-          size: 'small',
-          type: row.checked_in_at ? 'default' : 'primary',
-          onClick: () => handleCheckIn(row),
-          disabled: !canEdit.value
-        }, { 
-          default: () => row.checked_in_at ? t('gatherings.participants.checkOut') : t('gatherings.participants.checkIn')
-        }),
-        
-        h(NButton, {
-          size: 'small',
-          type: 'error',
-          onClick: () => handleRemoveParticipant(row),
-          disabled: !canEdit.value
-        }, { default: () => t('common.delete') })
-      ]
-    })
-  }
+    render: (row) =>
+      h(
+        NSpace,
+        {},
+        {
+          default: () => [
+            h(
+              NButton,
+              {
+                size: 'small',
+                type: row.checked_in_at ? 'default' : 'primary',
+                onClick: () => handleCheckIn(row),
+                disabled: !canEdit.value,
+              },
+              {
+                default: () =>
+                  row.checked_in_at
+                    ? t('gatherings.participants.checkOut')
+                    : t('gatherings.participants.checkIn'),
+              },
+            ),
+
+            h(
+              NButton,
+              {
+                size: 'small',
+                type: 'error',
+                onClick: () => handleRemoveParticipant(row),
+                disabled: !canEdit.value,
+              },
+              { default: () => t('common.delete') },
+            ),
+          ],
+        },
+      ),
+  },
 ]
 
 const loadParticipants = async () => {
   loading.value = true
   error.value = null
-  
+
   try {
     const response = await participantApi.getParticipants(props.associationId, props.gathering.id)
     participants.value = response.data
@@ -223,16 +238,16 @@ const loadParticipants = async () => {
 const handleCheckIn = async (participant: GatheringParticipant) => {
   try {
     const checkInData = {
-      checked_in_at: participant.checked_in_at ? '' : new Date().toISOString()
+      checked_in_at: participant.checked_in_at ? '' : new Date().toISOString(),
     }
-    
+
     await participantApi.checkInParticipant(
-      props.associationId, 
-      props.gathering.id, 
+      props.associationId,
+      props.gathering.id,
       participant.id,
-      checkInData
+      checkInData,
     )
-    
+
     await loadParticipants()
     emit('updated')
   } catch (err) {
@@ -245,17 +260,13 @@ const handleRemoveParticipant = (participant: GatheringParticipant) => {
     title: t('gatherings.participants.remove'),
     content: t('gatherings.participants.confirmRemove', { name: participant.owner_name }),
     positiveText: t('common.delete'),
-    onConfirm: () => removeParticipant(participant)
+    onConfirm: () => removeParticipant(participant),
   })
 }
 
 const removeParticipant = async (participant: GatheringParticipant) => {
   try {
-    await participantApi.removeParticipant(
-      props.associationId,
-      props.gathering.id,
-      participant.id
-    )
+    await participantApi.removeParticipant(props.associationId, props.gathering.id, participant.id)
 
     await loadParticipants()
     emit('updated')

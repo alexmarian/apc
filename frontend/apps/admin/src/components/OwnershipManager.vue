@@ -11,7 +11,7 @@ import {
   NSpin,
   NDatePicker,
   useMessage,
-  NTag
+  NTag,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { unitApi, ownershipApi } from '@/services/api'
@@ -50,12 +50,13 @@ const fetchOwnerships = async () => {
     const response = await unitApi.getUnitOwnerships(
       props.associationId,
       props.buildingId,
-      props.unitId
+      props.unitId,
     )
 
-    ownerships.value = response.data.filter(o=>o.is_active)
+    ownerships.value = response.data.filter((o) => o.is_active)
   } catch (err) {
-    error.value = err instanceof Error ? err.message : t('common.error', 'Failed to load ownerships')
+    error.value =
+      err instanceof Error ? err.message : t('common.error', 'Failed to load ownerships')
     console.error('Error fetching ownerships:', err)
   } finally {
     loading.value = false
@@ -91,7 +92,7 @@ const handleDisableOwnership = async () => {
     await ownershipApi.disableOwnership(
       props.associationId,
       selectedOwnershipId.value,
-      new Date(disableDate.value)
+      new Date(disableDate.value),
     )
 
     message.success(t('units.ownership.deactivateSuccess', 'Ownership deactivated successfully'))
@@ -99,7 +100,10 @@ const handleDisableOwnership = async () => {
     fetchOwnerships()
     emit('updated')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : t('units.ownership.deactivateError', 'Failed to deactivate ownership')
+    error.value =
+      err instanceof Error
+        ? err.message
+        : t('units.ownership.deactivateError', 'Failed to deactivate ownership')
     console.error('Error deactivating ownership:', err)
   } finally {
     loading.value = false
@@ -116,14 +120,17 @@ const handleSetVotingOwner = async (ownershipId: number) => {
       props.associationId,
       props.buildingId,
       props.unitId,
-      ownershipId
+      ownershipId,
     )
 
     message.success(t('units.ownership.votingUpdated', 'Voting rights updated successfully'))
     fetchOwnerships()
     emit('updated')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : t('units.ownership.votingError', 'Failed to update voting rights')
+    error.value =
+      err instanceof Error
+        ? err.message
+        : t('units.ownership.votingError', 'Failed to update voting rights')
     console.error('Error updating voting rights:', err)
   } finally {
     loading.value = false
@@ -135,17 +142,18 @@ const columns = computed<DataTableColumns<any>>(() => [
   {
     title: t('owners.name', 'Owner'),
     key: 'owner_name',
-    render: (row) => row.owner_name || t('units.ownership.ownerId', { id: row.owner_id }, 'Owner ID: {id}')
+    render: (row) =>
+      row.owner_name || t('units.ownership.ownerId', { id: row.owner_id }, 'Owner ID: {id}'),
   },
   {
     title: t('units.ownership.startDate', 'Start Date'),
     key: 'start_date',
-    render: (row) => new Date(row.start_date).toLocaleDateString()
+    render: (row) => new Date(row.start_date).toLocaleDateString(),
   },
   {
     title: t('units.ownership.endDate', 'End Date'),
     key: 'end_date',
-    render: (row) => row.end_date ? new Date(row.end_date).toLocaleDateString() : '-'
+    render: (row) => (row.end_date ? new Date(row.end_date).toLocaleDateString() : '-'),
   },
   {
     title: t('common.status', 'Status'),
@@ -155,32 +163,42 @@ const columns = computed<DataTableColumns<any>>(() => [
 
       // Status tag
       elements.push(
-        h(NTag, {
-          type: row.is_active ? 'success' : 'default',
-          style: 'margin-right: 8px'
-        }, {
-          default: () => row.is_active ? t('common.active', 'Active') : t('common.inactive', 'Inactive')
-        })
+        h(
+          NTag,
+          {
+            type: row.is_active ? 'success' : 'default',
+            style: 'margin-right: 8px',
+          },
+          {
+            default: () =>
+              row.is_active ? t('common.active', 'Active') : t('common.inactive', 'Inactive'),
+          },
+        ),
       )
 
       // Voting tag
       if (row.is_voting) {
         elements.push(
-          h(NTag, {
-            type: 'info'
-          }, {
-            default: () => t('units.ownership.votingOwner', 'Voting Owner')
-          })
+          h(
+            NTag,
+            {
+              type: 'info',
+            },
+            {
+              default: () => t('units.ownership.votingOwner', 'Voting Owner'),
+            },
+          ),
         )
       }
 
       return h('div', {}, elements)
-    }
+    },
   },
   {
     title: t('units.ownership.registration', 'Registration'),
     key: 'registration_document',
-    render: (row) => `${row.registration_document} (${new Date(row.registration_date).toLocaleDateString()})`
+    render: (row) =>
+      `${row.registration_document} (${new Date(row.registration_date).toLocaleDateString()})`,
   },
   {
     title: t('common.actions', 'Actions'),
@@ -190,37 +208,42 @@ const columns = computed<DataTableColumns<any>>(() => [
         return t('common.inactive', 'Inactive')
       }
 
-      return h(NSpace, {}, {
-        default: () => [
-          !row.is_voting ?
-          h(
-            NButton,
-            {
-              type: 'primary',
-              size: 'small',
-              onClick: () => handleSetVotingOwner(row.id)
-            },
-            { default: () => t('units.ownership.setVoting', 'Set as Voting Owner')}
-          ):'',
+      return h(
+        NSpace,
+        {},
+        {
+          default: () => [
+            !row.is_voting
+              ? h(
+                  NButton,
+                  {
+                    type: 'primary',
+                    size: 'small',
+                    onClick: () => handleSetVotingOwner(row.id),
+                  },
+                  { default: () => t('units.ownership.setVoting', 'Set as Voting Owner') },
+                )
+              : '',
 
-          // Deactivate button. No popconfirm here: the modal it opens asks for
-          // an end date and carries its own confirm, so a prompt in front of it
-          // would make this a two-step confirmation for one action.
-          h(
-            NButton,
-            {
-              strong: true,
-              secondary: true,
-              type: 'error',
-              size: 'small',
-              onClick: () => openDisableModal(row.id)
-            },
-            { default: () => t('common.disable', 'Deactivate') }
-          )
-        ]
-      })
-    }
-  }
+            // Deactivate button. No popconfirm here: the modal it opens asks for
+            // an end date and carries its own confirm, so a prompt in front of it
+            // would make this a two-step confirmation for one action.
+            h(
+              NButton,
+              {
+                strong: true,
+                secondary: true,
+                type: 'error',
+                size: 'small',
+                onClick: () => openDisableModal(row.id),
+              },
+              { default: () => t('common.disable', 'Deactivate') },
+            ),
+          ],
+        },
+      )
+    },
+  },
 ])
 
 onMounted(() => {
@@ -244,7 +267,12 @@ onMounted(() => {
 
       <NAlert type="info" :show-icon="false" class="ownership-manager__note">
         <strong>{{ t('common.note', 'Note') }}:</strong>
-        {{ t('units.ownership.votingNote', 'Each unit can have only one voting owner. The voting owner has the right to vote at association meetings. Setting a new voting owner will automatically remove voting rights from any previous voting owner for this unit.') }}
+        {{
+          t(
+            'units.ownership.votingNote',
+            'Each unit can have only one voting owner. The voting owner has the right to vote at association meetings. Setting a new voting owner will automatically remove voting rights from any previous voting owner for this unit.',
+          )
+        }}
       </NAlert>
 
       <NSpin :show="loading">
@@ -257,10 +285,12 @@ onMounted(() => {
           :data="ownerships"
           :bordered="false"
           :single-line="false"
-          :row-class-name="row => !row.is_active ? 'inactive-row' : ''"
+          :row-class-name="(row) => (!row.is_active ? 'inactive-row' : '')"
         >
           <template #empty>
-            <NEmpty :description="t('units.ownership.noOwnerships', 'No ownerships found for this unit')">
+            <NEmpty
+              :description="t('units.ownership.noOwnerships', 'No ownerships found for this unit')"
+            >
               <template #extra>
                 {{ t('units.ownership.addOwnerPrompt', 'Add an owner using the buttons above') }}
               </template>
@@ -298,7 +328,7 @@ onMounted(() => {
       :mask-closable="false"
       :close-on-esc="true"
     >
-      <div style="margin-bottom: 16px;">
+      <div style="margin-bottom: 16px">
         <p>{{ t('units.ownership.setEndDate', 'Set the date when ownership ends:') }}</p>
         <NDatePicker v-model:value="disableDate" type="date" clearable style="width: 100%" />
       </div>

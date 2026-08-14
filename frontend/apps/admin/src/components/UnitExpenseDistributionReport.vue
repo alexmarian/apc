@@ -16,7 +16,7 @@ import {
   NFlex,
   NText,
   NSkeleton,
-  useMessage
+  useMessage,
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { useRouter, useRoute } from 'vue-router'
@@ -35,8 +35,8 @@ const route = useRoute()
 
 // Props
 const props = defineProps<{
-  associationId: number | null;
-  buildingId: number | null;
+  associationId: number | null
+  buildingId: number | null
 }>()
 
 const { t } = useI18n()
@@ -59,10 +59,10 @@ const categoryFamilyOptions = ref<{ label: string; value: string }[]>([])
 const initialLoadComplete = ref<boolean>(false)
 
 const unitTypeOptions = computed(() =>
-  Object.values(UnitType).map(value => ({
+  Object.values(UnitType).map((value) => ({
     label: t(`unitTypes.${value}`),
-    value: value as string
-  }))
+    value: value as string,
+  })),
 )
 
 // Computed properties
@@ -95,29 +95,29 @@ const distributionColumns = computed<DataTableColumns<any>>(() => {
     {
       title: t('units.unit'),
       key: 'unit_info',
-      render: (row) => row.unit_number
+      render: (row) => row.unit_number,
     },
     {
       title: t('units.type'),
       key: 'unit_type',
-      render: (row) => row.unit_type
+      render: (row) => row.unit_type,
     },
     {
       title: t('units.area'),
       key: 'area',
-      render: (row) => `${row.area} m²`
+      render: (row) => `${row.area} m²`,
     },
     {
       title: t('units.part'),
       key: 'distribution_factor',
-      render: (row) => (row.distribution_factor * 100).toFixed(2) + '%'
+      render: (row) => (row.distribution_factor * 100).toFixed(2) + '%',
     },
     {
       title: t('distribution.total_share'),
       key: 'total_share',
       render: (row) => formatCurrency(row.total_share),
-      sorter: (a, b) => a.total_share - b.total_share
-    }
+      sorter: (a, b) => a.total_share - b.total_share,
+    },
   ]
 
   if (distributionData.value?.category_totals) {
@@ -127,7 +127,7 @@ const distributionColumns = computed<DataTableColumns<any>>(() => {
       columns.push({
         title: t(`categories.names.${category}`, category),
         key: category,
-        render: (row) => formatCurrency(row.expenses_share[category] || 0)
+        render: (row) => formatCurrency(row.expenses_share[category] || 0),
       })
     }
   }
@@ -156,7 +156,7 @@ const fetchDistributionReport = async (): Promise<void> => {
       category_type: selectedCategoryType.value,
       category_family: selectedCategoryFamily.value,
       distribution_method: distributionMethod.value,
-      unit_type: unitType.value
+      unit_type: unitType.value,
     })
 
     distributionData.value = response.data
@@ -206,17 +206,17 @@ const updateCategoryOptions = (): void => {
 
   categoryOptions.value = categories.value.map((cat) => ({
     label: cat.name,
-    value: cat.id.toString()
+    value: cat.id.toString(),
   }))
 
   categoryTypeOptions.value = Array.from(types).map((type) => ({
     label: t(`categories.types.${type}`, type),
-    value: type
+    value: type,
   }))
 
   categoryFamilyOptions.value = Array.from(families).map((family) => ({
     label: t(`categories.families.${family}`, family),
-    value: family
+    value: family,
   }))
 }
 
@@ -276,7 +276,7 @@ const exportToCSV = (): void => {
       t('units.type'),
       t('units.area') + ' (m²)',
       t('units.part'),
-      t('distribution.total_share')
+      t('distribution.total_share'),
     ]
 
     allRows.push(headers)
@@ -288,7 +288,7 @@ const exportToCSV = (): void => {
         unit.unit_type,
         unit.area.toFixed(2),
         (unit.distribution_factor * 100).toFixed(2) + '%',
-        unit.total_share.toFixed(2)
+        unit.total_share.toFixed(2),
       ])
     })
 
@@ -297,7 +297,10 @@ const exportToCSV = (): void => {
 
     // Add summary section
     allRows.push([t('distribution.report_period'), formattedDateRange.value])
-    allRows.push([t('distribution.distribution_method'), t(`distribution.method.${distributionMethod.value}`)])
+    allRows.push([
+      t('distribution.distribution_method'),
+      t(`distribution.method.${distributionMethod.value}`),
+    ])
     allRows.push([t('distribution.total_units'), totalUnits.value])
     allRows.push([t('distribution.total_expenses'), totalExpenses.value.toFixed(2)])
 
@@ -307,12 +310,11 @@ const exportToCSV = (): void => {
       allRows.push([t('distribution.category_totals')])
       allRows.push([t('categories.name'), t('charts.amount')])
 
-      Object.entries(distributionData.value.category_totals).forEach(([categoryKey, data]: [string, any]) => {
-        allRows.push([
-          t(`categories.names.${categoryKey}`, categoryKey),
-          data.amount.toFixed(2)
-        ])
-      })
+      Object.entries(distributionData.value.category_totals).forEach(
+        ([categoryKey, data]: [string, any]) => {
+          allRows.push([t(`categories.names.${categoryKey}`, categoryKey), data.amount.toFixed(2)])
+        },
+      )
     }
 
     // Convert to CSV with proper escaping
@@ -352,11 +354,14 @@ watch([selectedCategoryType], () => {
 })
 
 // Watch all filter changes for URL sync and error recovery
-watch([buildingId, dateRange, selectedCategoryId, selectedCategoryFamily, unitType, distributionMethod], () => {
-  // Clear error when filters change
-  error.value = null
-  updateUrlFromFilters()
-})
+watch(
+  [buildingId, dateRange, selectedCategoryId, selectedCategoryFamily, unitType, distributionMethod],
+  () => {
+    // Clear error when filters change
+    error.value = null
+    updateUrlFromFilters()
+  },
+)
 
 // Update URL with current filter state
 const updateUrlFromFilters = (): void => {
@@ -381,7 +386,7 @@ const restoreFromUrl = (): void => {
   if (route.query.startDate && route.query.endDate) {
     dateRange.value = [
       parseInt(route.query.startDate as string),
-      parseInt(route.query.endDate as string)
+      parseInt(route.query.endDate as string),
     ]
   }
   if (route.query.categoryId) {
@@ -419,17 +424,20 @@ onMounted(() => {
         <div class="filter-grid">
           <NFlex vertical>
             <NText>{{ t('common.dateRange') }}:</NText>
-            <NDatePicker
-              v-model:value="dateRange"
-              type="daterange"
-              clearable
-              style="width: 100%"
-            />
+            <NDatePicker v-model:value="dateRange" type="daterange" clearable style="width: 100%" />
             <NSpace>
-              <NButton size="small" @click="selectPreviousMonth">{{ t('reports.previousMonth', 'Previous Month') }}</NButton>
-              <NButton size="small" @click="selectCurrentMonth">{{ t('reports.currentMonth', 'Current Month') }}</NButton>
-              <NButton size="small" @click="selectCurrentYear">{{ t('reports.currentYear', 'Current Year') }}</NButton>
-              <NButton size="small" @click="selectLastYear">{{ t('reports.lastYear', 'Last Year') }}</NButton>
+              <NButton size="small" @click="selectPreviousMonth">{{
+                t('reports.previousMonth', 'Previous Month')
+              }}</NButton>
+              <NButton size="small" @click="selectCurrentMonth">{{
+                t('reports.currentMonth', 'Current Month')
+              }}</NButton>
+              <NButton size="small" @click="selectCurrentYear">{{
+                t('reports.currentYear', 'Current Year')
+              }}</NButton>
+              <NButton size="small" @click="selectLastYear">{{
+                t('reports.lastYear', 'Last Year')
+              }}</NButton>
             </NSpace>
           </NFlex>
 
@@ -481,12 +489,12 @@ onMounted(() => {
           </NFlex>
 
           <NFlex vertical>
-            <NText>{{t('distribution.distribution_method')}}</NText>
+            <NText>{{ t('distribution.distribution_method') }}</NText>
             <NRadioGroup v-model:value="distributionMethod">
               <NSpace>
-                <NRadio value="area">{{t('distribution.method.area')}}</NRadio>
-                <NRadio value="count">{{t('distribution.method.count')}}</NRadio>
-                <NRadio value="equal">{{t('distribution.method.equal')}}</NRadio>
+                <NRadio value="area">{{ t('distribution.method.area') }}</NRadio>
+                <NRadio value="count">{{ t('distribution.method.count') }}</NRadio>
+                <NRadio value="equal">{{ t('distribution.method.equal') }}</NRadio>
               </NSpace>
             </NRadioGroup>
           </NFlex>
@@ -506,13 +514,13 @@ onMounted(() => {
       </div>
 
       <NSpin :show="loading">
-        <NAlert v-if="error" type="error" style="margin-bottom: 16px;">
+        <NAlert v-if="error" type="error" style="margin-bottom: 16px">
           {{ error }}
         </NAlert>
 
         <!-- Loading Skeleton -->
-        <div v-if="loading && !distributionData" style="margin-top: 20px;">
-          <NSkeleton height="100px" style="margin-bottom: 20px;" />
+        <div v-if="loading && !distributionData" style="margin-top: 20px">
+          <NSkeleton height="100px" style="margin-bottom: 20px" />
           <NSkeleton height="400px" />
         </div>
 
@@ -563,7 +571,7 @@ onMounted(() => {
               :bordered="false"
               :single-line="false"
               :pagination="{
-                pageSize: 25
+                pageSize: 25,
               }"
             >
               <template #empty>
@@ -574,9 +582,7 @@ onMounted(() => {
         </div>
 
         <div v-else-if="!loading && !error" class="no-data">
-          <NEmpty
-            :description="t('distribution.no_report_data')">
-          </NEmpty>
+          <NEmpty :description="t('distribution.no_report_data')"> </NEmpty>
         </div>
       </NSpin>
     </NCard>

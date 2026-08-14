@@ -96,18 +96,14 @@ const toggleSummary = () => {
   <PageShell :title="t('expenses.title', 'Expense Management')">
     <template #actions>
       <NSpace>
-        <NButton
-          v-if="associationId"
-          secondary
-          @click="toggleSummary"
-        >
-          {{ showSummary ? t('common.hide', 'Hide') + ' ' + t('expenses.summary', 'Summary') : t('common.show', 'Show') + ' ' + t('expenses.summary', 'Summary') }}
+        <NButton v-if="associationId" secondary @click="toggleSummary">
+          {{
+            showSummary
+              ? t('common.hide', 'Hide') + ' ' + t('expenses.summary', 'Summary')
+              : t('common.show', 'Show') + ' ' + t('expenses.summary', 'Summary')
+          }}
         </NButton>
-        <NButton
-          type="primary"
-          @click="handleCreateExpense"
-          :disabled="!associationId"
-        >
+        <NButton type="primary" @click="handleCreateExpense" :disabled="!associationId">
           {{ t('expenses.createNew', 'Create New Expense') }}
         </NButton>
       </NSpace>
@@ -127,10 +123,7 @@ const toggleSummary = () => {
 
       <!-- Summary is below the list and can be toggled -->
       <div v-if="showSummary" class="expenses-view__summary">
-        <ExpensesSummary
-          v-if="displayedExpenses"
-          :expenses="displayedExpenses"
-        />
+        <ExpensesSummary v-if="displayedExpenses" :expenses="displayedExpenses" />
       </div>
     </div>
 

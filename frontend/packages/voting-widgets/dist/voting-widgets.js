@@ -246,7 +246,7 @@ const fe = { key: 4 }, ge = /* @__PURE__ */ K({
   for (const [b, y] of i)
     k[b] = y;
   return k;
-}, pe = /* @__PURE__ */ Z(ge, [["__scopeId", "data-v-114ab2f0"]]);
+}, pe = /* @__PURE__ */ Z(ge, [["__scopeId", "data-v-b97c74aa"]]);
 class Q extends Error {
   constructor(i, k) {
     super(i), this.status = k, this.name = "HttpError";
@@ -745,7 +745,7 @@ const _e = { class: "vw-block" }, be = { class: "vw-status" }, ye = /* @__PURE__
       _: 1
     }, 8, ["show"]));
   }
-}), Ve = /* @__PURE__ */ Z(ye, [["__scopeId", "data-v-38387e6c"]]), me = /* @__PURE__ */ K({
+}), Ve = /* @__PURE__ */ Z(ye, [["__scopeId", "data-v-f0a6e1ae"]]), me = /* @__PURE__ */ K({
   __name: "VotingResultsWidget",
   props: {
     service: {},
@@ -1148,7 +1148,7 @@ const _e = { class: "vw-block" }, be = { class: "vw-status" }, ye = /* @__PURE__
       _: 1
     }, 8, ["show"]));
   }
-}), Se = /* @__PURE__ */ Z(me, [["__scopeId", "data-v-42e95c29"]]);
+}), Se = /* @__PURE__ */ Z(me, [["__scopeId", "data-v-d00594a4"]]);
 async function te(S) {
   return (await S.json().catch(() => ({ error: S.statusText }))).error ?? `Request failed (${S.status})`;
 }

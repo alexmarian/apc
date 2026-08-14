@@ -2,7 +2,7 @@
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { NIcon, NLayout, NLayoutHeader, NLayoutContent, NMenu, NSwitch } from 'naive-ui'
 import { h, ref, computed, watch } from 'vue'
-import type { Component } from 'vue';
+import type { Component } from 'vue'
 import ThemeProvider from '@/providers/ThemeProvider.vue'
 import LanguageSelector from '@/components/LanguageSelector.vue'
 import AssociationSelector from '@/components/AssociationSelector.vue'
@@ -16,7 +16,7 @@ import {
   AccountBalanceRound,
   HomeRound,
   BedroomParentRound,
-  PeopleRound
+  PeopleRound,
 } from '@vicons/material'
 
 const preferences = usePreferences()
@@ -46,7 +46,7 @@ watch(
     } else {
       associationStore.reset()
     }
-  }
+  },
 )
 
 // Check if current route is an auth page (login, register, etc.)
@@ -66,17 +66,19 @@ const menuOptions = computed(() => [
   {
     label: () => h(RouterLink, { to: '/' }, { default: () => t('common.home', 'Home') }),
     key: 'home',
-    icon: renderIcon(HomeRound)
+    icon: renderIcon(HomeRound),
   },
   {
-    label: () => h(RouterLink, { to: '/accounts' }, { default: () => t('accounts.title', 'Accounts') }),
+    label: () =>
+      h(RouterLink, { to: '/accounts' }, { default: () => t('accounts.title', 'Accounts') }),
     key: 'accounts',
-    icon: renderIcon(AccountBalanceRound)
+    icon: renderIcon(AccountBalanceRound),
   },
   {
-    label: () => h(RouterLink, { to: '/gatherings' }, { default: () => t('gatherings.title', 'Gatherings') }),
+    label: () =>
+      h(RouterLink, { to: '/gatherings' }, { default: () => t('gatherings.title', 'Gatherings') }),
     key: 'gatherings',
-    icon: renderIcon(PeopleRound)
+    icon: renderIcon(PeopleRound),
   },
   {
     label: () => t('expenses.title', 'Expenses'),
@@ -84,22 +86,38 @@ const menuOptions = computed(() => [
     icon: renderIcon(AttachMoneyRound),
     children: [
       {
-        label: () => h(RouterLink, { to: '/expenses' }, { default: () => t('expenses.management', 'Management') }),
-        key: 'expenses-management'
+        label: () =>
+          h(
+            RouterLink,
+            { to: '/expenses' },
+            { default: () => t('expenses.management', 'Management') },
+          ),
+        key: 'expenses-management',
       },
       {
-        label: () => h(RouterLink, { to: '/categories' }, { default: () => t('categories.title', 'Categories') }),
-        key: 'categories'
+        label: () =>
+          h(
+            RouterLink,
+            { to: '/categories' },
+            { default: () => t('categories.title', 'Categories') },
+          ),
+        key: 'categories',
       },
       {
-        label: () => h(RouterLink, { to: '/reports' }, { default: () => t('reports.title', 'Reports') }),
-        key: 'expenses-reports'
+        label: () =>
+          h(RouterLink, { to: '/reports' }, { default: () => t('reports.title', 'Reports') }),
+        key: 'expenses-reports',
       },
       {
-        label: () => h(RouterLink, { to: '/expenses/distribution' }, { default: () => t('expenses.distribution', 'Distribution') }),
-        key: 'expense-distribution'
-      }
-    ]
+        label: () =>
+          h(
+            RouterLink,
+            { to: '/expenses/distribution' },
+            { default: () => t('expenses.distribution', 'Distribution') },
+          ),
+        key: 'expense-distribution',
+      },
+    ],
   },
   {
     label: () => t('units.title', 'Units'),
@@ -107,15 +125,21 @@ const menuOptions = computed(() => [
     icon: renderIcon(BedroomParentRound),
     children: [
       {
-        label: () => h(RouterLink, { to: '/units' }, { default: () => t('units.management', 'Management') }),
-        key: 'units-management'
+        label: () =>
+          h(RouterLink, { to: '/units' }, { default: () => t('units.management', 'Management') }),
+        key: 'units-management',
       },
       {
-        label: () => h(RouterLink, { to: '/owners/report' }, { default: () => t('owners.report', 'Owners Report') }),
-        key: 'owners-report'
-      }
-    ]
-  }
+        label: () =>
+          h(
+            RouterLink,
+            { to: '/owners/report' },
+            { default: () => t('owners.report', 'Owners Report') },
+          ),
+        key: 'owners-report',
+      },
+    ],
+  },
 ])
 
 // Route prefix -> menu key, ordered most-specific-first so that
@@ -128,7 +152,7 @@ const menuRouteKeys: [string, string][] = [
   ['/units', 'units-management'],
   ['/owners', 'owners-report'],
   ['/accounts', 'accounts'],
-  ['/gatherings', 'gatherings']
+  ['/gatherings', 'gatherings'],
 ]
 
 const activeMenuKey = computed(() => {
@@ -155,7 +179,12 @@ watch(isDark, () => {
               <img alt="App logo" class="logo-img" src="/logo_48.png" width="32" height="32" />
               <h1 class="app-title">APC</h1>
             </div>
-            <NMenu mode="horizontal" :value="activeMenuKey" :options="menuOptions" style="flex: 1" />
+            <NMenu
+              mode="horizontal"
+              :value="activeMenuKey"
+              :options="menuOptions"
+              style="flex: 1"
+            />
             <div class="header-right">
               <AssociationSelector class="association-switcher" />
               <LanguageSelector />

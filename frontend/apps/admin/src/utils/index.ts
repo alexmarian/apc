@@ -9,10 +9,7 @@ export const getCurrentMonthRange = (): [string, string] => {
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
 
-  return [
-    firstDay.toISOString().split('T')[0],
-    lastDay.toISOString().split('T')[0]
-  ]
+  return [firstDay.toISOString().split('T')[0], lastDay.toISOString().split('T')[0]]
 }
 
 export const getPreviousMonthRange = (): [string, string] => {
@@ -20,10 +17,7 @@ export const getPreviousMonthRange = (): [string, string] => {
   const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1)
   const lastDay = new Date(now.getFullYear(), now.getMonth(), 0)
 
-  return [
-    firstDay.toISOString().split('T')[0],
-    lastDay.toISOString().split('T')[0]
-  ]
+  return [firstDay.toISOString().split('T')[0], lastDay.toISOString().split('T')[0]]
 }
 
 export const getCurrentYearRange = (): [string, string] => {
@@ -31,10 +25,7 @@ export const getCurrentYearRange = (): [string, string] => {
   const firstDay = new Date(now.getFullYear(), 0, 1)
   const lastDay = new Date(now.getFullYear(), 11, 31)
 
-  return [
-    firstDay.toISOString().split('T')[0],
-    lastDay.toISOString().split('T')[0]
-  ]
+  return [firstDay.toISOString().split('T')[0], lastDay.toISOString().split('T')[0]]
 }
 
 // String utilities

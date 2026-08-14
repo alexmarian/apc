@@ -16,7 +16,7 @@ const props = defineProps<{
 
 // Emits
 const emit = defineEmits<{
-  (e: 'saved', account: Account): void  // Pass the updated/created account data
+  (e: 'saved', account: Account): void // Pass the updated/created account data
   (e: 'cancelled'): void
 }>()
 
@@ -28,17 +28,25 @@ const message = useMessage()
 const formData = reactive<AccountCreateRequest>({
   number: '',
   destination: '',
-  description: ''
+  description: '',
 })
 
 // Form validation rules
 const rules: FormRules = {
   number: [
-    { required: true, message: t('validation.required', { field: t('accounts.accountNumber') }), trigger: 'blur' }
+    {
+      required: true,
+      message: t('validation.required', { field: t('accounts.accountNumber') }),
+      trigger: 'blur',
+    },
   ],
   description: [
-    { required: true, message: t('validation.required', { field: t('accounts.description') }), trigger: 'blur' }
-  ]
+    {
+      required: true,
+      message: t('validation.required', { field: t('accounts.description') }),
+      trigger: 'blur',
+    },
+  ],
 }
 
 // State
@@ -93,7 +101,7 @@ const submitForm = async (e: MouseEvent) => {
       const updateData: AccountUpdateRequest = {
         number: formData.number,
         destination: formData.destination,
-        description: formData.description
+        description: formData.description,
       }
       response = await accountApi.updateAccount(props.associationId, props.accountId, updateData)
       message.success(t('accounts.accountUpdated'))
@@ -131,7 +139,14 @@ onMounted(() => {
   <FormShell>
     <!-- No title here: the modal that opens this form supplies it. -->
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" :title="t('common.error')" style="margin-bottom: 16px;" closable @close="error = null">
+      <NAlert
+        v-if="error"
+        type="error"
+        :title="t('common.error')"
+        style="margin-bottom: 16px"
+        closable
+        @close="error = null"
+      >
         {{ error }}
       </NAlert>
 
@@ -145,48 +160,28 @@ onMounted(() => {
       >
         <!-- Readonly Account ID for edit mode -->
         <NFormItem v-if="isEditMode && originalAccount" :label="t('common.id')">
-          <NInput
-            :value="originalAccount.id.toString()"
-            readonly
-            class="readonly-input"
-          />
+          <NInput :value="originalAccount.id.toString()" readonly class="readonly-input" />
         </NFormItem>
 
         <NFormItem :label="t('accounts.accountNumber')" path="number">
-          <NInput
-            v-model:value="formData.number"
-            :placeholder="t('accounts.accountNumber')"
-          />
+          <NInput v-model:value="formData.number" :placeholder="t('accounts.accountNumber')" />
         </NFormItem>
 
         <NFormItem :label="t('accounts.description')" path="description">
-          <NInput
-            v-model:value="formData.description"
-            :placeholder="t('accounts.description')"
-          />
+          <NInput v-model:value="formData.description" :placeholder="t('accounts.description')" />
         </NFormItem>
 
         <NFormItem :label="t('accounts.destination')" path="destination">
-          <NInput
-            v-model:value="formData.destination"
-            :placeholder="t('accounts.destination')"
-          />
+          <NInput v-model:value="formData.destination" :placeholder="t('accounts.destination')" />
         </NFormItem>
 
-        <div style="margin-top: 24px;">
+        <div style="margin-top: 24px">
           <NSpace justify="end">
-            <NButton
-              @click="cancelForm"
-              :disabled="submitting"
-            >
+            <NButton @click="cancelForm" :disabled="submitting">
               {{ t('common.cancel') }}
             </NButton>
 
-            <NButton
-              type="primary"
-              @click="submitForm"
-              :loading="submitting"
-            >
+            <NButton type="primary" @click="submitForm" :loading="submitting">
               {{ isEditMode ? t('common.update') : t('common.create') }}
             </NButton>
           </NSpace>
@@ -196,5 +191,4 @@ onMounted(() => {
   </FormShell>
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>

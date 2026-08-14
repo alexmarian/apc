@@ -1,6 +1,4 @@
-import type {
-  AxiosError
-} from 'axios'
+import type { AxiosError } from 'axios'
 // Extend AxiosRequestConfig to include the _retry property
 declare module 'axios' {
   export interface AxiosRequestConfig {

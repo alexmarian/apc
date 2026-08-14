@@ -1,6 +1,6 @@
 import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { NAlert, NButton, NCard, NDescriptions, NDescriptionsItem, NDivider, NSpace, NSpin, NTag, NText } from 'naive-ui';
+import { NAlert, NButton, NCard, NDescriptions, NDescriptionsItem, NDivider, NSpace, NSpin, NTag, NText, } from 'naive-ui';
 import BallotForm from './BallotForm.vue';
 import { HttpError } from './types';
 const { t, locale } = useI18n({
@@ -19,7 +19,9 @@ const { t, locale } = useI18n({
             submittedAt: 'Submitted at',
             yourVotes: 'Your votes',
             informational: 'Informational',
-            yes: 'Yes', no: 'No', abstain: 'Abstain',
+            yes: 'Yes',
+            no: 'No',
+            abstain: 'Abstain',
             statusNotStarted: 'Voting has not started yet. Please check back later.',
             statusTallied: 'Voting has closed. Results are being tallied.',
             statusClosed: 'Voting is closed.',
@@ -40,7 +42,9 @@ const { t, locale } = useI18n({
             submittedAt: 'Trimis la',
             yourVotes: 'Voturile dvs.',
             informational: 'Informativ',
-            yes: 'Da', no: 'Nu', abstain: 'Abținere',
+            yes: 'Da',
+            no: 'Nu',
+            abstain: 'Abținere',
             statusNotStarted: 'Votul nu a început încă. Verificați mai târziu.',
             statusTallied: 'Votul s-a încheiat. Rezultatele sunt în curs de numărare.',
             statusClosed: 'Votul este închis.',
@@ -61,7 +65,9 @@ const { t, locale } = useI18n({
             submittedAt: 'Подан в',
             yourVotes: 'Ваши голоса',
             informational: 'Информационный',
-            yes: 'Да', no: 'Нет', abstain: 'Воздержаться',
+            yes: 'Да',
+            no: 'Нет',
+            abstain: 'Воздержаться',
             statusNotStarted: 'Голосование ещё не началось. Загляните позже.',
             statusTallied: 'Голосование завершено. Результаты подсчитываются.',
             statusClosed: 'Голосование закрыто.',
@@ -69,7 +75,7 @@ const { t, locale } = useI18n({
             errInvalidBallot: 'Недействительный бюллетень.',
             unitsAlreadyVoted: 'Право голоса за вашу единицу уже было реализовано другим совладельцем.',
         },
-    }
+    },
 });
 const props = defineProps();
 const loading = ref(false);
@@ -93,19 +99,23 @@ const votingShare = computed(() => {
         return denom > 0 ? ((context.value?.units.length ?? 0) / denom) * 100 : 0;
     }
 });
-const allUnitsUnavailable = computed(() => (context.value?.units.length ?? 0) > 0 &&
-    context.value.units.every(u => !u.is_available));
-const votableMatters = computed(() => (context.value?.matters ?? []).filter(m => !m.is_informative));
-const informativeMatters = computed(() => (context.value?.matters ?? []).filter(m => m.is_informative));
+const allUnitsUnavailable = computed(() => (context.value?.units.length ?? 0) > 0 && context.value.units.every((u) => !u.is_available));
+const votableMatters = computed(() => (context.value?.matters ?? []).filter((m) => !m.is_informative));
+const informativeMatters = computed(() => (context.value?.matters ?? []).filter((m) => m.is_informative));
 const canSubmit = computed(() => votableMatters.value.length > 0 &&
-    votableMatters.value.every(m => (ballotVotes.value[String(m.id)]?.length ?? 0) > 0));
+    votableMatters.value.every((m) => (ballotVotes.value[String(m.id)]?.length ?? 0) > 0));
 const statusTagType = computed(() => {
     switch (context.value?.gathering.status) {
-        case 'active': return 'success';
-        case 'scheduled': return 'info';
-        case 'tallied': return 'info';
-        case 'closed': return 'error';
-        default: return 'default';
+        case 'active':
+            return 'success';
+        case 'scheduled':
+            return 'info';
+        case 'tallied':
+            return 'info';
+        case 'closed':
+            return 'error';
+        default:
+            return 'default';
     }
 });
 function matterTitle(matter) {
@@ -137,18 +147,18 @@ function formatVotedValues(matter) {
     if (matter.voting_config.type === 'ranking') {
         return vote.values
             .map((v, i) => {
-            const opt = matter.voting_config.options?.find(o => o.id === v);
+            const opt = matter.voting_config.options?.find((o) => o.id === v);
             return `${i + 1}. ${opt ? opt.text : v}`;
         })
             .join(', ');
     }
     return vote.values
-        .map(v => {
+        .map((v) => {
         if (v === 'abstain')
             return t('abstain');
         if (matter.voting_config.type === 'yes_no')
             return v === 'yes' ? t('yes') : t('no');
-        const opt = matter.voting_config.options?.find(o => o.id === v);
+        const opt = matter.voting_config.options?.find((o) => o.id === v);
         return opt ? opt.text : v;
     })
         .join(', ');
@@ -161,7 +171,7 @@ async function fetchContext() {
                 ballot_id: props.initialContext.ballot.ballot_id,
                 ballot_hash: props.initialContext.ballot.ballot_hash,
                 submitted_at: props.initialContext.ballot.submitted_at,
-                ballot_content: props.initialContext.ballot.ballot_content
+                ballot_content: props.initialContext.ballot.ballot_content,
             };
         }
         return;
@@ -176,7 +186,7 @@ async function fetchContext() {
                 ballot_id: data.ballot.ballot_id,
                 ballot_hash: data.ballot.ballot_hash,
                 submitted_at: data.ballot.submitted_at,
-                ballot_content: data.ballot.ballot_content
+                ballot_content: data.ballot.ballot_content,
             };
         }
     }
@@ -199,7 +209,7 @@ async function handleSubmit() {
             ballot_id: data.ballot_id,
             ballot_hash: data.ballot_hash,
             submitted_at: data.submitted_at,
-            ballot_content: data.ballot_content ?? ballotContent
+            ballot_content: data.ballot_content ?? ballotContent,
         };
     }
     catch (err) {
@@ -507,7 +517,7 @@ if (__VLS_ctx.context) {
             __VLS_80.slots.default;
             (__VLS_ctx.t('yourVotes'));
             var __VLS_80;
-            for (const [matter] of __VLS_getVForSourceType((__VLS_ctx.context.matters.filter(m => !m.is_informative)))) {
+            for (const [matter] of __VLS_getVForSourceType((__VLS_ctx.context.matters.filter((m) => !m.is_informative)))) {
                 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                     key: (matter.id),
                     ...{ class: "vw-voted" },

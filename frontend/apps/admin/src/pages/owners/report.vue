@@ -40,11 +40,7 @@ const handleOwnerFormCancelled = () => {
 
 <template>
   <PageShell :title="t('owners.report', 'Owners Report')">
-    <OwnersReport
-      :key="refreshKey"
-      :association-id="associationId"
-      @edit-owner="handleEditOwner"
-    />
+    <OwnersReport :key="refreshKey" :association-id="associationId" @edit-owner="handleEditOwner" />
 
     <!-- Owner Edit Modal -->
     <NModal

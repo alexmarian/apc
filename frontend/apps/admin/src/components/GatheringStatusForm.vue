@@ -11,7 +11,9 @@
         </NAlert>
 
         <div class="current-status">
-          <p><strong>{{ $t('gatherings.status.current') }}:</strong></p>
+          <p>
+            <strong>{{ $t('gatherings.status.current') }}:</strong>
+          </p>
           <NTag :type="getStatusType(gathering.status)" size="large">
             {{ $t(`gatherings.status.${gathering.status}`) }}
           </NTag>
@@ -19,8 +21,8 @@
 
         <NForm ref="formRef" :model="formData" :rules="rules" label-placement="top">
           <NFormItem :label="$t('gatherings.status.new')" path="status">
-            <NSelect 
-              v-model:value="formData.status" 
+            <NSelect
+              v-model:value="formData.status"
               :options="availableStatuses"
               :placeholder="$t('gatherings.status.selectNew')"
             />
@@ -44,9 +46,9 @@
             <NButton @click="handleCancel">
               {{ $t('common.cancel') }}
             </NButton>
-            <NButton 
-              type="primary" 
-              @click="handleSubmit" 
+            <NButton
+              type="primary"
+              @click="handleSubmit"
               :loading="submitting"
               :disabled="!formData.status || formData.status === gathering.status"
             >
@@ -73,7 +75,7 @@ import {
   NSpin,
   NTag,
   type FormInst,
-  type FormRules
+  type FormRules,
 } from 'naive-ui'
 import { gatheringApi } from '@/services/api'
 import type { Gathering, GatheringStatus } from '@/types/api'
@@ -100,7 +102,7 @@ const error = ref<string | null>(null)
 const formData = reactive<{
   status: GatheringStatus | null
 }>({
-  status: null
+  status: null,
 })
 
 const statusTransitions: Record<GatheringStatus, GatheringStatus[]> = {
@@ -108,14 +110,14 @@ const statusTransitions: Record<GatheringStatus, GatheringStatus[]> = {
   published: ['active' as GatheringStatus, 'draft' as GatheringStatus],
   active: ['closed' as GatheringStatus],
   closed: ['tallied' as GatheringStatus, 'active' as GatheringStatus],
-  tallied: []
+  tallied: [],
 }
 
 const availableStatuses = computed(() => {
   const available = statusTransitions[props.gathering.status] || []
-  return available.map(status => ({
+  return available.map((status) => ({
     label: t(`gatherings.status.${status}`),
-    value: status
+    value: status,
   }))
 })
 
@@ -160,9 +162,7 @@ const getStatusDescription = (status: GatheringStatus) => {
 }
 
 const rules: FormRules = {
-  status: [
-    { required: true, message: t('gatherings.status.required') }
-  ]
+  status: [{ required: true, message: t('gatherings.status.required') }],
 }
 
 const handleSubmit = async () => {
@@ -174,7 +174,7 @@ const handleSubmit = async () => {
     error.value = null
 
     await gatheringApi.updateGatheringStatus(props.associationId, props.gathering.id, {
-      status: formData.status
+      status: formData.status,
     })
 
     emit('saved')

@@ -6,20 +6,20 @@ import { useI18n } from 'vue-i18n'
 
 // Common data item interface used across chart types
 export interface ChartDataItem {
-  name: string;
-  rawName: string;
-  value: number;
-  color?: string;
-  percentage?: number;
-  count: number;
+  name: string
+  rawName: string
+  value: number
+  color?: string
+  percentage?: number
+  count: number
 }
 
 // Props
 const props = defineProps<{
-  data: ChartDataItem[];
-  title?: string;
-  showPercentage?: boolean;
-  showCount?: boolean;
+  data: ChartDataItem[]
+  title?: string
+  showPercentage?: boolean
+  showCount?: boolean
 }>()
 
 // I18n
@@ -32,9 +32,10 @@ const totalValue = computed(() => {
 
 // Calculate percentages if not already calculated
 const dataWithPercentages = computed(() => {
-  return props.data.map(item => ({
+  return props.data.map((item) => ({
     ...item,
-    percentage: item.percentage ?? (totalValue.value > 0 ? (item.value / totalValue.value) * 100 : 0)
+    percentage:
+      item.percentage ?? (totalValue.value > 0 ? (item.value / totalValue.value) * 100 : 0),
   }))
 })
 </script>
@@ -46,7 +47,11 @@ const dataWithPercentages = computed(() => {
 
     <!-- Standard Legend using Naive UI components -->
     <NSpace wrap justify="center" align="center" class="chart-legend">
-      <NTooltip v-for="(item, index) in dataWithPercentages" :key="'legend-item-' + index" placement="top">
+      <NTooltip
+        v-for="(item, index) in dataWithPercentages"
+        :key="'legend-item-' + index"
+        placement="top"
+      >
         <template #trigger>
           <div class="legend-item">
             <div class="legend-color" :style="{ backgroundColor: item.color }"></div>

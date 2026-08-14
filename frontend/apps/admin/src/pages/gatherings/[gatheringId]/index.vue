@@ -6,11 +6,7 @@
   >
     <template #actions>
       <NSpace v-if="gathering && associationId">
-        <NButton
-          v-if="canEdit"
-          type="primary"
-          @click="showEditModal = true"
-        >
+        <NButton v-if="canEdit" type="primary" @click="showEditModal = true">
           {{ $t('common.edit') }}
         </NButton>
         <NButton
@@ -26,101 +22,100 @@
     </template>
 
     <NSpin :show="loading">
-        <NAlert v-if="error" type="error" closable @close="error = null">
-          {{ error }}
-        </NAlert>
+      <NAlert v-if="error" type="error" closable @close="error = null">
+        {{ error }}
+      </NAlert>
 
-        <div v-if="gathering">
-          <NGrid :cols="2" :x-gap="16" :y-gap="16">
-            <!-- Basic Information -->
-            <NGridItem>
-              <NCard :title="$t('gatherings.details')">
-                <NDescriptions :column="1" label-placement="left">
-                  <NDescriptionsItem :label="$t('gatherings.title')">
-                    {{ gathering.title }}
-                  </NDescriptionsItem>
-                  <NDescriptionsItem :label="$t('gatherings.description')">
-                    {{ gathering.description }}
-                  </NDescriptionsItem>
-                  <NDescriptionsItem :label="$t('gatherings.location')">
-                    {{ gathering.location }}
-                  </NDescriptionsItem>
-                  <NDescriptionsItem :label="$t('gatherings.scheduledDate')">
-                    {{ formatDate(gathering.scheduled_date) }}
-                  </NDescriptionsItem>
-                  <NDescriptionsItem :label="$t('gatherings.status.title')">
-                    <NTag :type="getStatusType(gathering.status)">
-                      {{ $t(`gatherings.status.${gathering.status}`) }}
-                    </NTag>
-                  </NDescriptionsItem>
-                  <NDescriptionsItem :label="$t('gatherings.type.title')">
-                    {{ $t(`gatherings.type.${gathering.type}`) }}
-                  </NDescriptionsItem>
-                </NDescriptions>
-              </NCard>
-            </NGridItem>
+      <div v-if="gathering">
+        <NGrid :cols="2" :x-gap="16" :y-gap="16">
+          <!-- Basic Information -->
+          <NGridItem>
+            <NCard :title="$t('gatherings.details')">
+              <NDescriptions :column="1" label-placement="left">
+                <NDescriptionsItem :label="$t('gatherings.title')">
+                  {{ gathering.title }}
+                </NDescriptionsItem>
+                <NDescriptionsItem :label="$t('gatherings.description')">
+                  {{ gathering.description }}
+                </NDescriptionsItem>
+                <NDescriptionsItem :label="$t('gatherings.location')">
+                  {{ gathering.location }}
+                </NDescriptionsItem>
+                <NDescriptionsItem :label="$t('gatherings.scheduledDate')">
+                  {{ formatDate(gathering.scheduled_date) }}
+                </NDescriptionsItem>
+                <NDescriptionsItem :label="$t('gatherings.status.title')">
+                  <NTag :type="getStatusType(gathering.status)">
+                    {{ $t(`gatherings.status.${gathering.status}`) }}
+                  </NTag>
+                </NDescriptionsItem>
+                <NDescriptionsItem :label="$t('gatherings.type.title')">
+                  {{ $t(`gatherings.type.${gathering.type}`) }}
+                </NDescriptionsItem>
+              </NDescriptions>
+            </NCard>
+          </NGridItem>
 
-            <!-- Statistics -->
-            <NGridItem>
-              <NCard :title="$t('gatherings.statistics.title')">
-                <NDescriptions :column="1" label-placement="left">
-                  <NDescriptionsItem :label="$t('gatherings.statistics.qualified')">
-                    {{ gathering.qualified_units }} {{ $t('gatherings.statistics.units') }}
-                  </NDescriptionsItem>
-                  <NDescriptionsItem :label="$t('gatherings.statistics.participating')">
-                    {{ gathering.participating_units }} {{ $t('gatherings.statistics.units') }}
-                  </NDescriptionsItem>
-                  <NDescriptionsItem :label="$t('gatherings.statistics.participationRate')">
-                    {{ participationRate }}%
-                  </NDescriptionsItem>
-                  <NDescriptionsItem :label="$t('gatherings.statistics.weightParticipationRate')">
-                    {{ weightParticipationRate }}%
-                  </NDescriptionsItem>
-                </NDescriptions>
-              </NCard>
-            </NGridItem>
-          </NGrid>
+          <!-- Statistics -->
+          <NGridItem>
+            <NCard :title="$t('gatherings.statistics.title')">
+              <NDescriptions :column="1" label-placement="left">
+                <NDescriptionsItem :label="$t('gatherings.statistics.qualified')">
+                  {{ gathering.qualified_units }} {{ $t('gatherings.statistics.units') }}
+                </NDescriptionsItem>
+                <NDescriptionsItem :label="$t('gatherings.statistics.participating')">
+                  {{ gathering.participating_units }} {{ $t('gatherings.statistics.units') }}
+                </NDescriptionsItem>
+                <NDescriptionsItem :label="$t('gatherings.statistics.participationRate')">
+                  {{ participationRate }}%
+                </NDescriptionsItem>
+                <NDescriptionsItem :label="$t('gatherings.statistics.weightParticipationRate')">
+                  {{ weightParticipationRate }}%
+                </NDescriptionsItem>
+              </NDescriptions>
+            </NCard>
+          </NGridItem>
+        </NGrid>
 
-          <!-- Tabs for different sections -->
-          <NTabs type="line" animated style="margin-top: 16px;">
-            <NTabPane name="matters" :tab="$t('gatherings.matters.title')">
-              <VotingMattersManager
-                :association-id="associationId!"
-                :gathering="gathering!"
-                @updated="loadGathering"
-              />
-            </NTabPane>
+        <!-- Tabs for different sections -->
+        <NTabs type="line" animated style="margin-top: 16px">
+          <NTabPane name="matters" :tab="$t('gatherings.matters.title')">
+            <VotingMattersManager
+              :association-id="associationId!"
+              :gathering="gathering!"
+              @updated="loadGathering"
+            />
+          </NTabPane>
 
-            <NTabPane name="voting" :tab="$t('gatherings.voting.title')" :disabled="!canVote">
-              <VotingWizard
-                :association-id="associationId!"
-                :gathering="gathering!"
-                @completed="loadGathering"
-              />
-            </NTabPane>
+          <NTabPane name="voting" :tab="$t('gatherings.voting.title')" :disabled="!canVote">
+            <VotingWizard
+              :association-id="associationId!"
+              :gathering="gathering!"
+              @completed="loadGathering"
+            />
+          </NTabPane>
 
-            <NTabPane name="results" :tab="$t('gatherings.results.title')" :disabled="!canViewResults">
-              <ResultsDisplay
-                :association-id="associationId!"
-                :gathering="gathering!"
-              />
-            </NTabPane>
+          <NTabPane
+            name="results"
+            :tab="$t('gatherings.results.title')"
+            :disabled="!canViewResults"
+          >
+            <ResultsDisplay :association-id="associationId!" :gathering="gathering!" />
+          </NTabPane>
 
-            <NTabPane name="ballots" :tab="$t('gatherings.ballots.title')" :disabled="!canViewResults">
-              <BallotsList
-                :association-id="associationId!"
-                :gathering="gathering!"
-              />
-            </NTabPane>
+          <NTabPane
+            name="ballots"
+            :tab="$t('gatherings.ballots.title')"
+            :disabled="!canViewResults"
+          >
+            <BallotsList :association-id="associationId!" :gathering="gathering!" />
+          </NTabPane>
 
-            <NTabPane name="invitations" :tab="$t('gatherings.invitations.title')">
-              <MemberInvitationsPanel
-                :association-id="associationId!"
-                :gathering="gathering!"
-              />
-            </NTabPane>
-          </NTabs>
-        </div>
+          <NTabPane name="invitations" :tab="$t('gatherings.invitations.title')">
+            <MemberInvitationsPanel :association-id="associationId!" :gathering="gathering!" />
+          </NTabPane>
+        </NTabs>
+      </div>
     </NSpin>
 
     <!-- Edit Modal -->
@@ -160,7 +155,7 @@ import {
   NDescriptionsItem,
   NTag,
   NTabs,
-  NTabPane
+  NTabPane,
 } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { gatheringApi } from '@/services/api'
@@ -201,7 +196,7 @@ const statusTransitions: Record<GatheringStatus, GatheringStatus[]> = {
   published: ['active' as GatheringStatus, 'draft' as GatheringStatus],
   active: ['closed' as GatheringStatus],
   closed: ['tallied' as GatheringStatus, 'active' as GatheringStatus],
-  tallied: []
+  tallied: [],
 }
 
 const availableTransitions = computed<GatheringStatus[]>(() => {
@@ -211,18 +206,25 @@ const availableTransitions = computed<GatheringStatus[]>(() => {
 
 const getTransitionButtonType = (targetStatus: GatheringStatus) => {
   switch (targetStatus) {
-    case 'published': return 'info'
-    case 'active': return gathering.value?.status === 'closed' ? 'error' : 'success'
-    case 'closed': return 'warning'
-    case 'tallied': return 'primary'
-    case 'draft': return 'warning'
-    default: return 'default'
+    case 'published':
+      return 'info'
+    case 'active':
+      return gathering.value?.status === 'closed' ? 'error' : 'success'
+    case 'closed':
+      return 'warning'
+    case 'tallied':
+      return 'primary'
+    case 'draft':
+      return 'warning'
+    default:
+      return 'default'
   }
 }
 
 const handleTransition = (targetStatus: GatheringStatus) => {
   if (!gathering.value || !associationId.value) return
-  const isDestructive = targetStatus === 'draft' || (targetStatus === 'active' && gathering.value.status === 'closed')
+  const isDestructive =
+    targetStatus === 'draft' || (targetStatus === 'active' && gathering.value.status === 'closed')
   const gatheringId = gathering.value.id
 
   confirm({
@@ -233,14 +235,16 @@ const handleTransition = (targetStatus: GatheringStatus) => {
       transitionSubmitting.value = true
       error.value = null
       try {
-        await gatheringApi.updateGatheringStatus(associationId.value!, gatheringId, { status: targetStatus })
+        await gatheringApi.updateGatheringStatus(associationId.value!, gatheringId, {
+          status: targetStatus,
+        })
         loadGathering()
       } catch (err) {
         error.value = apiErrorMessage(err, t('common.error'))
       } finally {
         transitionSubmitting.value = false
       }
-    }
+    },
   })
 }
 
@@ -249,9 +253,11 @@ const canVote = computed(() => {
 })
 
 const canViewResults = computed(() => {
-  return gathering.value?.status === 'active'
-    || gathering.value?.status === 'closed'
-    || gathering.value?.status === 'tallied'
+  return (
+    gathering.value?.status === 'active' ||
+    gathering.value?.status === 'closed' ||
+    gathering.value?.status === 'tallied'
+  )
 })
 
 const participationRate = computed(() => {
@@ -261,7 +267,9 @@ const participationRate = computed(() => {
 
 const weightParticipationRate = computed(() => {
   if (!gathering.value || gathering.value.qualified_weight === 0) return 0
-  return ((gathering.value.participating_weight / gathering.value.qualified_weight) * 100).toFixed(1)
+  return ((gathering.value.participating_weight / gathering.value.qualified_weight) * 100).toFixed(
+    1,
+  )
 })
 
 const getStatusType = (status: GatheringStatus) => {
@@ -287,10 +295,10 @@ const formatDate = (dateString: string) => {
 
 const loadGathering = async () => {
   if (!associationId.value || !gatheringId.value) return
-  
+
   loading.value = true
   error.value = null
-  
+
   try {
     const response = await gatheringApi.getGathering(associationId.value!, gatheringId.value!)
     gathering.value = response.data
@@ -306,8 +314,11 @@ const handleGatheringSaved = () => {
   loadGathering()
 }
 
-watch([associationId, gatheringId], ([assocId, gId]) => {
-  if (assocId && gId) loadGathering()
-}, { immediate: true })
+watch(
+  [associationId, gatheringId],
+  ([assocId, gId]) => {
+    if (assocId && gId) loadGathering()
+  },
+  { immediate: true },
+)
 </script>
-

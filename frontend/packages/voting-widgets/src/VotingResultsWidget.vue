@@ -8,16 +8,21 @@
       <!-- Summary header -->
       <NCard class="vr-block">
         <NDescriptions :column="2" label-placement="top" size="small">
-          <NDescriptionsItem :label="t('gathering')">{{ context.gathering.title }}</NDescriptionsItem>
+          <NDescriptionsItem :label="t('gathering')">{{
+            context.gathering.title
+          }}</NDescriptionsItem>
           <NDescriptionsItem :label="t('status')">
-            <NTag :type="statusTagType" size="small">{{ context.gathering.status.toUpperCase() }}</NTag>
+            <NTag :type="statusTagType" size="small">{{
+              context.gathering.status.toUpperCase()
+            }}</NTag>
           </NDescriptionsItem>
         </NDescriptions>
       </NCard>
 
       <!-- Results not yet available -->
       <NAlert v-if="!results" type="info">
-        {{ t('notAvailable') }} <strong>{{ context.gathering.status }}</strong>.
+        {{ t('notAvailable') }} <strong>{{ context.gathering.status }}</strong
+        >.
         <template v-if="context.gathering.status !== 'tallied'">
           {{ t('willBePublished') }}
         </template>
@@ -61,12 +66,7 @@
             >
               {{ t('yourVoteCounted') }}
             </NAlert>
-            <NAlert
-              v-else-if="context.ballot"
-              type="default"
-              size="small"
-              class="vr-vote-notice"
-            >
+            <NAlert v-else-if="context.ballot" type="default" size="small" class="vr-vote-notice">
               {{ t('didNotVote') }}
             </NAlert>
 
@@ -85,8 +85,11 @@
                   </NTag>
                 </NSpace>
                 <NText :depth="2" class="vr-meta">
-                  {{ vote.vote_count }} {{ vote.vote_count !== 1 ? t('votes') : t('vote') }}
-                  ({{ vote.percentage.toFixed(1) }}%<template v-if="results?.statistics?.voting_mode === 'by_weight'">&nbsp;· {{ t('weight') }}: {{ vote.weight_percentage.toFixed(1) }}%</template>)
+                  {{ vote.vote_count }} {{ vote.vote_count !== 1 ? t('votes') : t('vote') }} ({{
+                    vote.percentage.toFixed(1)
+                  }}%<template v-if="results?.statistics?.voting_mode === 'by_weight'"
+                    >&nbsp;· {{ t('weight') }}: {{ vote.weight_percentage.toFixed(1) }}%</template
+                  >)
                 </NText>
               </NSpace>
               <NProgress
@@ -128,62 +131,102 @@ import {
   NSpace,
   NSpin,
   NTag,
-  NText
+  NText,
 } from 'naive-ui'
-import type { VotingService, MemberContext, VoteResults, MatterResult, VoteResult, VotingConfig } from './types'
+import type {
+  VotingService,
+  MemberContext,
+  VoteResults,
+  MatterResult,
+  VoteResult,
+  VotingConfig,
+} from './types'
 
 const { t } = useI18n({
   useScope: 'local',
   messages: {
     en: {
-      gathering: 'Gathering', status: 'Status',
+      gathering: 'Gathering',
+      status: 'Status',
       participationSummary: 'Participation Summary',
-      participated: 'Participated', voted: 'Voted', units: 'units',
+      participated: 'Participated',
+      voted: 'Voted',
+      units: 'units',
       participationRate: 'Participation rate',
-      passed: 'PASSED', failed: 'FAILED',
+      passed: 'PASSED',
+      failed: 'FAILED',
       yourVoteCounted: 'Your vote has been counted for this matter.',
       didNotVote: 'You did not vote on this matter.',
-      yourVote: 'Your vote', vote: 'vote', votes: 'votes',
-      yes: 'Yes', no: 'No', abstain: 'Abstain',
+      yourVote: 'Your vote',
+      vote: 'vote',
+      votes: 'votes',
+      yes: 'Yes',
+      no: 'No',
+      abstain: 'Abstain',
       weight: 'weight',
-      quorum: 'Quorum', quorumMet: 'Met', quorumNotMet: 'Not met',
-      of: 'of', required: 'required',
+      quorum: 'Quorum',
+      quorumMet: 'Met',
+      quorumNotMet: 'Not met',
+      of: 'of',
+      required: 'required',
       notAvailable: 'Results are not yet available. Current status:',
       willBePublished: 'Results will be published after the gathering is tallied.',
     },
     ro: {
-      gathering: 'Adunare', status: 'Status',
+      gathering: 'Adunare',
+      status: 'Status',
       participationSummary: 'Rezumat participare',
-      participated: 'Participat', voted: 'Votat', units: 'unități',
+      participated: 'Participat',
+      voted: 'Votat',
+      units: 'unități',
       participationRate: 'Rata de participare',
-      passed: 'ADOPTAT', failed: 'RESPINS',
+      passed: 'ADOPTAT',
+      failed: 'RESPINS',
       yourVoteCounted: 'Votul dvs. a fost înregistrat pentru acest punct.',
       didNotVote: 'Nu ați votat pentru acest punct.',
-      yourVote: 'Votul dvs.', vote: 'vot', votes: 'voturi',
-      yes: 'Da', no: 'Nu', abstain: 'Abținere',
+      yourVote: 'Votul dvs.',
+      vote: 'vot',
+      votes: 'voturi',
+      yes: 'Da',
+      no: 'Nu',
+      abstain: 'Abținere',
       weight: 'pondere',
-      quorum: 'Cvorum', quorumMet: 'Întrunit', quorumNotMet: 'Neîntrunit',
-      of: 'din', required: 'necesar',
+      quorum: 'Cvorum',
+      quorumMet: 'Întrunit',
+      quorumNotMet: 'Neîntrunit',
+      of: 'din',
+      required: 'necesar',
       notAvailable: 'Rezultatele nu sunt disponibile încă. Stare curentă:',
       willBePublished: 'Rezultatele vor fi publicate după numărarea voturilor.',
     },
     ru: {
-      gathering: 'Собрание', status: 'Статус',
+      gathering: 'Собрание',
+      status: 'Статус',
       participationSummary: 'Сводка участия',
-      participated: 'Участвовало', voted: 'Проголосовало', units: 'ед.',
+      participated: 'Участвовало',
+      voted: 'Проголосовало',
+      units: 'ед.',
       participationRate: 'Явка',
-      passed: 'ПРИНЯТО', failed: 'ОТКЛОНЕНО',
+      passed: 'ПРИНЯТО',
+      failed: 'ОТКЛОНЕНО',
       yourVoteCounted: 'Ваш голос учтён по данному вопросу.',
       didNotVote: 'Вы не голосовали по данному вопросу.',
-      yourVote: 'Ваш голос', vote: 'голос', votes: 'голосов',
-      yes: 'Да', no: 'Нет', abstain: 'Воздержаться',
+      yourVote: 'Ваш голос',
+      vote: 'голос',
+      votes: 'голосов',
+      yes: 'Да',
+      no: 'Нет',
+      abstain: 'Воздержаться',
       weight: 'вес',
-      quorum: 'Кворум', quorumMet: 'Достигнут', quorumNotMet: 'Не достигнут',
-      of: 'из', required: 'требуется',
+      quorum: 'Кворум',
+      quorumMet: 'Достигнут',
+      quorumNotMet: 'Не достигнут',
+      of: 'из',
+      required: 'требуется',
       notAvailable: 'Результаты пока недоступны. Текущий статус:',
       willBePublished: 'Результаты будут опубликованы после подсчёта голосов.',
     },
-  }
+  },
 })
 
 const props = defineProps<{
@@ -198,11 +241,16 @@ const results = ref<VoteResults | null>(null)
 
 const statusTagType = computed((): 'success' | 'warning' | 'error' | 'info' | 'default' => {
   switch (context.value?.gathering.status) {
-    case 'active': return 'success'
-    case 'scheduled': return 'info'
-    case 'tallied': return 'info'
-    case 'closed': return 'error'
-    default: return 'default'
+    case 'active':
+      return 'success'
+    case 'scheduled':
+      return 'info'
+    case 'tallied':
+      return 'info'
+    case 'closed':
+      return 'error'
+    default:
+      return 'default'
   }
 })
 
@@ -221,7 +269,7 @@ function isMyChoice(matterId: number, choice: string): boolean {
 function formatChoice(choice: string, config: VotingConfig): string {
   if (choice === 'abstain') return t('abstain')
   if (config.type === 'yes_no') return choice === 'yes' ? t('yes') : t('no')
-  const opt = config.options?.find(o => o.id === choice)
+  const opt = config.options?.find((o) => o.id === choice)
   return opt ? opt.text : choice
 }
 
@@ -229,7 +277,10 @@ function sortedVotes(matter: MatterResult): VoteResult[] {
   return [...matter.votes].sort((a, b) => b.vote_count - a.vote_count)
 }
 
-function progressStatus(choice: string, matter: MatterResult): 'success' | 'error' | 'default' | 'warning' {
+function progressStatus(
+  choice: string,
+  matter: MatterResult,
+): 'success' | 'error' | 'default' | 'warning' {
   if (choice === 'abstain') return 'warning'
   if (matter.voting_config.type === 'yes_no') {
     if (choice === 'yes') return matter.is_passed ? 'success' : 'default'
