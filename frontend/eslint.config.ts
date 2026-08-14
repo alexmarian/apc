@@ -41,5 +41,19 @@ export default defineConfigWithVueTs(
     rules: { 'vue/multi-word-component-names': 'off' },
   },
 
+  {
+    /*
+     * Demoted to a warning so the pre-commit hook acts as a ratchet: any *new*
+     * error class blocks a commit, while the 18 `any`s still in the tree do not
+     * block edits to the files that contain them. Each of those needs a
+     * specific endpoint's response shape checked against its Go handler, so
+     * they cannot be cleared mechanically. Promote back to 'error' once the
+     * count reaches zero.
+     */
+    name: 'app/explicit-any-ratchet',
+    files: ['**/*.{ts,mts,tsx,vue}'],
+    rules: { '@typescript-eslint/no-explicit-any': 'warn' },
+  },
+
   skipFormatting,
 )

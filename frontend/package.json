@@ -12,8 +12,10 @@
     "build:member": "npm run build:widgets && npm run build --workspace=apps/member",
     "_comment": "Both apps resolve @apc/voting-widgets to its committed dist/, so the package must be rebuilt after any change to its source. The build:* scripts do that; the dev servers do not, so run build:widgets by hand when editing widget source.",
     "build:widgets": "npm run build --workspace=packages/voting-widgets",
+    "type-check": "npm run type-check --workspaces --if-present",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "prepare": "cd .. && husky frontend/.husky",
     "format": "prettier --write \"apps/*/src/**/*.{ts,vue}\" \"packages/*/src/**/*.{ts,vue}\"",
     "format:check": "prettier --check \"apps/*/src/**/*.{ts,vue}\" \"packages/*/src/**/*.{ts,vue}\""
   },
@@ -22,7 +24,9 @@
     "@vue/eslint-config-typescript": "^14.5.0",
     "eslint": "^9.22.0",
     "eslint-plugin-vue": "~10.0.0",
+    "husky": "^9.1.7",
     "jiti": "^2.4.2",
+    "lint-staged": "^16.4.0",
     "prettier": "3.5.3"
   }
 }

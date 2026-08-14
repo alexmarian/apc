@@ -1,0 +1,7 @@
+# Git runs hooks from the repository root, but the npm workspace is one level
+# down, so everything below is scoped to frontend/. Nothing here touches api/
+# or ui/ -- lint-staged only considers staged files under its own cwd.
+cd frontend
+
+npx lint-staged
+npm run type-check

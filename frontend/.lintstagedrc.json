@@ -1,0 +1,5 @@
+{
+  "{apps,packages}/*/src/**/*.{ts,vue}": ["eslint --fix", "prettier --write"],
+  "{apps,packages}/*/src/**/*.css": "prettier --write",
+  "*.ts": "prettier --write"
+}
