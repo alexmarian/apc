@@ -76,6 +76,7 @@ import {
 } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { gatheringApi } from '@/services/api'
+import { apiErrorMessage } from '@/utils/apiError'
 import type { Gathering, GatheringStatus } from '@/types/api'
 import { useAssociationStore } from '@/stores/association'
 import GatheringForm from '@/components/GatheringForm.vue'
@@ -196,8 +197,8 @@ const loadGatherings = async () => {
   try {
     const response = await gatheringApi.getGatherings(associationId.value!)
     gatherings.value = response.data
-  } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || t('common.error')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('common.error'))
   } finally {
     loading.value = false
   }

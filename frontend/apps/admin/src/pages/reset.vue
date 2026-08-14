@@ -16,6 +16,7 @@ import type { FormInst } from 'naive-ui'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { useI18n } from 'vue-i18n'
 import { authApi } from '@/services/api.ts'
+import { apiErrorMessage } from '@/utils/apiError'
 
 const router = useRouter()
 const route = useRoute()
@@ -73,8 +74,8 @@ const handleResetPassword = async (e: MouseEvent) => {
     if (formData.resetTOTPSecret && response.data.qrCode) {
       qrCode.value = response.data.qrCode
     }
-  } catch (err: any) {
-    error.value = err.response?.data?.msg || 'An error occurred. Please try again.'
+  } catch (err) {
+    error.value = apiErrorMessage(err, 'An error occurred. Please try again.')
     console.error('Password reset failed:', err)
   } finally {
     loading.value = false

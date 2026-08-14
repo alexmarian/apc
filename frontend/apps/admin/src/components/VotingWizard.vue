@@ -245,6 +245,7 @@ import {
 } from 'naive-ui'
 import { BallotForm } from '@apc/voting-widgets'
 import { gatheringApi, votingMatterApi, votingApi, invitationApi } from '@/services/api'
+import { apiErrorMessage } from '@/utils/apiError'
 import type { Gathering, VotingMatter, MemberInvitation } from '@/types/api'
 
 interface EligibleVoterUnit {
@@ -377,8 +378,8 @@ const loadEligibleVoters = async () => {
     loading.value = true
     const response = await gatheringApi.getEligibleVoters(props.associationId, props.gathering.id)
     eligibleVoters.value = response.data || []
-  } catch (err: any) {
-    error.value = err.response?.data?.error || err.message || t('gatherings.voting.loadError')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('gatherings.voting.loadError'))
     message.error(error.value ?? 'An error occurred')
   } finally {
     loading.value = false
@@ -390,8 +391,8 @@ const loadVotingMatters = async () => {
     const response = await votingMatterApi.getVotingMatters(props.associationId, props.gathering.id)
     votingMatters.value = response.data.sort((a, b) => a.order_index - b.order_index)
     ballotVotes.value = {}
-  } catch (err: any) {
-    error.value = err.response?.data?.error || err.message || t('gatherings.matters.loadError')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('gatherings.matters.loadError'))
     message.error(error.value ?? 'An error occurred')
   }
 }
@@ -438,8 +439,8 @@ const generateInvitationLink = async () => {
       expires_at: defaultInvitationExpiry()
     })
     invitationLink.value = `${MEMBER_BASE_URL}/${res.data.token}`
-  } catch (err: any) {
-    error.value = err.response?.data?.error ?? err.message ?? 'Failed to generate invitation link'
+  } catch (err) {
+    error.value = apiErrorMessage(err, 'Failed to generate invitation link')
   } finally {
     invitationLinkGenerating.value = false
   }
@@ -527,8 +528,8 @@ const submitBallot = async () => {
     message.success(t('gatherings.voting.ballotSubmitted'))
     emit('completed')
     resetWizard()
-  } catch (err: any) {
-    error.value = err.response?.data?.error || err.message || t('gatherings.voting.submitError')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('gatherings.voting.submitError'))
     message.error(error.value ?? 'An error occurred')
   } finally {
     submitting.value = false

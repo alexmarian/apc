@@ -184,6 +184,7 @@ import {
 } from 'naive-ui'
 import FormShell from '@/components/FormShell.vue'
 import { votingMatterApi } from '@/services/api'
+import { apiErrorMessage } from '@/utils/apiError'
 import type {
   Gathering,
   VotingMatter,
@@ -371,8 +372,8 @@ const handleSubmit = async () => {
     }
 
     emit('saved')
-  } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || t('common.error')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('common.error'))
   } finally {
     submitting.value = false
   }

@@ -213,12 +213,12 @@ const unitColumns = computed(() => [
   {
     title: t('units.floor', 'Floor'),
     key: 'floor',
-    render: (row: VotingUnit) => (row as any).floor || '-'
+    render: (row: VotingUnit) => row.floor ?? '-'
   },
   {
     title: t('units.entrance', 'Entrance'),
     key: 'entrance',
-    render: (row: VotingUnit) => (row as any).entrance || '-'
+    render: (row: VotingUnit) => row.entrance ?? '-'
   }
 ])
 

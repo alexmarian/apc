@@ -5,6 +5,7 @@ import {
   NSelect, NInput, NRadioGroup, NRadioButton, useMessage
 } from 'naive-ui'
 import { categoryApi } from '@/services/api'
+import { apiErrorMessage } from '@/utils/apiError'
 import type { Category, CategoryCreateRequest, CategoryUpdateRequest } from '@/types/api'
 import type { FormInst, FormRules } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
@@ -234,15 +235,7 @@ const submitForm = async (e: MouseEvent) => {
 
     emit('saved', response.data)
   } catch (err) {
-    let errorMessage: string
-    if (err instanceof Error) {
-      errorMessage = err.message
-    } else if (typeof err === 'object' && err !== null && 'response' in err) {
-      const axiosError = err as any
-      errorMessage = axiosError.response?.data?.msg || t('common.error')
-    } else {
-      errorMessage = t('common.error')
-    }
+    const errorMessage = apiErrorMessage(err, t('common.error'))
     error.value = errorMessage
     message.error(errorMessage)
     console.error('Error submitting form:', err)

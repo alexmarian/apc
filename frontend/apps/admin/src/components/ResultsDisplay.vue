@@ -229,6 +229,7 @@ import {
 } from 'naive-ui'
 import { DownloadOutlined } from '@vicons/antd'
 import { votingApi } from '@/services/api'
+import { apiErrorMessage } from '@/utils/apiError'
 import type { Gathering, VotingResults, VoteResult } from '@/types/api'
 
 interface Props {
@@ -344,8 +345,8 @@ const loadResults = async () => {
   try {
     const response = await votingApi.getResults(props.associationId, props.gathering.id)
     results.value = response.data
-  } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || t('common.error')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('common.error'))
   } finally {
     loading.value = false
   }
@@ -365,8 +366,8 @@ const handleDownloadResults = async () => {
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
-  } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || t('common.error')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('common.error'))
   } finally {
     downloading.value = false
   }

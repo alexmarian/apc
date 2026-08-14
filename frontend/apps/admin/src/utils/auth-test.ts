@@ -1,6 +1,19 @@
 // Test utilities for auth functionality
 import { performLogout, attemptTokenRefresh, getAuthToken } from '@/services/auth-service'
 
+/**
+ * Dev-only console helpers; main.ts imports this module solely when DEV.
+ */
+declare global {
+  interface Window {
+    authTests?: {
+      testExpiredTokenLogout: () => void
+      testFailedRefreshTokenLogout: () => Promise<void>
+      logAuthState: () => void
+    }
+  }
+}
+
 // Test function to simulate expired token scenario
 export function testExpiredTokenLogout() {
   console.log('Testing expired token logout scenario...')
@@ -43,7 +56,7 @@ export function logAuthState() {
 
 // Export test functions for console access
 if (typeof window !== 'undefined') {
-  (window as any).authTests = {
+  window.authTests = {
     testExpiredTokenLogout,
     testFailedRefreshTokenLogout,
     logAuthState

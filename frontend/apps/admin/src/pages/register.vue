@@ -12,8 +12,9 @@ import {
 } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import tokenService from '@/services/tokenService'
+import { apiErrorMessage } from '@/utils/apiError'
 import AuthLayout from '@/layouts/AuthLayout.vue'
-import type { FormInst, FormRules } from 'naive-ui'
+import type { FormInst, FormItemRule, FormRules } from 'naive-ui'
 
 const router = useRouter()
 const route = useRoute()
@@ -115,7 +116,7 @@ const rules: FormRules = {
 }
 
 // Validate password match
-function validatePasswordMatch(_rule: any, value: string) {
+function validatePasswordMatch(_rule: FormItemRule, value: string) {
   return value === formData.password
 }
 
@@ -142,8 +143,8 @@ async function handleRegister(e: MouseEvent) {
       qrCode.value = response.qrCode
       registrationComplete.value = true
     }
-  } catch (err: any) {
-    error.value = err.response?.data?.msg || t('errors.registrationFailed', 'Registration failed. Please check your details and try again.')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('errors.registrationFailed', 'Registration failed. Please check your details and try again.'))
     console.error('Registration failed:', err)
   } finally {
     loading.value = false

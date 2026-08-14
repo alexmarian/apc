@@ -9,4 +9,4 @@ declare module 'axios' {
 }
 
 // Utility type for typed axios errors
-export type TypedAxiosError<T = any> = AxiosError<T>
+export type TypedAxiosError<T = unknown> = AxiosError<T>

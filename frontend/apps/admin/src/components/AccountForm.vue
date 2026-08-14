@@ -3,6 +3,7 @@ import FormShell from '@/components/FormShell.vue'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { NForm, NFormItem, NInput, NButton, NSpace, NSpin, NAlert, useMessage } from 'naive-ui'
 import { accountApi } from '@/services/api'
+import { apiErrorMessage } from '@/utils/apiError'
 import type { Account, AccountCreateRequest, AccountUpdateRequest } from '@/types/api'
 import type { FormInst, FormRules } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
@@ -104,16 +105,7 @@ const submitForm = async (e: MouseEvent) => {
     // Emit the updated/created account data so parent can update the list without reloading
     emit('saved', response.data)
   } catch (err) {
-    let errorMessage: string
-    if (err instanceof Error) {
-      errorMessage = err.message
-    } else if (typeof err === 'object' && err !== null && 'response' in err) {
-      // Axios error
-      const axiosError = err as any
-      errorMessage = axiosError.response?.data?.msg || t('common.error')
-    } else {
-      errorMessage = t('common.error')
-    }
+    const errorMessage = apiErrorMessage(err, t('common.error'))
     error.value = errorMessage
     message.error(errorMessage)
     console.error('Error submitting form:', err)

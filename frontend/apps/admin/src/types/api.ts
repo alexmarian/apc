@@ -363,6 +363,13 @@ export interface VotingUnit {
   area: number;
   part: number;
   unit_type: string;
+  /**
+   * Not currently sent by GET /owners/voters — its OwnerUnit struct
+   * (api/internal/handlers/owners.go) has no floor/entrance. The report renders
+   * a column for each, so they stay empty until the API includes them.
+   */
+  floor?: number;
+  entrance?: number;
 
 }
 

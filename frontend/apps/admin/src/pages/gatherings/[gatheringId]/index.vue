@@ -164,6 +164,7 @@ import {
 } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { gatheringApi } from '@/services/api'
+import { apiErrorMessage } from '@/utils/apiError'
 import type { Gathering, GatheringStatus } from '@/types/api'
 import { useAssociationStore } from '@/stores/association'
 import GatheringForm from '@/components/GatheringForm.vue'
@@ -234,8 +235,8 @@ const handleTransition = (targetStatus: GatheringStatus) => {
       try {
         await gatheringApi.updateGatheringStatus(associationId.value!, gatheringId, { status: targetStatus })
         loadGathering()
-      } catch (err: any) {
-        error.value = err.response?.data?.message || err.message || t('common.error')
+      } catch (err) {
+        error.value = apiErrorMessage(err, t('common.error'))
       } finally {
         transitionSubmitting.value = false
       }
@@ -293,8 +294,8 @@ const loadGathering = async () => {
   try {
     const response = await gatheringApi.getGathering(associationId.value!, gatheringId.value!)
     gathering.value = response.data
-  } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || t('common.error')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('common.error'))
   } finally {
     loading.value = false
   }

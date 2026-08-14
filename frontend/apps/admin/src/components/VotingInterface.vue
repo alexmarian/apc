@@ -160,6 +160,7 @@ import {
   type FormRules
 } from 'naive-ui'
 import { votingMatterApi, participantApi, votingApi } from '@/services/api'
+import { apiErrorMessage } from '@/utils/apiError'
 import type {
   Gathering,
   VotingMatter,
@@ -238,8 +239,8 @@ const loadData = async () => {
       formData.votes[matter.id] = matter.voting_config.type === 'multiple_choice' ? [] : null
     })
 
-  } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || t('common.error')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('common.error'))
   } finally {
     loading.value = false
   }
@@ -273,8 +274,8 @@ const handleSubmit = async () => {
     error.value = null
     // In a real app, you might redirect or show a success modal
 
-  } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || t('common.error')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('common.error'))
   } finally {
     submitting.value = false
   }

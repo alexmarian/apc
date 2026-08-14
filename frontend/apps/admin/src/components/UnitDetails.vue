@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, h, watch } from 'vue'
+import type { VNodeChild } from 'vue'
 import {
   NCard,
   NSpin,
@@ -52,7 +53,7 @@ const activeTab = ref<string>('info')
 interface OwnerTableColumn {
   title: string;
   key: string;
-  render?: (row: Owner) => any;
+  render?: (row: Owner) => VNodeChild;
 }
 
 // Owners table columns
@@ -102,7 +103,7 @@ const ownersColumns = ref<OwnerTableColumn[]>([
 interface OwnershipTableColumn {
   title: string;
   key: string;
-  render?: (row: OwnershipRecord) => any;
+  render?: (row: OwnershipRecord) => VNodeChild;
 }
 
 // Ownership history columns

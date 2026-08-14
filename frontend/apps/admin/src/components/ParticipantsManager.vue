@@ -99,6 +99,7 @@ import {
   type DataTableColumns
 } from 'naive-ui'
 import { participantApi } from '@/services/api'
+import { apiErrorMessage } from '@/utils/apiError'
 import type { Gathering, GatheringParticipant, ParticipantType } from '@/types/api'
 import ParticipantForm from '@/components/ParticipantForm.vue'
 import { useConfirm } from '@/composables/useConfirm'
@@ -212,8 +213,8 @@ const loadParticipants = async () => {
   try {
     const response = await participantApi.getParticipants(props.associationId, props.gathering.id)
     participants.value = response.data
-  } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || t('common.error')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('common.error'))
   } finally {
     loading.value = false
   }
@@ -234,8 +235,8 @@ const handleCheckIn = async (participant: GatheringParticipant) => {
     
     await loadParticipants()
     emit('updated')
-  } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || t('common.error')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('common.error'))
   }
 }
 
@@ -258,8 +259,8 @@ const removeParticipant = async (participant: GatheringParticipant) => {
 
     await loadParticipants()
     emit('updated')
-  } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || t('common.error')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('common.error'))
   }
 }
 

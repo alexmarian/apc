@@ -83,6 +83,7 @@ import {
 } from 'naive-ui'
 import { ArrowUpOutline, ArrowDownOutline } from '@vicons/ionicons5'
 import { votingMatterApi } from '@/services/api'
+import { apiErrorMessage } from '@/utils/apiError'
 import type { Gathering, VotingMatter, VotingMatterType } from '@/types/api'
 import VotingMatterForm from '@/components/VotingMatterForm.vue'
 import { useConfirm } from '@/composables/useConfirm'
@@ -164,8 +165,8 @@ const handleMoveUp = async (matter: VotingMatter) => {
 
     await loadMatters()
     emit('updated')
-  } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || t('common.error')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('common.error'))
   }
 }
 
@@ -205,8 +206,8 @@ const handleMoveDown = async (matter: VotingMatter) => {
 
     await loadMatters()
     emit('updated')
-  } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || t('common.error')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('common.error'))
   }
 }
 
@@ -311,8 +312,8 @@ const loadMatters = async () => {
   try {
     const response = await votingMatterApi.getVotingMatters(props.associationId, props.gathering.id)
     matters.value = response.data.sort((a, b) => a.order_index - b.order_index)
-  } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || t('common.error')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('common.error'))
   } finally {
     loading.value = false
   }
@@ -342,8 +343,8 @@ const deleteMatter = async (matter: VotingMatter) => {
 
     await loadMatters()
     emit('updated')
-  } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || t('common.error')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('common.error'))
   }
 }
 

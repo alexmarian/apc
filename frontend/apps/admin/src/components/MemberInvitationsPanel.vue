@@ -106,6 +106,7 @@ import {
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { gatheringApi, invitationApi } from '@/services/api'
+import { apiErrorMessage } from '@/utils/apiError'
 import { useConfirm } from '@/composables/useConfirm'
 import { useI18n } from 'vue-i18n'
 import PrintBallot from './PrintBallot.vue'
@@ -278,8 +279,8 @@ async function confirmGenerate() {
         ownerName: generateModalOwner.value.ownerName,
         url
       }]
-    } catch (err: any) {
-      error.value = err.response?.data?.error ?? err.message ?? t('gatherings.invitations.generateError')
+    } catch (err) {
+      error.value = apiErrorMessage(err, t('gatherings.invitations.generateError'))
       generateModalVisible.value = false
     } finally {
       generating.value = false
@@ -325,8 +326,8 @@ async function revokeInvitation(target: OwnerRow) {
     if (row) {
       row.status = 'revoked'
     }
-  } catch (err: any) {
-    error.value = err.response?.data?.error ?? err.message ?? t('gatherings.invitations.revokeError')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('gatherings.invitations.revokeError'))
   }
 }
 
@@ -405,8 +406,8 @@ async function loadData() {
         status: inv ? (inv.status as OwnerRow['status']) : 'none'
       }
     }).sort((a, b) => a.ownerName.localeCompare(b.ownerName))
-  } catch (err: any) {
-    error.value = err.response?.data?.error ?? err.message ?? t('gatherings.invitations.loadError')
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('gatherings.invitations.loadError'))
   } finally {
     loading.value = false
   }
