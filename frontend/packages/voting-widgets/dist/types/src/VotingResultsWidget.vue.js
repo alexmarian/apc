@@ -146,11 +146,11 @@ if (__VLS_ctx.fetchError) {
     // @ts-ignore
     const __VLS_6 = __VLS_asFunctionalComponent(__VLS_5, new __VLS_5({
         type: "error",
-        ...{ style: {} },
+        ...{ class: "vr-block" },
     }));
     const __VLS_7 = __VLS_6({
         type: "error",
-        ...{ style: {} },
+        ...{ class: "vr-block" },
     }, ...__VLS_functionalComponentArgsRest(__VLS_6));
     __VLS_8.slots.default;
     (__VLS_ctx.fetchError);
@@ -161,10 +161,10 @@ if (__VLS_ctx.context) {
     /** @type {[typeof __VLS_components.NCard, typeof __VLS_components.NCard, ]} */ ;
     // @ts-ignore
     const __VLS_10 = __VLS_asFunctionalComponent(__VLS_9, new __VLS_9({
-        ...{ style: {} },
+        ...{ class: "vr-block" },
     }));
     const __VLS_11 = __VLS_10({
-        ...{ style: {} },
+        ...{ class: "vr-block" },
     }, ...__VLS_functionalComponentArgsRest(__VLS_10));
     __VLS_12.slots.default;
     const __VLS_13 = {}.NDescriptions;
@@ -245,12 +245,12 @@ if (__VLS_ctx.context) {
         // @ts-ignore
         const __VLS_34 = __VLS_asFunctionalComponent(__VLS_33, new __VLS_33({
             size: "small",
-            ...{ style: {} },
+            ...{ class: "vr-block" },
             title: (__VLS_ctx.t('participationSummary')),
         }));
         const __VLS_35 = __VLS_34({
             size: "small",
-            ...{ style: {} },
+            ...{ class: "vr-block" },
             title: (__VLS_ctx.t('participationSummary')),
         }, ...__VLS_functionalComponentArgsRest(__VLS_34));
         __VLS_36.slots.default;
@@ -311,7 +311,7 @@ if (__VLS_ctx.context) {
         for (const [matter] of __VLS_getVForSourceType((__VLS_ctx.results.results))) {
             __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                 key: (matter.matter_id),
-                ...{ style: {} },
+                ...{ class: "vr-block" },
             });
             const __VLS_53 = {}.NCard;
             /** @type {[typeof __VLS_components.NCard, typeof __VLS_components.NCard, ]} */ ;
@@ -331,12 +331,12 @@ if (__VLS_ctx.context) {
                 const __VLS_58 = __VLS_asFunctionalComponent(__VLS_57, new __VLS_57({
                     align: "center",
                     justify: "space-between",
-                    ...{ style: {} },
+                    size: (4),
                 }));
                 const __VLS_59 = __VLS_58({
                     align: "center",
                     justify: "space-between",
-                    ...{ style: {} },
+                    size: (4),
                 }, ...__VLS_functionalComponentArgsRest(__VLS_58));
                 __VLS_60.slots.default;
                 const __VLS_61 = {}.NText;
@@ -374,12 +374,12 @@ if (__VLS_ctx.context) {
                 const __VLS_70 = __VLS_asFunctionalComponent(__VLS_69, new __VLS_69({
                     type: "success",
                     size: "small",
-                    ...{ style: {} },
+                    ...{ class: "vr-vote-notice" },
                 }));
                 const __VLS_71 = __VLS_70({
                     type: "success",
                     size: "small",
-                    ...{ style: {} },
+                    ...{ class: "vr-vote-notice" },
                 }, ...__VLS_functionalComponentArgsRest(__VLS_70));
                 __VLS_72.slots.default;
                 (__VLS_ctx.t('yourVoteCounted'));
@@ -392,12 +392,12 @@ if (__VLS_ctx.context) {
                 const __VLS_74 = __VLS_asFunctionalComponent(__VLS_73, new __VLS_73({
                     type: "default",
                     size: "small",
-                    ...{ style: {} },
+                    ...{ class: "vr-vote-notice" },
                 }));
                 const __VLS_75 = __VLS_74({
                     type: "default",
                     size: "small",
-                    ...{ style: {} },
+                    ...{ class: "vr-vote-notice" },
                 }, ...__VLS_functionalComponentArgsRest(__VLS_74));
                 __VLS_76.slots.default;
                 (__VLS_ctx.t('didNotVote'));
@@ -406,7 +406,7 @@ if (__VLS_ctx.context) {
             for (const [vote] of __VLS_getVForSourceType((__VLS_ctx.sortedVotes(matter)))) {
                 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                     key: (vote.choice),
-                    ...{ style: {} },
+                    ...{ class: "vr-vote" },
                 });
                 const __VLS_77 = {}.NSpace;
                 /** @type {[typeof __VLS_components.NSpace, typeof __VLS_components.NSpace, ]} */ ;
@@ -414,12 +414,12 @@ if (__VLS_ctx.context) {
                 const __VLS_78 = __VLS_asFunctionalComponent(__VLS_77, new __VLS_77({
                     align: "center",
                     justify: "space-between",
-                    ...{ style: {} },
+                    ...{ class: "vr-vote__head" },
                 }));
                 const __VLS_79 = __VLS_78({
                     align: "center",
                     justify: "space-between",
-                    ...{ style: {} },
+                    ...{ class: "vr-vote__head" },
                 }, ...__VLS_functionalComponentArgsRest(__VLS_78));
                 __VLS_80.slots.default;
                 const __VLS_81 = {}.NSpace;
@@ -438,10 +438,12 @@ if (__VLS_ctx.context) {
                 /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
                 // @ts-ignore
                 const __VLS_86 = __VLS_asFunctionalComponent(__VLS_85, new __VLS_85({
-                    ...{ style: (__VLS_ctx.isMyChoice(matter.matter_id, vote.choice) ? 'font-weight:600;color:#18a058' : '') },
+                    type: (__VLS_ctx.isMyChoice(matter.matter_id, vote.choice) ? 'success' : 'default'),
+                    strong: (__VLS_ctx.isMyChoice(matter.matter_id, vote.choice)),
                 }));
                 const __VLS_87 = __VLS_86({
-                    ...{ style: (__VLS_ctx.isMyChoice(matter.matter_id, vote.choice) ? 'font-weight:600;color:#18a058' : '') },
+                    type: (__VLS_ctx.isMyChoice(matter.matter_id, vote.choice) ? 'success' : 'default'),
+                    strong: (__VLS_ctx.isMyChoice(matter.matter_id, vote.choice)),
                 }, ...__VLS_functionalComponentArgsRest(__VLS_86));
                 __VLS_88.slots.default;
                 (__VLS_ctx.formatChoice(vote.choice, matter.voting_config));
@@ -468,11 +470,11 @@ if (__VLS_ctx.context) {
                 // @ts-ignore
                 const __VLS_94 = __VLS_asFunctionalComponent(__VLS_93, new __VLS_93({
                     depth: (2),
-                    ...{ style: {} },
+                    ...{ class: "vr-meta" },
                 }));
                 const __VLS_95 = __VLS_94({
                     depth: (2),
-                    ...{ style: {} },
+                    ...{ class: "vr-meta" },
                 }, ...__VLS_functionalComponentArgsRest(__VLS_94));
                 __VLS_96.slots.default;
                 (vote.vote_count);
@@ -508,21 +510,21 @@ if (__VLS_ctx.context) {
             /** @type {[typeof __VLS_components.NDivider, ]} */ ;
             // @ts-ignore
             const __VLS_102 = __VLS_asFunctionalComponent(__VLS_101, new __VLS_101({
-                ...{ style: {} },
+                ...{ class: "vr-divider" },
             }));
             const __VLS_103 = __VLS_102({
-                ...{ style: {} },
+                ...{ class: "vr-divider" },
             }, ...__VLS_functionalComponentArgsRest(__VLS_102));
             const __VLS_105 = {}.NText;
             /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
             // @ts-ignore
             const __VLS_106 = __VLS_asFunctionalComponent(__VLS_105, new __VLS_105({
                 depth: (3),
-                ...{ style: {} },
+                ...{ class: "vr-meta" },
             }));
             const __VLS_107 = __VLS_106({
                 depth: (3),
-                ...{ style: {} },
+                ...{ class: "vr-meta" },
             }, ...__VLS_functionalComponentArgsRest(__VLS_106));
             __VLS_108.slots.default;
             (__VLS_ctx.t('quorum'));
@@ -539,6 +541,17 @@ if (__VLS_ctx.context) {
     }
 }
 var __VLS_3;
+/** @type {__VLS_StyleScopedClasses['vr-block']} */ ;
+/** @type {__VLS_StyleScopedClasses['vr-block']} */ ;
+/** @type {__VLS_StyleScopedClasses['vr-block']} */ ;
+/** @type {__VLS_StyleScopedClasses['vr-block']} */ ;
+/** @type {__VLS_StyleScopedClasses['vr-vote-notice']} */ ;
+/** @type {__VLS_StyleScopedClasses['vr-vote-notice']} */ ;
+/** @type {__VLS_StyleScopedClasses['vr-vote']} */ ;
+/** @type {__VLS_StyleScopedClasses['vr-vote__head']} */ ;
+/** @type {__VLS_StyleScopedClasses['vr-meta']} */ ;
+/** @type {__VLS_StyleScopedClasses['vr-divider']} */ ;
+/** @type {__VLS_StyleScopedClasses['vr-meta']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {

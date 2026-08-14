@@ -1,22 +1,22 @@
 <template>
   <NSpin :show="loading">
-    <NAlert v-if="fetchError" type="error" style="margin-bottom: 16px">
+    <NAlert v-if="fetchError" type="error" class="vw-block">
       {{ fetchError }}
     </NAlert>
 
     <template v-if="context">
       <!-- Gathering header -->
-      <div style="margin-bottom: 16px">
-        <NText tag="h2" style="font-size: var(--text-lg, 18px); font-weight: 600; margin: 0 0 4px">
+      <div class="vw-block">
+        <NText tag="h2" class="vw-title">
           {{ context.gathering.title }}
         </NText>
-        <NText v-if="context.gathering.description" :depth="2" style="font-size: var(--text-md, 14px); display: block">
+        <NText v-if="context.gathering.description" :depth="2" class="vw-subtitle">
           {{ context.gathering.description }}
         </NText>
       </div>
 
       <!-- Summary header -->
-      <NCard style="margin-bottom: 16px">
+      <NCard class="vw-block">
         <NDescriptions :column="3" label-placement="top" size="small">
           <NDescriptionsItem :label="t('owner')">{{ context.owner.name }}</NDescriptionsItem>
           <NDescriptionsItem :label="t('units')">{{ context.units.length }}</NDescriptionsItem>
@@ -24,7 +24,7 @@
             {{ votingShare.toFixed(2) }}%
           </NDescriptionsItem>
         </NDescriptions>
-        <div style="margin-top: 8px">
+        <div class="vw-status">
           <NTag :type="statusTagType" size="small">{{ context.gathering.status.toUpperCase() }}</NTag>
         </div>
       </NCard>
@@ -48,20 +48,20 @@
       <!-- Active gathering -->
       <template v-else>
         <!-- Unit already voted by co-owner -->
-        <NAlert v-if="allUnitsUnavailable && !receipt" type="warning" style="margin-bottom: 16px">
+        <NAlert v-if="allUnitsUnavailable && !receipt" type="warning" class="vw-block">
           {{ t('unitsAlreadyVoted') }}
         </NAlert>
 
         <!-- Read-only receipt (already voted or just submitted) -->
         <NCard v-else-if="receipt">
           <template #header>
-            <span style="color: #18a058">✓ {{ t('ballotSubmitted') }}</span>
+            <NText type="success">✓ {{ t('ballotSubmitted') }}</NText>
           </template>
 
-          <NDescriptions :column="1" label-placement="left" size="small" style="margin-bottom: 16px">
+          <NDescriptions :column="1" label-placement="left" size="small" class="vw-block">
             <NDescriptionsItem :label="t('ballotId')">{{ receipt.ballot_id }}</NDescriptionsItem>
             <NDescriptionsItem :label="t('verificationHash')">
-              <NText code style="font-size: var(--text-xs, 11px); word-break: break-all">
+              <NText code class="vw-hash">
                 {{ receipt.ballot_hash }}
               </NText>
             </NDescriptionsItem>
@@ -75,10 +75,10 @@
           <div
             v-for="matter in context.matters.filter(m => !m.is_informative)"
             :key="matter.id"
-            style="margin-bottom: 12px; padding-left: 4px"
+            class="vw-voted"
           >
-            <NText strong style="display: block">{{ matterTitle(matter) }}</NText>
-            <NText :depth="2" style="margin-top: 4px; display: block; padding-left: 12px">
+            <NText strong class="vw-voted__matter">{{ matterTitle(matter) }}</NText>
+            <NText :depth="2" class="vw-voted__values">
               {{ formatVotedValues(matter) }}
             </NText>
           </div>
@@ -88,12 +88,12 @@
         <NCard v-else>
           <template #header>
             <span>{{ t('yourBallot') }}</span>
-            <NText :depth="3" style="font-size: var(--text-md, 14px); margin-left: 8px">
+            <NText :depth="3" class="vw-header-note">
               — {{ context.gathering.title }}
             </NText>
           </template>
 
-          <NAlert v-if="submitError" type="error" closable style="margin-bottom: 16px" @close="submitError = null">
+          <NAlert v-if="submitError" type="error" closable class="vw-block" @close="submitError = null">
             {{ submitError }}
           </NAlert>
 
@@ -101,21 +101,21 @@
           <div
             v-for="matter in informativeMatters"
             :key="matter.id"
-            style="margin-bottom: 16px"
+            class="vw-block"
           >
             <NCard size="small" embedded>
               <template #header>
-                <NText style="font-size: var(--text-md, 14px)">{{ matterTitle(matter) }}</NText>
-                <NTag size="tiny" style="margin-left: 8px">{{ t('informational') }}</NTag>
+                <NText class="vw-body-text">{{ matterTitle(matter) }}</NText>
+                <NTag size="tiny" class="vw-header-tag">{{ t('informational') }}</NTag>
               </template>
-              <NText :depth="2" style="font-size: var(--text-md, 14px)">{{ matterDescription(matter) }}</NText>
+              <NText :depth="2" class="vw-body-text">{{ matterDescription(matter) }}</NText>
             </NCard>
           </div>
 
           <!-- Votable matters via shared BallotForm -->
           <BallotForm :matters="votableMatters" v-model="ballotVotes" />
 
-          <NSpace justify="end" style="margin-top: 8px">
+          <NSpace justify="end" class="vw-actions">
             <NButton
               type="primary"
               :loading="submitting"
@@ -385,7 +385,59 @@ onMounted(fetchContext)
 </script>
 
 <style scoped>
-.n-card {
-  border-radius: 8px;
+.vw-block {
+  margin-bottom: 16px;
+}
+
+.vw-title {
+  font-size: var(--text-lg, 18px);
+  font-weight: var(--font-weight-strong, 500);
+  margin: 0 0 4px;
+}
+
+.vw-subtitle,
+.vw-body-text,
+.vw-header-note {
+  font-size: var(--text-md, 14px);
+}
+
+.vw-subtitle {
+  display: block;
+}
+
+.vw-status {
+  margin-top: 8px;
+}
+
+.vw-hash {
+  font-size: var(--text-xs, 11px);
+  word-break: break-all;
+}
+
+.vw-voted {
+  margin-bottom: 12px;
+  padding-left: 4px;
+}
+
+.vw-voted__matter {
+  display: block;
+}
+
+.vw-voted__values {
+  display: block;
+  margin-top: 4px;
+  padding-left: 12px;
+}
+
+.vw-header-note {
+  margin-left: 8px;
+}
+
+.vw-header-tag {
+  margin-left: 8px;
+}
+
+.vw-actions {
+  margin-top: 8px;
 }
 </style>

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import axios from 'axios'
 import config from '@/config'
-import type { LoginRequest, LoginResponse } from '@/types/api'
+import type { LoginRequest } from '@/types/api'
 import { authApi } from '@/services/api'
 import { onLogout, offLogout, clearAuthTokens, attemptTokenRefresh } from '@/services/auth-service'
 

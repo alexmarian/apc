@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { NForm, NFormItem, NInput, NButton, NAlert, NSpace } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
 import { useI18n } from 'vue-i18n'
-import type { FormRules } from 'naive-ui'
+import type { FormInst, FormRules } from 'naive-ui'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 
 // Get auth store
@@ -60,7 +60,7 @@ const rules: FormRules = {
 }
 
 // State
-const formRef = ref(null)
+const formRef = ref<FormInst | null>(null)
 
 // Handle login
 const handleLogin = async (e: MouseEvent) => {
@@ -69,7 +69,6 @@ const handleLogin = async (e: MouseEvent) => {
   if (!formRef.value) return
 
   try {
-    // @ts-ignore - Naive UI types issue with form ref
     await formRef.value.validate()
 
     const success = await auth.login(formData)

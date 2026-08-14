@@ -28,6 +28,11 @@ const i18n = createI18n({
   }
 })
 
+// setLocale keeps this in sync afterwards, but it only runs on an actual
+// change — without this the document stays at the index.html default for the
+// whole first visit.
+document.querySelector('html')?.setAttribute('lang', defaultLocale)
+
 export default i18n
 
 // Function to change locale

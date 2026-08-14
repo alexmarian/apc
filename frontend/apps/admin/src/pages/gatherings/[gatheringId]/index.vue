@@ -144,8 +144,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
   NCard,
@@ -177,7 +177,6 @@ import { useConfirm } from '@/composables/useConfirm'
 
 const { t } = useI18n()
 const route = useRoute()
-const router = useRouter()
 const confirm = useConfirm()
 
 const { associationId } = storeToRefs(useAssociationStore())

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { NCard, NDivider, NEmpty, NGradientText, NSpace, NStatistic, NText } from 'naive-ui'
+import { NCard, NDivider, NEmpty, NSpace, NStatistic } from 'naive-ui'
 import type { Expense } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
 import { useI18n } from 'vue-i18n'

@@ -1,12 +1,14 @@
 // src/standalone-charts-app.js
-import { h, ref, onMounted, computed } from 'vue'
+import { h, ref, onMounted } from 'vue'
 import {
-  NSpace, NButton, NCard, NPageHeader, NEmpty, NDivider, NIcon
+  NButton,
+  NCard,
+  NPageHeader,
+  NEmpty,
+  NIcon
 } from 'naive-ui'
 import { PrintRound } from '@vicons/material'
 import PieChart from './components/charts/PieChart.vue'
-import BarChart from './components/charts/BarChart.vue'
-import StackedBarChart from './components/charts/StackedBarChart.vue'
 import { formatCurrency } from './utils/formatters'
 
 // Create a simplified app with just the charts

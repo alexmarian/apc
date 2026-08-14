@@ -21,7 +21,6 @@ import BarChart from '@/components/charts/BarChart.vue'
 import StackedBarChart from '@/components/charts/StackedBarChart.vue'
 import type { ChartDataItem } from '@/components/charts/BaseChart.vue'
 import type { StackedChartItem, StackedChartSeries } from '@/components/charts/StackedBarChart.vue'
-import LocalizedCategoryDisplay from './LocalizedCategoryDisplay.vue'
 
 // Props
 const props = defineProps<{
@@ -35,7 +34,6 @@ const { t, locale } = useI18n()
 // Chart display mode for each section
 const typeChartMode = ref<'pie' | 'bar'>('pie')
 const categoryChartMode = ref<'pie' | 'bar'>('pie')
-const monthlyChartMode = ref<'bar'>('bar')
 
 // Selected type for category breakdown
 const selectedType = ref<string | null>(null)

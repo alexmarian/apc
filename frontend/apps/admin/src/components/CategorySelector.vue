@@ -7,7 +7,6 @@ import { categoryApi } from '@/services/api'
 import type { Category } from '@/types/api'
 import { useI18n } from 'vue-i18n'
 
-
 const props = defineProps<{
   modelValue: number | null
   associationId: number | null
@@ -21,7 +20,6 @@ const emit = defineEmits<{
   (e: 'update:modelValue', id: number | null): void
 }>()
 
-
 const categories = ref<Category[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -33,7 +31,6 @@ const options = computed(() => {
     label: `${t(`categories.types.${category.type}`, category.type)} → ${t(`categories.families.${category.family}`, category.family)} → ${t(`categories.names.${category.name}`, category.name)}`,
     value: category.id
   }))
-
 
   if (props.includeAllOption) {
     categoryOptions.unshift({
@@ -104,7 +101,7 @@ const handleChange = (value: number | null) => {
 }
 watch(
   () => props.associationId,
-  (newValue) => {
+  () => {
     fetchCategories()
   },
   { immediate: true }

@@ -17,8 +17,11 @@ import type {
   LoginRequest,
   LoginResponse,
   Owner,
-  Unit, UnitReportDetails, VotingOwner,
-  ResetPasswordResponse, ResetPasswordRequest,
+  Unit,
+  UnitReportDetails,
+  VotingOwner,
+  ResetPasswordResponse,
+  ResetPasswordRequest,
   Gathering,
   GatheringCreateRequest,
   GatheringUpdateRequest,
@@ -29,7 +32,6 @@ import type {
   GatheringParticipant,
   ParticipantCreateRequest,
   ParticipantCheckInRequest,
-  BallotSubmissionRequest,
   VotingResults,
   QualifiedUnit,
   NonParticipatingOwner,
@@ -139,8 +141,6 @@ api.interceptors.response.use(
     return Promise.reject(error)
   }
 )
-
-
 
 // Auth APIs
 export const authApi = {

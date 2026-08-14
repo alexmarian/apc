@@ -11,7 +11,8 @@
       "types": "./dist/types/src/index.d.ts",
       "import": "./dist/voting-widgets.js",
       "require": "./dist/voting-widgets.umd.cjs"
-    }
+    },
+    "./style.css": "./dist/voting-widgets.css"
   },
   "scripts": {
     "build": "vite build && vue-tsc --build",

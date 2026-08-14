@@ -9,8 +9,6 @@ import {
   NCard,
   NEmpty,
   NSpin,
-  NTabs,
-  NTabPane,
   NDatePicker,
   useMessage,
   NTag

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import {
   NForm, NFormItem, NButton, NSpace, NSpin, NAlert,
   NSelect, NInput, NRadioGroup, NRadioButton, useMessage
 } from 'naive-ui'
 import { categoryApi } from '@/services/api'
 import type { Category, CategoryCreateRequest, CategoryUpdateRequest } from '@/types/api'
-import type { FormRules } from 'naive-ui'
+import type { FormInst, FormRules } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
@@ -44,7 +44,7 @@ const nameKeyManuallyEdited = ref(false)
 const loading = ref(false)
 const submitting = ref(false)
 const error = ref<string | null>(null)
-const formRef = ref(null)
+const formRef = ref<FormInst | null>(null)
 const originalCategory = ref<Category | null>(null)
 const allCategories = ref<Category[]>([])
 
@@ -201,7 +201,6 @@ const submitForm = async (e: MouseEvent) => {
   if (!formRef.value) return
 
   try {
-    // @ts-ignore
     await formRef.value.validate()
     submitting.value = true
     error.value = null

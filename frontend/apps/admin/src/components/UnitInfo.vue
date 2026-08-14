@@ -11,10 +11,6 @@ const props = defineProps<{
   showDetails?: boolean
 }>()
 
-// Compute a display string for the unit
-const unitDisplayString = computed(() => {
-  return `${props.unit.unit_number} (${t(`unitTypes.${props.unit.unit_type}`)}, ${props.unit.area} m²)`
-})
 
 // Get appropriate color for unit type
 const unitTypeColor = computed(() => {

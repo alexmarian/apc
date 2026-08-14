@@ -13,7 +13,6 @@ import {
   NGrid,
   NGridItem,
   NStatistic,
-  NTooltip,
   NText,
   NEmpty,
   NDataTable,
@@ -48,7 +47,6 @@ const error = ref<string | null>(null)
 // Filters
 const dateRange = ref<[number, number] | null>(null)
 const selectedCategory = ref<number | null>(null)
-const reportType = ref<string>('overview')
 
 // Reports data
 const yearlyTotal = computed(() => {
@@ -186,7 +184,6 @@ watch([associationId, dateRange, selectedCategory], () => {
   updateUrlFromFilters()
   fetchExpenses()
 })
-
 
 // Format date range for display
 const formattedDateRange = computed(() => {

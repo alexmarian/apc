@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, h, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, h, computed, watch } from 'vue'
 import { refDebounced } from '@vueuse/core'
 import {
   NDataTable,
@@ -8,7 +8,6 @@ import {
   NEmpty,
   NSpin,
   NAlert,
-  useMessage,
   NInput,
   NSelect,
   NCard,
@@ -50,7 +49,6 @@ const debouncedSearchQuery = refDebounced(searchQuery, 500)
 const units = ref<Unit[]>([])
 const loading = ref<boolean>(false)
 const error = ref<string | null>(null)
-const message = useMessage()
 const hasInitialized = ref(false)
 
 // Available unit types for filter (will be populated from units)

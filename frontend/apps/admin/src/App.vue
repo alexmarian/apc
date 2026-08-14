@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
-import { NIcon, NLayout, NLayoutHeader, NLayoutContent, NMenu, NButton, NDropdown, NSwitch } from 'naive-ui'
+import { NIcon, NLayout, NLayoutHeader, NLayoutContent, NMenu, NSwitch } from 'naive-ui'
 import { h, ref, computed, watch } from 'vue'
 import type { Component } from 'vue';
 import ThemeProvider from '@/providers/ThemeProvider.vue'
@@ -135,22 +135,6 @@ const activeMenuKey = computed(() => {
   if (route.path === '/') return 'home'
   return menuRouteKeys.find(([prefix]) => route.path.startsWith(prefix))?.[1] ?? null
 })
-
-// Theme options as computed property to make them translatable
-const themeMenuOptions = computed(() => [
-  {
-    label: t('theme.light', 'Light Theme'),
-    key: 'light'
-  },
-  {
-    label: t('theme.dark', 'Dark Theme'),
-    key: 'dark'
-  },
-  {
-    label: t('theme.auto', 'Auto (System)'),
-    key: 'auto'
-  }
-])
 
 // Watch for theme changes
 watch(isDark, () => {

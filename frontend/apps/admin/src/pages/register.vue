@@ -13,7 +13,7 @@ import {
 import { useI18n } from 'vue-i18n'
 import tokenService from '@/services/tokenService'
 import AuthLayout from '@/layouts/AuthLayout.vue'
-import type { FormRules } from 'naive-ui'
+import type { FormInst, FormRules } from 'naive-ui'
 
 const router = useRouter()
 const route = useRoute()
@@ -28,7 +28,7 @@ const formData = reactive({
 })
 
 // State
-const formRef = ref(null)
+const formRef = ref<FormInst | null>(null)
 const loading = ref(false)
 const error = ref('')
 const qrCode = ref('')
@@ -126,7 +126,6 @@ async function handleRegister(e: MouseEvent) {
   if (!formRef.value) return
 
   try {
-    // @ts-ignore - Naive UI types issue with form ref
     await formRef.value.validate()
 
     loading.value = true

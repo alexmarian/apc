@@ -224,6 +224,8 @@ debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
+/** @type {__VLS_StyleScopedClasses['vw-subtitle']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-header-note']} */ ;
 // CSS variable injection 
 // CSS variable injection end 
 const __VLS_0 = {}.NSpin;
@@ -243,11 +245,11 @@ if (__VLS_ctx.fetchError) {
     // @ts-ignore
     const __VLS_6 = __VLS_asFunctionalComponent(__VLS_5, new __VLS_5({
         type: "error",
-        ...{ style: {} },
+        ...{ class: "vw-block" },
     }));
     const __VLS_7 = __VLS_6({
         type: "error",
-        ...{ style: {} },
+        ...{ class: "vw-block" },
     }, ...__VLS_functionalComponentArgsRest(__VLS_6));
     __VLS_8.slots.default;
     (__VLS_ctx.fetchError);
@@ -255,18 +257,18 @@ if (__VLS_ctx.fetchError) {
 }
 if (__VLS_ctx.context) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ style: {} },
+        ...{ class: "vw-block" },
     });
     const __VLS_9 = {}.NText;
     /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
     // @ts-ignore
     const __VLS_10 = __VLS_asFunctionalComponent(__VLS_9, new __VLS_9({
         tag: "h2",
-        ...{ style: {} },
+        ...{ class: "vw-title" },
     }));
     const __VLS_11 = __VLS_10({
         tag: "h2",
-        ...{ style: {} },
+        ...{ class: "vw-title" },
     }, ...__VLS_functionalComponentArgsRest(__VLS_10));
     __VLS_12.slots.default;
     (__VLS_ctx.context.gathering.title);
@@ -277,11 +279,11 @@ if (__VLS_ctx.context) {
         // @ts-ignore
         const __VLS_14 = __VLS_asFunctionalComponent(__VLS_13, new __VLS_13({
             depth: (2),
-            ...{ style: {} },
+            ...{ class: "vw-subtitle" },
         }));
         const __VLS_15 = __VLS_14({
             depth: (2),
-            ...{ style: {} },
+            ...{ class: "vw-subtitle" },
         }, ...__VLS_functionalComponentArgsRest(__VLS_14));
         __VLS_16.slots.default;
         (__VLS_ctx.context.gathering.description);
@@ -291,10 +293,10 @@ if (__VLS_ctx.context) {
     /** @type {[typeof __VLS_components.NCard, typeof __VLS_components.NCard, ]} */ ;
     // @ts-ignore
     const __VLS_18 = __VLS_asFunctionalComponent(__VLS_17, new __VLS_17({
-        ...{ style: {} },
+        ...{ class: "vw-block" },
     }));
     const __VLS_19 = __VLS_18({
-        ...{ style: {} },
+        ...{ class: "vw-block" },
     }, ...__VLS_functionalComponentArgsRest(__VLS_18));
     __VLS_20.slots.default;
     const __VLS_21 = {}.NDescriptions;
@@ -349,7 +351,7 @@ if (__VLS_ctx.context) {
     var __VLS_36;
     var __VLS_24;
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ style: {} },
+        ...{ class: "vw-status" },
     });
     const __VLS_37 = {}.NTag;
     /** @type {[typeof __VLS_components.NTag, typeof __VLS_components.NTag, ]} */ ;
@@ -395,11 +397,11 @@ if (__VLS_ctx.context) {
             // @ts-ignore
             const __VLS_46 = __VLS_asFunctionalComponent(__VLS_45, new __VLS_45({
                 type: "warning",
-                ...{ style: {} },
+                ...{ class: "vw-block" },
             }));
             const __VLS_47 = __VLS_46({
                 type: "warning",
-                ...{ style: {} },
+                ...{ class: "vw-block" },
             }, ...__VLS_functionalComponentArgsRest(__VLS_46));
             __VLS_48.slots.default;
             (__VLS_ctx.t('unitsAlreadyVoted'));
@@ -414,171 +416,179 @@ if (__VLS_ctx.context) {
             __VLS_52.slots.default;
             {
                 const { header: __VLS_thisSlot } = __VLS_52.slots;
-                __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
-                    ...{ style: {} },
-                });
+                const __VLS_53 = {}.NText;
+                /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
+                // @ts-ignore
+                const __VLS_54 = __VLS_asFunctionalComponent(__VLS_53, new __VLS_53({
+                    type: "success",
+                }));
+                const __VLS_55 = __VLS_54({
+                    type: "success",
+                }, ...__VLS_functionalComponentArgsRest(__VLS_54));
+                __VLS_56.slots.default;
                 (__VLS_ctx.t('ballotSubmitted'));
+                var __VLS_56;
             }
-            const __VLS_53 = {}.NDescriptions;
+            const __VLS_57 = {}.NDescriptions;
             /** @type {[typeof __VLS_components.NDescriptions, typeof __VLS_components.NDescriptions, ]} */ ;
             // @ts-ignore
-            const __VLS_54 = __VLS_asFunctionalComponent(__VLS_53, new __VLS_53({
-                column: (1),
-                labelPlacement: "left",
-                size: "small",
-                ...{ style: {} },
-            }));
-            const __VLS_55 = __VLS_54({
-                column: (1),
-                labelPlacement: "left",
-                size: "small",
-                ...{ style: {} },
-            }, ...__VLS_functionalComponentArgsRest(__VLS_54));
-            __VLS_56.slots.default;
-            const __VLS_57 = {}.NDescriptionsItem;
-            /** @type {[typeof __VLS_components.NDescriptionsItem, typeof __VLS_components.NDescriptionsItem, ]} */ ;
-            // @ts-ignore
             const __VLS_58 = __VLS_asFunctionalComponent(__VLS_57, new __VLS_57({
-                label: (__VLS_ctx.t('ballotId')),
+                column: (1),
+                labelPlacement: "left",
+                size: "small",
+                ...{ class: "vw-block" },
             }));
             const __VLS_59 = __VLS_58({
-                label: (__VLS_ctx.t('ballotId')),
+                column: (1),
+                labelPlacement: "left",
+                size: "small",
+                ...{ class: "vw-block" },
             }, ...__VLS_functionalComponentArgsRest(__VLS_58));
             __VLS_60.slots.default;
-            (__VLS_ctx.receipt.ballot_id);
-            var __VLS_60;
             const __VLS_61 = {}.NDescriptionsItem;
             /** @type {[typeof __VLS_components.NDescriptionsItem, typeof __VLS_components.NDescriptionsItem, ]} */ ;
             // @ts-ignore
             const __VLS_62 = __VLS_asFunctionalComponent(__VLS_61, new __VLS_61({
-                label: (__VLS_ctx.t('verificationHash')),
+                label: (__VLS_ctx.t('ballotId')),
             }));
             const __VLS_63 = __VLS_62({
-                label: (__VLS_ctx.t('verificationHash')),
+                label: (__VLS_ctx.t('ballotId')),
             }, ...__VLS_functionalComponentArgsRest(__VLS_62));
             __VLS_64.slots.default;
-            const __VLS_65 = {}.NText;
-            /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
-            // @ts-ignore
-            const __VLS_66 = __VLS_asFunctionalComponent(__VLS_65, new __VLS_65({
-                code: true,
-                ...{ style: {} },
-            }));
-            const __VLS_67 = __VLS_66({
-                code: true,
-                ...{ style: {} },
-            }, ...__VLS_functionalComponentArgsRest(__VLS_66));
-            __VLS_68.slots.default;
-            (__VLS_ctx.receipt.ballot_hash);
-            var __VLS_68;
+            (__VLS_ctx.receipt.ballot_id);
             var __VLS_64;
-            const __VLS_69 = {}.NDescriptionsItem;
+            const __VLS_65 = {}.NDescriptionsItem;
             /** @type {[typeof __VLS_components.NDescriptionsItem, typeof __VLS_components.NDescriptionsItem, ]} */ ;
             // @ts-ignore
+            const __VLS_66 = __VLS_asFunctionalComponent(__VLS_65, new __VLS_65({
+                label: (__VLS_ctx.t('verificationHash')),
+            }));
+            const __VLS_67 = __VLS_66({
+                label: (__VLS_ctx.t('verificationHash')),
+            }, ...__VLS_functionalComponentArgsRest(__VLS_66));
+            __VLS_68.slots.default;
+            const __VLS_69 = {}.NText;
+            /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
+            // @ts-ignore
             const __VLS_70 = __VLS_asFunctionalComponent(__VLS_69, new __VLS_69({
-                label: (__VLS_ctx.t('submittedAt')),
+                code: true,
+                ...{ class: "vw-hash" },
             }));
             const __VLS_71 = __VLS_70({
-                label: (__VLS_ctx.t('submittedAt')),
+                code: true,
+                ...{ class: "vw-hash" },
             }, ...__VLS_functionalComponentArgsRest(__VLS_70));
             __VLS_72.slots.default;
-            (__VLS_ctx.receipt.submitted_at ? new Date(__VLS_ctx.receipt.submitted_at).toLocaleString() : '—');
+            (__VLS_ctx.receipt.ballot_hash);
             var __VLS_72;
-            var __VLS_56;
-            const __VLS_73 = {}.NDivider;
-            /** @type {[typeof __VLS_components.NDivider, typeof __VLS_components.NDivider, ]} */ ;
+            var __VLS_68;
+            const __VLS_73 = {}.NDescriptionsItem;
+            /** @type {[typeof __VLS_components.NDescriptionsItem, typeof __VLS_components.NDescriptionsItem, ]} */ ;
             // @ts-ignore
             const __VLS_74 = __VLS_asFunctionalComponent(__VLS_73, new __VLS_73({
-                titlePlacement: "left",
+                label: (__VLS_ctx.t('submittedAt')),
             }));
             const __VLS_75 = __VLS_74({
-                titlePlacement: "left",
+                label: (__VLS_ctx.t('submittedAt')),
             }, ...__VLS_functionalComponentArgsRest(__VLS_74));
             __VLS_76.slots.default;
-            (__VLS_ctx.t('yourVotes'));
+            (__VLS_ctx.receipt.submitted_at ? new Date(__VLS_ctx.receipt.submitted_at).toLocaleString() : '—');
             var __VLS_76;
+            var __VLS_60;
+            const __VLS_77 = {}.NDivider;
+            /** @type {[typeof __VLS_components.NDivider, typeof __VLS_components.NDivider, ]} */ ;
+            // @ts-ignore
+            const __VLS_78 = __VLS_asFunctionalComponent(__VLS_77, new __VLS_77({
+                titlePlacement: "left",
+            }));
+            const __VLS_79 = __VLS_78({
+                titlePlacement: "left",
+            }, ...__VLS_functionalComponentArgsRest(__VLS_78));
+            __VLS_80.slots.default;
+            (__VLS_ctx.t('yourVotes'));
+            var __VLS_80;
             for (const [matter] of __VLS_getVForSourceType((__VLS_ctx.context.matters.filter(m => !m.is_informative)))) {
                 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                     key: (matter.id),
-                    ...{ style: {} },
+                    ...{ class: "vw-voted" },
                 });
-                const __VLS_77 = {}.NText;
-                /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
-                // @ts-ignore
-                const __VLS_78 = __VLS_asFunctionalComponent(__VLS_77, new __VLS_77({
-                    strong: true,
-                    ...{ style: {} },
-                }));
-                const __VLS_79 = __VLS_78({
-                    strong: true,
-                    ...{ style: {} },
-                }, ...__VLS_functionalComponentArgsRest(__VLS_78));
-                __VLS_80.slots.default;
-                (__VLS_ctx.matterTitle(matter));
-                var __VLS_80;
                 const __VLS_81 = {}.NText;
                 /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
                 // @ts-ignore
                 const __VLS_82 = __VLS_asFunctionalComponent(__VLS_81, new __VLS_81({
-                    depth: (2),
-                    ...{ style: {} },
+                    strong: true,
+                    ...{ class: "vw-voted__matter" },
                 }));
                 const __VLS_83 = __VLS_82({
-                    depth: (2),
-                    ...{ style: {} },
+                    strong: true,
+                    ...{ class: "vw-voted__matter" },
                 }, ...__VLS_functionalComponentArgsRest(__VLS_82));
                 __VLS_84.slots.default;
-                (__VLS_ctx.formatVotedValues(matter));
+                (__VLS_ctx.matterTitle(matter));
                 var __VLS_84;
+                const __VLS_85 = {}.NText;
+                /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
+                // @ts-ignore
+                const __VLS_86 = __VLS_asFunctionalComponent(__VLS_85, new __VLS_85({
+                    depth: (2),
+                    ...{ class: "vw-voted__values" },
+                }));
+                const __VLS_87 = __VLS_86({
+                    depth: (2),
+                    ...{ class: "vw-voted__values" },
+                }, ...__VLS_functionalComponentArgsRest(__VLS_86));
+                __VLS_88.slots.default;
+                (__VLS_ctx.formatVotedValues(matter));
+                var __VLS_88;
             }
             var __VLS_52;
         }
         else {
-            const __VLS_85 = {}.NCard;
+            const __VLS_89 = {}.NCard;
             /** @type {[typeof __VLS_components.NCard, typeof __VLS_components.NCard, ]} */ ;
             // @ts-ignore
-            const __VLS_86 = __VLS_asFunctionalComponent(__VLS_85, new __VLS_85({}));
-            const __VLS_87 = __VLS_86({}, ...__VLS_functionalComponentArgsRest(__VLS_86));
-            __VLS_88.slots.default;
+            const __VLS_90 = __VLS_asFunctionalComponent(__VLS_89, new __VLS_89({}));
+            const __VLS_91 = __VLS_90({}, ...__VLS_functionalComponentArgsRest(__VLS_90));
+            __VLS_92.slots.default;
             {
-                const { header: __VLS_thisSlot } = __VLS_88.slots;
+                const { header: __VLS_thisSlot } = __VLS_92.slots;
                 __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({});
                 (__VLS_ctx.t('yourBallot'));
-                const __VLS_89 = {}.NText;
+                const __VLS_93 = {}.NText;
                 /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
                 // @ts-ignore
-                const __VLS_90 = __VLS_asFunctionalComponent(__VLS_89, new __VLS_89({
-                    depth: (3),
-                    ...{ style: {} },
-                }));
-                const __VLS_91 = __VLS_90({
-                    depth: (3),
-                    ...{ style: {} },
-                }, ...__VLS_functionalComponentArgsRest(__VLS_90));
-                __VLS_92.slots.default;
-                (__VLS_ctx.context.gathering.title);
-                var __VLS_92;
-            }
-            if (__VLS_ctx.submitError) {
-                const __VLS_93 = {}.NAlert;
-                /** @type {[typeof __VLS_components.NAlert, typeof __VLS_components.NAlert, ]} */ ;
-                // @ts-ignore
                 const __VLS_94 = __VLS_asFunctionalComponent(__VLS_93, new __VLS_93({
-                    ...{ 'onClose': {} },
-                    type: "error",
-                    closable: true,
-                    ...{ style: {} },
+                    depth: (3),
+                    ...{ class: "vw-header-note" },
                 }));
                 const __VLS_95 = __VLS_94({
+                    depth: (3),
+                    ...{ class: "vw-header-note" },
+                }, ...__VLS_functionalComponentArgsRest(__VLS_94));
+                __VLS_96.slots.default;
+                (__VLS_ctx.context.gathering.title);
+                var __VLS_96;
+            }
+            if (__VLS_ctx.submitError) {
+                const __VLS_97 = {}.NAlert;
+                /** @type {[typeof __VLS_components.NAlert, typeof __VLS_components.NAlert, ]} */ ;
+                // @ts-ignore
+                const __VLS_98 = __VLS_asFunctionalComponent(__VLS_97, new __VLS_97({
                     ...{ 'onClose': {} },
                     type: "error",
                     closable: true,
-                    ...{ style: {} },
-                }, ...__VLS_functionalComponentArgsRest(__VLS_94));
-                let __VLS_97;
-                let __VLS_98;
-                let __VLS_99;
-                const __VLS_100 = {
+                    ...{ class: "vw-block" },
+                }));
+                const __VLS_99 = __VLS_98({
+                    ...{ 'onClose': {} },
+                    type: "error",
+                    closable: true,
+                    ...{ class: "vw-block" },
+                }, ...__VLS_functionalComponentArgsRest(__VLS_98));
+                let __VLS_101;
+                let __VLS_102;
+                let __VLS_103;
+                const __VLS_104 = {
                     onClose: (...[$event]) => {
                         if (!(__VLS_ctx.context))
                             return;
@@ -593,124 +603,143 @@ if (__VLS_ctx.context) {
                         __VLS_ctx.submitError = null;
                     }
                 };
-                __VLS_96.slots.default;
+                __VLS_100.slots.default;
                 (__VLS_ctx.submitError);
-                var __VLS_96;
+                var __VLS_100;
             }
             for (const [matter] of __VLS_getVForSourceType((__VLS_ctx.informativeMatters))) {
                 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                     key: (matter.id),
-                    ...{ style: {} },
+                    ...{ class: "vw-block" },
                 });
-                const __VLS_101 = {}.NCard;
+                const __VLS_105 = {}.NCard;
                 /** @type {[typeof __VLS_components.NCard, typeof __VLS_components.NCard, ]} */ ;
                 // @ts-ignore
-                const __VLS_102 = __VLS_asFunctionalComponent(__VLS_101, new __VLS_101({
+                const __VLS_106 = __VLS_asFunctionalComponent(__VLS_105, new __VLS_105({
                     size: "small",
                     embedded: true,
                 }));
-                const __VLS_103 = __VLS_102({
+                const __VLS_107 = __VLS_106({
                     size: "small",
                     embedded: true,
-                }, ...__VLS_functionalComponentArgsRest(__VLS_102));
-                __VLS_104.slots.default;
+                }, ...__VLS_functionalComponentArgsRest(__VLS_106));
+                __VLS_108.slots.default;
                 {
-                    const { header: __VLS_thisSlot } = __VLS_104.slots;
-                    const __VLS_105 = {}.NText;
+                    const { header: __VLS_thisSlot } = __VLS_108.slots;
+                    const __VLS_109 = {}.NText;
                     /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
                     // @ts-ignore
-                    const __VLS_106 = __VLS_asFunctionalComponent(__VLS_105, new __VLS_105({
-                        ...{ style: {} },
-                    }));
-                    const __VLS_107 = __VLS_106({
-                        ...{ style: {} },
-                    }, ...__VLS_functionalComponentArgsRest(__VLS_106));
-                    __VLS_108.slots.default;
-                    (__VLS_ctx.matterTitle(matter));
-                    var __VLS_108;
-                    const __VLS_109 = {}.NTag;
-                    /** @type {[typeof __VLS_components.NTag, typeof __VLS_components.NTag, ]} */ ;
-                    // @ts-ignore
                     const __VLS_110 = __VLS_asFunctionalComponent(__VLS_109, new __VLS_109({
-                        size: "tiny",
-                        ...{ style: {} },
+                        ...{ class: "vw-body-text" },
                     }));
                     const __VLS_111 = __VLS_110({
-                        size: "tiny",
-                        ...{ style: {} },
+                        ...{ class: "vw-body-text" },
                     }, ...__VLS_functionalComponentArgsRest(__VLS_110));
                     __VLS_112.slots.default;
-                    (__VLS_ctx.t('informational'));
+                    (__VLS_ctx.matterTitle(matter));
                     var __VLS_112;
+                    const __VLS_113 = {}.NTag;
+                    /** @type {[typeof __VLS_components.NTag, typeof __VLS_components.NTag, ]} */ ;
+                    // @ts-ignore
+                    const __VLS_114 = __VLS_asFunctionalComponent(__VLS_113, new __VLS_113({
+                        size: "tiny",
+                        ...{ class: "vw-header-tag" },
+                    }));
+                    const __VLS_115 = __VLS_114({
+                        size: "tiny",
+                        ...{ class: "vw-header-tag" },
+                    }, ...__VLS_functionalComponentArgsRest(__VLS_114));
+                    __VLS_116.slots.default;
+                    (__VLS_ctx.t('informational'));
+                    var __VLS_116;
                 }
-                const __VLS_113 = {}.NText;
+                const __VLS_117 = {}.NText;
                 /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
                 // @ts-ignore
-                const __VLS_114 = __VLS_asFunctionalComponent(__VLS_113, new __VLS_113({
+                const __VLS_118 = __VLS_asFunctionalComponent(__VLS_117, new __VLS_117({
                     depth: (2),
-                    ...{ style: {} },
+                    ...{ class: "vw-body-text" },
                 }));
-                const __VLS_115 = __VLS_114({
+                const __VLS_119 = __VLS_118({
                     depth: (2),
-                    ...{ style: {} },
-                }, ...__VLS_functionalComponentArgsRest(__VLS_114));
-                __VLS_116.slots.default;
+                    ...{ class: "vw-body-text" },
+                }, ...__VLS_functionalComponentArgsRest(__VLS_118));
+                __VLS_120.slots.default;
                 (__VLS_ctx.matterDescription(matter));
-                var __VLS_116;
-                var __VLS_104;
+                var __VLS_120;
+                var __VLS_108;
             }
             /** @type {[typeof BallotForm, ]} */ ;
             // @ts-ignore
-            const __VLS_117 = __VLS_asFunctionalComponent(BallotForm, new BallotForm({
+            const __VLS_121 = __VLS_asFunctionalComponent(BallotForm, new BallotForm({
                 matters: (__VLS_ctx.votableMatters),
                 modelValue: (__VLS_ctx.ballotVotes),
-            }));
-            const __VLS_118 = __VLS_117({
-                matters: (__VLS_ctx.votableMatters),
-                modelValue: (__VLS_ctx.ballotVotes),
-            }, ...__VLS_functionalComponentArgsRest(__VLS_117));
-            const __VLS_120 = {}.NSpace;
-            /** @type {[typeof __VLS_components.NSpace, typeof __VLS_components.NSpace, ]} */ ;
-            // @ts-ignore
-            const __VLS_121 = __VLS_asFunctionalComponent(__VLS_120, new __VLS_120({
-                justify: "end",
-                ...{ style: {} },
             }));
             const __VLS_122 = __VLS_121({
-                justify: "end",
-                ...{ style: {} },
+                matters: (__VLS_ctx.votableMatters),
+                modelValue: (__VLS_ctx.ballotVotes),
             }, ...__VLS_functionalComponentArgsRest(__VLS_121));
-            __VLS_123.slots.default;
-            const __VLS_124 = {}.NButton;
-            /** @type {[typeof __VLS_components.NButton, typeof __VLS_components.NButton, ]} */ ;
+            const __VLS_124 = {}.NSpace;
+            /** @type {[typeof __VLS_components.NSpace, typeof __VLS_components.NSpace, ]} */ ;
             // @ts-ignore
             const __VLS_125 = __VLS_asFunctionalComponent(__VLS_124, new __VLS_124({
+                justify: "end",
+                ...{ class: "vw-actions" },
+            }));
+            const __VLS_126 = __VLS_125({
+                justify: "end",
+                ...{ class: "vw-actions" },
+            }, ...__VLS_functionalComponentArgsRest(__VLS_125));
+            __VLS_127.slots.default;
+            const __VLS_128 = {}.NButton;
+            /** @type {[typeof __VLS_components.NButton, typeof __VLS_components.NButton, ]} */ ;
+            // @ts-ignore
+            const __VLS_129 = __VLS_asFunctionalComponent(__VLS_128, new __VLS_128({
                 ...{ 'onClick': {} },
                 type: "primary",
                 loading: (__VLS_ctx.submitting),
                 disabled: (!__VLS_ctx.canSubmit),
             }));
-            const __VLS_126 = __VLS_125({
+            const __VLS_130 = __VLS_129({
                 ...{ 'onClick': {} },
                 type: "primary",
                 loading: (__VLS_ctx.submitting),
                 disabled: (!__VLS_ctx.canSubmit),
-            }, ...__VLS_functionalComponentArgsRest(__VLS_125));
-            let __VLS_128;
-            let __VLS_129;
-            let __VLS_130;
-            const __VLS_131 = {
+            }, ...__VLS_functionalComponentArgsRest(__VLS_129));
+            let __VLS_132;
+            let __VLS_133;
+            let __VLS_134;
+            const __VLS_135 = {
                 onClick: (__VLS_ctx.handleSubmit)
             };
-            __VLS_127.slots.default;
+            __VLS_131.slots.default;
             (__VLS_ctx.t('submitBallot'));
+            var __VLS_131;
             var __VLS_127;
-            var __VLS_123;
-            var __VLS_88;
+            var __VLS_92;
         }
     }
 }
 var __VLS_3;
+/** @type {__VLS_StyleScopedClasses['vw-block']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-block']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-title']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-subtitle']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-block']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-status']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-block']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-block']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-hash']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-voted']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-voted__matter']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-voted__values']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-header-note']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-block']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-block']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-body-text']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-header-tag']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-body-text']} */ ;
+/** @type {__VLS_StyleScopedClasses['vw-actions']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {

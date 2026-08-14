@@ -152,7 +152,7 @@
               <NGridItem>
                 <h5>{{ $t('gatherings.results.votes') }}</h5>
                 <NDataTable
-                  :columns="getVoteColumns(result)"
+                  :columns="getVoteColumns()"
                   :data="result.votes || []"
                   :pagination="false"
                   size="small"
@@ -229,7 +229,7 @@ import {
 } from 'naive-ui'
 import { DownloadOutlined } from '@vicons/antd'
 import { votingApi } from '@/services/api'
-import type { Gathering, VotingResults, VoteResult, MatterResult } from '@/types/api'
+import type { Gathering, VotingResults, VoteResult } from '@/types/api'
 
 interface Props {
   associationId: number
@@ -266,7 +266,7 @@ const formatDate = (dateString: string) => {
 
 // Returns vote table columns; percentage columns show % among votes cast,
 // plus a separate column for weight as % of qualified
-const getVoteColumns = (result: MatterResult): DataTableColumns<VoteResult> => {
+const getVoteColumns = (): DataTableColumns<VoteResult> => {
   const qualifiedWeight = results.value?.statistics?.qualified_weight ?? 0
 
   return [

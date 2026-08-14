@@ -237,7 +237,6 @@ import {
   NCheckboxGroup,
   NSpin,
   NAlert,
-  NTag,
   NDescriptions,
   NDescriptionsItem,
   useMessage,

@@ -7,15 +7,13 @@ import {
   NButton,
   NDescriptions,
   NDescriptionsItem,
-  NSpace,
-  NDivider,
   NEmpty,
   NTag,
   NDataTable,
   NTabs,
   NTabPane
 } from 'naive-ui'
-import type { DataTableColumns } from 'naive-ui'
+
 import { unitApi } from '@/services/api'
 import OwnershipManager from './OwnershipManager.vue'
 import type {
@@ -166,11 +164,6 @@ const fetchUnitReport = async (): Promise<void> => {
 // Handle ownership updates
 const handleOwnershipUpdated = (): void => {
   fetchUnitReport()
-}
-
-// Handle edit unit button click
-const handleEditUnit = (): void => {
-  emit('edit-unit')
 }
 
 // Watch for property changes to reload data

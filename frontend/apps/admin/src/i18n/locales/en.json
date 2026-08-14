@@ -33,6 +33,7 @@
     "inactive": "Inactive",
     "status": "Status",
     "hide": "Hide",
+    "id": "ID",
     "notFound": "Page not found",
     "dateRange": "Date Range",
     "reset_filters": "Reset Filters",

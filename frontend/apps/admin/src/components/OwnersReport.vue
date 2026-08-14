@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, h } from 'vue'
+import { ref, computed, watch, h } from 'vue'
 import {
   NCard,
   NDataTable,
@@ -162,8 +162,6 @@ const columns = computed<DataTableColumns<OwnerReportItem>>(() => {
   return cols
 })
 
-
-
 // Fetch owners report
 const fetchOwnersReport = async (forceUnits = false): Promise<void> => {
   if (!props.associationId) return
@@ -276,17 +274,11 @@ const exportToCSV = async (): Promise<void> => {
       return row
     })
 
-    // Create CSV content
-    let csvContent = headers.join(',') + '\n'
+    // Create CSV content. Headers are translated, so they can contain commas
+    // too and need the same escaping as the values.
+    let csvContent = headers.map(csvEscape).join(',') + '\n'
     rows.forEach(row => {
-      // Properly escape values that might contain commas
-      const escapedRow = row.map(value => {
-        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
-          return `"${value.replace(/"/g, '""')}"`
-        }
-        return value
-      })
-      csvContent += escapedRow.join(',') + '\n'
+      csvContent += row.map(csvEscape).join(',') + '\n'
     })
 
     // Add summary data
@@ -490,7 +482,5 @@ watch(unitsNeeded, () => {
   display: flex;
   gap: 16px;
 }
-
-
 
 </style>

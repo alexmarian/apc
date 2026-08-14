@@ -1,4 +1,7 @@
 import './assets/main.css'
+// The widgets' scoped styles are extracted to their own stylesheet at build
+// time; without this import they never load and the widgets lose their layout.
+import '@apc/voting-widgets/style.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'

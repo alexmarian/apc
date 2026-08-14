@@ -1,12 +1,12 @@
 <template>
   <NSpin :show="loading">
-    <NAlert v-if="fetchError" type="error" style="margin-bottom: 16px">
+    <NAlert v-if="fetchError" type="error" class="vr-block">
       {{ fetchError }}
     </NAlert>
 
     <template v-if="context">
       <!-- Summary header -->
-      <NCard style="margin-bottom: 16px">
+      <NCard class="vr-block">
         <NDescriptions :column="2" label-placement="top" size="small">
           <NDescriptionsItem :label="t('gathering')">{{ context.gathering.title }}</NDescriptionsItem>
           <NDescriptionsItem :label="t('status')">
@@ -26,7 +26,7 @@
       <!-- Results available -->
       <template v-else>
         <!-- Summary statistics -->
-        <NCard size="small" style="margin-bottom: 16px" :title="t('participationSummary')">
+        <NCard size="small" class="vr-block" :title="t('participationSummary')">
           <NDescriptions :column="3" label-placement="top" size="small">
             <NDescriptionsItem :label="t('participated')">
               {{ results.statistics.participating_units }} {{ t('units') }}
@@ -41,10 +41,10 @@
         </NCard>
 
         <!-- Per-matter breakdown -->
-        <div v-for="matter in results.results" :key="matter.matter_id" style="margin-bottom: 16px">
+        <div v-for="matter in results.results" :key="matter.matter_id" class="vr-block">
           <NCard size="small">
             <template #header>
-              <NSpace align="center" justify="space-between" style="flex-wrap: wrap; gap: 4px">
+              <NSpace align="center" justify="space-between" :size="4">
                 <NText strong>{{ matter.matter_title }}</NText>
                 <NTag :type="matter.is_passed ? 'success' : 'error'" size="small">
                   {{ matter.is_passed ? t('passed') : t('failed') }}
@@ -57,7 +57,7 @@
               v-if="memberVotedOnMatter(matter.matter_id)"
               type="success"
               size="small"
-              style="margin-bottom: 12px"
+              class="vr-vote-notice"
             >
               {{ t('yourVoteCounted') }}
             </NAlert>
@@ -65,23 +65,26 @@
               v-else-if="context.ballot"
               type="default"
               size="small"
-              style="margin-bottom: 12px"
+              class="vr-vote-notice"
             >
               {{ t('didNotVote') }}
             </NAlert>
 
             <!-- Vote breakdown -->
-            <div v-for="vote in sortedVotes(matter)" :key="vote.choice" style="margin-bottom: 10px">
-              <NSpace align="center" justify="space-between" style="margin-bottom: 4px">
+            <div v-for="vote in sortedVotes(matter)" :key="vote.choice" class="vr-vote">
+              <NSpace align="center" justify="space-between" class="vr-vote__head">
                 <NSpace align="center" size="small">
-                  <NText :style="isMyChoice(matter.matter_id, vote.choice) ? 'font-weight:600;color:#18a058' : ''">
+                  <NText
+                    :type="isMyChoice(matter.matter_id, vote.choice) ? 'success' : 'default'"
+                    :strong="isMyChoice(matter.matter_id, vote.choice)"
+                  >
                     {{ formatChoice(vote.choice, matter.voting_config) }}
                   </NText>
                   <NTag v-if="isMyChoice(matter.matter_id, vote.choice)" type="success" size="tiny">
                     {{ t('yourVote') }}
                   </NTag>
                 </NSpace>
-                <NText :depth="2" style="font-size: var(--text-sm, 12px)">
+                <NText :depth="2" class="vr-meta">
                   {{ vote.vote_count }} {{ vote.vote_count !== 1 ? t('votes') : t('vote') }}
                   ({{ vote.percentage.toFixed(1) }}%<template v-if="results?.statistics?.voting_mode === 'by_weight'">&nbsp;· {{ t('weight') }}: {{ vote.weight_percentage.toFixed(1) }}%</template>)
                 </NText>
@@ -97,8 +100,8 @@
             </div>
 
             <!-- Quorum info -->
-            <NDivider style="margin: 8px 0" />
-            <NText :depth="3" style="font-size: var(--text-sm, 12px)">
+            <NDivider class="vr-divider" />
+            <NText :depth="3" class="vr-meta">
               {{ t('quorum') }}: {{ matter.quorum_info?.met ? t('quorumMet') : t('quorumNotMet') }}
               <template v-if="matter.quorum_info">
                 — {{ matter.quorum_info.achieved_percentage.toFixed(1) }}% {{ t('of') }}
@@ -258,7 +261,27 @@ onMounted(fetchContext)
 </script>
 
 <style scoped>
-.n-card {
-  border-radius: 8px;
+.vr-block {
+  margin-bottom: 16px;
+}
+
+.vr-vote-notice {
+  margin-bottom: 12px;
+}
+
+.vr-vote {
+  margin-bottom: 10px;
+}
+
+.vr-vote__head {
+  margin-bottom: 4px;
+}
+
+.vr-meta {
+  font-size: var(--text-sm, 12px);
+}
+
+.vr-divider {
+  margin: 8px 0;
 }
 </style>

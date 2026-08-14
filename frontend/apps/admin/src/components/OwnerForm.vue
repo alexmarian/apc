@@ -166,7 +166,7 @@ const submitForm = async (e: MouseEvent) => {
   if (formRef.value) {
     try {
       await formRef.value.validate()
-    } catch (err) {
+    } catch {
       console.log('Form validation failed, using manual validation')
       isValid = false
     }
@@ -248,7 +248,7 @@ onMounted(() => {
         require-mark-placement="right-hanging"
       >
         <!-- Readonly Owner ID for edit mode -->
-        <NFormItem v-if="isEditMode && originalOwner" :label="'Owner ID'">
+        <NFormItem v-if="isEditMode && originalOwner" :label="t('common.id')">
           <NInput
             :value="originalOwner.id.toString()"
             readonly

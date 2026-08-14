@@ -3,12 +3,12 @@
     <div
       v-for="matter in matters"
       :key="matter.id"
-      style="margin-bottom: 20px"
+      class="bf-matter"
     >
       <NCard size="small">
         <template #header>{{ matterTitle(matter) }}</template>
 
-        <NText v-if="matter.description || matter.description_ru" :depth="2" style="display: block; margin-bottom: 12px; font-size: var(--text-md, 14px)">
+        <NText v-if="matter.description || matter.description_ru" :depth="2" class="bf-description">
           {{ matterDescription(matter) }}
         </NText>
 
@@ -66,16 +66,16 @@
 
         <!-- ranking -->
         <div v-else-if="matter.voting_config.type === 'ranking'">
-          <NText :depth="3" style="font-size: var(--text-sm, 12px); margin-bottom: 10px; display: block">
+          <NText :depth="3" class="bf-hint">
             {{ t('rankingHint') }}
           </NText>
           <div
             v-for="(optId, idx) in rankValue(matter.id)"
             :key="optId"
-            style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; padding: 6px 10px; border: 1px solid var(--n-border-color); border-radius: 4px"
+            class="bf-rank-row"
           >
-            <NText :depth="3" style="min-width: 20px; text-align: center; font-weight: 600">{{ idx + 1 }}</NText>
-            <NText style="flex: 1">{{ optionText(matter, optId) }}</NText>
+            <NText :depth="3" class="bf-rank-row__index">{{ idx + 1 }}</NText>
+            <NText class="bf-rank-row__label">{{ optionText(matter, optId) }}</NText>
             <NButton size="tiny" :disabled="idx === 0" @click="moveRank(matter.id, idx, -1)">↑</NButton>
             <NButton
               size="tiny"
@@ -201,3 +201,47 @@ function optionText(matter: MatterInfo, optId: string): string {
   return matter.voting_config.options?.find(o => o.id === optId)?.text ?? optId
 }
 </script>
+
+<style scoped>
+.bf-matter {
+  margin-bottom: 20px;
+}
+
+.bf-description {
+  display: block;
+  margin-bottom: 12px;
+  font-size: var(--text-md, 14px);
+}
+
+.bf-hint {
+  display: block;
+  margin-bottom: 10px;
+  font-size: var(--text-sm, 12px);
+}
+
+/*
+ * --n-border-color is naive's own variable, published on the enclosing NCard's
+ * root and inherited here. It is used rather than the app-level --border-color
+ * because apps/member has no ThemeTokens bridge to publish that one, so this is
+ * the only border token that resolves in both consuming apps.
+ */
+.bf-rank-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--n-border-color);
+  border-radius: var(--border-radius, 4px);
+}
+
+.bf-rank-row__index {
+  min-width: 20px;
+  text-align: center;
+  font-weight: var(--font-weight-strong, 500);
+}
+
+.bf-rank-row__label {
+  flex: 1;
+}
+</style>

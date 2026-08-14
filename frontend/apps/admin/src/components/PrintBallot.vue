@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { NButton, NSpin } from 'naive-ui'
+import { NButton } from 'naive-ui'
 import { votingMatterApi, associationApi } from '@/services/api'
 import type { Gathering, VotingMatter } from '@/types/api'
 import { VotingType } from '@/types/api'

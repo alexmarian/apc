@@ -1,6 +1,6 @@
 <!-- src/providers/ThemeProvider.vue -->
 <script setup lang="ts">
-import { ref, provide, computed, watchEffect, watch } from 'vue'
+import { computed, watch } from 'vue'
 import {
   darkTheme,
   lightTheme,

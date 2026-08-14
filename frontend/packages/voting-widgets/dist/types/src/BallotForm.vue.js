@@ -84,11 +84,13 @@ debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
+// CSS variable injection 
+// CSS variable injection end 
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
 for (const [matter] of __VLS_getVForSourceType((__VLS_ctx.matters))) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         key: (matter.id),
-        ...{ style: {} },
+        ...{ class: "bf-matter" },
     });
     const __VLS_0 = {}.NCard;
     /** @type {[typeof __VLS_components.NCard, typeof __VLS_components.NCard, ]} */ ;
@@ -110,11 +112,11 @@ for (const [matter] of __VLS_getVForSourceType((__VLS_ctx.matters))) {
         // @ts-ignore
         const __VLS_5 = __VLS_asFunctionalComponent(__VLS_4, new __VLS_4({
             depth: (2),
-            ...{ style: {} },
+            ...{ class: "bf-description" },
         }));
         const __VLS_6 = __VLS_5({
             depth: (2),
-            ...{ style: {} },
+            ...{ class: "bf-description" },
         }, ...__VLS_functionalComponentArgsRest(__VLS_5));
         __VLS_7.slots.default;
         (__VLS_ctx.matterDescription(matter));
@@ -321,11 +323,11 @@ for (const [matter] of __VLS_getVForSourceType((__VLS_ctx.matters))) {
         // @ts-ignore
         const __VLS_69 = __VLS_asFunctionalComponent(__VLS_68, new __VLS_68({
             depth: (3),
-            ...{ style: {} },
+            ...{ class: "bf-hint" },
         }));
         const __VLS_70 = __VLS_69({
             depth: (3),
-            ...{ style: {} },
+            ...{ class: "bf-hint" },
         }, ...__VLS_functionalComponentArgsRest(__VLS_69));
         __VLS_71.slots.default;
         (__VLS_ctx.t('rankingHint'));
@@ -333,18 +335,18 @@ for (const [matter] of __VLS_getVForSourceType((__VLS_ctx.matters))) {
         for (const [optId, idx] of __VLS_getVForSourceType((__VLS_ctx.rankValue(matter.id)))) {
             __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
                 key: (optId),
-                ...{ style: {} },
+                ...{ class: "bf-rank-row" },
             });
             const __VLS_72 = {}.NText;
             /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
             // @ts-ignore
             const __VLS_73 = __VLS_asFunctionalComponent(__VLS_72, new __VLS_72({
                 depth: (3),
-                ...{ style: {} },
+                ...{ class: "bf-rank-row__index" },
             }));
             const __VLS_74 = __VLS_73({
                 depth: (3),
-                ...{ style: {} },
+                ...{ class: "bf-rank-row__index" },
             }, ...__VLS_functionalComponentArgsRest(__VLS_73));
             __VLS_75.slots.default;
             (idx + 1);
@@ -353,10 +355,10 @@ for (const [matter] of __VLS_getVForSourceType((__VLS_ctx.matters))) {
             /** @type {[typeof __VLS_components.NText, typeof __VLS_components.NText, ]} */ ;
             // @ts-ignore
             const __VLS_77 = __VLS_asFunctionalComponent(__VLS_76, new __VLS_76({
-                ...{ style: {} },
+                ...{ class: "bf-rank-row__label" },
             }));
             const __VLS_78 = __VLS_77({
-                ...{ style: {} },
+                ...{ class: "bf-rank-row__label" },
             }, ...__VLS_functionalComponentArgsRest(__VLS_77));
             __VLS_79.slots.default;
             (__VLS_ctx.optionText(matter, optId));
@@ -427,6 +429,12 @@ for (const [matter] of __VLS_getVForSourceType((__VLS_ctx.matters))) {
     }
     var __VLS_3;
 }
+/** @type {__VLS_StyleScopedClasses['bf-matter']} */ ;
+/** @type {__VLS_StyleScopedClasses['bf-description']} */ ;
+/** @type {__VLS_StyleScopedClasses['bf-hint']} */ ;
+/** @type {__VLS_StyleScopedClasses['bf-rank-row']} */ ;
+/** @type {__VLS_StyleScopedClasses['bf-rank-row__index']} */ ;
+/** @type {__VLS_StyleScopedClasses['bf-rank-row__label']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {

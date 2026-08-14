@@ -67,7 +67,7 @@ const handleUpdateValue = (value: number) => {
 // Watch for association changes
 watch(
   () => props.associationId,
-  (newValue) => {
+  () => {
     fetchBuildings()
   },
   { immediate: true }

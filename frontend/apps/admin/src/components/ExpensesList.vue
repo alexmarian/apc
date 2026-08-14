@@ -9,21 +9,19 @@ import {
   NAlert,
   useMessage,
   NDatePicker,
-  NSelect,
   NCard,
   NFlex,
   NText
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { expenseApi } from '@/services/api'
-import type { Expense, ApiResponse } from '@/types/api'
+import type { Expense } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
 import CategorySelector from '@/components/CategorySelector.vue'
 import FilterBar from '@/components/FilterBar.vue'
 import FilterField from '@/components/FilterField.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useI18n } from 'vue-i18n'
-import LocalizedCategoryDisplay from './LocalizedCategoryDisplay.vue'
 
 // Props
 const props = defineProps<{

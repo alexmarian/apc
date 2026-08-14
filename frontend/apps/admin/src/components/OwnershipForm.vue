@@ -15,7 +15,7 @@ import {
   NDivider,
   useMessage
 } from 'naive-ui'
-import { ownerApi, unitApi, ownershipApi } from '@/services/api'
+import { ownerApi, ownershipApi } from '@/services/api'
 import type { Owner } from '@/types/api'
 import type { FormRules } from 'naive-ui'
 import { useI18n } from 'vue-i18n'

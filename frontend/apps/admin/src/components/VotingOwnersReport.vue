@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, h } from 'vue'
+import { ref, computed, watch, h } from 'vue'
 import {
   NCard,
   NDataTable,
@@ -8,15 +8,11 @@ import {
   NButton,
   useMessage,
   NSpace,
-  NInput,
   NInputGroup,
   NSelect,
-  NInputNumber,
-  NFormItem,
   NForm,
   NGrid,
-  NFormItemGi,
-  NCheckbox
+  NFormItemGi
 } from 'naive-ui'
 import type { DataTableColumns, SelectOption } from 'naive-ui'
 import { ownerApi } from '@/services/api'

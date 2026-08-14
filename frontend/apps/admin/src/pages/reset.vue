@@ -12,6 +12,7 @@ import {
   NResult,
   NText
 } from 'naive-ui'
+import type { FormInst } from 'naive-ui'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { useI18n } from 'vue-i18n'
 import { authApi } from '@/services/api.ts'
@@ -33,7 +34,7 @@ const loading = ref(false)
 const error = ref('')
 const success = ref(false)
 const qrCode = ref('')
-const formRef = ref(null)
+const formRef = ref<FormInst | null>(null)
 
 // Get token from route
 onMounted(() => {
@@ -50,7 +51,6 @@ const handleResetPassword = async (e: MouseEvent) => {
   if (!formRef.value) return
 
   try {
-    // @ts-ignore - Naive UI types issue with form ref
     await formRef.value.validate()
 
     if (formData.newPassword !== formData.confirmPassword) {

@@ -59,12 +59,11 @@ const categoryFamilyOptions = ref<{ label: string; value: string }[]>([])
 const initialLoadComplete = ref<boolean>(false)
 
 const unitTypeOptions = computed(() =>
-  Object.entries(UnitType).map(([key, value]) => ({
+  Object.values(UnitType).map(value => ({
     label: t(`unitTypes.${value}`),
     value: value as string
   }))
 )
-
 
 // Computed properties
 const associationId = computed(() => props.associationId)

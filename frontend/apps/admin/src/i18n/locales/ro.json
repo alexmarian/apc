@@ -33,6 +33,7 @@
     "inactive": "Inactiv",
     "status": "Status",
     "hide": "Ascunde",
+    "id": "ID",
     "notFound": "Pagină lipsă",
     "dateRange": "Interval de date",
     "reset_filters": "Resetează filtrele",

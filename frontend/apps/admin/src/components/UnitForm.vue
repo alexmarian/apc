@@ -45,7 +45,7 @@ interface UnitFormData {
 }
 
 const unitTypeOptions = computed(() =>
-  Object.entries(UnitType).map(([key, value]) => ({
+  Object.values(UnitType).map(value => ({
     label: t(`unitTypes.${value}`),
     value
   }))

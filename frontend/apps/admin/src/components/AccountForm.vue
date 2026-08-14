@@ -4,7 +4,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { NForm, NFormItem, NInput, NButton, NSpace, NSpin, NAlert, useMessage } from 'naive-ui'
 import { accountApi } from '@/services/api'
 import type { Account, AccountCreateRequest, AccountUpdateRequest } from '@/types/api'
-import type { FormRules } from 'naive-ui'
+import type { FormInst, FormRules } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 
 // Props
@@ -44,7 +44,7 @@ const rules: FormRules = {
 const loading = ref<boolean>(false)
 const submitting = ref<boolean>(false)
 const error = ref<string | null>(null)
-const formRef = ref(null)
+const formRef = ref<FormInst | null>(null)
 const originalAccount = ref<Account | null>(null)
 
 const isEditMode = computed(() => !!props.accountId)
@@ -80,7 +80,6 @@ const submitForm = async (e: MouseEvent) => {
   if (!formRef.value) return
 
   try {
-    // @ts-ignore - Naive UI types issue with form ref
     await formRef.value.validate()
 
     submitting.value = true
@@ -153,7 +152,7 @@ onMounted(() => {
         require-mark-placement="right-hanging"
       >
         <!-- Readonly Account ID for edit mode -->
-        <NFormItem v-if="isEditMode && originalAccount" :label="'Account ID'">
+        <NFormItem v-if="isEditMode && originalAccount" :label="t('common.id')">
           <NInput
             :value="originalAccount.id.toString()"
             readonly
