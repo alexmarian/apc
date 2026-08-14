@@ -1,19 +1,16 @@
 <template>
   <div class="voting-matters-manager">
-    <NCard>
-      <template #header>
-        <div class="matters-header">
-          <h3>{{ $t('gatherings.matters.title') }}</h3>
-          <NSpace>
-            <NButton
-              v-if="canEdit"
-              type="primary"
-              @click="showCreateModal = true"
-            >
-              {{ $t('gatherings.matters.create') }}
-            </NButton>
-          </NSpace>
-        </div>
+    <NCard :title="$t('gatherings.matters.title')">
+      <template #header-extra>
+        <NSpace>
+          <NButton
+            v-if="canEdit"
+            type="primary"
+            @click="showCreateModal = true"
+          >
+            {{ $t('gatherings.matters.create') }}
+          </NButton>
+        </NSpace>
       </template>
 
       <NSpin :show="loading">
@@ -48,7 +45,14 @@
     </NCard>
 
     <!-- Create/Edit Modal -->
-    <NModal v-model:show="showCreateModal">
+    <NModal
+      v-model:show="showCreateModal"
+      style="width: 750px"
+      preset="card"
+      :title="selectedMatter ? $t('gatherings.matters.edit') : $t('gatherings.matters.create')"
+      :mask-closable="false"
+      :close-on-esc="true"
+    >
       <VotingMatterForm
         :association-id="associationId"
         :gathering="gathering"
@@ -58,32 +62,6 @@
       />
     </NModal>
 
-    <!-- Delete Confirmation Modal -->
-    <NModal v-model:show="showDeleteModal">
-      <NCard style="width: 400px">
-        <template #header>
-          <h3>{{ $t('gatherings.matters.deleteConfirm') }}</h3>
-        </template>
-
-        <p>{{ $t('gatherings.matters.deleteWarning') }}</p>
-        <p v-if="selectedMatter"><strong>{{ selectedMatter.title }}</strong></p>
-
-        <div class="modal-actions">
-          <NSpace justify="end">
-            <NButton @click="showDeleteModal = false">
-              {{ $t('common.cancel') }}
-            </NButton>
-            <NButton
-              type="error"
-              @click="handleDeleteMatter"
-              :loading="deleting"
-            >
-              {{ $t('common.delete') }}
-            </NButton>
-          </NSpace>
-        </div>
-      </NCard>
-    </NModal>
   </div>
 </template>
 
@@ -107,6 +85,7 @@ import { ArrowUpOutline, ArrowDownOutline } from '@vicons/ionicons5'
 import { votingMatterApi } from '@/services/api'
 import type { Gathering, VotingMatter, VotingMatterType } from '@/types/api'
 import VotingMatterForm from '@/components/VotingMatterForm.vue'
+import { useConfirm } from '@/composables/useConfirm'
 
 interface Props {
   associationId: number
@@ -120,14 +99,13 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const confirm = useConfirm()
 
 const matters = ref<VotingMatter[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const showCreateModal = ref(false)
-const showDeleteModal = ref(false)
 const selectedMatter = ref<VotingMatter | undefined>(undefined)
-const deleting = ref(false)
 
 const canEdit = computed(() => {
   return props.gathering.status === 'draft'
@@ -346,30 +324,26 @@ const handleEditMatter = (matter: VotingMatter) => {
 }
 
 const handleDeleteConfirm = (matter: VotingMatter) => {
-  selectedMatter.value = matter
-  showDeleteModal.value = true
+  confirm({
+    title: t('gatherings.matters.deleteConfirm'),
+    content: `${t('gatherings.matters.deleteWarning')}\n\n${matter.title}`,
+    positiveText: t('common.delete'),
+    onConfirm: () => deleteMatter(matter)
+  })
 }
 
-const handleDeleteMatter = async () => {
-  if (!selectedMatter.value) return
-
-  deleting.value = true
-
+const deleteMatter = async (matter: VotingMatter) => {
   try {
     await votingMatterApi.deleteVotingMatter(
       props.associationId,
       props.gathering.id,
-      selectedMatter.value.id
+      matter.id
     )
 
-    showDeleteModal.value = false
-    selectedMatter.value = undefined
     await loadMatters()
     emit('updated')
   } catch (err: any) {
     error.value = err.response?.data?.message || err.message || t('common.error')
-  } finally {
-    deleting.value = false
   }
 }
 
@@ -393,16 +367,6 @@ onMounted(() => {
 <style scoped>
 .voting-matters-manager {
   margin-top: 16px;
-}
-
-.matters-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.matters-header h3 {
-  margin: 0;
 }
 
 .no-matters {

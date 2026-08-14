@@ -1,95 +1,31 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { NSelect, NSpin } from 'naive-ui'
-import FieldError from '@/components/FieldError.vue'
-import config from '@/config'
-import type { Association } from '@/types/api'
-import { associationApi } from '@/services/api.ts'
-import { syncCategoryLabels } from '@/utils/categoryLabels'
+import { computed } from 'vue'
+import { NSelect } from 'naive-ui'
+import { storeToRefs } from 'pinia'
+import { useAssociationStore } from '@/stores/association'
 import { useI18n } from 'vue-i18n'
 
-// Props
-const props = defineProps<{
-  associationId: number | null
-}>()
-
-// Emits
-const emit = defineEmits<{
-  (e: 'update:associationId', id: number): void
-}>()
-
-// I18n
 const { t } = useI18n()
 
-// State
-const associations = ref<Association[]>([])
-const loading = ref(true)
-const error = ref<string | null>(null)
+const store = useAssociationStore()
+const { associationId, associations, loading } = storeToRefs(store)
 
-// Fetch associations
-const fetchAssociations = async () => {
-  try {
-    loading.value = true
-    error.value = null
-
-    const token = localStorage.getItem(config.authTokenKey)
-
-    const response = await associationApi.getAssociations();
-
-    associations.value = response.data
-
-    // If we have associations but no selection, select the first one
-    if (associations.value.length > 0 && !props.associationId) {
-      const id = associations.value[0].id
-      emit('update:associationId', id)
-      syncCategoryLabels(id)
-    }
-  } catch (err) {
-    console.error('Error fetching associations:', err)
-    error.value = t('common.error')
-  } finally {
-    loading.value = false
-  }
-}
-
-// Format association options for NSelect
-const options = computed(() => {
-  return associations.value.map(assoc => ({
+const options = computed(() =>
+  associations.value.map(assoc => ({
     label: assoc.name,
     value: assoc.id
   }))
-})
-
-// Handle selection change
-const handleChange = (value: number) => {
-  emit('update:associationId', value)
-  syncCategoryLabels(value)
-}
-
-// Load associations on mount
-onMounted(() => {
-  fetchAssociations()
-})
+)
 </script>
 
 <template>
-  <div class="association-selector">
-    <NSpin :show="loading">
-      <NSelect
-        :value="props.associationId"
-        :options="options"
-        :placeholder="t('associations.select')"
-        @update:value="handleChange"
-        :disabled="loading || associations.length === 0"
-      />
-    </NSpin>
-    <FieldError v-if="error">{{ error }}</FieldError>
-  </div>
+  <NSelect
+    :value="associationId"
+    :options="options"
+    :loading="loading"
+    :placeholder="t('associations.select')"
+    :disabled="loading || associations.length === 0"
+    :consistent-menu-width="false"
+    @update:value="store.select"
+  />
 </template>
-
-<style scoped>
-.association-selector {
-  width: 100%;
-  max-width: 300px;
-}
-</style>

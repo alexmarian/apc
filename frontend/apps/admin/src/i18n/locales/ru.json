@@ -694,7 +694,8 @@
         "delegate": "Делегат"
       },
       "addBallotInfo": "Добавить данные бюллетеня",
-      "addBallotInfoDescription": "Добавить результаты голосования офлайн для этого участника"
+      "addBallotInfoDescription": "Добавить результаты голосования офлайн для этого участника",
+      "confirmRemove": "Вы уверены, что хотите удалить {name} из этого собрания?"
     },
     "voting": {
       "title": "Голосование",
@@ -796,7 +797,34 @@
     "invitations": {
       "title": "Приглашения",
       "printBallotRo": "Печать бюллетеня (RO)",
-      "printBallotRu": "Печать бюллетеня (RU)"
+      "printBallotRu": "Печать бюллетеня (RU)",
+      "qualifiedOwners": "{count} подходящий собственник | {count} подходящих собственника | {count} подходящих собственников",
+      "generateForVisible": "Создать для показанных ({count})",
+      "exportCsv": "Экспорт CSV",
+      "searchOwners": "Поиск собственников...",
+      "owner": "Собственник",
+      "expires": "Истекает",
+      "generateLink": "Создать ссылку",
+      "revoke": "Отозвать",
+      "statusActive": "Активна",
+      "statusExpired": "Истекла",
+      "statusRevoked": "Отозвана",
+      "statusNone": "Не создана",
+      "generateLinkFor": "Создать ссылку для {name}",
+      "generateAllLinks": "Создать все ссылки",
+      "expiryDate": "Дата окончания",
+      "selectExpiry": "Выберите дату окончания",
+      "generate": "Создать",
+      "copy": "Копировать",
+      "copied": "Скопировано",
+      "done": "Готово",
+      "linksNotRecoverable": "Эти ссылки нельзя восстановить после закрытия окна. Скопируйте их сейчас.",
+      "revokeTitle": "Отозвать приглашение",
+      "revokeWarning": "Отзыв ссылки для {name} немедленно аннулирует доступ. Позже можно создать новую ссылку.",
+      "generateError": "Не удалось создать приглашение",
+      "revokeError": "Не удалось отозвать приглашение",
+      "loadError": "Не удалось загрузить приглашения",
+      "link": "Ссылка"
     },
     "ballots": {
       "title": "Бюллетени",

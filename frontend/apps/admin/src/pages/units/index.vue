@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import { NCard, NButton, NSpace, NPageHeader, NDivider, useMessage, NModal } from 'naive-ui'
+import { NCard, NEmpty, NModal } from 'naive-ui'
+import PageShell from '@/components/PageShell.vue'
 import UnitsList from '@/components/UnitsList.vue'
 import UnitForm from '@/components/UnitForm.vue'
 import BuildingSelector from '@/components/BuildingSelector.vue'
@@ -13,8 +14,6 @@ import { useI18n } from 'vue-i18n'
 // Setup i18n
 const { t } = useI18n()
 
-// Setup Naive UI message system
-const message = useMessage()
 const router = useRouter()
 const route = useRoute()
 
@@ -60,10 +59,6 @@ const setDisplayedUnits = (units: Unit[]) => {
 }
 
 // Computed properties
-const formTitle = computed(() => {
-  return editingUnitId.value ? t('units.editUnit', 'Edit Unit') : t('units.createUnit', 'Create New Unit')
-})
-
 const canShowUnits = computed(() => {
   return associationId.value !== null && buildingId.value !== null
 })
@@ -146,54 +141,37 @@ watch([unitTypeFilter, searchQuery, currentPage], ([newUnitType, newSearch, newP
 </script>
 
 <template>
-  <div class="units-view">
-    <NPageHeader>
-      <template #title>
-        {{ t('units.management', 'Unit Management') }}
-      </template>
-
-      <template #header>
-        <div style="margin-bottom: 12px;">
-          <BuildingSelector
-            v-model:building-id="buildingId"
-            v-model:association-id="associationId"
-            @update:building-id="handleBuildingIdUpdate"
-          />
-        </div>
-      </template>
-    </NPageHeader>
-
-    <div v-if="!buildingId">
-      <NCard style="margin-top: 16px;">
-        <div style="text-align: center; padding: 32px;">
-          <p>{{ t('units.selectBuilding', 'Please select a building to manage units') }}</p>
-        </div>
-      </NCard>
-    </div>
-
-    <div v-else-if="canShowUnits">
-      <!-- Units list -->
-      <UnitsList
-        ref="unitsListRef"
-        :association-id="associationId"
-        :building-id="buildingId"
-        :unit-type-filter="unitTypeFilter"
-        :search-query="searchQuery"
-        :page="currentPage"
-        @edit="handleEditUnit"
-        @units-rendered="setDisplayedUnits"
-        @unit-type-changed="(newUnitType: string[]) => unitTypeFilter = newUnitType"
-        @search-query-changed="newQuery => searchQuery = newQuery"
-        @page-changed="newPage => currentPage = newPage"
+  <PageShell :title="t('units.management', 'Unit Management')">
+    <template #context>
+      <BuildingSelector
+        v-model:building-id="buildingId"
+        v-model:association-id="associationId"
+        @update:building-id="handleBuildingIdUpdate"
       />
-    </div>
+    </template>
+
+    <NCard v-if="!buildingId">
+      <NEmpty :description="t('units.selectBuilding', 'Please select a building to manage units')" />
+    </NCard>
+
+    <UnitsList
+      v-else-if="canShowUnits"
+      ref="unitsListRef"
+      :association-id="associationId"
+      :building-id="buildingId"
+      v-model:unit-type-filter="unitTypeFilter"
+      v-model:search-query="searchQuery"
+      v-model:page="currentPage"
+      @edit="handleEditUnit"
+      @units-rendered="setDisplayedUnits"
+    />
 
     <!-- Unit Edit Modal -->
     <NModal
       v-model:show="showUnitEditModal"
       style="width: 650px"
       preset="card"
-      :title="formTitle"
+      :title="t('units.editUnit', 'Edit Unit')"
       :mask-closable="false"
       :close-on-esc="true"
     >
@@ -206,12 +184,5 @@ watch([unitTypeFilter, searchQuery, currentPage], ([newUnitType, newSearch, newP
         @cancelled="handleUnitFormCancelled"
       />
     </NModal>
-  </div>
+  </PageShell>
 </template>
-
-<style scoped>
-.units-view {
-  width: 100%;
-  margin: 0 auto;
-}
-</style>

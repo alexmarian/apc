@@ -1,10 +1,5 @@
 <template>
-  <div class="gathering-form">
-    <NCard style="width: 600px">
-      <template #header>
-        <h2>{{ isEditMode ? $t('gatherings.edit') : $t('gatherings.create') }}</h2>
-      </template>
-
+  <FormShell>
       <NSpin :show="loading">
         <NAlert v-if="error" type="error" closable @close="error = null">
           {{ error }}
@@ -97,9 +92,8 @@
             </NButton>
           </NSpace>
         </div>
-      </NSpin>
-    </NCard>
-  </div>
+    </NSpin>
+  </FormShell>
 </template>
 
 <script setup lang="ts">
@@ -119,6 +113,7 @@ import {
   type FormInst,
   type FormRules
 } from 'naive-ui'
+import FormShell from '@/components/FormShell.vue'
 import { gatheringApi, unitApi, buildingApi } from '@/services/api'
 import type {
   GatheringCreateRequest,
@@ -341,14 +336,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.gathering-form {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: 16px;
-}
-
 .form-actions {
   margin-top: 24px;
 }

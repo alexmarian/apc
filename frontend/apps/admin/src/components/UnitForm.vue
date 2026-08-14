@@ -25,7 +25,7 @@ const message = useMessage()
 const props = defineProps<{
   associationId: number
   buildingId: number
-  unitId?: number
+  unitId: number
 }>()
 
 const emit = defineEmits<{
@@ -137,8 +137,6 @@ const error = ref<string | null>(null)
 const formRef = ref<FormInst | null>(null)
 const originalUnit = ref<Unit | null>(null)
 
-const isEditMode = computed(() => !!props.unitId)
-
 const resetValidation = async () => {
   if (formRef.value) {
     try {
@@ -149,23 +147,7 @@ const resetValidation = async () => {
   }
 }
 
-const resetForm = () => {
-  Object.assign(formData, {
-    unit_number: '',
-    address: '',
-    entrance: 1,
-    area: 0,
-    part: 0,
-    unit_type: 'apartment',
-    floor: 1,
-    room_count: 1
-  })
-  error.value = null
-}
-
 const fetchUnitDetails = async () => {
-  if (!props.unitId) return
-
   try {
     loading.value = true
     error.value = null
@@ -223,21 +205,19 @@ const handleSubmit = async () => {
       part: formData.part
     }
 
-    if (isEditMode.value && props.unitId) {
-      const response = await unitApi.updateUnit(
-        props.associationId,
-        props.buildingId,
-        props.unitId,
-        updateData
-      )
+    // Update only: the API exposes no POST for units, so this form never creates.
+    const response = await unitApi.updateUnit(
+      props.associationId,
+      props.buildingId,
+      props.unitId!,
+      updateData
+    )
 
-      // Show success message
-      message.success(t('units.unitSaved', { action: t('common.update') }))
+    // Show success message
+    message.success(t('units.unitSaved', { action: t('common.update') }))
 
-      // Emit the updated unit data so parent can update the list without reloading
-      emit('saved', response.data)
-    } else {
-    }
+    // Emit the updated unit data so parent can update the list without reloading
+    emit('saved', response.data)
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : t('common.error')
     error.value = errorMessage
@@ -253,20 +233,13 @@ const handleCancel = () => {
 }
 
 onMounted(() => {
-  if (isEditMode.value) {
-    fetchUnitDetails()
-  } else {
-    resetForm()
-  }
+  fetchUnitDetails()
 })
 </script>
 
 <template>
   <FormShell>
-    <h2 class="unit-form__title">
-      {{ isEditMode ? t('units.editUnit') : t('units.createUnit') }}
-    </h2>
-
+    <!-- No title here: every call site already titles the modal or page header. -->
     <NSpin :show="loading">
       <NAlert
         v-if="error"
@@ -380,7 +353,7 @@ onMounted(() => {
               @click="handleSubmit"
               :loading="submitting"
             >
-              {{ isEditMode ? t('common.update') : t('common.create') }}
+              {{ t('common.update') }}
             </NButton>
           </NSpace>
         </div>
@@ -390,13 +363,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.unit-form__title {
-  margin-bottom: 1.5rem;
-  font-size: var(--text-xl);
-  font-weight: 600;
-  color: var(--text-color-1);
-}
-
 .unit-form__error {
   margin-bottom: 1rem;
 }

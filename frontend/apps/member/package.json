@@ -11,6 +11,7 @@
     "type-check": "vue-tsc --build"
   },
   "dependencies": {
+    "@apc/theme": "*",
     "@apc/voting-widgets": "*",
     "naive-ui": "^2.37.0",
     "vue": "^3.5.13",

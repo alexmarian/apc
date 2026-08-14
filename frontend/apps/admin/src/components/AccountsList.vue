@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, h, watch } from 'vue'
-import { NDataTable, NButton, NSpace, NTag, NEmpty, NSpin, NAlert, useMessage } from 'naive-ui'
+import { NDataTable, NButton, NSpace, NTag, NEmpty, NSpin, NAlert, NCard, useMessage } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { accountApi } from '@/services/api'
 import type { Account } from '@/types/api'
+import { useConfirm } from '@/composables/useConfirm'
 import { useI18n } from 'vue-i18n'
 
 // Props
@@ -25,6 +26,7 @@ const accounts = ref<Account[]>([])
 const loading = ref<boolean>(false)
 const error = ref<string | null>(null)
 const message = useMessage()
+const confirm = useConfirm()
 const hasInitialized = ref(false)
 
 // Table columns definition
@@ -160,11 +162,17 @@ defineExpose({
 })
 
 // Disable account
-const disableAccount = async (accountId: number) => {
-  try {
-    const confirmDisable = window.confirm(t('accounts.confirmDisable'))
-    if (!confirmDisable) return
+const disableAccount = (accountId: number) => {
+  confirm({
+    title: t('common.disable'),
+    content: t('accounts.confirmDisable'),
+    positiveText: t('common.disable'),
+    onConfirm: () => performDisableAccount(accountId)
+  })
+}
 
+const performDisableAccount = async (accountId: number) => {
+  try {
     await accountApi.disableAccount(props.associationId!, accountId)
 
     // Update the local state
@@ -207,14 +215,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="accounts-list">
-    <div class="accounts-header">
-      <h2>{{ t('accounts.list') }}</h2>
-      <NButton type="primary" @click="emit('create')">
-        {{ t('accounts.createNew') }}
-      </NButton>
-    </div>
-
+  <NCard>
     <NSpin :show="loading">
       <NAlert v-if="error" type="error" :title="t('common.error')" closable>
         {{ error }}
@@ -237,28 +238,13 @@ onMounted(() => {
         <template #empty>
           <NEmpty :description="t('accounts.noAccounts')">
             <template #extra>
-              <p>{{ t('accounts.createToStart') }}</p>
+              <NButton type="primary" @click="emit('create')">
+                {{ t('accounts.createNew') }}
+              </NButton>
             </template>
           </NEmpty>
         </template>
       </NDataTable>
     </NSpin>
-  </div>
+  </NCard>
 </template>
-
-<style scoped>
-.accounts-list {
-  margin: 2rem 0;
-}
-
-.accounts-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.accounts-header h2 {
-  margin: 0;
-}
-</style>

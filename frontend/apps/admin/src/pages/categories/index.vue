@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { NCard, NModal } from 'naive-ui'
+import { NButton, NModal } from 'naive-ui'
+import PageShell from '@/components/PageShell.vue'
 import CategoriesList from '@/components/CategoriesList.vue'
 import CategoryForm from '@/components/CategoryForm.vue'
 import { useAssociationStore } from '@/stores/association'
@@ -38,15 +39,11 @@ const handleCreateCategory = () => {
 }
 
 const handleCategorySaved = (savedCategory: Category) => {
-  console.log('Category saved:', savedCategory)
-
   // Update or add the category in the list without reloading
   if (categoriesListRef.value) {
     if (editingCategoryId.value) {
-      // Update existing category
       categoriesListRef.value.updateCategory(savedCategory)
     } else {
-      // Add new category
       categoriesListRef.value.addCategory(savedCategory)
     }
   }
@@ -60,20 +57,23 @@ const handleCategoryFormCancelled = () => {
   showCategoryModal.value = false
   editingCategoryId.value = undefined
 }
-
 </script>
 
 <template>
-  <div class="categories-page">
-    <div v-if="canShowCategories">
-      <!-- Categories List -->
-      <CategoriesList
-        ref="categoriesListRef"
-        :association-id="associationId"
-        @edit="handleEditCategory"
-        @create="handleCreateCategory"
-      />
-    </div>
+  <PageShell :title="t('categories.title')">
+    <template #actions>
+      <NButton type="primary" :disabled="!associationId" @click="handleCreateCategory">
+        {{ t('categories.createNew') }}
+      </NButton>
+    </template>
+
+    <CategoriesList
+      v-if="canShowCategories"
+      ref="categoriesListRef"
+      :association-id="associationId"
+      @edit="handleEditCategory"
+      @create="handleCreateCategory"
+    />
 
     <!-- Category Edit/Create Modal -->
     <NModal
@@ -92,11 +92,5 @@ const handleCategoryFormCancelled = () => {
         @cancelled="handleCategoryFormCancelled"
       />
     </NModal>
-  </div>
+  </PageShell>
 </template>
-
-<style scoped>
-.categories-page {
-  width: 100%;
-}
-</style>

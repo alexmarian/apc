@@ -1,6 +1,13 @@
 <!-- src/components/FormShell.vue -->
+<script setup lang="ts">
+const props = defineProps<{
+  /** Override for forms whose layout needs more room, e.g. two-column grids. */
+  maxWidth?: number
+}>()
+</script>
+
 <template>
-  <div class="form-shell">
+  <div class="form-shell" :style="{ maxWidth: `${props.maxWidth ?? 600}px` }">
     <slot></slot>
   </div>
 </template>
@@ -12,7 +19,6 @@
  * which already owns that chrome. Only the width constraint is ours.
  */
 .form-shell {
-  max-width: 600px;
   margin: 0 auto;
 }
 

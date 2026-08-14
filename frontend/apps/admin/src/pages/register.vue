@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   NForm,
@@ -14,17 +14,10 @@ import { useI18n } from 'vue-i18n'
 import tokenService from '@/services/tokenService'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import type { FormRules } from 'naive-ui'
-import { usePreferences } from '@/stores/preferences.ts'
 
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
-const preferences = usePreferences()
-
-// Check if we're using dark theme
-const isDarkTheme = computed(() => {
-  return preferences.theme === 'darkTheme' || preferences.theme === null
-})
 
 // Form data
 const formData = reactive({
@@ -165,7 +158,7 @@ function goToLogin() {
 </script>
 
 <template>
-  <AuthLayout>
+  <AuthLayout :title="registrationComplete ? undefined : t('auth.register', 'Register')">
     <!-- Registration Form -->
     <div v-if="!registrationComplete">
       <NAlert v-if="error" type="error" style="margin-bottom: 16px;">
@@ -178,8 +171,6 @@ function goToLogin() {
         :rules="rules"
         label-placement="top"
       >
-        <h2 class="form-title" :class="{ 'light': !isDarkTheme }">{{ t('auth.register', 'Register') }}</h2>
-
         <NFormItem :label="t('auth.username', 'Username')" path="login">
           <NInput
             id="login-input"
@@ -223,6 +214,7 @@ function goToLogin() {
           <NSpace vertical align="center">
             <NButton
               type="primary"
+              size="large"
               block
               @click="handleRegister"
               :loading="loading"
@@ -230,7 +222,7 @@ function goToLogin() {
               {{ t('auth.register', 'Register') }}
             </NButton>
 
-            <NButton text @click="goToLogin" class="login-link">
+            <NButton text type="primary" @click="goToLogin">
               {{ t('auth.alreadyHaveAccount', 'Already have an account? Login') }}
             </NButton>
           </NSpace>
@@ -244,7 +236,6 @@ function goToLogin() {
         status="success"
         :title="t('auth.registrationComplete', 'Registration Complete')"
         :description="t('auth.scanQRDescription', 'Please scan this QR code with your authenticator app to set up two-factor authentication. You will need this for logging in.')"
-        class="qr-result"
       >
         <template #icon>
           <div class="qr-code-container">
@@ -262,25 +253,9 @@ function goToLogin() {
 </template>
 
 <style scoped>
-.form-title {
-  color: #e0e0e0;
-  text-align: center;
-  margin-bottom: 24px;
-  font-size: var(--text-xl);
-}
-
-.form-title.light {
-  color: #2c3e50;
-}
-
-:deep(.n-button) {
-  font-weight: bold;
-  height: 40px;
-}
-
 .token-info {
   font-size: var(--text-md);
-  color: #41b883;
+  color: var(--primary-color);
   margin-top: 4px;
 }
 
@@ -290,31 +265,13 @@ function goToLogin() {
   margin: 20px 0;
 }
 
+/* Stays white in both themes: scanners need the light quiet zone, and the
+ * code itself is rendered as black-on-transparent. */
 .qr-code {
   width: 200px;
   height: 200px;
-  border: 1px solid #eee;
+  border: 1px solid var(--border-color);
   padding: 10px;
   background: white;
-}
-
-.login-link {
-  color: #41b883 !important;
-}
-
-:deep(.qr-result) {
-  background: transparent !important;
-}
-
-:deep(.qr-result .n-result-header .n-result-icon) {
-  color: #41b883 !important;
-}
-
-:deep(.qr-result .n-result-header .n-result-title) {
-  color: v-bind('isDarkTheme ? "#e0e0e0" : "#2c3e50"');
-}
-
-:deep(.qr-result .n-result-content) {
-  color: v-bind('isDarkTheme ? "#aaa" : "#555"');
 }
 </style>

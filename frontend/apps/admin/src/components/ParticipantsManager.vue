@@ -1,22 +1,19 @@
 <template>
   <div class="participants-manager">
-    <NCard>
-      <template #header>
-        <div class="participants-header">
-          <h3>{{ $t('gatherings.participants.title') }}</h3>
-          <NSpace>
-            <NButton 
-              v-if="canEdit" 
-              type="primary" 
-              @click="showAddModal = true"
-            >
-              {{ $t('gatherings.participants.add') }}
-            </NButton>
-            <NButton @click="loadParticipants">
-              {{ $t('common.refresh') }}
-            </NButton>
-          </NSpace>
-        </div>
+    <NCard :title="$t('gatherings.participants.title')">
+      <template #header-extra>
+        <NSpace>
+          <NButton
+            v-if="canEdit"
+            type="primary"
+            @click="showAddModal = true"
+          >
+            {{ $t('gatherings.participants.add') }}
+          </NButton>
+          <NButton @click="loadParticipants">
+            {{ $t('common.refresh') }}
+          </NButton>
+        </NSpace>
       </template>
 
       <NSpin :show="loading">
@@ -67,7 +64,14 @@
     </NCard>
 
     <!-- Add Participant Modal -->
-    <NModal v-model:show="showAddModal">
+    <NModal
+      v-model:show="showAddModal"
+      style="width: 650px"
+      preset="card"
+      :title="$t('gatherings.participants.add')"
+      :mask-closable="false"
+      :close-on-esc="true"
+    >
       <ParticipantForm
         :association-id="associationId"
         :gathering="gathering"
@@ -97,6 +101,7 @@ import {
 import { participantApi } from '@/services/api'
 import type { Gathering, GatheringParticipant, ParticipantType } from '@/types/api'
 import ParticipantForm from '@/components/ParticipantForm.vue'
+import { useConfirm } from '@/composables/useConfirm'
 
 interface Props {
   associationId: number
@@ -110,6 +115,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const confirm = useConfirm()
 
 const participants = ref<GatheringParticipant[]>([])
 const loading = ref(false)
@@ -233,14 +239,23 @@ const handleCheckIn = async (participant: GatheringParticipant) => {
   }
 }
 
-const handleRemoveParticipant = async (participant: GatheringParticipant) => {
+const handleRemoveParticipant = (participant: GatheringParticipant) => {
+  confirm({
+    title: t('gatherings.participants.remove'),
+    content: t('gatherings.participants.confirmRemove', { name: participant.owner_name }),
+    positiveText: t('common.delete'),
+    onConfirm: () => removeParticipant(participant)
+  })
+}
+
+const removeParticipant = async (participant: GatheringParticipant) => {
   try {
     await participantApi.removeParticipant(
-      props.associationId, 
-      props.gathering.id, 
+      props.associationId,
+      props.gathering.id,
       participant.id
     )
-    
+
     await loadParticipants()
     emit('updated')
   } catch (err: any) {
@@ -262,16 +277,6 @@ onMounted(() => {
 <style scoped>
 .participants-manager {
   margin-top: 16px;
-}
-
-.participants-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.participants-header h3 {
-  margin: 0;
 }
 
 .no-participants {

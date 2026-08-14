@@ -1,5 +1,5 @@
 <template>
-  <NSpin v-if="loading" size="large" style="display: flex; justify-content: center; padding: 64px 0" />
+  <NSpin v-if="loading" size="large" class="token-view__spinner" />
 
   <NResult
     v-else-if="unauthorized"
@@ -8,7 +8,7 @@
     :description="t('linkInvalidDesc')"
   />
 
-  <NAlert v-else-if="fetchError" type="error" style="margin: 32px auto; max-width: 600px">
+  <NAlert v-else-if="fetchError" type="error" class="token-view__error">
     {{ fetchError }}
   </NAlert>
 
@@ -81,3 +81,16 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.token-view__spinner {
+  display: flex;
+  justify-content: center;
+  padding: 64px 0;
+}
+
+.token-view__error {
+  margin: 32px auto;
+  max-width: 600px;
+}
+</style>

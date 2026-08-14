@@ -1,10 +1,5 @@
 <template>
-  <div class="participant-form">
-    <NCard style="width: 600px">
-      <template #header>
-        <h2>{{ $t('gatherings.participants.add') }}</h2>
-      </template>
-
+  <FormShell>
       <NSpin :show="loading">
         <NAlert v-if="error" type="error" closable @close="error = null">
           {{ error }}
@@ -92,9 +87,8 @@
             </NButton>
           </NSpace>
         </div>
-      </NSpin>
-    </NCard>
-  </div>
+    </NSpin>
+  </FormShell>
 </template>
 
 <script setup lang="ts">
@@ -115,6 +109,7 @@ import {
   type FormInst,
   type FormRules
 } from 'naive-ui'
+import FormShell from '@/components/FormShell.vue'
 import { participantApi, ownerApi, gatheringApi } from '@/services/api'
 import type { 
   Gathering, 
@@ -311,14 +306,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.participant-form {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: 16px;
-}
-
 .delegate-fields {
   margin-top: 16px;
 }

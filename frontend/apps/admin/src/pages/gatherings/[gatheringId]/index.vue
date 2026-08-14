@@ -1,50 +1,40 @@
 <template>
-  <div class="gathering-details-page">
-    <NPageHeader>
-      <template #title>
-        <span v-if="gathering">{{ gathering.title }}</span>
-        <span v-else>{{ $t('gatherings.title') }}</span>
-      </template>
-      <template #extra>
-        <NSpace v-if="gathering && associationId">
-          <NButton @click="$router.push('/gatherings')">
-            {{ $t('common.back') }}
-          </NButton>
-          <NButton 
-            v-if="canEdit"
-            type="primary" 
-            @click="showEditModal = true"
-          >
-            {{ $t('common.edit') }}
-          </NButton>
-          <NButton
-            v-for="targetStatus in availableTransitions"
-            :key="targetStatus"
-            :type="getTransitionButtonType(targetStatus)"
-            :loading="transitionSubmitting"
-            @click="handleTransition(targetStatus)"
-          >
-            {{ $t(`gatherings.status.transitions.${gathering.status}_to_${targetStatus}`) }}
-          </NButton>
-        </NSpace>
-      </template>
-    </NPageHeader>
+  <PageShell
+    :title="gathering ? gathering.title : $t('gatherings.title')"
+    back
+    @back="$router.push('/gatherings')"
+  >
+    <template #actions>
+      <NSpace v-if="gathering && associationId">
+        <NButton
+          v-if="canEdit"
+          type="primary"
+          @click="showEditModal = true"
+        >
+          {{ $t('common.edit') }}
+        </NButton>
+        <NButton
+          v-for="targetStatus in availableTransitions"
+          :key="targetStatus"
+          :type="getTransitionButtonType(targetStatus)"
+          :loading="transitionSubmitting"
+          @click="handleTransition(targetStatus)"
+        >
+          {{ $t(`gatherings.status.transitions.${gathering.status}_to_${targetStatus}`) }}
+        </NButton>
+      </NSpace>
+    </template>
 
-    <div class="gathering-content">
-      <NSpin :show="loading">
+    <NSpin :show="loading">
         <NAlert v-if="error" type="error" closable @close="error = null">
           {{ error }}
         </NAlert>
 
-        <div v-if="gathering" class="gathering-info">
+        <div v-if="gathering">
           <NGrid :cols="2" :x-gap="16" :y-gap="16">
             <!-- Basic Information -->
             <NGridItem>
-              <NCard>
-                <template #header>
-                  <h3>{{ $t('gatherings.details') }}</h3>
-                </template>
-                
+              <NCard :title="$t('gatherings.details')">
                 <NDescriptions :column="1" label-placement="left">
                   <NDescriptionsItem :label="$t('gatherings.title')">
                     {{ gathering.title }}
@@ -72,11 +62,7 @@
 
             <!-- Statistics -->
             <NGridItem>
-              <NCard>
-                <template #header>
-                  <h3>{{ $t('gatherings.statistics.title') }}</h3>
-                </template>
-                
+              <NCard :title="$t('gatherings.statistics.title')">
                 <NDescriptions :column="1" label-placement="left">
                   <NDescriptionsItem :label="$t('gatherings.statistics.qualified')">
                     {{ gathering.qualified_units }} {{ $t('gatherings.statistics.units') }}
@@ -135,11 +121,18 @@
             </NTabPane>
           </NTabs>
         </div>
-      </NSpin>
-    </div>
+    </NSpin>
 
     <!-- Edit Modal -->
-    <NModal v-model:show="showEditModal" v-if="associationId && gathering">
+    <NModal
+      v-if="associationId && gathering"
+      v-model:show="showEditModal"
+      style="width: 650px"
+      preset="card"
+      :title="$t('common.edit')"
+      :mask-closable="false"
+      :close-on-esc="true"
+    >
       <GatheringForm
         :association-id="associationId"
         :gathering="gathering"
@@ -147,8 +140,7 @@
         @cancelled="showEditModal = false"
       />
     </NModal>
-
-  </div>
+  </PageShell>
 </template>
 
 <script setup lang="ts">
@@ -156,7 +148,6 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
-  NPageHeader,
   NCard,
   NButton,
   NSpace,
@@ -169,8 +160,7 @@ import {
   NDescriptionsItem,
   NTag,
   NTabs,
-  NTabPane,
-  useDialog
+  NTabPane
 } from 'naive-ui'
 import { storeToRefs } from 'pinia'
 import { gatheringApi } from '@/services/api'
@@ -182,11 +172,13 @@ import VotingWizard from '@/components/VotingWizard.vue'
 import ResultsDisplay from '@/components/ResultsDisplay.vue'
 import BallotsList from '@/components/BallotsList.vue'
 import MemberInvitationsPanel from '@/components/MemberInvitationsPanel.vue'
+import PageShell from '@/components/PageShell.vue'
+import { useConfirm } from '@/composables/useConfirm'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
-const dialog = useDialog()
+const confirm = useConfirm()
 
 const { associationId } = storeToRefs(useAssociationStore())
 const gathering = ref<Gathering | null>(null)
@@ -233,12 +225,11 @@ const handleTransition = (targetStatus: GatheringStatus) => {
   const isDestructive = targetStatus === 'draft' || (targetStatus === 'active' && gathering.value.status === 'closed')
   const gatheringId = gathering.value.id
 
-  dialog[isDestructive ? 'warning' : 'info']({
+  confirm({
     title: t('gatherings.status.confirmTitle'),
     content: t(`gatherings.status.descriptions.${targetStatus}`),
-    positiveText: t('common.confirm'),
-    negativeText: t('common.cancel'),
-    onPositiveClick: async () => {
+    tone: isDestructive ? 'destructive' : 'neutral',
+    onConfirm: async () => {
       transitionSubmitting.value = true
       error.value = null
       try {
@@ -320,20 +311,3 @@ watch([associationId, gatheringId], ([assocId, gId]) => {
 }, { immediate: true })
 </script>
 
-<style scoped>
-.gathering-details-page {
-  padding: 16px;
-}
-
-.no-association {
-  margin-top: 16px;
-}
-
-.gathering-content {
-  margin-top: 16px;
-}
-
-.gathering-info {
-  margin-top: 16px;
-}
-</style>

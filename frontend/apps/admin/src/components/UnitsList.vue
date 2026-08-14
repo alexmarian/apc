@@ -12,12 +12,13 @@ import {
   NInput,
   NSelect,
   NCard,
-  NFlex,
   NText
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { unitApi } from '@/services/api'
 import type { Unit } from '@/types/api'
+import FilterBar from '@/components/FilterBar.vue'
+import FilterField from '@/components/FilterField.vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
@@ -27,21 +28,23 @@ const router = useRouter()
 // Props
 const props = defineProps<{
   associationId: number | null,
-  buildingId: number | null,
-  unitTypeFilter?: string[] | null,
-  searchQuery?: string | null,
-  page?: number | null
+  buildingId: number | null
 }>()
 
 // Emits
 const emit = defineEmits<{
   (e: 'edit', unitId: number): void
-  (e: 'view-report', unitId: number): void
   (e: 'units-rendered', units: Unit[]): void
-  (e: 'unit-type-changed', newUnitType: string[]): void
-  (e: 'search-query-changed', newSearchQuery: string | null): void
-  (e: 'page-changed', page: number): void
 }>()
+
+// Filters are owned by the page (which persists them to the URL) and bound
+// two-way, so there is one copy of each rather than a page ref shadowed by a
+// list ref that only ever syncs upward.
+const unitTypeFilter = defineModel<string[]>('unitTypeFilter', { default: () => [] })
+const searchQuery = defineModel<string | null>('searchQuery', { default: null })
+const currentPage = defineModel<number>('page', { default: 1 })
+
+const debouncedSearchQuery = refDebounced(searchQuery, 500)
 
 // Data
 const units = ref<Unit[]>([])
@@ -49,12 +52,6 @@ const loading = ref<boolean>(false)
 const error = ref<string | null>(null)
 const message = useMessage()
 const hasInitialized = ref(false)
-
-// Filters - use shared filters if available, otherwise use local state
-const unitTypeFilter = ref<string[]>(props.unitTypeFilter || [])
-const searchQuery = ref<string | null>(props.searchQuery || null)
-const debouncedSearchQuery = refDebounced(searchQuery, 500)
-const currentPage = ref<number>(props.page || 1)
 
 // Available unit types for filter (will be populated from units)
 const availableUnitTypes = computed(() => {
@@ -164,7 +161,7 @@ const columns = computed<DataTableColumns<Unit>>(() => [
             ),
             h(NButton,
               {
-                type: 'primary',
+                tertiary: true,
                 size: 'small',
                 onClick: () => router.push({
                   path: `/units/${row.id}`,
@@ -239,27 +236,22 @@ defineExpose({
   refreshData: fetchUnits
 })
 
-const handlePageChange = (page: number) => {
-  currentPage.value = page
-  emit('page-changed', page)
-}
-
+// Narrowing the result set can leave the current page out of range, so any
+// filter change returns to page 1.
 const searchQueryChanged = (newValue: string | null) => {
   searchQuery.value = newValue
   currentPage.value = 1
-  emit('search-query-changed', newValue)
 }
 
 const unitTypeChanged = (newValue: string[]) => {
   unitTypeFilter.value = newValue
   currentPage.value = 1
-  emit('unit-type-changed', newValue)
 }
 
-// Reset filters
 const resetFilters = () => {
   unitTypeFilter.value = []
   searchQuery.value = null
+  currentPage.value = 1
 }
 
 // Watch for prop changes and refetch only when necessary
@@ -294,48 +286,39 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="units-list">
-    <NCard style="margin-top: 16px;">
-      <div class="filter-bar">
-        <div class="filter-search">
-          <NText style="white-space: nowrap">{{ t('common.search', 'Search') }}:</NText>
-          <NInput
-            :value="searchQuery"
-            @update:value="searchQueryChanged"
-            :placeholder="t('units.searchPlaceholder', 'Search by unit number, owner...')"
-            clearable
-          />
-        </div>
-        <div class="filter-type">
-          <NText style="white-space: nowrap">{{ t('units.type', 'Unit Type') }}:</NText>
-          <NSelect
-            :value="unitTypeFilter"
-            @update:value="unitTypeChanged"
-            :options="availableUnitTypes"
-            :placeholder="t('units.allTypes', 'All Types')"
-            multiple
-            clearable
-            :max-tag-count="2"
-          />
-          <NButton @click="resetFilters" style="white-space: nowrap">{{ t('common.reset_filters', 'Reset Filters') }}</NButton>
-        </div>
-      </div>
-    </NCard>
+  <div>
+    <FilterBar resettable @reset="resetFilters">
+      <FilterField :label="t('common.search', 'Search')" :grow="2">
+        <NInput
+          :value="searchQuery"
+          @update:value="searchQueryChanged"
+          :placeholder="t('units.searchPlaceholder', 'Search by unit number, owner...')"
+          clearable
+        />
+      </FilterField>
+      <FilterField :label="t('units.type', 'Unit Type')" :grow="1">
+        <NSelect
+          :value="unitTypeFilter"
+          @update:value="unitTypeChanged"
+          :options="availableUnitTypes"
+          :placeholder="t('units.allTypes', 'All Types')"
+          multiple
+          clearable
+          :max-tag-count="2"
+        />
+      </FilterField>
+    </FilterBar>
 
-    <NCard style="margin-top: 16px;">
+    <NCard>
       <NSpin :show="loading">
         <NAlert v-if="error" type="error" :title="t('common.error', 'Error')" closable>
           {{ error }}
           <NButton @click="fetchUnits">{{ t('common.retry', 'Retry') }}</NButton>
         </NAlert>
 
-        <div v-if="filteredUnits.length > 0" class="summary">
-          <div>
-            <span class="unit-count">
-              {{ t('units.unitsFound', { count: filteredUnits.length }) }}
-            </span>
-          </div>
-        </div>
+        <NText v-if="filteredUnits.length > 0" depth="3" class="units-list__count">
+          {{ t('units.unitsFound', { count: filteredUnits.length }) }}
+        </NText>
 
         <NDataTable
           :columns="columns"
@@ -345,13 +328,13 @@ onMounted(() => {
           :pagination="{
             page: currentPage,
             pageSize: 10,
-            onUpdatePage: handlePageChange
+            onUpdatePage: (page: number) => currentPage = page
           }"
         >
           <template #empty>
             <NEmpty :description="t('units.noUnitsFound', 'No units found')">
               <template #extra>
-                <p>{{ t('units.tryChangingFilters', 'Try changing your search filters.') }}</p>
+                {{ t('units.tryChangingFilters', 'Try changing your search filters.') }}
               </template>
             </NEmpty>
           </template>
@@ -362,45 +345,8 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.units-list {
-  margin: 1rem 0;
-}
-
-.filter-bar {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.filter-search {
-  flex: 2;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.filter-type {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.summary {
-  margin: 1rem 0;
-  padding: 0.5rem 1rem;
-  font-size: var(--text-lg);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: var(--background-color);
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-}
-
-.unit-count {
-  font-size: var(--text-md);
-  color: var(--text-color);
-  opacity: 0.8;
+.units-list__count {
+  display: block;
+  margin-bottom: 12px;
 }
 </style>

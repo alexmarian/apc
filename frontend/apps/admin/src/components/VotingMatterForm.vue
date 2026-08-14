@@ -1,10 +1,5 @@
 <template>
-  <div class="voting-matter-form">
-    <NCard style="width: 700px">
-      <template #header>
-        <h2>{{ isEditMode ? $t('gatherings.matters.edit') : $t('gatherings.matters.create') }}</h2>
-      </template>
-
+  <FormShell :max-width="700">
       <NSpin :show="loading">
         <NAlert v-if="error" type="error" closable @close="error = null">
           {{ error }}
@@ -163,9 +158,8 @@
             </NButton>
           </NSpace>
         </div>
-      </NSpin>
-    </NCard>
-  </div>
+    </NSpin>
+  </FormShell>
 </template>
 
 <script setup lang="ts">
@@ -189,6 +183,7 @@ import {
   type FormInst,
   type FormRules
 } from 'naive-ui'
+import FormShell from '@/components/FormShell.vue'
 import { votingMatterApi } from '@/services/api'
 import type {
   Gathering,
@@ -425,14 +420,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.voting-matter-form {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: 16px;
-}
-
 .options-section {
   display: flex;
   flex-direction: column;

@@ -5,13 +5,13 @@
     </NAlert>
 
     <NSpace justify="space-between" align="center" style="margin-bottom: 16px">
-      <NText strong>{{ filteredRows.length }} qualified owner{{ filteredRows.length !== 1 ? 's' : '' }}</NText>
+      <NText strong>{{ t('gatherings.invitations.qualifiedOwners', filteredRows.length) }}</NText>
       <NSpace>
         <NButton @click="handleGenerateAll" :loading="bulkGenerating" :disabled="ownersWithoutActive.length === 0">
-          Generate for visible ({{ ownersWithoutActive.length }})
+          {{ t('gatherings.invitations.generateForVisible', { count: ownersWithoutActive.length }) }}
         </NButton>
         <NButton @click="exportCsv" :disabled="activeRows.length === 0">
-          Export CSV
+          {{ t('gatherings.invitations.exportCsv') }}
         </NButton>
         <PrintBallot :association-id="associationId" :gathering="gathering" lang="ro">
           {{ $t('gatherings.invitations.printBallotRo') }}
@@ -24,7 +24,7 @@
 
     <NInput
       v-model:value="searchQuery"
-      placeholder="Search owners..."
+      :placeholder="t('gatherings.invitations.searchOwners')"
       clearable
       style="margin-bottom: 12px"
     />
@@ -33,10 +33,18 @@
   </NSpin>
 
   <!-- Generate link modal -->
-  <NModal v-model:show="generateModalVisible" :mask-closable="false" style="width: 480px">
-    <NCard :title="generateModalOwner ? `Generate link for ${generateModalOwner.ownerName}` : 'Generate all links'">
-      <template v-if="!generatedTokens.length">
-        <NFormItem label="Expiry date" :feedback="expiryError || undefined" :validation-status="expiryError ? 'error' : undefined">
+  <NModal
+    v-model:show="generateModalVisible"
+    style="width: 480px"
+    preset="card"
+    :title="generateModalOwner
+      ? t('gatherings.invitations.generateLinkFor', { name: generateModalOwner.ownerName })
+      : t('gatherings.invitations.generateAllLinks')"
+    :mask-closable="false"
+    :close-on-esc="true"
+  >
+    <template v-if="!generatedTokens.length">
+        <NFormItem :label="t('gatherings.invitations.expiryDate')" :feedback="expiryError || undefined" :validation-status="expiryError ? 'error' : undefined">
           <NDatePicker
             v-model:value="expiryTimestamp"
             type="date"
@@ -45,16 +53,16 @@
           />
         </NFormItem>
         <NSpace justify="end" style="margin-top: 8px">
-          <NButton @click="generateModalVisible = false">Cancel</NButton>
+          <NButton @click="generateModalVisible = false">{{ t('common.cancel') }}</NButton>
           <NButton type="primary" :loading="generating" @click="confirmGenerate">
-            Generate
+            {{ t('gatherings.invitations.generate') }}
           </NButton>
         </NSpace>
-      </template>
+    </template>
 
-      <template v-else>
+    <template v-else>
         <NAlert type="warning" style="margin-bottom: 16px">
-          These links cannot be recovered after closing this dialog. Copy them now.
+          {{ t('gatherings.invitations.linksNotRecoverable') }}
         </NAlert>
 
         <div v-for="item in generatedTokens" :key="item.ownerId" style="margin-bottom: 12px">
@@ -62,32 +70,22 @@
           <NInputGroup>
             <NInput :value="item.url" readonly style="font-size: var(--text-sm); font-family: monospace" />
             <NButton @click="copyUrl(item.url)" style="min-width: 70px">
-              {{ copiedUrl === item.url ? '✓ Copied' : 'Copy' }}
+              {{ copiedUrl === item.url ? `✓ ${t('gatherings.invitations.copied')}` : t('gatherings.invitations.copy') }}
             </NButton>
           </NInputGroup>
         </div>
 
         <NSpace justify="end" style="margin-top: 16px">
-          <NButton v-if="generatedTokens.length > 1" @click="exportGeneratedCsv">Export CSV</NButton>
-          <NButton type="primary" @click="closeGenerateModal">Done</NButton>
+          <NButton v-if="generatedTokens.length > 1" @click="exportGeneratedCsv">
+            {{ t('gatherings.invitations.exportCsv') }}
+          </NButton>
+          <NButton type="primary" @click="closeGenerateModal">
+            {{ t('gatherings.invitations.done') }}
+          </NButton>
         </NSpace>
-      </template>
-    </NCard>
+    </template>
   </NModal>
 
-  <!-- Revoke confirm modal -->
-  <NModal v-model:show="revokeModalVisible" style="width: 400px">
-    <NCard title="Revoke invitation">
-      <NText>
-        Revoking this link for <strong>{{ revokeTarget?.ownerName }}</strong> will immediately
-        invalidate their access. You can generate a new link afterward.
-      </NText>
-      <NSpace justify="end" style="margin-top: 16px">
-        <NButton @click="revokeModalVisible = false">Cancel</NButton>
-        <NButton type="error" :loading="revoking" @click="confirmRevoke">Revoke</NButton>
-      </NSpace>
-    </NCard>
-  </NModal>
 </template>
 
 <script setup lang="ts">
@@ -95,7 +93,6 @@ import { ref, computed, watch, h } from 'vue'
 import {
   NAlert,
   NButton,
-  NCard,
   NDataTable,
   NDatePicker,
   NFormItem,
@@ -109,6 +106,8 @@ import {
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { gatheringApi, invitationApi } from '@/services/api'
+import { useConfirm } from '@/composables/useConfirm'
+import { useI18n } from 'vue-i18n'
 import PrintBallot from './PrintBallot.vue'
 import type { Gathering, MemberInvitation, QualifiedUnit } from '@/types/api'
 
@@ -126,6 +125,9 @@ interface OwnerRow {
   status: 'none' | 'active' | 'expired' | 'revoked'
 }
 
+const { t } = useI18n()
+const confirm = useConfirm()
+
 const loading = ref(false)
 const error = ref<string | null>(null)
 const rows = ref<OwnerRow[]>([])
@@ -140,9 +142,6 @@ const generating = ref(false)
 const bulkGenerating = ref(false)
 const copiedUrl = ref<string | null>(null)
 
-const revokeModalVisible = ref(false)
-const revokeTarget = ref<OwnerRow | null>(null)
-const revoking = ref(false)
 
 const searchQuery = ref('')
 
@@ -176,10 +175,10 @@ function isPastDate(ts: number): boolean {
   return ts < Date.now() - 86400_000
 }
 
-const columns: DataTableColumns<OwnerRow> = [
-  { title: 'Owner', key: 'ownerName' },
+const columns = computed<DataTableColumns<OwnerRow>>(() => [
+  { title: t('gatherings.invitations.owner'), key: 'ownerName' },
   {
-    title: 'Status',
+    title: t('common.status'),
     key: 'status',
     render(row) {
       const types: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
@@ -189,16 +188,16 @@ const columns: DataTableColumns<OwnerRow> = [
         none: 'default'
       }
       const labels: Record<string, string> = {
-        active: 'Active',
-        expired: 'Expired',
-        revoked: 'Revoked',
-        none: 'Not generated'
+        active: t('gatherings.invitations.statusActive'),
+        expired: t('gatherings.invitations.statusExpired'),
+        revoked: t('gatherings.invitations.statusRevoked'),
+        none: t('gatherings.invitations.statusNone')
       }
       return h(NTag, { type: types[row.status], size: 'small' }, () => labels[row.status])
     }
   },
   {
-    title: 'Expires',
+    title: t('gatherings.invitations.expires'),
     key: 'expires',
     render(row) {
       if (!row.invitation || row.status === 'revoked') return '—'
@@ -206,7 +205,7 @@ const columns: DataTableColumns<OwnerRow> = [
     }
   },
   {
-    title: 'Actions',
+    title: t('common.actions'),
     key: 'actions',
     render(row) {
       const actions: ReturnType<typeof h>[] = []
@@ -215,7 +214,7 @@ const columns: DataTableColumns<OwnerRow> = [
           h(NButton, {
             size: 'small',
             onClick: () => openGenerateSingle(row)
-          }, () => 'Generate link')
+          }, () => t('gatherings.invitations.generateLink'))
         )
       }
       if (row.status === 'active') {
@@ -224,13 +223,13 @@ const columns: DataTableColumns<OwnerRow> = [
             size: 'small',
             type: 'error',
             onClick: () => openRevoke(row)
-          }, () => 'Revoke')
+          }, () => t('gatherings.invitations.revoke'))
         )
       }
       return h(NSpace, { size: 'small' }, () => actions)
     }
   }
-]
+])
 
 function openGenerateSingle(row: OwnerRow) {
   generateModalOwner.value = row
@@ -241,8 +240,12 @@ function openGenerateSingle(row: OwnerRow) {
 }
 
 function openRevoke(row: OwnerRow) {
-  revokeTarget.value = row
-  revokeModalVisible.value = true
+  confirm({
+    title: t('gatherings.invitations.revokeTitle'),
+    content: t('gatherings.invitations.revokeWarning', { name: row.ownerName }),
+    positiveText: t('gatherings.invitations.revoke'),
+    onConfirm: () => revokeInvitation(row)
+  })
 }
 
 function handleGenerateAll() {
@@ -255,7 +258,7 @@ function handleGenerateAll() {
 
 async function confirmGenerate() {
   if (!expiryTimestamp.value) {
-    expiryError.value = 'Select an expiry date'
+    expiryError.value = t('gatherings.invitations.selectExpiry')
     return
   }
   expiryError.value = null
@@ -276,7 +279,7 @@ async function confirmGenerate() {
         url
       }]
     } catch (err: any) {
-      error.value = err.response?.data?.error ?? err.message ?? 'Failed to generate invitation'
+      error.value = err.response?.data?.error ?? err.message ?? t('gatherings.invitations.generateError')
       generateModalVisible.value = false
     } finally {
       generating.value = false
@@ -314,25 +317,21 @@ function closeGenerateModal() {
   loadData()
 }
 
-async function confirmRevoke() {
-  if (!revokeTarget.value?.invitation) return
-  revoking.value = true
+async function revokeInvitation(target: OwnerRow) {
+  if (!target.invitation) return
   try {
-    await invitationApi.revoke(props.associationId, props.gathering.id, revokeTarget.value.invitation.id)
-    const row = rows.value.find(r => r.ownerId === revokeTarget.value!.ownerId)
+    await invitationApi.revoke(props.associationId, props.gathering.id, target.invitation.id)
+    const row = rows.value.find(r => r.ownerId === target.ownerId)
     if (row) {
       row.status = 'revoked'
     }
-    revokeModalVisible.value = false
   } catch (err: any) {
-    error.value = err.response?.data?.error ?? err.message ?? 'Failed to revoke invitation'
-  } finally {
-    revoking.value = false
+    error.value = err.response?.data?.error ?? err.message ?? t('gatherings.invitations.revokeError')
   }
 }
 
 function exportGeneratedCsv() {
-  const lines = ['Owner,Link']
+  const lines = [[t('gatherings.invitations.owner'), t('gatherings.invitations.link')].join(',')]
   for (const item of generatedTokens.value) {
     const ownerName = `"${item.ownerName.replace(/"/g, '""')}"`
     lines.push(`${ownerName},${item.url}`)
@@ -347,7 +346,11 @@ function exportGeneratedCsv() {
 }
 
 function exportCsv() {
-  const lines = ['Owner,Link,Expires']
+  const lines = [[
+    t('gatherings.invitations.owner'),
+    t('gatherings.invitations.link'),
+    t('gatherings.invitations.expires')
+  ].join(',')]
   for (const row of activeRows.value) {
     if (!row.invitation) continue
     const ownerName = `"${row.ownerName.replace(/"/g, '""')}"`
@@ -403,7 +406,7 @@ async function loadData() {
       }
     }).sort((a, b) => a.ownerName.localeCompare(b.ownerName))
   } catch (err: any) {
-    error.value = err.response?.data?.error ?? err.message ?? 'Failed to load invitations'
+    error.value = err.response?.data?.error ?? err.message ?? t('gatherings.invitations.loadError')
   } finally {
     loading.value = false
   }

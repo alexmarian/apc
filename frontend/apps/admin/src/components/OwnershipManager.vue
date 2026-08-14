@@ -6,13 +6,13 @@ import {
   NSpace,
   NModal,
   NAlert,
+  NCard,
   NEmpty,
   NSpin,
   NTabs,
   NTabPane,
   NDatePicker,
   useMessage,
-  NPopconfirm,
   NTag
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
@@ -205,27 +205,19 @@ const columns = computed<DataTableColumns<any>>(() => [
             { default: () => t('units.ownership.setVoting', 'Set as Voting Owner')}
           ):'',
 
-          // Deactivate button
+          // Deactivate button. No popconfirm here: the modal it opens asks for
+          // an end date and carries its own confirm, so a prompt in front of it
+          // would make this a two-step confirmation for one action.
           h(
-            NPopconfirm,
+            NButton,
             {
-              onPositiveClick: () => openDisableModal(row.id),
-              negativeText: t('common.cancel', 'Cancel'),
-              positiveText: t('common.disable', 'Deactivate')
+              strong: true,
+              secondary: true,
+              type: 'error',
+              size: 'small',
+              onClick: () => openDisableModal(row.id)
             },
-            {
-              trigger: () => h(
-                NButton,
-                {
-                  strong: true,
-                  secondary: true,
-                  type: 'warning',
-                  size: 'small'
-                },
-                { default: () => t('common.disable', 'Deactivate') }
-              ),
-              default: () => t('units.ownership.confirmDeactivate', 'Are you sure you want to deactivate this ownership?')
-            }
+            { default: () => t('common.disable', 'Deactivate') }
           )
         ]
       })
@@ -240,28 +232,28 @@ onMounted(() => {
 
 <template>
   <div class="ownership-manager">
-    <div class="section-header">
-      <h3>{{ t('units.ownership.management', 'Unit Ownership Management') }}</h3>
-      <NSpace>
-        <NButton type="primary" @click="handleAddOwnership('select')">
-          {{ t('units.ownership.addExisting', 'Add Existing Owner') }}
-        </NButton>
-        <NButton @click="handleAddOwnership('create')">
-          {{ t('units.ownership.createNew', 'Create New Owner') }}
-        </NButton>
-      </NSpace>
-    </div>
+    <NCard :title="t('units.ownership.management', 'Unit Ownership Management')">
+      <template #header-extra>
+        <NSpace>
+          <NButton type="primary" @click="handleAddOwnership('select')">
+            {{ t('units.ownership.addExisting', 'Add Existing Owner') }}
+          </NButton>
+          <NButton @click="handleAddOwnership('create')">
+            {{ t('units.ownership.createNew', 'Create New Owner') }}
+          </NButton>
+        </NSpace>
+      </template>
 
-    <div class="info-box">
-      <p><strong>{{ t('common.note', 'Note') }}:</strong> {{ t('units.ownership.votingNote', 'Each unit can have only one voting owner. The voting owner has the right to vote at association meetings. Setting a new voting owner will automatically remove voting rights from any previous voting owner for this unit.') }}</p>
-    </div>
-
-    <NSpin :show="loading">
-      <NAlert v-if="error" type="error" style="margin-bottom: 16px;">
-        {{ error }}
+      <NAlert type="info" :show-icon="false" class="ownership-manager__note">
+        <strong>{{ t('common.note', 'Note') }}:</strong>
+        {{ t('units.ownership.votingNote', 'Each unit can have only one voting owner. The voting owner has the right to vote at association meetings. Setting a new voting owner will automatically remove voting rights from any previous voting owner for this unit.') }}
       </NAlert>
 
-      <div class="ownerships-table">
+      <NSpin :show="loading">
+        <NAlert v-if="error" type="error" class="ownership-manager__note">
+          {{ error }}
+        </NAlert>
+
         <NDataTable
           :columns="columns"
           :data="ownerships"
@@ -272,17 +264,23 @@ onMounted(() => {
           <template #empty>
             <NEmpty :description="t('units.ownership.noOwnerships', 'No ownerships found for this unit')">
               <template #extra>
-                <p>{{ t('units.ownership.addOwnerPrompt', 'Add an owner using the buttons above') }}</p>
+                {{ t('units.ownership.addOwnerPrompt', 'Add an owner using the buttons above') }}
               </template>
             </NEmpty>
           </template>
         </NDataTable>
-      </div>
-    </NSpin>
+      </NSpin>
+    </NCard>
 
     <!-- Ownership Form Modal -->
-    <NModal v-model:show="showOwnershipModal" style="width: 600px;" preset="card"
-            :title="t('units.ownership.addOwnership', 'Add Ownership')">
+    <NModal
+      v-model:show="showOwnershipModal"
+      style="width: 600px"
+      preset="card"
+      :title="t('units.ownership.addOwnership', 'Add Ownership')"
+      :mask-closable="false"
+      :close-on-esc="true"
+    >
       <OwnershipForm
         :association-id="props.associationId"
         :building-id="props.buildingId"
@@ -294,45 +292,36 @@ onMounted(() => {
     </NModal>
 
     <!-- Disable Ownership Modal -->
-    <NModal v-model:show="showDisableModal" style="width: 400px;" preset="card"
-            :title="t('units.ownership.deactivateOwnership', 'Deactivate Ownership')">
+    <NModal
+      v-model:show="showDisableModal"
+      style="width: 400px"
+      preset="card"
+      :title="t('units.ownership.deactivateOwnership', 'Deactivate Ownership')"
+      :mask-closable="false"
+      :close-on-esc="true"
+    >
       <div style="margin-bottom: 16px;">
         <p>{{ t('units.ownership.setEndDate', 'Set the date when ownership ends:') }}</p>
         <NDatePicker v-model:value="disableDate" type="date" clearable style="width: 100%" />
       </div>
 
-      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+      <NSpace justify="end">
         <NButton @click="showDisableModal = false">{{ t('common.cancel', 'Cancel') }}</NButton>
-        <NButton type="warning" @click="handleDisableOwnership">{{ t('common.disable', 'Deactivate') }}</NButton>
-      </div>
+        <NButton type="error" :loading="loading" @click="handleDisableOwnership">
+          {{ t('common.disable', 'Deactivate') }}
+        </NButton>
+      </NSpace>
     </NModal>
   </div>
 </template>
 
 <style scoped>
 .ownership-manager {
-  margin-top: 16px;
+  /* Matches the .report-section spacing of the sibling cards in UnitDetails. */
+  margin-bottom: 1.5rem;
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.section-header h3 {
-  margin: 0;
-}
-
-.info-box {
-  margin-bottom: 16px;
-  padding: 12px;
-  border-radius: 4px;
-  border-left: 4px solid #2080f0;
-}
-
-.ownerships-table {
+.ownership-manager__note {
   margin-bottom: 16px;
 }
 

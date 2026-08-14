@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { NButton, NCard, NPageHeader, NSpace, useMessage, NModal } from 'naive-ui'
+import { NButton, NSpace, useMessage, NModal } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
+import PageShell from '@/components/PageShell.vue'
 import ExpensesList from '@/components/ExpensesList.vue'
 import ExpenseForm from '@/components/ExpenseForm.vue'
 import ExpensesSummary from '@/components/ExpensesSummary.vue'
@@ -92,48 +93,40 @@ const toggleSummary = () => {
 </script>
 
 <template>
-  <div class="expenses-view">
-    <NPageHeader>
-      <template #title>
-        {{ t('expenses.title', 'Expense Management') }}
-      </template>
-
-      <template #extra>
-        <NSpace>
-          <NButton
-            v-if="associationId"
-            secondary
-            @click="toggleSummary"
-          >
-            {{ showSummary ? t('common.hide', 'Hide') + ' ' + t('expenses.summary', 'Summary') : t('common.show', 'Show') + ' ' + t('expenses.summary', 'Summary') }}
-          </NButton>
-          <NButton
-            type="primary"
-            @click="handleCreateExpense"
-            :disabled="!associationId"
-          >
-            {{ t('expenses.createNew', 'Create New Expense') }}
-          </NButton>
-        </NSpace>
-      </template>
-    </NPageHeader>
+  <PageShell :title="t('expenses.title', 'Expense Management')">
+    <template #actions>
+      <NSpace>
+        <NButton
+          v-if="associationId"
+          secondary
+          @click="toggleSummary"
+        >
+          {{ showSummary ? t('common.hide', 'Hide') + ' ' + t('expenses.summary', 'Summary') : t('common.show', 'Show') + ' ' + t('expenses.summary', 'Summary') }}
+        </NButton>
+        <NButton
+          type="primary"
+          @click="handleCreateExpense"
+          :disabled="!associationId"
+        >
+          {{ t('expenses.createNew', 'Create New Expense') }}
+        </NButton>
+      </NSpace>
+    </template>
 
     <div v-if="canShowExpenses">
       <!-- Expenses List -->
       <ExpensesList
         ref="expensesListRef"
         :association-id="associationId"
-        :date-range="dateRange"
-        :selected-category="selectedCategory"
+        v-model:date-range="dateRange"
+        v-model:selected-category="selectedCategory"
         @edit="handleEditExpense"
         @create="handleCreateExpense"
         @expenses-rendered="setDisplayedExpenses"
-        @category-changed="newCategory => selectedCategory=newCategory"
-        @date-range-changed="newDateRange => dateRange=newDateRange"
       />
 
       <!-- Summary is below the list and can be toggled -->
-      <div v-if="showSummary" style="margin-top: 16px;">
+      <div v-if="showSummary" class="expenses-view__summary">
         <ExpensesSummary
           v-if="displayedExpenses"
           :expenses="displayedExpenses"
@@ -158,12 +151,11 @@ const toggleSummary = () => {
         @cancelled="handleExpenseFormCancelled"
       />
     </NModal>
-  </div>
+  </PageShell>
 </template>
 
 <style scoped>
-.expenses-view {
-  width: 100%;
-  margin: 0 auto;
+.expenses-view__summary {
+  margin-top: 16px;
 }
 </style>

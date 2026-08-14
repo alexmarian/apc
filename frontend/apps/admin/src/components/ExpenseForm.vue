@@ -365,18 +365,18 @@ onMounted(() => {
         <div class="expense-form__actions">
           <NSpace justify="end">
             <NButton
+              @click="handleCancel"
+              :disabled="submitting"
+            >
+              {{ t('common.cancel') }}
+            </NButton>
+
+            <NButton
               type="primary"
               @click="handleSubmit"
               :loading="submitting"
             >
               {{ isEditMode ? t('common.update') : t('common.create') }}
-            </NButton>
-
-            <NButton
-              @click="handleCancel"
-              :disabled="submitting"
-            >
-              {{ t('common.cancel') }}
             </NButton>
           </NSpace>
         </div>

@@ -138,8 +138,7 @@ onMounted(() => {
 
 <template>
   <FormShell>
-    <h2>{{ isEditMode ? t('accounts.editAccount') : t('accounts.createNew') }}</h2>
-
+    <!-- No title here: the modal that opens this form supplies it. -->
     <NSpin :show="loading">
       <NAlert v-if="error" type="error" :title="t('common.error')" style="margin-bottom: 16px;" closable @close="error = null">
         {{ error }}

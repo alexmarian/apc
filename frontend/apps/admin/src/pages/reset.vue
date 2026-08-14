@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   NForm,
@@ -9,22 +9,16 @@ import {
   NAlert,
   NSpace,
   NCheckbox,
-  NResult
+  NResult,
+  NText
 } from 'naive-ui'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { useI18n } from 'vue-i18n'
 import { authApi } from '@/services/api.ts'
-import { usePreferences } from '@/stores/preferences.ts'
 
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
-const preferences = usePreferences()
-
-// Check if we're using dark theme
-const isDarkTheme = computed(() => {
-  return preferences.theme === 'darkTheme' || preferences.theme === null
-})
 
 // Form data
 const formData = reactive({
@@ -94,20 +88,19 @@ const goToLogin = () => {
 </script>
 
 <template>
-  <AuthLayout>
+  <AuthLayout :title="success ? undefined : t('auth.resetPassword', 'Reset Password')">
     <!-- Reset Success -->
     <div v-if="success">
       <NResult
         status="success"
         :title="t('auth.passwordResetComplete', 'Password Reset Complete')"
         :description="t('auth.passwordResetSuccess', 'Your password has been reset successfully.')"
-        class="reset-result"
       >
         <template #icon v-if="qrCode">
           <div class="qr-code-container">
-            <h3 class="qr-code-title" :class="{ 'light': !isDarkTheme }">
-              {{ t('auth.scanQRDescription', 'Please scan this QR code with your authenticator app')
-              }}</h3>
+            <NText>
+              {{ t('auth.scanQRDescription', 'Please scan this QR code with your authenticator app') }}
+            </NText>
             <img :src="'data:image/png;base64,' + qrCode" alt="QR Code for TOTP" class="qr-code" />
           </div>
         </template>
@@ -130,8 +123,6 @@ const goToLogin = () => {
         :model="formData"
         label-placement="top"
       >
-        <h2 class="form-title" :class="{ 'light': !isDarkTheme }">{{ t('auth.resetPassword', 'Reset Password') }}</h2>
-
         <NFormItem :label="t('auth.newPassword', 'New Password')" path="newPassword">
           <NInput
             v-model:value="formData.newPassword"
@@ -154,7 +145,7 @@ const goToLogin = () => {
           <NCheckbox v-model:checked="formData.resetTOTPSecret">
             {{ t('auth.resetTOTP', 'Reset two-factor authentication (2FA)') }}
           </NCheckbox>
-          <div class="help-text" :class="{ 'light': !isDarkTheme }">
+          <div class="help-text">
             {{ t('auth.resetTOTPHelp', 'Check this if you have lost access to your authenticator app')
             }}
           </div>
@@ -164,6 +155,7 @@ const goToLogin = () => {
           <NSpace vertical align="center">
             <NButton
               type="primary"
+              size="large"
               block
               @click="handleResetPassword"
               :loading="loading"
@@ -171,7 +163,7 @@ const goToLogin = () => {
               {{ t('auth.resetPassword', 'Reset Password') }}
             </NButton>
 
-            <NButton text @click="goToLogin" class="login-link">
+            <NButton text type="primary" @click="goToLogin">
               {{ t('auth.backToLogin', 'Back to Login') }}
             </NButton>
           </NSpace>
@@ -182,30 +174,10 @@ const goToLogin = () => {
 </template>
 
 <style scoped>
-.form-title {
-  color: #e0e0e0;
-  text-align: center;
-  margin-bottom: 24px;
-  font-size: var(--text-xl);
-}
-
-.form-title.light {
-  color: #2c3e50;
-}
-
-:deep(.n-button) {
-  font-weight: bold;
-  height: 40px;
-}
-
 .help-text {
   font-size: var(--text-md);
-  color: #aaa;
+  color: var(--text-color-3);
   margin-top: 4px;
-}
-
-.help-text.light {
-  color: #666;
 }
 
 .qr-code-container {
@@ -215,45 +187,14 @@ const goToLogin = () => {
   margin: 20px 0;
 }
 
-.qr-code-title {
-  color: #e0e0e0;
-  margin-bottom: 12px;
-}
-
-.qr-code-title.light {
-  color: #2c3e50;
-}
-
+/* Stays white in both themes: scanners need the light quiet zone, and the
+ * code itself is rendered as black-on-transparent. */
 .qr-code {
   width: 200px;
   height: 200px;
-  border: 1px solid #eee;
+  border: 1px solid var(--border-color);
   padding: 10px;
   background: white;
   margin-top: 12px;
-}
-
-.login-link {
-  color: #41b883 !important;
-}
-
-:deep(.reset-result) {
-  background: transparent !important;
-}
-
-:deep(.reset-result .n-result-header .n-result-icon) {
-  color: #41b883 !important;
-}
-
-:deep(.reset-result .n-result-header .n-result-title) {
-  color: v-bind('isDarkTheme ? "#e0e0e0" : "#2c3e50"');
-}
-
-:deep(.reset-result .n-result-content) {
-  color: v-bind('isDarkTheme ? "#aaa" : "#555"');
-}
-
-:deep(.n-checkbox__label) {
-  color: v-bind('isDarkTheme ? "#e0e0e0" : "#2c3e50"') !important;
 }
 </style>

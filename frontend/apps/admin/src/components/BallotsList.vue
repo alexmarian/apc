@@ -5,21 +5,18 @@
         {{ error }}
       </NAlert>
 
-      <NCard>
-        <template #header>
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3>{{ $t('gatherings.ballots.title') }}</h3>
-            <NButton
-              type="primary"
-              @click="handleDownloadBallots"
-              :loading="downloading"
-            >
-              <template #icon>
-                <NIcon><DownloadOutlined /></NIcon>
-              </template>
-              {{ $t('gatherings.ballots.download') }}
-            </NButton>
-          </div>
+      <NCard :title="$t('gatherings.ballots.title')">
+        <template #header-extra>
+          <NButton
+            type="primary"
+            @click="handleDownloadBallots"
+            :loading="downloading"
+          >
+            <template #icon>
+              <NIcon><DownloadOutlined /></NIcon>
+            </template>
+            {{ $t('gatherings.ballots.download') }}
+          </NButton>
         </template>
 
         <div v-if="!ballots || ballots.length === 0" class="no-ballots">

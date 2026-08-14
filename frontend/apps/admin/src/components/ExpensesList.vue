@@ -19,14 +19,15 @@ import { expenseApi } from '@/services/api'
 import type { Expense, ApiResponse } from '@/types/api'
 import { formatCurrency } from '@/utils/formatters'
 import CategorySelector from '@/components/CategorySelector.vue'
+import FilterBar from '@/components/FilterBar.vue'
+import FilterField from '@/components/FilterField.vue'
+import { useConfirm } from '@/composables/useConfirm'
 import { useI18n } from 'vue-i18n'
 import LocalizedCategoryDisplay from './LocalizedCategoryDisplay.vue'
 
 // Props
 const props = defineProps<{
-  associationId: number | null,
-  dateRange?: [number, number] | null,
-  selectedCategory?: number | null
+  associationId: number | null
 }>()
 
 // Emits
@@ -34,9 +35,12 @@ const emit = defineEmits<{
   (e: 'edit', expenseId: number): void
   (e: 'create'): void
   (e: 'expenses-rendered', expenses: Expense[]): void
-  (e: 'date-range-changed', newDateRange: [number, number] | null): void
-  (e: 'category-changed', newCategory: number | null): void
 }>()
+
+// Filters are owned by the page and bound two-way, so there is one copy of
+// each rather than a page ref shadowed by a list ref that only syncs upward.
+const dateRange = defineModel<[number, number] | null>('dateRange', { default: null })
+const selectedCategory = defineModel<number | null>('selectedCategory', { default: null })
 
 // I18n
 const { t } = useI18n()
@@ -46,11 +50,8 @@ const expenses = ref<Expense[]>([])
 const loading = ref<boolean>(false)
 const error = ref<string | null>(null)
 const message = useMessage()
+const confirm = useConfirm()
 const hasInitialized = ref(false)
-
-// Filters - use shared filters if available, otherwise use local state
-const dateRange = ref<[number, number] | null>(props.dateRange ?? null)
-const selectedCategory = ref<number | null>(props.selectedCategory ?? null)
 
 const filteredExpenses = computed<Expense[]>(() => {
   if (selectedCategory.value) {
@@ -257,9 +258,12 @@ const formattedDateRange = computed<string>(() => {
 
 // Delete expense
 const confirmDeleteExpense = (expenseId: number): void => {
-  if (window.confirm(t('expenses.confirmDelete'))) {
-    deleteExpense(expenseId)
-  }
+  confirm({
+    title: t('common.delete'),
+    content: t('expenses.confirmDelete'),
+    positiveText: t('common.delete'),
+    onConfirm: () => deleteExpense(expenseId)
+  })
 }
 
 const deleteExpense = async (expenseId: number): Promise<void> => {
@@ -284,13 +288,10 @@ const totalAmount = computed<number>(() => {
 })
 
 // Watch for changes in filters and refresh data
-watch(dateRange, (newDateRange) => {
+// The date range is applied server-side, so it needs a refetch. The category
+// filter is applied client-side by filteredExpenses.
+watch(dateRange, () => {
   fetchExpenses()
-  emit('date-range-changed', newDateRange)
-})
-
-watch(selectedCategory, (newCategory) => {
-  emit('category-changed', newCategory)
 })
 
 // Watch filtered expenses and emit changes, but only after initialization
@@ -330,17 +331,17 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="expenses-list">
-    <NCard style="margin-top: 16px;">
-      <NFlex align="center" justify="start">
-        <NText>{{ t('expenses.dateRange') }}:</NText>
+  <div>
+    <FilterBar resettable @reset="resetFilters">
+      <FilterField :label="t('expenses.dateRange')">
         <NDatePicker
           v-model:value="dateRange"
           type="daterange"
           clearable
           style="width: 240px"
         />
-        <NText>{{ t('expenses.category') }}:</NText>
+      </FilterField>
+      <FilterField :label="t('expenses.category')">
         <CategorySelector
           v-model:modelValue="selectedCategory"
           :association-id="props.associationId"
@@ -348,23 +349,20 @@ onMounted(() => {
           :include-all-option="true"
           style="width: 360px"
         />
-        <NButton @click="resetFilters">{{ t('expenses.resetFilters') }}</NButton>
-      </NFlex>
-    </NCard>
+      </FilterField>
+    </FilterBar>
 
-    <NCard style="margin-top: 16px;">
+    <NCard>
       <NSpin :show="loading">
         <NAlert v-if="error" type="error" :title="t('common.error')" closable>
           {{ error }}
           <NButton @click="fetchExpenses">{{ t('common.retry') }}</NButton>
         </NAlert>
 
-        <div v-if="expenses.length > 0" class="summary">
-          <div>
-            <span class="date-range-label">{{ t('expenses.period', 'Period') }}: {{ formattedDateRange }}</span>
-          </div>
-          <strong>{{ t('expenses.totalAmount') }}: {{ formatCurrency(totalAmount) }}</strong>
-        </div>
+        <NFlex v-if="expenses.length > 0" justify="space-between" align="center" class="expenses-list__summary">
+          <NText depth="3">{{ t('expenses.period', 'Period') }}: {{ formattedDateRange }}</NText>
+          <NText strong>{{ t('expenses.totalAmount') }}: {{ formatCurrency(totalAmount) }}</NText>
+        </NFlex>
 
         <NDataTable
           :columns="columns"
@@ -378,7 +376,9 @@ onMounted(() => {
           <template #empty>
             <NEmpty :description="t('expenses.noExpenses')">
               <template #extra>
-                <p>{{ t('expenses.createToStart') }}</p>
+                <NButton type="primary" @click="emit('create')">
+                  {{ t('expenses.createNew') }}
+                </NButton>
               </template>
             </NEmpty>
           </template>
@@ -389,27 +389,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.expenses-list {
-  margin: 1rem 0;
-}
-
-
-.summary {
-  margin: 1rem 0;
-  padding: 0.5rem 1rem;
-  font-size: var(--text-lg);
-  text-align: right;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: var(--background-color);
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-}
-
-.date-range-label {
-  font-size: var(--text-md);
-  color: var(--text-color);
-  opacity: 0.8;
+.expenses-list__summary {
+  margin-bottom: 12px;
 }
 </style>

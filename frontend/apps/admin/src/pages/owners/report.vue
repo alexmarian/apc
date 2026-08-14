@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { NPageHeader, NCard, NModal } from 'naive-ui'
+import { NModal } from 'naive-ui'
+import PageShell from '@/components/PageShell.vue'
 import OwnersReport from '@/components/OwnersReport.vue'
 import OwnerForm from '@/components/OwnerForm.vue'
 import { useAssociationStore } from '@/stores/association'
@@ -38,23 +39,12 @@ const handleOwnerFormCancelled = () => {
 </script>
 
 <template>
-  <div class="owners-report-page">
-    <NPageHeader>
-      <template #title>
-        {{ t('owners.report', 'Owners Report') }}
-      </template>
-
-    </NPageHeader>
-
-    <div class="content">
-      <div>
-        <OwnersReport
-          :key="refreshKey"
-          :association-id="associationId"
-          @edit-owner="handleEditOwner"
-        />
-      </div>
-    </div>
+  <PageShell :title="t('owners.report', 'Owners Report')">
+    <OwnersReport
+      :key="refreshKey"
+      :association-id="associationId"
+      @edit-owner="handleEditOwner"
+    />
 
     <!-- Owner Edit Modal -->
     <NModal
@@ -63,6 +53,7 @@ const handleOwnerFormCancelled = () => {
       preset="card"
       :title="t('owners.editOwner', 'Edit Owner')"
       :mask-closable="false"
+      :close-on-esc="true"
     >
       <OwnerForm
         v-if="associationId && editingOwnerId"
@@ -72,15 +63,5 @@ const handleOwnerFormCancelled = () => {
         @cancelled="handleOwnerFormCancelled"
       />
     </NModal>
-  </div>
+  </PageShell>
 </template>
-
-<style scoped>
-.owners-report-page {
-  width: 100%;
-}
-
-.content {
-  margin-top: 16px;
-}
-</style>

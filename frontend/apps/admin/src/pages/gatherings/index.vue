@@ -1,58 +1,61 @@
 <template>
-  <div class="gatherings-page">
-    <NPageHeader>
-      <template #title>{{ $t('gatherings.title') }}</template>
-      <template #extra>
+  <PageShell :title="$t('gatherings.title')">
+    <template #actions>
+      <NSpace>
+        <NButton @click="loadGatherings">
+          {{ $t('common.refresh') }}
+        </NButton>
         <NButton v-if="associationId" type="primary" @click="showCreateModal = true">
           {{ $t('gatherings.create') }}
         </NButton>
-      </template>
-    </NPageHeader>
+      </NSpace>
+    </template>
 
-    <div class="gatherings-content">
-      <NSpin :show="loading">
-        <NAlert v-if="error" type="error" closable @close="error = null">
-          {{ error }}
-        </NAlert>
+    <FilterBar resettable @reset="statusFilter = null">
+      <FilterField :label="$t('gatherings.status.title')">
+        <NSelect
+          v-model:value="statusFilter"
+          :options="statusOptions"
+          :placeholder="$t('gatherings.filterByStatus')"
+          clearable
+          style="width: 200px"
+        />
+      </FilterField>
+    </FilterBar>
 
-        <NCard>
-          <template #header>
-            <div class="gatherings-header">
-              <NSpace>
-                <NSelect
-                  v-model:value="statusFilter"
-                  :options="statusOptions"
-                  :placeholder="$t('gatherings.filterByStatus')"
-                  clearable
-                  style="width: 200px"
-                />
-                <NButton @click="loadGatherings">
-                  {{ $t('common.refresh') }}
-                </NButton>
-              </NSpace>
-            </div>
-          </template>
+    <NSpin :show="loading">
+      <NAlert v-if="error" type="error" closable @close="error = null">
+        {{ error }}
+      </NAlert>
 
-          <NDataTable
-            :columns="columns"
-            :data="filteredGatherings"
-            :loading="loading"
-            :pagination="pagination"
-            :row-key="(row: Gathering) => row.id"
-            striped
-          />
-        </NCard>
-      </NSpin>
-    </div>
+      <NCard>
+        <NDataTable
+          :columns="columns"
+          :data="filteredGatherings"
+          :loading="loading"
+          :pagination="pagination"
+          :row-key="(row: Gathering) => row.id"
+          striped
+        />
+      </NCard>
+    </NSpin>
 
-    <NModal v-model:show="showCreateModal" v-if="associationId">
+    <NModal
+      v-if="associationId"
+      v-model:show="showCreateModal"
+      style="width: 650px"
+      preset="card"
+      :title="$t('gatherings.create')"
+      :mask-closable="false"
+      :close-on-esc="true"
+    >
       <GatheringForm
         :association-id="associationId"
         @saved="handleGatheringSaved"
         @cancelled="showCreateModal = false"
       />
     </NModal>
-  </div>
+  </PageShell>
 </template>
 
 <script setup lang="ts">
@@ -60,7 +63,6 @@ import { ref, computed, onMounted, watch, h } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
-  NPageHeader,
   NCard,
   NButton,
   NDataTable,
@@ -77,6 +79,9 @@ import { gatheringApi } from '@/services/api'
 import type { Gathering, GatheringStatus } from '@/types/api'
 import { useAssociationStore } from '@/stores/association'
 import GatheringForm from '@/components/GatheringForm.vue'
+import PageShell from '@/components/PageShell.vue'
+import FilterBar from '@/components/FilterBar.vue'
+import FilterField from '@/components/FilterField.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -209,26 +214,3 @@ watch(associationId, (val) => {
 }, { immediate: true })
 </script>
 
-<style scoped>
-.gatherings-page {
-  padding: 16px;
-}
-
-.no-association {
-  margin-top: 16px;
-}
-
-.gatherings-content {
-  margin-top: 16px;
-}
-
-.gatherings-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.gatherings-header h3 {
-  margin: 0;
-}
-</style>

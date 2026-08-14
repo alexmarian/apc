@@ -1,23 +1,16 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { NForm, NFormItem, NInput, NButton, NAlert, NSpace } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
 import { useI18n } from 'vue-i18n'
 import type { FormRules } from 'naive-ui'
 import AuthLayout from '@/layouts/AuthLayout.vue'
-import { usePreferences } from '@/stores/preferences.ts'
 
 // Get auth store
 const auth = useAuthStore()
 const router = useRouter()
 const { t } = useI18n()
-const preferences = usePreferences()
-
-// Check if we're using dark theme
-const isDarkTheme = computed(() => {
-  return preferences.theme === 'darkTheme' || preferences.theme === null
-})
 
 // Form data
 const formData = reactive({
@@ -91,7 +84,7 @@ const handleLogin = async (e: MouseEvent) => {
 </script>
 
 <template>
-  <AuthLayout>
+  <AuthLayout :title="t('auth.login', 'Login')">
     <NAlert v-if="auth.error" type="error" style="margin-bottom: 24px;">
       {{ auth.error }}
     </NAlert>
@@ -102,8 +95,6 @@ const handleLogin = async (e: MouseEvent) => {
       :rules="rules"
       label-placement="top"
     >
-      <h2 class="form-title" :class="{ 'light': !isDarkTheme }">{{ t('auth.login', 'Login') }}</h2>
-
       <NFormItem :label="t('auth.username', 'Username')" path="login">
         <NInput
           v-model:value="formData.login"
@@ -132,6 +123,7 @@ const handleLogin = async (e: MouseEvent) => {
         <NSpace vertical align="center">
           <NButton
             type="primary"
+            size="large"
             block
             @click="handleLogin"
             :loading="auth.loading"
@@ -143,21 +135,3 @@ const handleLogin = async (e: MouseEvent) => {
     </NForm>
   </AuthLayout>
 </template>
-
-<style scoped>
-.form-title {
-  color: #e0e0e0;
-  text-align: center;
-  margin-bottom: 24px;
-  font-size: var(--text-xl);
-}
-
-.form-title.light {
-  color: #2c3e50;
-}
-
-:deep(.n-button) {
-  font-weight: bold;
-  height: 40px;
-}
-</style>

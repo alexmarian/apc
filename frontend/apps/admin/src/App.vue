@@ -5,6 +5,7 @@ import { h, ref, computed, watch } from 'vue'
 import type { Component } from 'vue';
 import ThemeProvider from '@/providers/ThemeProvider.vue'
 import LanguageSelector from '@/components/LanguageSelector.vue'
+import AssociationSelector from '@/components/AssociationSelector.vue'
 import UserProfileButton from '@/components/UserProfileButton.vue'
 import { useI18n } from 'vue-i18n'
 import { usePreferences } from '@/stores/preferences.ts'
@@ -117,6 +118,24 @@ const menuOptions = computed(() => [
   }
 ])
 
+// Route prefix -> menu key, ordered most-specific-first so that
+// /expenses/distribution does not match the /expenses entry.
+const menuRouteKeys: [string, string][] = [
+  ['/expenses/distribution', 'expense-distribution'],
+  ['/expenses', 'expenses-management'],
+  ['/categories', 'categories'],
+  ['/reports', 'expenses-reports'],
+  ['/units', 'units-management'],
+  ['/owners', 'owners-report'],
+  ['/accounts', 'accounts'],
+  ['/gatherings', 'gatherings']
+]
+
+const activeMenuKey = computed(() => {
+  if (route.path === '/') return 'home'
+  return menuRouteKeys.find(([prefix]) => route.path.startsWith(prefix))?.[1] ?? null
+})
+
 // Theme options as computed property to make them translatable
 const themeMenuOptions = computed(() => [
   {
@@ -152,8 +171,9 @@ watch(isDark, () => {
               <img alt="App logo" class="logo-img" src="/logo_48.png" width="32" height="32" />
               <h1 class="app-title">APC</h1>
             </div>
-            <NMenu mode="horizontal" :options="menuOptions" style="flex: 1" />
+            <NMenu mode="horizontal" :value="activeMenuKey" :options="menuOptions" style="flex: 1" />
             <div class="header-right">
+              <AssociationSelector class="association-switcher" />
               <LanguageSelector />
               <NSwitch v-model:value="isDark" />
               <UserProfileButton />
@@ -218,6 +238,11 @@ watch(isDark, () => {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.association-switcher {
+  min-width: 180px;
+  max-width: 260px;
 }
 
 .content-margin {

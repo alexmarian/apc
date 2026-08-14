@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, h, watch } from 'vue'
 import {
-  NPageHeader,
   NCard,
   NDescriptions,
   NDescriptionsItem,
@@ -18,6 +17,7 @@ import {
   NBreadcrumb,
   NBreadcrumbItem
 } from 'naive-ui'
+import PageShell from '@/components/PageShell.vue'
 import type { DataTableColumns } from 'naive-ui'
 import { useRoute, useRouter } from 'vue-router'
 import { ownerApi } from '@/services/api'
@@ -244,43 +244,40 @@ onMounted(fetchOwnerDetail)
 </script>
 
 <template>
-  <div class="owner-detail-page">
-    <NPageHeader @back="handleBack">
-      <template #title>
-        {{ ownerData?.owner.name ?? t('owners.detail.title', 'Owner Detail') }}
-      </template>
-      <template #subtitle>
-        {{ ownerData?.owner.identification_number }}
-      </template>
-      <template #header>
-        <NBreadcrumb>
-          <NBreadcrumbItem @click="router.push('/owners/report')" style="cursor:pointer">
-            {{ t('owners.report', 'Owners Report') }}
-          </NBreadcrumbItem>
-          <NBreadcrumbItem
-            v-for="(entry, idx) in breadcrumbChain"
-            :key="entry.id"
-            @click="navigateToBreadcrumb(entry, idx)"
-            style="cursor:pointer"
-          >
-            {{ entry.name }}
-          </NBreadcrumbItem>
-          <NBreadcrumbItem>
-            {{ ownerData?.owner.name ?? t('owners.detail.title', 'Owner Detail') }}
-          </NBreadcrumbItem>
-        </NBreadcrumb>
-      </template>
-    </NPageHeader>
+  <PageShell
+    :title="ownerData?.owner.name ?? t('owners.detail.title', 'Owner Detail')"
+    :subtitle="ownerData?.owner.identification_number"
+    back
+    @back="handleBack"
+  >
+    <template #context>
+      <NBreadcrumb>
+        <NBreadcrumbItem @click="router.push('/owners/report')" style="cursor:pointer">
+          {{ t('owners.report', 'Owners Report') }}
+        </NBreadcrumbItem>
+        <NBreadcrumbItem
+          v-for="(entry, idx) in breadcrumbChain"
+          :key="entry.id"
+          @click="navigateToBreadcrumb(entry, idx)"
+          style="cursor:pointer"
+        >
+          {{ entry.name }}
+        </NBreadcrumbItem>
+        <NBreadcrumbItem>
+          {{ ownerData?.owner.name ?? t('owners.detail.title', 'Owner Detail') }}
+        </NBreadcrumbItem>
+      </NBreadcrumb>
+    </template>
 
     <NSpin :show="loading">
-      <NAlert v-if="error" type="error" style="margin-top: 16px;">
+      <NAlert v-if="error" type="error">
         {{ error }}
         <NButton style="margin-left: 12px;" @click="fetchOwnerDetail">{{ t('common.retry', 'Retry') }}</NButton>
       </NAlert>
 
       <div v-else-if="ownerData" class="detail-content">
         <!-- Owner Info -->
-        <NCard style="margin-top: 16px;">
+        <NCard>
           <NDescriptions bordered :column="2">
             <NDescriptionsItem :label="t('owners.name', 'Name')">
               {{ ownerData.owner.name }}
@@ -323,8 +320,11 @@ onMounted(fetchOwnerDetail)
         </NCard>
 
         <!-- Holdings by type -->
-        <NCard v-if="unitTypeSummary.length > 0" style="margin-top: 16px;">
-          <h3 class="section-title">{{ t('owners.holdingsByType', 'Holdings by unit type') }}</h3>
+        <NCard
+          v-if="unitTypeSummary.length > 0"
+          style="margin-top: 16px;"
+          :title="t('owners.holdingsByType', 'Holdings by unit type')"
+        >
           <div class="type-cards-row">
             <div
               v-for="entry in unitTypeSummary"
@@ -351,22 +351,23 @@ onMounted(fetchOwnerDetail)
         </NCard>
 
         <!-- Units table -->
-        <NCard style="margin-top: 16px;">
-          <div class="section-header">
-            <h3 class="section-title">{{ t('owners.unitsDetails', "Owner's Units") }}</h3>
-            <NTag
-              v-for="type in selectedUnitTypes"
-              :key="type"
-              type="info"
-              closable
-              @close="handleSelectUnitType(type)"
-            >
-              {{ t(`unitTypes.${type}`, type) }}
-            </NTag>
-            <NButton size="small" @click="downloadFilteredUnits" style="margin-left: auto;">
-              {{ t('owners.exportToCsv', 'Export to CSV') }}
-            </NButton>
-          </div>
+        <NCard style="margin-top: 16px;" :title="t('owners.unitsDetails', 'Owner\'s Units')">
+          <template #header-extra>
+            <NSpace align="center">
+              <NTag
+                v-for="type in selectedUnitTypes"
+                :key="type"
+                type="info"
+                closable
+                @close="handleSelectUnitType(type)"
+              >
+                {{ t(`unitTypes.${type}`, type) }}
+              </NTag>
+              <NButton size="small" @click="downloadFilteredUnits">
+                {{ t('owners.exportToCsv', 'Export to CSV') }}
+              </NButton>
+            </NSpace>
+          </template>
           <NDataTable
             :columns="unitsColumns"
             :data="filteredUnits"
@@ -377,8 +378,11 @@ onMounted(fetchOwnerDetail)
         </NCard>
 
         <!-- Co-owners table -->
-        <NCard v-if="ownerData.co_owners && ownerData.co_owners.length > 0" style="margin-top: 16px;">
-          <h3 class="section-title">{{ t('owners.coOwners', 'Co-Owners') }}</h3>
+        <NCard
+          v-if="ownerData.co_owners && ownerData.co_owners.length > 0"
+          style="margin-top: 16px;"
+          :title="t('owners.coOwners', 'Co-Owners')"
+        >
           <NDataTable
             :columns="coOwnersColumns"
             :data="ownerData.co_owners"
@@ -390,29 +394,12 @@ onMounted(fetchOwnerDetail)
         <NDivider v-else />
       </div>
     </NSpin>
-  </div>
+  </PageShell>
 </template>
 
 <style scoped>
-.owner-detail-page {
-  width: 100%;
-}
-
 .detail-content {
   padding-bottom: 32px;
-}
-
-.section-title {
-  font-size: var(--text-lg);
-  font-weight: 600;
-  margin: 0 0 12px;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
 }
 
 .type-cards-row {

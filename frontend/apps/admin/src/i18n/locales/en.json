@@ -700,7 +700,8 @@
         "delegate": "Delegate"
       },
       "addBallotInfo": "Add Ballot Information",
-      "addBallotInfoDescription": "Add offline voting results for this participant"
+      "addBallotInfoDescription": "Add offline voting results for this participant",
+      "confirmRemove": "Are you sure you want to remove {name} from this gathering?"
     },
     "voting": {
       "title": "Voting",
@@ -802,7 +803,34 @@
     "invitations": {
       "title": "Invitations",
       "printBallotRo": "Print ballot (RO)",
-      "printBallotRu": "Print ballot (RU)"
+      "printBallotRu": "Print ballot (RU)",
+      "qualifiedOwners": "{count} qualified owner | {count} qualified owners",
+      "generateForVisible": "Generate for visible ({count})",
+      "exportCsv": "Export CSV",
+      "searchOwners": "Search owners...",
+      "owner": "Owner",
+      "expires": "Expires",
+      "generateLink": "Generate link",
+      "revoke": "Revoke",
+      "statusActive": "Active",
+      "statusExpired": "Expired",
+      "statusRevoked": "Revoked",
+      "statusNone": "Not generated",
+      "generateLinkFor": "Generate link for {name}",
+      "generateAllLinks": "Generate all links",
+      "expiryDate": "Expiry date",
+      "selectExpiry": "Select an expiry date",
+      "generate": "Generate",
+      "copy": "Copy",
+      "copied": "Copied",
+      "done": "Done",
+      "linksNotRecoverable": "These links cannot be recovered after closing this dialog. Copy them now.",
+      "revokeTitle": "Revoke invitation",
+      "revokeWarning": "Revoking this link for {name} will immediately invalidate their access. You can generate a new link afterward.",
+      "generateError": "Failed to generate invitation",
+      "revokeError": "Failed to revoke invitation",
+      "loadError": "Failed to load invitations",
+      "link": "Link"
     },
     "ballots": {
       "title": "Ballots",

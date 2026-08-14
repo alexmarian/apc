@@ -694,7 +694,8 @@
         "delegate": "Delegat"
       },
       "addBallotInfo": "Adaugă Informații Buletin",
-      "addBallotInfoDescription": "Adaugă rezultatele votării offline pentru acest participant"
+      "addBallotInfoDescription": "Adaugă rezultatele votării offline pentru acest participant",
+      "confirmRemove": "Sigur doriți să eliminați {name} din această adunare?"
     },
     "voting": {
       "title": "Votare",
@@ -796,7 +797,34 @@
     "invitations": {
       "title": "Invitații",
       "printBallotRo": "Tipărește buletin (RO)",
-      "printBallotRu": "Tipărește buletin (RU)"
+      "printBallotRu": "Tipărește buletin (RU)",
+      "qualifiedOwners": "{count} proprietar eligibil | {count} proprietari eligibili",
+      "generateForVisible": "Generează pentru cei afișați ({count})",
+      "exportCsv": "Exportă CSV",
+      "searchOwners": "Caută proprietari...",
+      "owner": "Proprietar",
+      "expires": "Expiră",
+      "generateLink": "Generează link",
+      "revoke": "Revocă",
+      "statusActive": "Activ",
+      "statusExpired": "Expirat",
+      "statusRevoked": "Revocat",
+      "statusNone": "Negenerat",
+      "generateLinkFor": "Generează link pentru {name}",
+      "generateAllLinks": "Generează toate linkurile",
+      "expiryDate": "Data expirării",
+      "selectExpiry": "Selectați o dată de expirare",
+      "generate": "Generează",
+      "copy": "Copiază",
+      "copied": "Copiat",
+      "done": "Gata",
+      "linksNotRecoverable": "Aceste linkuri nu mai pot fi recuperate după închiderea acestei ferestre. Copiați-le acum.",
+      "revokeTitle": "Revocă invitația",
+      "revokeWarning": "Revocarea acestui link pentru {name} îi va invalida imediat accesul. Puteți genera ulterior un link nou.",
+      "generateError": "Generarea invitației a eșuat",
+      "revokeError": "Revocarea invitației a eșuat",
+      "loadError": "Încărcarea invitațiilor a eșuat",
+      "link": "Link"
     },
     "ballots": {
       "title": "Buletine de Vot",

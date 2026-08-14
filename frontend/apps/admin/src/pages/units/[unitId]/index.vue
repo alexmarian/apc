@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { NCard, NButton, NPageHeader, NSpin, NAlert, NModal } from 'naive-ui'
+import { NCard, NButton, NSpin, NAlert, NModal } from 'naive-ui'
+import PageShell from '@/components/PageShell.vue'
 import UnitDetails from '@/components/UnitDetails.vue'
 import UnitForm from '@/components/UnitForm.vue'
 import OwnerForm from '@/components/OwnerForm.vue'
@@ -139,34 +140,31 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="unit-details-page">
-    <NPageHeader @back="handleBackToUnits">
-      <template #title>
-        {{ showEditForm ? t('units.editUnit', 'Edit Unit') : t('units.details', 'Unit Details') }}
-      </template>
-      <template #extra>
-        <NButton
-          v-if="!showEditForm"
-          type="primary"
-          @click="handleEditUnit"
-          :disabled="loading || error !== null"
-        >
-          {{ t('units.editUnit', 'Edit Unit') }}
-        </NButton>
-      </template>
-    </NPageHeader>
+  <PageShell
+    :title="showEditForm ? t('units.editUnit', 'Edit Unit') : t('units.details', 'Unit Details')"
+    back
+    @back="handleBackToUnits"
+  >
+    <template #actions>
+      <NButton
+        v-if="!showEditForm"
+        type="primary"
+        @click="handleEditUnit"
+        :disabled="loading || error !== null"
+      >
+        {{ t('units.editUnit', 'Edit Unit') }}
+      </NButton>
+    </template>
 
     <NSpin :show="loading">
-      <NCard v-if="error" style="margin-top: 16px;">
-        <NAlert type="error" :title="t('common.error', 'Error')">
+      <NCard v-if="error">
+        <NAlert type="error" :title="t('common.error', 'Error')" class="unit-details-page__error">
           {{ error }}
         </NAlert>
-        <div style="text-align: center; padding: 16px;">
-          <NButton @click="verifyParams">{{ t('common.retry', 'Retry') }}</NButton>
-        </div>
+        <NButton @click="verifyParams">{{ t('common.retry', 'Retry') }}</NButton>
       </NCard>
 
-      <div v-else-if="associationId && buildingId" style="margin-top: 16px;">
+      <div v-else-if="associationId && buildingId">
         <!-- Show edit form or details based on state -->
         <NCard v-if="showEditForm">
           <UnitForm
@@ -197,6 +195,7 @@ onMounted(() => {
       preset="card"
       :title="t('owners.editOwner', 'Edit Owner')"
       :mask-closable="false"
+      :close-on-esc="true"
     >
       <OwnerForm
         v-if="associationId && editingOwnerId"
@@ -206,12 +205,11 @@ onMounted(() => {
         @cancelled="handleOwnerFormCancelled"
       />
     </NModal>
-  </div>
+  </PageShell>
 </template>
 
 <style scoped>
-.unit-details-page {
-  width: 100%;
-  margin: 0 auto;
+.unit-details-page__error {
+  margin-bottom: 16px;
 }
 </style>

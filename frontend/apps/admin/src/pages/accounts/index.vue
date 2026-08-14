@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { NCard, NModal } from 'naive-ui'
+import { NButton, NModal } from 'naive-ui'
+import PageShell from '@/components/PageShell.vue'
 import AccountsList from '@/components/AccountsList.vue'
 import AccountForm from '@/components/AccountForm.vue'
 import { useAssociationStore } from '@/stores/association'
@@ -38,15 +39,11 @@ const handleCreateAccount = () => {
 }
 
 const handleAccountSaved = (savedAccount: Account) => {
-  console.log('Account saved:', savedAccount)
-
   // Update or add the account in the list without reloading
   if (accountsListRef.value) {
     if (editingAccountId.value) {
-      // Update existing account
       accountsListRef.value.updateAccount(savedAccount)
     } else {
-      // Add new account
       accountsListRef.value.addAccount(savedAccount)
     }
   }
@@ -60,20 +57,23 @@ const handleAccountFormCancelled = () => {
   showAccountModal.value = false
   editingAccountId.value = undefined
 }
-
 </script>
 
 <template>
-  <div class="accounts-page">
-    <div v-if="canShowAccounts">
-      <!-- Accounts List -->
-      <AccountsList
-        ref="accountsListRef"
-        :association-id="associationId"
-        @edit="handleEditAccount"
-        @create="handleCreateAccount"
-      />
-    </div>
+  <PageShell :title="t('accounts.title')">
+    <template #actions>
+      <NButton type="primary" :disabled="!associationId" @click="handleCreateAccount">
+        {{ t('accounts.createNew') }}
+      </NButton>
+    </template>
+
+    <AccountsList
+      v-if="canShowAccounts"
+      ref="accountsListRef"
+      :association-id="associationId"
+      @edit="handleEditAccount"
+      @create="handleCreateAccount"
+    />
 
     <!-- Account Edit/Create Modal -->
     <NModal
@@ -92,11 +92,5 @@ const handleAccountFormCancelled = () => {
         @cancelled="handleAccountFormCancelled"
       />
     </NModal>
-  </div>
+  </PageShell>
 </template>
-
-<style scoped>
-.accounts-page {
-  width: 100%;
-}
-</style>

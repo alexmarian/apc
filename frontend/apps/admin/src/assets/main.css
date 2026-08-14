@@ -1,4 +1,4 @@
-@import './base.css';
+@import '@apc/theme/base.css';
 
 #app {
   width: 100%;
