@@ -1,0 +1,12 @@
+# Revisions listed here are skipped by `git blame`, so that bulk reformatting
+# does not hide the last real author of a line.
+#
+# Local git needs to be told about this file once:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# GitHub picks it up automatically.
+#
+# Only add commits that change formatting and nothing else, and use the full
+# 40-character SHA -- git blame rejects abbreviated ones.
+
+# style: run prettier across all app and package sources
+d5ea111316bdcaa0c613d238c3a9d3d129d02d0b
