@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { NForm, NFormItem, NInput, NButton, NAlert, NSpace } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
 import { useI18n } from 'vue-i18n'
@@ -10,7 +10,21 @@ import AuthLayout from '@/layouts/AuthLayout.vue'
 // Get auth store
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
+
+/**
+ * Where to go after signing in: back to whatever the guard interrupted, or the
+ * dashboard. Only same-site absolute paths are accepted — `//host` is a
+ * protocol-relative URL and would send the user off-site.
+ */
+const redirectTarget = computed(() => {
+  const target = route.query.redirect
+  if (typeof target === 'string' && target.startsWith('/') && !target.startsWith('//')) {
+    return target
+  }
+  return '/'
+})
 
 // Form data
 const formData = reactive({
@@ -76,7 +90,7 @@ const handleLogin = async (e: MouseEvent) => {
     const success = await auth.login(formData)
 
     if (success) {
-      router.push('/')
+      router.push(redirectTarget.value)
     }
   } catch (err) {
     console.error('Validation failed:', err)

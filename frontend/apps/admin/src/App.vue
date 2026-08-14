@@ -11,6 +11,7 @@ import { useI18n } from 'vue-i18n'
 import { usePreferences } from '@/stores/preferences.ts'
 import { useAuthStore } from '@/stores/auth'
 import { useAssociationStore } from '@/stores/association'
+import { isAuthPath } from '@/router/authPages'
 import {
   AttachMoneyRound,
   AccountBalanceRound,
@@ -49,8 +50,13 @@ watch(
   },
 )
 
-// Check if current route is an auth page (login, register, etc.)
-const isAuthPage = computed(() => route.meta.isAuthPage)
+/*
+ * Derived from the path, not from `route.meta`. The guard used to assign
+ * `to.meta.isAuthPage` on every navigation, and this read it back — so the
+ * chrome depended on a mutation the router made to a shared object rather than
+ * on the route itself.
+ */
+const isAuthPage = computed(() => isAuthPath(route.path))
 
 const isDark = ref(preferences.theme ? preferences.theme === 'darkTheme' : true)
 const currentTheme = computed(() => {

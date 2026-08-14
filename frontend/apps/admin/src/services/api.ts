@@ -73,10 +73,6 @@ api.interceptors.request.use(
   },
 )
 
-// Flag to prevent multiple simultaneous logout attempts
-let isRefreshing = false
-let refreshPromise: Promise<boolean> | null = null
-
 // Response interceptor
 api.interceptors.response.use(
   (response: AxiosResponse) => {
@@ -89,49 +85,21 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    // Handle 401 errors (unauthorized)
+    // Handle 401 errors (unauthorized). attemptTokenRefresh collapses
+    // concurrent callers onto a single request, so the queueing this used to do
+    // by hand is no longer needed here.
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
-      // If we're already refreshing, wait for the existing refresh
-      if (isRefreshing && refreshPromise) {
-        try {
-          const success = await refreshPromise
-          if (success) {
-            const newToken = getAuthToken()
-            if (originalRequest.headers && newToken) {
-              originalRequest.headers.Authorization = `Bearer ${newToken}`
-            }
-            return api(originalRequest)
-          }
-        } catch {
-          // If refresh failed, continue to logout
+      if (await attemptTokenRefresh()) {
+        const newToken = getAuthToken()
+        if (originalRequest.headers && newToken) {
+          originalRequest.headers.Authorization = `Bearer ${newToken}`
         }
+        return api(originalRequest)
       }
 
-      // Start refresh process
-      if (!isRefreshing) {
-        isRefreshing = true
-        refreshPromise = attemptTokenRefresh()
-
-        try {
-          const success = await refreshPromise
-          if (success) {
-            const newToken = getAuthToken()
-            if (originalRequest.headers && newToken) {
-              originalRequest.headers.Authorization = `Bearer ${newToken}`
-            }
-            return api(originalRequest)
-          }
-        } catch {
-          // If refresh failed, continue to logout
-        } finally {
-          isRefreshing = false
-          refreshPromise = null
-        }
-      }
-
-      // If we get here, refresh failed or no refresh token available
+      // No refresh token, or the refresh itself was rejected.
       performLogout()
     }
 
