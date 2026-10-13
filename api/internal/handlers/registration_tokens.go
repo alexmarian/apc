@@ -26,6 +26,9 @@ type RegistrationToken struct {
 	Description string     `json:"description"`
 	IsAdmin     bool       `json:"is_admin"`
 	Status      string     `json:"status,omitempty"`
+	// Associations the invited user is linked to on registration (never
+	// set for admin invitations).
+	Associations []AssociationRef `json:"associations"`
 }
 
 // Generate a secure random token
@@ -46,9 +49,10 @@ func HandleCreateRegistrationToken(cfg *ApiConfig) func(http.ResponseWriter, *ht
 
 		// Parse request
 		var tokenRequest struct {
-			ExpirationHours int    `json:"expiration_hours"`
-			Description     string `json:"description"`
-			IsAdmin         bool   `json:"is_admin"`
+			ExpirationHours int     `json:"expiration_hours"`
+			Description     string  `json:"description"`
+			IsAdmin         bool    `json:"is_admin"`
+			AssociationIds  []int64 `json:"association_ids"`
 		}
 
 		decoder := json.NewDecoder(req.Body)
@@ -68,6 +72,15 @@ func HandleCreateRegistrationToken(cfg *ApiConfig) func(http.ResponseWriter, *ht
 			return
 		}
 
+		if tokenRequest.IsAdmin && len(tokenRequest.AssociationIds) > 0 {
+			RespondWithError(rw, http.StatusBadRequest, "Admin invitations can't be limited to associations")
+			return
+		}
+		associationIds, ok := validAssociationIds(cfg, rw, req, tokenRequest.AssociationIds)
+		if !ok {
+			return
+		}
+
 		// Generate token
 		token, err := generateToken()
 		if err != nil {
@@ -77,16 +90,33 @@ func HandleCreateRegistrationToken(cfg *ApiConfig) func(http.ResponseWriter, *ht
 		}
 
 		// Calculate expiration time
-		expiresAt := time.Now().Add(time.Duration(tokenRequest.ExpirationHours) * time.Hour)
+		expiresAt := time.Now().UTC().Add(time.Duration(tokenRequest.ExpirationHours) * time.Hour)
 
-		// Create token in database
-		dbToken, err := cfg.Db.CreateRegistrationToken(req.Context(), database.CreateRegistrationTokenParams{
+		// Create the token and its association links together.
+		ctx := req.Context()
+		tx, err := cfg.DB.BeginTx(ctx, nil)
+		if err != nil {
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to create token")
+			return
+		}
+		defer tx.Rollback()
+		q := cfg.Db.WithTx(tx)
+		dbToken, err := q.CreateRegistrationToken(ctx, database.CreateRegistrationTokenParams{
 			Token:       token,
 			CreatedBy:   userLogin,
 			ExpiresAt:   expiresAt,
 			Description: tokenRequest.Description,
 			IsAdmin:     tokenRequest.IsAdmin,
 		})
+		for _, id := range associationIds {
+			if err != nil {
+				break
+			}
+			err = q.AddRegistrationTokenAssociation(ctx, database.AddRegistrationTokenAssociationParams{Token: token, AssociationID: id})
+		}
+		if err == nil {
+			err = tx.Commit()
+		}
 
 		if err != nil {
 			logging.Logger.Log(zap.WarnLevel, "Error creating token", zap.String("error", err.Error()))
@@ -96,12 +126,17 @@ func HandleCreateRegistrationToken(cfg *ApiConfig) func(http.ResponseWriter, *ht
 
 		// Return created token
 		tokenResponse := RegistrationToken{
-			Token:       dbToken.Token,
-			CreatedBy:   dbToken.CreatedBy,
-			CreatedAt:   dbToken.CreatedAt,
-			ExpiresAt:   dbToken.ExpiresAt,
-			Description: dbToken.Description,
-			IsAdmin:     dbToken.IsAdmin,
+			Token:        dbToken.Token,
+			CreatedBy:    dbToken.CreatedBy,
+			CreatedAt:    dbToken.CreatedAt,
+			ExpiresAt:    dbToken.ExpiresAt,
+			Description:  dbToken.Description,
+			IsAdmin:      dbToken.IsAdmin,
+			Status:       "Valid",
+			Associations: tokenAssociations(req, cfg.Db)[dbToken.Token],
+		}
+		if tokenResponse.Associations == nil {
+			tokenResponse.Associations = []AssociationRef{}
 		}
 
 		RespondWithJSON(rw, http.StatusCreated, tokenResponse)
@@ -175,16 +210,21 @@ func HandleGetAllRegistrationTokens(cfg *ApiConfig) func(http.ResponseWriter, *h
 		}
 
 		// Convert to response format
+		associations := tokenAssociations(req, cfg.Db)
 		tokens := make([]RegistrationToken, len(dbTokens))
 		for i, dbToken := range dbTokens {
 			tokens[i] = RegistrationToken{
-				Token:       dbToken.Token,
-				CreatedBy:   dbToken.CreatedBy,
-				CreatedAt:   dbToken.CreatedAt,
-				ExpiresAt:   dbToken.ExpiresAt,
-				Description: dbToken.Description,
-				IsAdmin:     dbToken.IsAdmin,
-				Status:      dbToken.Status,
+				Token:        dbToken.Token,
+				CreatedBy:    dbToken.CreatedBy,
+				CreatedAt:    dbToken.CreatedAt,
+				ExpiresAt:    dbToken.ExpiresAt,
+				Description:  dbToken.Description,
+				IsAdmin:      dbToken.IsAdmin,
+				Status:       dbToken.Status,
+				Associations: associations[dbToken.Token],
+			}
+			if tokens[i].Associations == nil {
+				tokens[i].Associations = []AssociationRef{}
 			}
 
 			if dbToken.UsedAt.Valid {
@@ -210,4 +250,19 @@ func HandleGetAllRegistrationTokens(cfg *ApiConfig) func(http.ResponseWriter, *h
 
 		RespondWithJSON(rw, http.StatusOK, tokens)
 	}
+}
+
+// tokenAssociations groups every registration token's associations by
+// token. Errors yield an empty map (associations are informational here).
+func tokenAssociations(req *http.Request, q *database.Queries) map[string][]AssociationRef {
+	byToken := make(map[string][]AssociationRef)
+	rows, err := q.ListRegistrationTokenAssociations(req.Context())
+	if err != nil {
+		logging.Logger.Log(zap.WarnLevel, "Error listing token associations", zap.String("error", err.Error()))
+		return byToken
+	}
+	for _, r := range rows {
+		byToken[r.Token] = append(byToken[r.Token], AssociationRef{ID: r.ID, Name: r.Name})
+	}
+	return byToken
 }

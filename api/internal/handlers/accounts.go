@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/alexmarian/apc/api/internal/database"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/alexmarian/apc/api/internal/database"
 )
 
 type Account struct {
@@ -24,6 +26,21 @@ type Account struct {
 
 const AccountIdPathValue = "accountId"
 
+// validateAccountInput trims an account's fields in place and checks them;
+// returns a message for a 400, or "".
+func validateAccountInput(number, description, destination *string) string {
+	*number, *description, *destination = strings.TrimSpace(*number), strings.TrimSpace(*description), strings.TrimSpace(*destination)
+	switch {
+	case *number == "":
+		return "Account number is required"
+	case *description == "":
+		return "Description is required"
+	case len([]rune(*number)) > 255 || len([]rune(*description)) > 255 || len([]rune(*destination)) > 255:
+		return "Fields must be at most 255 characters"
+	}
+	return ""
+}
+
 func HandleGetAssociationAccounts(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
@@ -31,7 +48,7 @@ func HandleGetAssociationAccounts(cfg *ApiConfig) func(http.ResponseWriter, *htt
 		accounts, err := cfg.Db.GetAssociationAccounts(req.Context(), int64(associationId))
 		if err != nil {
 			var errorMsg = fmt.Sprintf("Error getting accounts: %s", err)
-			log.Printf(errorMsg)
+			log.Print(errorMsg)
 			RespondWithError(rw, http.StatusInternalServerError, errorMsg)
 			return
 		}
@@ -112,13 +129,8 @@ func HandleCreateAccount(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		}
 
 		// Validate request
-		if accountRequest.Number == "" {
-			RespondWithError(rw, http.StatusBadRequest, "Account number is required")
-			return
-		}
-
-		if accountRequest.Description == "" {
-			RespondWithError(rw, http.StatusBadRequest, "Description is required")
+		if msg := validateAccountInput(&accountRequest.Number, &accountRequest.Description, &accountRequest.Destination); msg != "" {
+			RespondWithError(rw, http.StatusBadRequest, msg)
 			return
 		}
 
@@ -171,13 +183,19 @@ func HandleUpdateAccount(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		}
 
 		// Validate request
-		if accountRequest.Number == "" {
-			RespondWithError(rw, http.StatusBadRequest, "Account number is required")
+		if msg := validateAccountInput(&accountRequest.Number, &accountRequest.Description, &accountRequest.Destination); msg != "" {
+			RespondWithError(rw, http.StatusBadRequest, msg)
 			return
 		}
 
-		if accountRequest.Description == "" {
-			RespondWithError(rw, http.StatusBadRequest, "Description is required")
+		// Disabling is one-way and final: a disabled account isn't edited.
+		existing, err := cfg.Db.GetAccount(req.Context(), int64(accountId))
+		if err != nil || existing.AssociationID != int64(associationId) {
+			RespondWithError(rw, http.StatusNotFound, "Account not found or doesn't belong to this association")
+			return
+		}
+		if !existing.IsActive {
+			RespondWithError(rw, http.StatusConflict, "A disabled account can't be edited")
 			return
 		}
 

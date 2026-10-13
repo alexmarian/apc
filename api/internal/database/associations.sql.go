@@ -10,6 +10,61 @@ import (
 	"strings"
 )
 
+const addAssociationUser = `-- name: AddAssociationUser :exec
+
+
+INSERT INTO users_associations (user_id, association_id)
+VALUES (?, ?)
+`
+
+type AddAssociationUserParams struct {
+	UserID        int64
+	AssociationID int64
+}
+
+func (q *Queries) AddAssociationUser(ctx context.Context, arg AddAssociationUserParams) error {
+	_, err := q.db.ExecContext(ctx, addAssociationUser, arg.UserID, arg.AssociationID)
+	return err
+}
+
+const createAssociation = `-- name: CreateAssociation :one
+
+INSERT INTO associations (name, address, administrator)
+VALUES (?, ?, ?)
+RETURNING id, name, address, administrator, created_at, updated_at
+`
+
+type CreateAssociationParams struct {
+	Name          string
+	Address       string
+	Administrator string
+}
+
+func (q *Queries) CreateAssociation(ctx context.Context, arg CreateAssociationParams) (Association, error) {
+	row := q.db.QueryRowContext(ctx, createAssociation, arg.Name, arg.Address, arg.Administrator)
+	var i Association
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Address,
+		&i.Administrator,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteAssociationUsers = `-- name: DeleteAssociationUsers :exec
+
+
+DELETE FROM users_associations WHERE association_id = ?
+`
+
+func (q *Queries) DeleteAssociationUsers(ctx context.Context, associationID int64) error {
+	_, err := q.db.ExecContext(ctx, deleteAssociationUsers, associationID)
+	return err
+}
+
 const getAssociations = `-- name: GetAssociations :one
 
 SELECT id, name, address, administrator, created_at, updated_at from associations where id = ?
@@ -75,6 +130,44 @@ func (q *Queries) GetAssociationsFromList(ctx context.Context, associationIds []
 	return items, nil
 }
 
+const listAssociationAdministrators = `-- name: ListAssociationAdministrators :many
+
+
+SELECT users_associations.association_id, users.id, users.login
+FROM users_associations
+         JOIN users ON users.id = users_associations.user_id
+ORDER BY users.login
+`
+
+type ListAssociationAdministratorsRow struct {
+	AssociationID int64
+	ID            int64
+	Login         string
+}
+
+func (q *Queries) ListAssociationAdministrators(ctx context.Context) ([]ListAssociationAdministratorsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listAssociationAdministrators)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAssociationAdministratorsRow
+	for rows.Next() {
+		var i ListAssociationAdministratorsRow
+		if err := rows.Scan(&i.AssociationID, &i.ID, &i.Login); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAssociations = `-- name: ListAssociations :many
 
 
@@ -109,4 +202,42 @@ func (q *Queries) ListAssociations(ctx context.Context) ([]Association, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateAssociation = `-- name: UpdateAssociation :one
+
+
+UPDATE associations
+SET name          = ?,
+    address       = ?,
+    administrator = ?,
+    updated_at    = CURRENT_TIMESTAMP
+WHERE id = ?
+RETURNING id, name, address, administrator, created_at, updated_at
+`
+
+type UpdateAssociationParams struct {
+	Name          string
+	Address       string
+	Administrator string
+	ID            int64
+}
+
+func (q *Queries) UpdateAssociation(ctx context.Context, arg UpdateAssociationParams) (Association, error) {
+	row := q.db.QueryRowContext(ctx, updateAssociation,
+		arg.Name,
+		arg.Address,
+		arg.Administrator,
+		arg.ID,
+	)
+	var i Association
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Address,
+		&i.Administrator,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

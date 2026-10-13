@@ -10,6 +10,100 @@ import (
 	"database/sql"
 )
 
+const countUnitOwnerships = `-- name: CountUnitOwnerships :one
+
+
+SELECT COUNT(*) FROM ownerships WHERE unit_id = ?
+`
+
+func (q *Queries) CountUnitOwnerships(ctx context.Context, unitID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUnitOwnerships, unitID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUnitSlots = `-- name: CountUnitSlots :one
+
+
+SELECT COUNT(*) FROM unit_slots WHERE unit_id = ?
+`
+
+func (q *Queries) CountUnitSlots(ctx context.Context, unitID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUnitSlots, unitID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const createUnit = `-- name: CreateUnit :one
+
+INSERT INTO units (cadastral_number, building_id, unit_number, address, entrance, area, part, unit_type, floor, room_count)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, cadastral_number, building_id, unit_number, address, entrance, area, part, unit_type, floor, room_count, created_at, updated_at
+`
+
+type CreateUnitParams struct {
+	CadastralNumber string
+	BuildingID      int64
+	UnitNumber      string
+	Address         string
+	Entrance        int64
+	Area            float64
+	Part            float64
+	UnitType        string
+	Floor           int64
+	RoomCount       int64
+}
+
+func (q *Queries) CreateUnit(ctx context.Context, arg CreateUnitParams) (Unit, error) {
+	row := q.db.QueryRowContext(ctx, createUnit,
+		arg.CadastralNumber,
+		arg.BuildingID,
+		arg.UnitNumber,
+		arg.Address,
+		arg.Entrance,
+		arg.Area,
+		arg.Part,
+		arg.UnitType,
+		arg.Floor,
+		arg.RoomCount,
+	)
+	var i Unit
+	err := row.Scan(
+		&i.ID,
+		&i.CadastralNumber,
+		&i.BuildingID,
+		&i.UnitNumber,
+		&i.Address,
+		&i.Entrance,
+		&i.Area,
+		&i.Part,
+		&i.UnitType,
+		&i.Floor,
+		&i.RoomCount,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteUnit = `-- name: DeleteUnit :exec
+
+
+DELETE FROM units WHERE id = ? AND building_id = ?
+`
+
+type DeleteUnitParams struct {
+	ID         int64
+	BuildingID int64
+}
+
+func (q *Queries) DeleteUnit(ctx context.Context, arg DeleteUnitParams) error {
+	_, err := q.db.ExecContext(ctx, deleteUnit, arg.ID, arg.BuildingID)
+	return err
+}
+
 const getBuildingUnit = `-- name: GetBuildingUnit :one
 
 SELECT id, cadastral_number, building_id, unit_number, address, entrance, area, part, unit_type, floor, room_count, created_at, updated_at from units where id = ? and building_id = ?
@@ -155,6 +249,57 @@ func (q *Queries) GetBuildingUnitsWithOwners(ctx context.Context, arg GetBuildin
 	return items, nil
 }
 
+const getUnitByCadastralNumber = `-- name: GetUnitByCadastralNumber :one
+
+
+SELECT u.id, u.building_id, b.association_id
+FROM units u
+         JOIN buildings b ON b.id = u.building_id
+WHERE u.cadastral_number = ?
+`
+
+type GetUnitByCadastralNumberRow struct {
+	ID            int64
+	BuildingID    int64
+	AssociationID int64
+}
+
+func (q *Queries) GetUnitByCadastralNumber(ctx context.Context, cadastralNumber string) (GetUnitByCadastralNumberRow, error) {
+	row := q.db.QueryRowContext(ctx, getUnitByCadastralNumber, cadastralNumber)
+	var i GetUnitByCadastralNumberRow
+	err := row.Scan(&i.ID, &i.BuildingID, &i.AssociationID)
+	return i, err
+}
+
+const listParticipantUnitsInfo = `-- name: ListParticipantUnitsInfo :many
+
+
+SELECT units_info FROM gathering_participants
+`
+
+func (q *Queries) ListParticipantUnitsInfo(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listParticipantUnitsInfo)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var units_info string
+		if err := rows.Scan(&units_info); err != nil {
+			return nil, err
+		}
+		items = append(items, units_info)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateBuildingUnitById = `-- name: UpdateBuildingUnitById :exec
 
 
@@ -179,6 +324,55 @@ func (q *Queries) UpdateBuildingUnitById(ctx context.Context, arg UpdateBuilding
 		arg.UnitNumber,
 		arg.Address,
 		arg.Entrance,
+		arg.UnitType,
+		arg.Floor,
+		arg.RoomCount,
+		arg.ID,
+		arg.BuildingID,
+	)
+	return err
+}
+
+const updateUnitAll = `-- name: UpdateUnitAll :exec
+
+
+UPDATE units
+SET cadastral_number = ?,
+    unit_number      = ?,
+    address          = ?,
+    entrance         = ?,
+    area             = ?,
+    part             = ?,
+    unit_type        = ?,
+    floor            = ?,
+    room_count       = ?,
+    updated_at       = datetime('now')
+WHERE id = ?
+  AND building_id = ?
+`
+
+type UpdateUnitAllParams struct {
+	CadastralNumber string
+	UnitNumber      string
+	Address         string
+	Entrance        int64
+	Area            float64
+	Part            float64
+	UnitType        string
+	Floor           int64
+	RoomCount       int64
+	ID              int64
+	BuildingID      int64
+}
+
+func (q *Queries) UpdateUnitAll(ctx context.Context, arg UpdateUnitAllParams) error {
+	_, err := q.db.ExecContext(ctx, updateUnitAll,
+		arg.CadastralNumber,
+		arg.UnitNumber,
+		arg.Address,
+		arg.Entrance,
+		arg.Area,
+		arg.Part,
 		arg.UnitType,
 		arg.Floor,
 		arg.RoomCount,

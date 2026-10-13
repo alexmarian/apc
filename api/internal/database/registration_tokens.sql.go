@@ -11,6 +11,21 @@ import (
 	"time"
 )
 
+const addRegistrationTokenAssociation = `-- name: AddRegistrationTokenAssociation :exec
+INSERT INTO registration_token_associations (token, association_id)
+VALUES (?, ?)
+`
+
+type AddRegistrationTokenAssociationParams struct {
+	Token         string
+	AssociationID int64
+}
+
+func (q *Queries) AddRegistrationTokenAssociation(ctx context.Context, arg AddRegistrationTokenAssociationParams) error {
+	_, err := q.db.ExecContext(ctx, addRegistrationTokenAssociation, arg.Token, arg.AssociationID)
+	return err
+}
+
 const createRegistrationToken = `-- name: CreateRegistrationToken :one
 INSERT INTO registration_tokens (
     token,
@@ -84,6 +99,35 @@ func (q *Queries) GetAllRegistrationTokens(ctx context.Context) ([]RegistrationT
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRegistrationTokenAssociationIds = `-- name: GetRegistrationTokenAssociationIds :many
+SELECT association_id
+FROM registration_token_associations
+WHERE token = ?
+`
+
+func (q *Queries) GetRegistrationTokenAssociationIds(ctx context.Context, token string) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, getRegistrationTokenAssociationIds, token)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var association_id int64
+		if err := rows.Scan(&association_id); err != nil {
+			return nil, err
+		}
+		items = append(items, association_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -193,6 +237,42 @@ func (q *Queries) GetValidRegistrationToken(ctx context.Context, token string) (
 	return i, err
 }
 
+const listRegistrationTokenAssociations = `-- name: ListRegistrationTokenAssociations :many
+SELECT registration_token_associations.token, associations.id, associations.name
+FROM registration_token_associations
+         JOIN associations ON associations.id = registration_token_associations.association_id
+ORDER BY associations.name
+`
+
+type ListRegistrationTokenAssociationsRow struct {
+	Token string
+	ID    int64
+	Name  string
+}
+
+func (q *Queries) ListRegistrationTokenAssociations(ctx context.Context) ([]ListRegistrationTokenAssociationsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listRegistrationTokenAssociations)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRegistrationTokenAssociationsRow
+	for rows.Next() {
+		var i ListRegistrationTokenAssociationsRow
+		if err := rows.Scan(&i.Token, &i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const revokeRegistrationToken = `-- name: RevokeRegistrationToken :exec
 UPDATE registration_tokens
 SET revoked_at = datetime('now'),
@@ -212,7 +292,7 @@ func (q *Queries) RevokeRegistrationToken(ctx context.Context, arg RevokeRegistr
 	return err
 }
 
-const useRegistrationToken = `-- name: UseRegistrationToken :exec
+const useRegistrationToken = `-- name: UseRegistrationToken :execrows
 UPDATE registration_tokens
 SET used_at = datetime('now'),
     used_by = ?
@@ -227,7 +307,10 @@ type UseRegistrationTokenParams struct {
 	Token  string
 }
 
-func (q *Queries) UseRegistrationToken(ctx context.Context, arg UseRegistrationTokenParams) error {
-	_, err := q.db.ExecContext(ctx, useRegistrationToken, arg.UsedBy, arg.Token)
-	return err
+func (q *Queries) UseRegistrationToken(ctx context.Context, arg UseRegistrationTokenParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, useRegistrationToken, arg.UsedBy, arg.Token)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

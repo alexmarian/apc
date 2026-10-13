@@ -195,6 +195,99 @@ func (q *Queries) GetAssociationOwners(ctx context.Context, associationID int64)
 	return items, nil
 }
 
+const getAssociationOwnersByIdentification = `-- name: GetAssociationOwnersByIdentification :many
+SELECT id, name, normalized_name, identification_number, contact_phone, contact_email, first_detected_at, association_id, created_at, updated_at
+FROM owners
+WHERE association_id = ?
+  AND identification_number = ?
+`
+
+type GetAssociationOwnersByIdentificationParams struct {
+	AssociationID        int64
+	IdentificationNumber string
+}
+
+func (q *Queries) GetAssociationOwnersByIdentification(ctx context.Context, arg GetAssociationOwnersByIdentificationParams) ([]Owner, error) {
+	rows, err := q.db.QueryContext(ctx, getAssociationOwnersByIdentification, arg.AssociationID, arg.IdentificationNumber)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Owner
+	for rows.Next() {
+		var i Owner
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.NormalizedName,
+			&i.IdentificationNumber,
+			&i.ContactPhone,
+			&i.ContactEmail,
+			&i.FirstDetectedAt,
+			&i.AssociationID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAssociationOwnersByNormalizedName = `-- name: GetAssociationOwnersByNormalizedName :many
+
+SELECT id, name, normalized_name, identification_number, contact_phone, contact_email, first_detected_at, association_id, created_at, updated_at
+FROM owners
+WHERE association_id = ?
+  AND normalized_name = ?
+`
+
+type GetAssociationOwnersByNormalizedNameParams struct {
+	AssociationID  int64
+	NormalizedName string
+}
+
+func (q *Queries) GetAssociationOwnersByNormalizedName(ctx context.Context, arg GetAssociationOwnersByNormalizedNameParams) ([]Owner, error) {
+	rows, err := q.db.QueryContext(ctx, getAssociationOwnersByNormalizedName, arg.AssociationID, arg.NormalizedName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Owner
+	for rows.Next() {
+		var i Owner
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.NormalizedName,
+			&i.IdentificationNumber,
+			&i.ContactPhone,
+			&i.ContactEmail,
+			&i.FirstDetectedAt,
+			&i.AssociationID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAssociationVoters = `-- name: GetAssociationVoters :many
 
 SELECT o.id                    as owner_id,

@@ -71,8 +71,8 @@ FROM expenses e
          JOIN categories c ON e.category_id = c.id
          JOIN accounts a ON e.account_id = a.id
 WHERE c.association_id = ?
-  AND e.date > ?
-  AND e.date < ?
+  AND e.date >= ? -- inclusive: an expense dated on the first/last day counts
+  AND e.date <= ?
 ORDER BY e.date DESC;
 
 -- name: GetDistinctDestinations :many
@@ -103,8 +103,8 @@ FROM expenses e
          JOIN categories c ON e.category_id = c.id
          JOIN accounts a ON e.account_id = a.id
 WHERE c.association_id = ?
-  AND e.date > ?
-  AND e.date < ?
+  AND e.date >= ? -- inclusive: an expense dated on the first/last day counts
+  AND e.date <= ?
   AND (? = 0 OR e.category_id = ?) -- Filter by category_id if provided (non-zero)
   AND (? = '' OR c.type = ?)       -- Filter by category_type if provided (non-empty)
   AND (? = '' OR c.family = ?)     -- Filter by category_family if provided (non-empty)

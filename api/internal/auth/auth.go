@@ -100,26 +100,56 @@ func MakeRefreshToken() (string, error) {
 	return hex.EncodeToString(token), nil
 }
 
+// TOTPEnrollment is what a user needs to add a new TOTP secret to their
+// authenticator app: the QR code (base64 PNG), the secret to type in by hand,
+// and the otpauth:// URL (opens the app directly on a phone).
+type TOTPEnrollment struct {
+	Secret     string
+	QRCode     string
+	OtpauthURL string
+}
+
+// GenerateTOTPEnrollment creates a new TOTP secret for username.
+func GenerateTOTPEnrollment(username string) (TOTPEnrollment, error) {
+	key, err := newTOTPKey(username)
+	if err != nil {
+		return TOTPEnrollment{}, err
+	}
+	qrCode, err := qrCodePNG(key)
+	if err != nil {
+		return TOTPEnrollment{}, err
+	}
+	return TOTPEnrollment{Secret: key.Secret(), QRCode: qrCode, OtpauthURL: key.URL()}, nil
+}
+
 func GenerateQRCode(username string) (string, string, error) {
-	key, err := totp.Generate(totp.GenerateOpts{
+	enrollment, err := GenerateTOTPEnrollment(username)
+	if err != nil {
+		return "", "", err
+	}
+	return enrollment.Secret, enrollment.QRCode, nil
+}
+
+func newTOTPKey(username string) (*otp.Key, error) {
+	return totp.Generate(totp.GenerateOpts{
 		Issuer:      "APC",
 		AccountName: username,
 		Period:      30,
 		Digits:      otp.DigitsSix,
 		Algorithm:   otp.AlgorithmSHA1,
 	})
-	if err != nil {
-		return "", "", err
-	}
+}
+
+func qrCodePNG(key *otp.Key) (string, error) {
 	img, err := key.Image(300, 300)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {
-		return "", "", err
+		return "", err
 	}
-	return key.Secret(), base64.StdEncoding.EncodeToString(buf.Bytes()), nil
+	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 
 func VerifyTOTPCode(secret, code string) (bool, error) {

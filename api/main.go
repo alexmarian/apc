@@ -24,6 +24,13 @@ import (
 var schemaFS embed.FS
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "create-admin" {
+		if err := runCreateAdmin(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
 	logLevel := os.Getenv("LOG_LEVEL")
 	if logLevel == "" {
 		logLevel = "info" // Default log level
@@ -77,6 +84,7 @@ func main() {
 		}
 		logging.Logger.Log(zap.InfoLevel, "Migrations applied")
 		apiCfg.Db = database.New(db)
+		apiCfg.DB = db
 		logging.Logger.Log(zap.InfoLevel, "Connected to database!")
 	}
 
@@ -91,13 +99,26 @@ func main() {
 	// Initialize refactored gathering router
 	gatheringRouter := gathering.NewGatheringRouter(apiCfg)
 
-	mux.HandleFunc("POST /v1/api/users", handlers.HandleCreateUserWithToken(apiCfg))
+	// Registration and TOTP onboarding take credentials, so they're rate
+	// limited like login (with their own budget: a few typos while copying
+	// an authenticator code shouldn't lock someone out).
+	onboardingRateLimiter := handlers.NewRateLimiter(10, 5*time.Minute)
+	onboarding := func(h http.HandlerFunc) http.Handler {
+		return logging.LoggingMiddleware(handlers.MiddlewareRateLimit(onboardingRateLimiter)(h))
+	}
+	mux.Handle("POST /v1/api/users", onboarding(handlers.HandleCreateUserWithToken(apiCfg)))
+	mux.Handle("POST /v1/api/onboarding/totp", onboarding(handlers.HandleStartOnboarding(apiCfg)))
+	mux.Handle("POST /v1/api/onboarding/totp/confirm", onboarding(handlers.HandleConfirmOnboarding(apiCfg)))
 	mux.HandleFunc("POST /v1/api/admin/tokens", apiCfg.MiddlewareAdminOnly(handlers.HandleCreateRegistrationToken(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/admin/tokens/{%s}/revoke", handlers.RegistrationTokenPathValue),
 		apiCfg.MiddlewareAdminOnly(handlers.HandleRevokeRegistrationToken(apiCfg)))
 	mux.HandleFunc("GET /v1/api/admin/tokens",
 		apiCfg.MiddlewareAdminOnly(handlers.HandleGetAllRegistrationTokens(apiCfg)))
 	mux.Handle("POST /v1/api/admin/password-reset/request", apiCfg.MiddlewareAdminOnly(handlers.HandleRequestPasswordReset(apiCfg)))
+	mux.HandleFunc("GET /v1/api/admin/users", apiCfg.MiddlewareAdminOnly(handlers.HandleListUsers(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/admin/users/{%s}/role", handlers.UserIdPathValue), apiCfg.MiddlewareAdminOnly(handlers.HandleSetUserRole(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/admin/users/{%s}/status", handlers.UserIdPathValue), apiCfg.MiddlewareAdminOnly(handlers.HandleSetUserStatus(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/admin/users/{%s}/associations", handlers.UserIdPathValue), apiCfg.MiddlewareAdminOnly(handlers.HandleSetUserAssociations(apiCfg)))
 	loginRateLimiter := handlers.NewRateLimiter(5, 5*time.Minute) // 5 attempts per 5 minutes
 	// Existing user endpoints
 	mux.Handle("PUT /v1/api/users", apiCfg.MiddlewareAuth(handlers.HandleUpdateUser(apiCfg)))
@@ -111,9 +132,18 @@ func main() {
 	mux.HandleFunc("POST /v1/api/logout", apiCfg.MiddlewareAuth(handlers.HandleLogout(apiCfg)))
 
 	mux.HandleFunc("GET /v1/api/associations", apiCfg.MiddlewareAuth(handlers.HandleGetUserAssociations(apiCfg)))
+	mux.HandleFunc("POST /v1/api/associations", apiCfg.MiddlewareAdminOnly(handlers.HandleCreateAssociation(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}", handlers.AssociationIdPathValue), apiCfg.MiddlewareAdminOnly(handlers.HandleUpdateAssociation(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}", handlers.AssociationIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetUserAssociation(apiCfg)))
 
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/buildings", handlers.AssociationIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetAssociationBuildings(apiCfg)))
+	// Structural data (buildings, units, imports): application admins only.
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/buildings", handlers.AssociationIdPathValue), apiCfg.MiddlewareAdminOnly(handlers.HandleCreateBuilding(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/buildings/{%s}", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue), apiCfg.MiddlewareAdminOnly(handlers.HandleUpdateBuilding(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("DELETE /v1/api/associations/{%s}/buildings/{%s}", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue), apiCfg.MiddlewareAdminOnly(handlers.HandleDeleteBuilding(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/buildings/{%s}/units", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue), apiCfg.MiddlewareAdminOnly(handlers.HandleCreateUnit(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/associations/{%s}/buildings/{%s}/units/import", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue), apiCfg.MiddlewareAdminOnly(handlers.HandleImportUnits(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("DELETE /v1/api/associations/{%s}/buildings/{%s}/units/{%s}", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue, handlers.UnitIdPathValue), apiCfg.MiddlewareAdminOnly(handlers.HandleDeleteUnit(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/buildings/{%s}", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetAssociationBuilding(apiCfg)))
 
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/buildings/{%s}/units", handlers.AssociationIdPathValue, handlers.BuildingIdPathValue), apiCfg.MiddlewareAssociationResource(handlers.HandleGetBuildingUnits(apiCfg)))

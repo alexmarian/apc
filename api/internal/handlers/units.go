@@ -1,16 +1,15 @@
 package handlers
 
 import (
-	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/alexmarian/apc/api/internal/database"
 	"github.com/alexmarian/apc/api/internal/logging"
 	"go.uber.org/zap"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 const UnitIdPathValue = "unitId"
@@ -32,29 +31,51 @@ type Unit struct {
 	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
+// UnitUpdateRequest is a partial update: absent fields keep their value.
+// Area, Part and CadastralNumber are app-admin only.
 type UnitUpdateRequest struct {
-	UnitNumber *string  `json:"unit_number,omitempty"`
-	Address    *string  `json:"address,omitempty"`
-	Entrance   *int64   `json:"entrance,omitempty"`
-	Area       *float64 `json:"area,omitempty"`
-	Part       *float64 `json:"part,omitempty"`
-	UnitType   *string  `json:"unit_type,omitempty"`
-	Floor      *int64   `json:"floor,omitempty"`
-	RoomCount  *int64   `json:"room_count,omitempty"`
+	CadastralNumber *string  `json:"cadastral_number,omitempty"`
+	UnitNumber      *string  `json:"unit_number,omitempty"`
+	Address         *string  `json:"address,omitempty"`
+	Entrance        *int64   `json:"entrance,omitempty"`
+	Area            *float64 `json:"area,omitempty"`
+	Part            *float64 `json:"part,omitempty"`
+	UnitType        *string  `json:"unit_type,omitempty"`
+	Floor           *int64   `json:"floor,omitempty"`
+	RoomCount       *int64   `json:"room_count,omitempty"`
+}
+
+func toUnit(u database.Unit) Unit {
+	return Unit{
+		ID:              u.ID,
+		CadastralNumber: u.CadastralNumber,
+		BuildingId:      u.BuildingID,
+		UnitNumber:      u.UnitNumber,
+		Address:         u.Address,
+		Entrance:        u.Entrance,
+		Area:            u.Area,
+		Part:            u.Part,
+		UnitType:        u.UnitType,
+		Floor:           u.Floor,
+		RoomCount:       u.RoomCount,
+		CreatedAt:       u.CreatedAt.Time,
+		UpdatedAt:       u.UpdatedAt.Time,
+	}
 }
 
 func HandleGetBuildingUnits(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		buildingId, _ := strconv.Atoi(req.PathValue(BuildingIdPathValue))
+		building, ok := associationBuilding(cfg, rw, req)
+		if !ok {
+			return
+		}
 		unitsFromList, err := cfg.Db.GetBuildingUnitsWithOwners(req.Context(), database.GetBuildingUnitsWithOwnersParams{
-			AssociationID: int64(associationId),
-			BuildingID:    int64(buildingId),
+			AssociationID: building.AssociationID,
+			BuildingID:    building.ID,
 		})
 		if err != nil {
-			var errors = fmt.Sprintf("Error getting units: %s", err)
-			logging.Logger.Log(zap.WarnLevel, "Error getting units")
-			RespondWithError(rw, http.StatusInternalServerError, errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting units", zap.String("error", err.Error()))
+			RespondWithError(rw, http.StatusInternalServerError, "Error getting units")
 			return
 		}
 		units := make([]Unit, len(unitsFromList))
@@ -80,48 +101,33 @@ func HandleGetBuildingUnits(cfg *ApiConfig) func(http.ResponseWriter, *http.Requ
 				UpdatedAt:       unit.UpdatedAt.Time,
 			}
 		}
-		RespondWithJSON(rw, http.StatusCreated, units)
+		RespondWithJSON(rw, http.StatusOK, units)
 	}
 }
+
 func HandleGetBuildingUnit(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		//associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		buildingId, _ := strconv.Atoi(req.PathValue(BuildingIdPathValue))
-		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
-
-		unitPayload, err := getUnitPayloadFromDb(req.Context(), cfg, buildingId, unitId)
-		if err != nil {
-			var errors = fmt.Sprintf("Error getting buildings: %s", err)
-			logging.Logger.Log(zap.WarnLevel, "Error getting buildings")
-			if err == sql.ErrNoRows {
-				RespondWithError(rw, http.StatusNotFound, "Building not found")
-				return
-			}
-			RespondWithError(rw, http.StatusInternalServerError, errors)
+		_, unit, ok := associationUnit(cfg, rw, req)
+		if !ok {
 			return
 		}
-		RespondWithJSON(rw, http.StatusCreated, unitPayload)
+		RespondWithJSON(rw, http.StatusOK, toUnit(unit))
 	}
 }
 
 func HandleGetBuildingUnitOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		//buildingId, _ := strconv.Atoi(req.PathValue(BuildingIdPathValue))
-		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
-
+		building, unit, ok := associationUnit(cfg, rw, req)
+		if !ok {
+			return
+		}
 		ownersFromDb, err := cfg.Db.GetUnitOwners(req.Context(), database.GetUnitOwnersParams{
-			AssociationID: int64(associationId),
-			UnitID:        int64(unitId),
+			AssociationID: building.AssociationID,
+			UnitID:        unit.ID,
 		})
 		if err != nil {
-			var errors = fmt.Sprintf("Error getting buildings: %s", err)
-			logging.Logger.Log(zap.WarnLevel, "Error getting buildings")
-			if err == sql.ErrNoRows {
-				RespondWithError(rw, http.StatusNotFound, "Building not found")
-				return
-			}
-			RespondWithError(rw, http.StatusInternalServerError, errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting unit owners", zap.String("error", err.Error()))
+			RespondWithError(rw, http.StatusInternalServerError, "Error getting unit owners")
 			return
 		}
 		owners := make([]Owner, len(ownersFromDb))
@@ -138,28 +144,23 @@ func HandleGetBuildingUnitOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.
 				UpdatedAt:            owner.UpdatedAt.Time,
 			}
 		}
-		RespondWithJSON(rw, http.StatusCreated, owners)
+		RespondWithJSON(rw, http.StatusOK, owners)
 	}
 }
 
 func HandleGetBuildingUnitOwnerships(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		//buildingId, _ := strconv.Atoi(req.PathValue(BuildingIdPathValue))
-		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
-
+		building, unit, ok := associationUnit(cfg, rw, req)
+		if !ok {
+			return
+		}
 		ownershipsFromDb, err := cfg.Db.GetUnitOwnerships(req.Context(), database.GetUnitOwnershipsParams{
-			AssociationID: int64(associationId),
-			UnitID:        int64(unitId),
+			AssociationID: building.AssociationID,
+			UnitID:        unit.ID,
 		})
 		if err != nil {
-			var errors = fmt.Sprintf("Error getting buildings: %s", err)
-			logging.Logger.Log(zap.WarnLevel, "Error getting buildings")
-			if err == sql.ErrNoRows {
-				RespondWithError(rw, http.StatusNotFound, "Building not found")
-				return
-			}
-			RespondWithError(rw, http.StatusInternalServerError, errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting ownerships", zap.String("error", err.Error()))
+			RespondWithError(rw, http.StatusInternalServerError, "Error getting ownerships")
 			return
 		}
 		ownerships := make([]Ownership, len(ownershipsFromDb))
@@ -186,261 +187,243 @@ func HandleGetBuildingUnitOwnerships(cfg *ApiConfig) func(http.ResponseWriter, *
 	}
 }
 
+// Unit fields an update may set. Area, part and cadastral number are
+// read-only: they come from the cadastral records units are imported from.
+const (
+	unitEntranceMin  = -2
+	unitTextMaxRunes = 255
+)
+
+// validateUnitUpdate returns a message for a 400, or "".
+func validateUnitUpdate(u *UnitUpdateRequest, isAdmin bool) string {
+	trim := func(p *string) {
+		if p != nil {
+			*p = strings.TrimSpace(*p)
+		}
+	}
+	trim(u.UnitNumber)
+	trim(u.Address)
+	trim(u.UnitType)
+	trim(u.CadastralNumber)
+	structural := u.Area != nil || u.Part != nil || u.CadastralNumber != nil
+	switch {
+	case structural && !isAdmin:
+		return "Area, share and cadastral number can only be changed by an application admin"
+	case u.CadastralNumber != nil && *u.CadastralNumber == "":
+		return "Cadastral number is required"
+	case u.Area != nil && *u.Area <= 0:
+		return "Area must be greater than 0"
+	case u.Part != nil && (*u.Part <= 0 || *u.Part > 1):
+		return "Share must be greater than 0 and at most 100%"
+
+	case u.UnitNumber != nil && *u.UnitNumber == "":
+		return "Unit number is required"
+	case u.UnitNumber != nil && len([]rune(*u.UnitNumber)) > unitTextMaxRunes,
+		u.Address != nil && len([]rune(*u.Address)) > unitTextMaxRunes:
+		return "Text fields must be at most 255 characters"
+	case u.UnitType != nil && *u.UnitType == "":
+		return "Unit type is required"
+	case u.Entrance != nil && *u.Entrance < unitEntranceMin:
+		return "Entrance must be at least -2"
+	case u.RoomCount != nil && *u.RoomCount < 0:
+		return "Room count must be at least 0"
+	}
+	return ""
+}
+
+// HandleUpdateBuildingUnit partially updates a unit (only the fields
+// present in the body change). Area, share and cadastral number are
+// app-admin only (they come from cadastral records).
 func HandleUpdateBuildingUnit(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		buildingId, _ := strconv.Atoi(req.PathValue(BuildingIdPathValue))
-		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
-
-		existingUnit, err := getUnitPayloadFromDb(req.Context(), cfg, buildingId, unitId)
-		if err != nil {
+		building, unit, ok := associationUnit(cfg, rw, req)
+		if !ok {
 			return
 		}
-
-		decoder := json.NewDecoder(req.Body)
-		var updateRequest UnitUpdateRequest
-		if err := decoder.Decode(&updateRequest); err != nil {
+		var update UnitUpdateRequest
+		if err := json.NewDecoder(req.Body).Decode(&update); err != nil {
 			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
 			return
 		}
-
-		params := database.UpdateBuildingUnitByIdParams{
-			ID:         int64(unitId),
-			BuildingID: int64(buildingId),
-		}
-
-		applyUnitPartialUpdates(&updateRequest, existingUnit, &params)
-
-		if err := cfg.Db.UpdateBuildingUnitById(req.Context(), params); err != nil {
+		claims := GetClaimsFromContext(req)
+		if msg := validateUnitUpdate(&update, claims != nil && claims.IsAdmin); msg != "" {
+			RespondWithError(rw, http.StatusBadRequest, msg)
 			return
 		}
+		if update.CadastralNumber != nil && *update.CadastralNumber != unit.CadastralNumber {
+			if _, err := cfg.Db.GetUnitByCadastralNumber(req.Context(), *update.CadastralNumber); err == nil {
+				RespondWithError(rw, http.StatusConflict, "Cadastral number already used by another unit")
+				return
+			}
+		}
 
-		existingUnit.UpdatedAt = time.Now()
-
-		RespondWithJSON(rw, http.StatusOK, existingUnit)
+		pick := func(p *string, v string) string {
+			if p != nil {
+				return *p
+			}
+			return v
+		}
+		pickInt := func(p *int64, v int64) int64 {
+			if p != nil {
+				return *p
+			}
+			return v
+		}
+		pickFloat := func(p *float64, v float64) float64 {
+			if p != nil {
+				return *p
+			}
+			return v
+		}
+		params := database.UpdateUnitAllParams{
+			CadastralNumber: pick(update.CadastralNumber, unit.CadastralNumber),
+			UnitNumber:      pick(update.UnitNumber, unit.UnitNumber),
+			Address:         pick(update.Address, unit.Address),
+			Entrance:        pickInt(update.Entrance, unit.Entrance),
+			Area:            pickFloat(update.Area, unit.Area),
+			Part:            pickFloat(update.Part, unit.Part),
+			UnitType:        pick(update.UnitType, unit.UnitType),
+			Floor:           pickInt(update.Floor, unit.Floor),
+			RoomCount:       pickInt(update.RoomCount, unit.RoomCount),
+			ID:              unit.ID,
+			BuildingID:      building.ID,
+		}
+		if err := cfg.Db.UpdateUnitAll(req.Context(), params); err != nil {
+			if isUniqueViolation(err) {
+				RespondWithError(rw, http.StatusConflict, "Cadastral number already used by another unit")
+				return
+			}
+			logging.Logger.Log(zap.WarnLevel, "Error updating unit", zap.String("error", err.Error()))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to update unit")
+			return
+		}
+		updated := database.Unit{
+			ID: unit.ID, BuildingID: building.ID, CadastralNumber: params.CadastralNumber, UnitNumber: params.UnitNumber,
+			Address: params.Address, Entrance: params.Entrance, Area: params.Area, Part: params.Part,
+			UnitType: params.UnitType, Floor: params.Floor, RoomCount: params.RoomCount, CreatedAt: unit.CreatedAt,
+		}
+		result := toUnit(updated)
+		result.UpdatedAt = time.Now()
+		RespondWithJSON(rw, http.StatusOK, result)
 	}
 }
 
-func applyUnitPartialUpdates(update *UnitUpdateRequest, existing *Unit, params *database.UpdateBuildingUnitByIdParams) {
-	// Use pointers to distinguish between "field not provided" and "field set to zero value"
-	if update.UnitNumber != nil {
-		params.UnitNumber = *update.UnitNumber
-		existing.UnitNumber = *update.UnitNumber
-	} else {
-		params.UnitNumber = existing.UnitNumber
-	}
-
-	if update.Address != nil {
-		params.Address = *update.Address
-		existing.Address = *update.Address
-	} else {
-		params.Address = existing.Address
-	}
-
-	if update.Entrance != nil {
-		params.Entrance = *update.Entrance
-		existing.Entrance = *update.Entrance
-	} else {
-		params.Entrance = existing.Entrance
-	}
-
-	if update.UnitType != nil {
-		params.UnitType = *update.UnitType
-		existing.UnitType = *update.UnitType
-	} else {
-		params.UnitType = existing.UnitType
-	}
-
-	if update.Floor != nil {
-		params.Floor = *update.Floor
-		existing.Floor = *update.Floor
-	} else {
-		params.Floor = existing.Floor
-	}
-
-	if update.RoomCount != nil {
-		params.RoomCount = *update.RoomCount
-		existing.RoomCount = *update.RoomCount
-	} else {
-		params.RoomCount = existing.RoomCount
-	}
-
-}
-
-func getUnitPayloadFromDb(context context.Context, cfg *ApiConfig, buildingId int, unitId int) (*Unit, error) {
-	unit, err := cfg.Db.GetBuildingUnit(context, database.GetBuildingUnitParams{
-		BuildingID: int64(buildingId),
-		ID:         int64(unitId),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	unitPayload := &Unit{
-		ID:              unit.ID,
-		CadastralNumber: unit.CadastralNumber,
-		BuildingId:      unit.BuildingID,
-		UnitNumber:      unit.UnitNumber,
-		Address:         unit.Address,
-		Entrance:        unit.Entrance,
-		Area:            unit.Area,
-		Part:            unit.Part,
-		UnitType:        unit.UnitType,
-		Floor:           unit.Floor,
-		RoomCount:       unit.RoomCount,
-		CreatedAt:       unit.CreatedAt.Time,
-		UpdatedAt:       unit.UpdatedAt.Time,
-	}
-	return unitPayload, nil
-}
-
+// HandleGetUnitReport returns a unit with its building, owners (current and
+// past, flagged) and full ownership history — everything the unit detail
+// page shows, in one call.
 func HandleGetUnitReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
+	type UnitOwner struct {
+		ID                   int64  `json:"id"`
+		Name                 string `json:"name"`
+		IdentificationNumber string `json:"identification_number"`
+		ContactPhone         string `json:"contact_phone"`
+		ContactEmail         string `json:"contact_email"`
+		IsActive             bool   `json:"is_active"`
+	}
+	type OwnershipRecord struct {
+		ID                   int64      `json:"id"`
+		OwnerID              int64      `json:"owner_id"`
+		OwnerName            string     `json:"owner_name"`
+		StartDate            time.Time  `json:"start_date"`
+		EndDate              *time.Time `json:"end_date,omitempty"`
+		IsActive             bool       `json:"is_active"`
+		IsVoting             bool       `json:"is_voting"`
+		RegistrationDocument string     `json:"registration_document"`
+		RegistrationDate     time.Time  `json:"registration_date"`
+	}
+	type UnitDetails struct {
+		ID              int64     `json:"id"`
+		CadastralNumber string    `json:"cadastral_number"`
+		UnitNumber      string    `json:"unit_number"`
+		Address         string    `json:"address"`
+		Entrance        int64     `json:"entrance"`
+		Area            float64   `json:"area"`
+		Part            float64   `json:"part"`
+		UnitType        string    `json:"unit_type"`
+		Floor           int64     `json:"floor"`
+		RoomCount       int64     `json:"room_count"`
+		CreatedAt       time.Time `json:"created_at"`
+		UpdatedAt       time.Time `json:"updated_at"`
+	}
+	type BuildingDetails struct {
+		ID              int64   `json:"id"`
+		Name            string  `json:"name"`
+		Address         string  `json:"address"`
+		CadastralNumber string  `json:"cadastral_number"`
+		TotalArea       float64 `json:"total_area"`
+	}
+	type UnitReportResponse struct {
+		UnitDetails      UnitDetails       `json:"unit_details"`
+		BuildingDetails  BuildingDetails   `json:"building_details"`
+		CurrentOwners    []UnitOwner       `json:"current_owners"`
+		OwnershipHistory []OwnershipRecord `json:"ownership_history"`
+	}
+
 	return func(rw http.ResponseWriter, req *http.Request) {
-		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		buildingId, _ := strconv.Atoi(req.PathValue(BuildingIdPathValue))
-		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
-
-		// First, get the unit details
-		unit, err := cfg.Db.GetBuildingUnit(req.Context(), database.GetBuildingUnitParams{
-			ID:         int64(unitId),
-			BuildingID: int64(buildingId),
-		})
-
-		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "Error getting unit", zap.String("unitId", fmt.Sprintf("%d", unitId)))
-			RespondWithError(rw, http.StatusNotFound, "Unit not found")
+		building, unit, ok := associationUnit(cfg, rw, req)
+		if !ok {
 			return
 		}
-
-		// Get the building details
-		building, err := cfg.Db.GetAssociationBuilding(req.Context(), database.GetAssociationBuildingParams{
-			ID:            int64(buildingId),
-			AssociationID: int64(associationId),
-		})
-
-		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "Error getting building", zap.String("buildingId", fmt.Sprintf("%d", buildingId)))
-			RespondWithError(rw, http.StatusNotFound, "Building not found")
-			return
-		}
-
-		// Get all owners of this unit
 		owners, err := cfg.Db.GetUnitOwners(req.Context(), database.GetUnitOwnersParams{
-			UnitID:        int64(unitId),
-			AssociationID: int64(associationId),
+			UnitID:        unit.ID,
+			AssociationID: building.AssociationID,
 		})
-
 		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "Error getting unit owners", zap.String("unitId", fmt.Sprintf("%d", unitId)))
+			logging.Logger.Log(zap.WarnLevel, "Error getting unit owners", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve unit owners")
 			return
 		}
-
-		// Get ownership history
 		ownerships, err := cfg.Db.GetUnitOwnerships(req.Context(), database.GetUnitOwnershipsParams{
-			UnitID:        int64(unitId),
-			AssociationID: int64(associationId),
+			UnitID:        unit.ID,
+			AssociationID: building.AssociationID,
 		})
-
 		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "Error getting unit ownerships", zap.String("unitId", fmt.Sprintf("%d", unitId)))
+			logging.Logger.Log(zap.WarnLevel, "Error getting unit ownerships", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to retrieve unit ownership history")
 			return
 		}
 
-		// Prepare the response
-		type UnitOwner struct {
-			ID                   int64  `json:"id"`
-			Name                 string `json:"name"`
-			IdentificationNumber string `json:"identification_number"`
-			ContactPhone         string `json:"contact_phone"`
-			ContactEmail         string `json:"contact_email"`
-			IsActive             bool   `json:"is_active"`
+		response := UnitReportResponse{
+			UnitDetails: UnitDetails{
+				ID:              unit.ID,
+				CadastralNumber: unit.CadastralNumber,
+				UnitNumber:      unit.UnitNumber,
+				Address:         unit.Address,
+				Entrance:        unit.Entrance,
+				Area:            unit.Area,
+				Part:            unit.Part,
+				UnitType:        unit.UnitType,
+				Floor:           unit.Floor,
+				RoomCount:       unit.RoomCount,
+				CreatedAt:       unit.CreatedAt.Time,
+				UpdatedAt:       unit.UpdatedAt.Time,
+			},
+			BuildingDetails: BuildingDetails{
+				ID:              building.ID,
+				Name:            building.Name,
+				Address:         building.Address,
+				CadastralNumber: building.CadastralNumber,
+				TotalArea:       building.TotalArea,
+			},
+			CurrentOwners:    []UnitOwner{},
+			OwnershipHistory: []OwnershipRecord{},
 		}
 
-		type OwnershipRecord struct {
-			ID                   int64      `json:"id"`
-			OwnerID              int64      `json:"owner_id"`
-			OwnerName            string     `json:"owner_name"`
-			StartDate            time.Time  `json:"start_date"`
-			EndDate              *time.Time `json:"end_date,omitempty"`
-			IsActive             bool       `json:"is_active"`
-			RegistrationDocument string     `json:"registration_document"`
-			RegistrationDate     time.Time  `json:"registration_date"`
-		}
-
-		type UnitReportResponse struct {
-			UnitDetails struct {
-				ID              int64     `json:"id"`
-				CadastralNumber string    `json:"cadastral_number"`
-				UnitNumber      string    `json:"unit_number"`
-				Address         string    `json:"address"`
-				Entrance        int64     `json:"entrance"`
-				Area            float64   `json:"area"`
-				Part            float64   `json:"part"`
-				UnitType        string    `json:"unit_type"`
-				Floor           int64     `json:"floor"`
-				RoomCount       int64     `json:"room_count"`
-				CreatedAt       time.Time `json:"created_at"`
-				UpdatedAt       time.Time `json:"updated_at"`
-			} `json:"unit_details"`
-
-			BuildingDetails struct {
-				ID              int64   `json:"id"`
-				Name            string  `json:"name"`
-				Address         string  `json:"address"`
-				CadastralNumber string  `json:"cadastral_number"`
-				TotalArea       float64 `json:"total_area"`
-			} `json:"building_details"`
-
-			CurrentOwners    []UnitOwner       `json:"current_owners"`
-			OwnershipHistory []OwnershipRecord `json:"ownership_history"`
-		}
-
-		response := UnitReportResponse{}
-
-		// Fill unit details
-		response.UnitDetails.ID = unit.ID
-		response.UnitDetails.CadastralNumber = unit.CadastralNumber
-		response.UnitDetails.UnitNumber = unit.UnitNumber
-		response.UnitDetails.Address = unit.Address
-		response.UnitDetails.Entrance = unit.Entrance
-		response.UnitDetails.Area = unit.Area
-		response.UnitDetails.Part = unit.Part
-		response.UnitDetails.UnitType = unit.UnitType
-		response.UnitDetails.Floor = unit.Floor
-		response.UnitDetails.RoomCount = unit.RoomCount
-		response.UnitDetails.CreatedAt = unit.CreatedAt.Time
-		response.UnitDetails.UpdatedAt = unit.UpdatedAt.Time
-
-		// Fill building details
-		response.BuildingDetails.ID = building.ID
-		response.BuildingDetails.Name = building.Name
-		response.BuildingDetails.Address = building.Address
-		response.BuildingDetails.CadastralNumber = building.CadastralNumber
-		response.BuildingDetails.TotalArea = building.TotalArea
-
-		// Fill current owners
-		currentOwners := []UnitOwner{}
-
-		// Get active ownerships
-		activeOwnerships, err := cfg.Db.GetActiveUnitOwnerships(req.Context(), database.GetActiveUnitOwnershipsParams{
-			UnitID:        int64(unitId),
-			AssociationID: int64(associationId),
-		})
-		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "Error getting active ownerships", zap.String("unitId", fmt.Sprintf("%d", unitId)))
-			// Continue anyway to return partial data
-		}
-
-		// Map active owner IDs
 		activeOwnerIDs := make(map[int64]bool)
-		for _, ownership := range activeOwnerships {
-			activeOwnerIDs[ownership.OwnerID] = true
+		for _, o := range ownerships {
+			if o.IsActive {
+				activeOwnerIDs[o.OwnerID] = true
+			}
 		}
-
-		// Process owners
+		// GetUnitOwners yields one row per ownership, so an owner with
+		// several (e.g. a past and a current one) appears more than once.
+		seen := make(map[int64]bool)
 		for _, owner := range owners {
-			currentOwners = append(currentOwners, UnitOwner{
+			if seen[owner.ID] {
+				continue
+			}
+			seen[owner.ID] = true
+			response.CurrentOwners = append(response.CurrentOwners, UnitOwner{
 				ID:                   owner.ID,
 				Name:                 owner.Name,
 				IdentificationNumber: owner.IdentificationNumber,
@@ -450,39 +433,23 @@ func HandleGetUnitReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 			})
 		}
 
-		response.CurrentOwners = currentOwners
-
-		// Fill ownership history
-		ownershipHistory := []OwnershipRecord{}
-
-		// Create a map of owner IDs to names
-		ownerNames := make(map[int64]string)
-		for _, owner := range owners {
-			ownerNames[owner.ID] = owner.Name
-		}
-
-		// Process ownerships
-		for _, ownership := range ownerships {
+		for _, o := range ownerships {
 			record := OwnershipRecord{
-				ID:                   ownership.ID,
-				OwnerID:              ownership.OwnerID,
-				OwnerName:            ownerNames[ownership.OwnerID],
-				StartDate:            ownership.StartDate.Time,
-				IsActive:             ownership.IsActive,
-				RegistrationDocument: ownership.RegistrationDocument,
-				RegistrationDate:     ownership.RegistrationDate,
+				ID:                   o.ID,
+				OwnerID:              o.OwnerID,
+				OwnerName:            o.OwnerName,
+				StartDate:            o.StartDate.Time,
+				IsActive:             o.IsActive,
+				IsVoting:             o.IsVoting,
+				RegistrationDocument: o.RegistrationDocument,
+				RegistrationDate:     o.RegistrationDate,
 			}
-
-			// Add end date if present
-			if ownership.EndDate.Valid {
-				endDate := ownership.EndDate.Time
+			if o.EndDate.Valid {
+				endDate := o.EndDate.Time
 				record.EndDate = &endDate
 			}
-
-			ownershipHistory = append(ownershipHistory, record)
+			response.OwnershipHistory = append(response.OwnershipHistory, record)
 		}
-
-		response.OwnershipHistory = ownershipHistory
 
 		RespondWithJSON(rw, http.StatusOK, response)
 	}

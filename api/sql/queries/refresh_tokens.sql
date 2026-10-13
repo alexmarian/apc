@@ -18,3 +18,10 @@ FROM refresh_tokens
 where token = ?
   AND revoked_at IS NULL
   AND expires_at > datetime('now');
+
+-- name: RevokeUserRefreshTokens :exec
+UPDATE refresh_tokens
+set revoked_at = datetime('now'),
+    updated_at = datetime('now')
+where login = ?
+  AND revoked_at IS NULL;

@@ -3,11 +3,12 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"github.com/alexmarian/apc/api/internal/database"
 	"github.com/alexmarian/apc/api/internal/logging"
 	"go.uber.org/zap"
 	"net/http"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -27,14 +28,6 @@ type Owner struct {
 	FirstDetectedAt      time.Time `json:"first_detected_at"`
 	CreatedAt            time.Time `json:"created_at"`
 	UpdatedAt            time.Time `json:"updated_at"`
-}
-
-type OwnerUpdateRequest struct {
-	Name                 string `json:"name"`
-	NormalizedName       string `json:"normalized_name"`
-	IdentificationNumber string `json:"identification_number"`
-	ContactPhone         string `json:"contact_phone"`
-	ContactEmail         string `json:"contact_email"`
 }
 
 type Ownership struct {
@@ -59,284 +52,280 @@ const UnitTypeVotersFilter = "unit_types"
 const EntranceVotersFilter = "entrances"
 const FloorVotersFilter = "floors"
 
+func toOwner(o database.Owner) Owner {
+	return Owner{
+		ID:                   o.ID,
+		Name:                 o.Name,
+		NormalizedName:       o.NormalizedName,
+		IdentificationNumber: o.IdentificationNumber,
+		ContactPhone:         o.ContactPhone,
+		ContactEmail:         o.ContactEmail,
+		FirstDetectedAt:      o.FirstDetectedAt.Time,
+		CreatedAt:            o.CreatedAt.Time,
+		UpdatedAt:            o.UpdatedAt.Time,
+	}
+}
+
 func HandleGetAssociationOwners(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		//buildingId, _ := strconv.Atoi(req.PathValue(BuildingIdPathValue))
 		ownersFromDb, err := cfg.Db.GetAssociationOwners(req.Context(), int64(associationId))
 		if err != nil {
-			var errors = fmt.Sprintf("Error getting associations: %s", err)
-			logging.Logger.Log(zap.WarnLevel, "Error getting associations")
-			RespondWithError(rw, http.StatusInternalServerError, errors)
+			logging.Logger.Log(zap.WarnLevel, "Error getting owners", zap.String("error", err.Error()))
+			RespondWithError(rw, http.StatusInternalServerError, "Error getting owners")
 			return
 		}
 		owners := make([]Owner, len(ownersFromDb))
 		for i, owner := range ownersFromDb {
-			owners[i] = Owner{
-				ID:                   owner.ID,
-				Name:                 owner.Name,
-				NormalizedName:       owner.NormalizedName,
-				IdentificationNumber: owner.IdentificationNumber,
-				ContactPhone:         owner.ContactPhone,
-				ContactEmail:         owner.ContactEmail,
-				FirstDetectedAt:      owner.FirstDetectedAt.Time,
-				CreatedAt:            owner.CreatedAt.Time,
-				UpdatedAt:            owner.UpdatedAt.Time,
-			}
+			owners[i] = toOwner(owner)
 		}
-		RespondWithJSON(rw, http.StatusCreated, owners)
+		RespondWithJSON(rw, http.StatusOK, owners)
 	}
 }
 
+// associationOwner resolves {ownerId} within the association in the path.
+// On failure it has already written the response.
+func associationOwner(cfg *ApiConfig, rw http.ResponseWriter, req *http.Request) (database.Owner, bool) {
+	associationId, okA := pathInt64(req, AssociationIdPathValue)
+	ownerId, okO := pathInt64(req, OwnerIdPathValue)
+	if !okA || !okO {
+		RespondWithError(rw, http.StatusBadRequest, "Invalid id")
+		return database.Owner{}, false
+	}
+	owner, err := cfg.Db.GetAssociationOwner(req.Context(), database.GetAssociationOwnerParams{ID: ownerId, AssociationID: associationId})
+	if errors.Is(err, sql.ErrNoRows) {
+		RespondWithError(rw, http.StatusNotFound, "Owner not found")
+		return owner, false
+	}
+	if err != nil {
+		logging.Logger.Log(zap.WarnLevel, "Error getting owner", zap.String("error", err.Error()))
+		RespondWithError(rw, http.StatusInternalServerError, "Error getting owner")
+		return owner, false
+	}
+	return owner, true
+}
+
+// ownerInput is a validated create/update body.
+type ownerInput struct {
+	Name                 string `json:"name"`
+	IdentificationNumber string `json:"identification_number"`
+	ContactPhone         string `json:"contact_phone"`
+	ContactEmail         string `json:"contact_email"`
+}
+
+// parseOwnerInput decodes and validates an owner body: everything trimmed,
+// name required, each field at most 255 characters, an email (if any) must
+// look like one. On failure it has already written the response.
+func parseOwnerInput(rw http.ResponseWriter, req *http.Request) (ownerInput, bool) {
+	var in ownerInput
+	if err := json.NewDecoder(req.Body).Decode(&in); err != nil {
+		RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
+		return in, false
+	}
+	for _, f := range []*string{&in.Name, &in.IdentificationNumber, &in.ContactPhone, &in.ContactEmail} {
+		*f = strings.TrimSpace(*f)
+		if len([]rune(*f)) > 255 {
+			RespondWithError(rw, http.StatusBadRequest, "Fields must be at most 255 characters")
+			return in, false
+		}
+	}
+	switch {
+	case in.Name == "":
+		RespondWithError(rw, http.StatusBadRequest, "Owner name is required")
+		return in, false
+	case in.ContactEmail != "" && !emailPattern.MatchString(in.ContactEmail):
+		RespondWithError(rw, http.StatusBadRequest, "Invalid email address")
+		return in, false
+	}
+	return in, true
+}
+
+var emailPattern = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
+
+// HandleUpdateAssociationOwner replaces an owner's details (all fields —
+// an empty value clears it). 404 for an owner outside the association.
 func HandleUpdateAssociationOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		ownerId, _ := strconv.Atoi(req.PathValue(OwnerIdPathValue))
-		dbOwner, err := cfg.Db.GetAssociationOwner(req.Context(), database.GetAssociationOwnerParams{
-			ID:            int64(ownerId),
-			AssociationID: int64(associationId),
+		owner, ok := associationOwner(cfg, rw, req)
+		if !ok {
+			return
+		}
+		in, ok := parseOwnerInput(rw, req)
+		if !ok {
+			return
+		}
+		err := cfg.Db.UpdateAssociationOwner(req.Context(), database.UpdateAssociationOwnerParams{
+			Name:                 in.Name,
+			NormalizedName:       strings.ToLower(in.Name),
+			IdentificationNumber: in.IdentificationNumber,
+			ContactPhone:         in.ContactPhone,
+			ContactEmail:         in.ContactEmail,
+			ID:                   owner.ID,
+			AssociationID:        owner.AssociationID,
 		})
 		if err != nil {
-			var errors = fmt.Sprintf("Error getting association owner: %s", err)
-			logging.Logger.Log(zap.WarnLevel, "Error getting association owner")
-			RespondWithError(rw, http.StatusInternalServerError, errors)
+			logging.Logger.Log(zap.WarnLevel, "Error updating owner", zap.String("error", err.Error()))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to update owner")
 			return
 		}
-		decoder := json.NewDecoder(req.Body)
-		defer req.Body.Close()
-		var ownerUpdateRequest OwnerUpdateRequest
-		if err := decoder.Decode(&ownerUpdateRequest); err != nil {
-			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
-			return
-		}
-		applyOwnerPartialUpdates(&ownerUpdateRequest, &dbOwner)
-		err = cfg.Db.UpdateAssociationOwner(req.Context(), database.UpdateAssociationOwnerParams{
-			Name:                 ownerUpdateRequest.Name,
-			NormalizedName:       ownerUpdateRequest.NormalizedName,
-			IdentificationNumber: ownerUpdateRequest.IdentificationNumber,
-			ContactPhone:         ownerUpdateRequest.ContactPhone,
-			ContactEmail:         ownerUpdateRequest.ContactEmail,
-			ID:                   int64(ownerId),
-			AssociationID:        int64(associationId),
-		})
-		if err != nil {
-			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
-			return
-		}
-		RespondWithJSON(rw, http.StatusCreated, Owner{
-			ID:                   dbOwner.ID,
-			Name:                 dbOwner.Name,
-			NormalizedName:       dbOwner.NormalizedName,
-			IdentificationNumber: dbOwner.IdentificationNumber,
-			ContactPhone:         dbOwner.ContactPhone,
-			ContactEmail:         dbOwner.ContactEmail,
-			FirstDetectedAt:      dbOwner.FirstDetectedAt.Time,
-			CreatedAt:            dbOwner.CreatedAt.Time,
-			UpdatedAt:            time.Now(),
-		})
+		owner.Name, owner.NormalizedName = in.Name, strings.ToLower(in.Name)
+		owner.IdentificationNumber, owner.ContactPhone, owner.ContactEmail = in.IdentificationNumber, in.ContactPhone, in.ContactEmail
+		result := toOwner(owner)
+		result.UpdatedAt = time.Now()
+		RespondWithJSON(rw, http.StatusOK, result)
 	}
 }
-func applyOwnerPartialUpdates(update *OwnerUpdateRequest, existing *database.Owner) {
-	// Use pointers to distinguish between "field not provided" and "field set to zero value"
-	if update.Name != "" {
-		existing.Name = update.Name
-		existing.NormalizedName = strings.ToLower(update.Name)
-	} else {
-		update.Name = existing.Name
-		update.NormalizedName = existing.NormalizedName
-	}
-	if update.IdentificationNumber != "" {
-		existing.IdentificationNumber = update.IdentificationNumber
-	} else {
-		update.IdentificationNumber = existing.IdentificationNumber
-	}
-	if update.ContactPhone != "" {
-		existing.ContactPhone = update.ContactPhone
-	} else {
-		update.ContactPhone = existing.ContactPhone
-	}
-	if update.ContactEmail != "" {
-		existing.ContactEmail = update.ContactEmail
-	} else {
-		update.ContactEmail = existing.ContactEmail
-	}
 
-}
 func HandleGetAssociationOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		ownerId, _ := strconv.Atoi(req.PathValue(OwnerIdPathValue))
-		dbOwner, err := cfg.Db.GetAssociationOwner(req.Context(), database.GetAssociationOwnerParams{
-			ID:            int64(ownerId),
-			AssociationID: int64(associationId),
-		})
-		if err != nil {
-			var errors = fmt.Sprintf("Error getting association owner: %s", err)
-			logging.Logger.Log(zap.WarnLevel, "Error getting association owner")
-			RespondWithError(rw, http.StatusInternalServerError, errors)
+		owner, ok := associationOwner(cfg, rw, req)
+		if !ok {
 			return
 		}
-		RespondWithJSON(rw, http.StatusCreated, Owner{
-			ID:                   dbOwner.ID,
-			Name:                 dbOwner.Name,
-			NormalizedName:       dbOwner.NormalizedName,
-			IdentificationNumber: dbOwner.IdentificationNumber,
-			ContactPhone:         dbOwner.ContactPhone,
-			ContactEmail:         dbOwner.ContactEmail,
-			FirstDetectedAt:      dbOwner.FirstDetectedAt.Time,
-			CreatedAt:            dbOwner.CreatedAt.Time,
-			UpdatedAt:            dbOwner.UpdatedAt.Time,
-		})
+		RespondWithJSON(rw, http.StatusOK, toOwner(owner))
 	}
 }
 func HandleCreateOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-
-		// Parse request
-		decoder := json.NewDecoder(req.Body)
-		var newOwner struct {
-			Name                 string `json:"name"`
-			IdentificationNumber string `json:"identification_number"`
-			ContactPhone         string `json:"contact_phone"`
-			ContactEmail         string `json:"contact_email"`
-		}
-
-		if err := decoder.Decode(&newOwner); err != nil {
-			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
+		in, ok := parseOwnerInput(rw, req)
+		if !ok {
 			return
 		}
-
-		// Validate
-		if newOwner.Name == "" {
-			RespondWithError(rw, http.StatusBadRequest, "Owner name is required")
-			return
-		}
-
-		// Normalize name for search
-		normalizedName := strings.ToLower(newOwner.Name)
-
-		// Create owner in database
 		owner, err := cfg.Db.CreateOwner(req.Context(), database.CreateOwnerParams{
-			Name:                 newOwner.Name,
-			NormalizedName:       normalizedName,
-			IdentificationNumber: newOwner.IdentificationNumber,
-			ContactPhone:         newOwner.ContactPhone,
-			ContactEmail:         newOwner.ContactEmail,
+			Name:                 in.Name,
+			NormalizedName:       strings.ToLower(in.Name),
+			IdentificationNumber: in.IdentificationNumber,
+			ContactPhone:         in.ContactPhone,
+			ContactEmail:         in.ContactEmail,
 			AssociationID:        int64(associationId),
 		})
-
 		if err != nil {
 			logging.Logger.Log(zap.WarnLevel, "Error creating owner", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to create owner")
 			return
 		}
-
-		// Return the created owner
-		ownerResponse := Owner{
-			ID:                   owner.ID,
-			Name:                 owner.Name,
-			NormalizedName:       owner.NormalizedName,
-			IdentificationNumber: owner.IdentificationNumber,
-			ContactPhone:         owner.ContactPhone,
-			ContactEmail:         owner.ContactEmail,
-			FirstDetectedAt:      owner.FirstDetectedAt.Time,
-			CreatedAt:            owner.CreatedAt.Time,
-			UpdatedAt:            owner.UpdatedAt.Time,
-		}
-
-		RespondWithJSON(rw, http.StatusCreated, ownerResponse)
+		RespondWithJSON(rw, http.StatusCreated, toOwner(owner))
 	}
+}
+
+func toOwnership(o database.GetUnitOwnershipRow) Ownership {
+	return Ownership{
+		ID:                        o.ID,
+		UnitId:                    o.UnitID,
+		OwnerId:                   o.OwnerID,
+		OwnerName:                 o.OwnerName,
+		OwnerNormalizedName:       o.OwnerNormalizedName,
+		OwnerIdentificationNumber: o.IdentificationNumber,
+		AssociationId:             o.AssociationID,
+		StartDate:                 o.StartDate.Time,
+		EndDate:                   o.EndDate.Time,
+		IsActive:                  o.IsActive,
+		IsVoting:                  o.IsVoting,
+		RegistrationDocument:      o.RegistrationDocument,
+		RegistrationDate:          o.RegistrationDate,
+		CreatedAt:                 o.CreatedAt.Time,
+		UpdatedAt:                 o.UpdatedAt.Time,
+	}
+}
+
+// unitOwnership resolves {ownershipId} within the unit in the path. On
+// failure it has already written the response.
+func unitOwnership(q *database.Queries, rw http.ResponseWriter, req *http.Request, building database.Building, unit database.Unit) (database.GetUnitOwnershipRow, bool) {
+	ownershipId, ok := pathInt64(req, OwnershipIdPathValue)
+	if !ok {
+		RespondWithError(rw, http.StatusBadRequest, "Invalid ownership id")
+		return database.GetUnitOwnershipRow{}, false
+	}
+	ownership, err := q.GetUnitOwnership(req.Context(), database.GetUnitOwnershipParams{
+		UnitID:        unit.ID,
+		AssociationID: building.AssociationID,
+		ID:            ownershipId,
+	})
+	if errors.Is(err, sql.ErrNoRows) {
+		RespondWithError(rw, http.StatusNotFound, "Ownership not found")
+		return ownership, false
+	}
+	if err != nil {
+		RespondWithError(rw, http.StatusInternalServerError, "Failed to get ownership")
+		return ownership, false
+	}
+	return ownership, true
 }
 
 func HandleGetUnitOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
-		ownershipId, _ := strconv.Atoi(req.PathValue(OwnershipIdPathValue))
-
-		ownership, err := cfg.Db.GetUnitOwnership(req.Context(), database.GetUnitOwnershipParams{
-			UnitID:        int64(unitId),
-			AssociationID: int64(associationId),
-			ID:            int64(ownershipId),
-		})
-		if err != nil && err != sql.ErrNoRows {
-			RespondWithError(rw, http.StatusInternalServerError, "Failed to get current ownerships")
+		building, unit, ok := associationUnit(cfg, rw, req)
+		if !ok {
 			return
 		}
-		RespondWithJSON(rw, http.StatusCreated, Ownership{
-			ID:                   ownership.ID,
-			UnitId:               ownership.UnitID,
-			OwnerId:              ownership.OwnerID,
-			AssociationId:        ownership.AssociationID,
-			StartDate:            ownership.StartDate.Time,
-			EndDate:              ownership.EndDate.Time,
-			IsActive:             ownership.IsActive,
-			IsVoting:             ownership.IsVoting,
-			RegistrationDocument: ownership.RegistrationDocument,
-			CreatedAt:            ownership.CreatedAt.Time,
-			UpdatedAt:            ownership.UpdatedAt.Time,
-		})
+		ownership, ok := unitOwnership(cfg.Db, rw, req, building, unit)
+		if !ok {
+			return
+		}
+		RespondWithJSON(rw, http.StatusOK, toOwnership(ownership))
 	}
 }
 
+// HandleUnitVotingOwnership makes an active ownership the unit's voting
+// one, taking voting rights from the previous holder — in one transaction,
+// so a failure never leaves the unit without its voting owner.
 func HandleUnitVotingOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
-		ownershipId, _ := strconv.Atoi(req.PathValue(OwnershipIdPathValue))
-		err := cfg.Db.DisableActiveVoting(req.Context(), database.DisableActiveVotingParams{
-			UnitID:        int64(unitId),
-			AssociationID: int64(associationId),
-		})
-		if err != nil && err != sql.ErrNoRows {
-			logging.Logger.Log(zap.WarnLevel, "Error disabling active voting", zap.String("error", err.Error()))
-			RespondWithError(rw, http.StatusInternalServerError, "Failed to disable active voting")
+		building, unit, ok := associationUnit(cfg, rw, req)
+		if !ok {
 			return
 		}
-		err = cfg.Db.SetVoting(req.Context(), database.SetVotingParams{
-			UnitID:        int64(unitId),
-			AssociationID: int64(associationId),
+		ctx := req.Context()
+		tx, err := cfg.DB.BeginTx(ctx, nil)
+		if err != nil {
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to set voting owner")
+			return
+		}
+		defer tx.Rollback()
+		q := cfg.Db.WithTx(tx)
 
-			ID: int64(ownershipId),
-		})
-		if err != nil && err != sql.ErrNoRows {
-			logging.Logger.Log(zap.WarnLevel, "Error setting active voting", zap.String("error", err.Error()))
-			RespondWithError(rw, http.StatusInternalServerError, "Failed to set active voting")
+		ownership, ok := unitOwnership(q, rw, req, building, unit)
+		if !ok {
 			return
 		}
-		ownership, err := cfg.Db.GetUnitOwnership(req.Context(), database.GetUnitOwnershipParams{
-			UnitID:        int64(unitId),
-			AssociationID: int64(associationId),
-			ID:            int64(ownershipId),
-		})
-		if err != nil && err != sql.ErrNoRows {
-			RespondWithError(rw, http.StatusInternalServerError, "Failed to get active voting")
+		if !ownership.IsActive {
+			RespondWithError(rw, http.StatusBadRequest, "Only an active ownership can have voting rights")
 			return
 		}
-		RespondWithJSON(rw, http.StatusCreated, Ownership{
-			ID:                   ownership.ID,
-			UnitId:               ownership.UnitID,
-			OwnerId:              ownership.OwnerID,
-			AssociationId:        ownership.AssociationID,
-			StartDate:            ownership.StartDate.Time,
-			EndDate:              ownership.EndDate.Time,
-			IsActive:             ownership.IsActive,
-			IsVoting:             ownership.IsVoting,
-			RegistrationDocument: ownership.RegistrationDocument,
-			CreatedAt:            ownership.CreatedAt.Time,
-			UpdatedAt:            ownership.UpdatedAt.Time,
-		})
+		err = q.DisableActiveVoting(ctx, database.DisableActiveVotingParams{UnitID: unit.ID, AssociationID: building.AssociationID})
+		if err == nil {
+			err = q.SetVoting(ctx, database.SetVotingParams{ID: ownership.ID, UnitID: unit.ID, AssociationID: building.AssociationID})
+		}
+		if err == nil {
+			err = tx.Commit()
+		}
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error setting voting owner", zap.String("error", err.Error()))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to set voting owner")
+			return
+		}
+		ownership.IsVoting = true
+		RespondWithJSON(rw, http.StatusOK, toOwnership(ownership))
 	}
 }
+
+// isUniqueViolation reports a SQLite UNIQUE constraint failure.
+func isUniqueViolation(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed")
+}
+
+// HandleCreateUnitOwnership records an owner (of this association) owning
+// the unit. With is_exclusive, every other active ownership of the unit
+// ends now and the new one becomes the voting ownership — all in one
+// transaction.
 func HandleCreateUnitOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
-		unitId, _ := strconv.Atoi(req.PathValue(UnitIdPathValue))
-
-		// Parse request
-		decoder := json.NewDecoder(req.Body)
-		var ownershipRequest struct {
+		building, unit, ok := associationUnit(cfg, rw, req)
+		if !ok {
+			return
+		}
+		var request struct {
 			OwnerID              int64      `json:"owner_id"`
 			StartDate            time.Time  `json:"start_date"`
 			EndDate              *time.Time `json:"end_date,omitempty"`
@@ -344,84 +333,111 @@ func HandleCreateUnitOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 			RegistrationDate     time.Time  `json:"registration_date"`
 			ExclusiveOwnership   bool       `json:"is_exclusive"`
 		}
-
-		if err := decoder.Decode(&ownershipRequest); err != nil {
+		if err := json.NewDecoder(req.Body).Decode(&request); err != nil {
 			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
 			return
 		}
+		request.RegistrationDocument = strings.TrimSpace(request.RegistrationDocument)
+		switch {
+		case request.RegistrationDocument == "":
+			RespondWithError(rw, http.StatusBadRequest, "Registration document is required")
+			return
+		case request.StartDate.IsZero():
+			RespondWithError(rw, http.StatusBadRequest, "Start date is required")
+			return
+		case request.RegistrationDate.IsZero():
+			RespondWithError(rw, http.StatusBadRequest, "Registration date is required")
+			return
+		case request.EndDate != nil && request.EndDate.Before(request.StartDate):
+			RespondWithError(rw, http.StatusBadRequest, "End date can't be before the start date")
+			return
+		}
 
-		// Check if owner exists
-		_, err := cfg.Db.GetOwnerById(req.Context(), ownershipRequest.OwnerID)
-		if err != nil {
+		ctx := req.Context()
+		if _, err := cfg.Db.GetAssociationOwner(ctx, database.GetAssociationOwnerParams{
+			ID:            request.OwnerID,
+			AssociationID: building.AssociationID,
+		}); err != nil {
 			RespondWithError(rw, http.StatusBadRequest, "Owner not found")
 			return
 		}
 
-		// Get current active ownerships for this unit
-		currentOwnerships, err := cfg.Db.GetActiveUnitOwnerships(req.Context(), database.GetActiveUnitOwnershipsParams{
-			UnitID:        int64(unitId),
-			AssociationID: int64(associationId),
-		})
-		if err != nil && err != sql.ErrNoRows {
-			RespondWithError(rw, http.StatusInternalServerError, "Failed to get current ownerships")
+		tx, err := cfg.DB.BeginTx(ctx, nil)
+		if err != nil {
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to create ownership")
 			return
 		}
+		defer tx.Rollback()
+		q := cfg.Db.WithTx(tx)
 
-		if ownershipRequest.ExclusiveOwnership {
-			for _, ownership := range currentOwnerships {
-				now := time.Now()
-				err = cfg.Db.DeactivateOwnership(req.Context(), database.DeactivateOwnershipParams{
-					ID:      ownership.ID,
-					EndDate: sql.NullTime{Time: now, Valid: true},
-				})
-
-				if err != nil {
+		if request.ExclusiveOwnership {
+			current, err := q.GetActiveUnitOwnerships(ctx, database.GetActiveUnitOwnershipsParams{
+				UnitID:        unit.ID,
+				AssociationID: building.AssociationID,
+			})
+			if err != nil {
+				RespondWithError(rw, http.StatusInternalServerError, "Failed to get current ownerships")
+				return
+			}
+			now := sql.NullTime{Time: time.Now().UTC(), Valid: true}
+			for _, o := range current {
+				if err := q.DeactivateOwnership(ctx, database.DeactivateOwnershipParams{ID: o.ID, EndDate: now}); err != nil {
+					if isUniqueViolation(err) {
+						RespondWithError(rw, http.StatusConflict, ownershipHistoryConflict)
+						return
+					}
 					RespondWithError(rw, http.StatusInternalServerError, "Failed to deactivate current ownership")
 					return
 				}
 			}
 		}
-		// Create new ownership
-		var endDateParam sql.NullTime
-		if ownershipRequest.EndDate != nil {
-			endDateParam = sql.NullTime{Time: *ownershipRequest.EndDate, Valid: true}
+
+		var endDate sql.NullTime
+		if request.EndDate != nil {
+			endDate = sql.NullTime{Time: *request.EndDate, Valid: true}
 		}
-
-		newOwnership, err := cfg.Db.CreateOwnership(req.Context(), database.CreateOwnershipParams{
-			UnitID:               int64(unitId),
-			OwnerID:              ownershipRequest.OwnerID,
-			AssociationID:        int64(associationId),
-			StartDate:            sql.NullTime{Time: ownershipRequest.StartDate},
-			EndDate:              endDateParam,
+		created, err := q.CreateOwnership(ctx, database.CreateOwnershipParams{
+			UnitID:               unit.ID,
+			OwnerID:              request.OwnerID,
+			AssociationID:        building.AssociationID,
+			StartDate:            sql.NullTime{Time: request.StartDate, Valid: true},
+			EndDate:              endDate,
 			IsActive:             true,
-			IsVoting:             ownershipRequest.ExclusiveOwnership,
-			RegistrationDocument: ownershipRequest.RegistrationDocument,
-			RegistrationDate:     ownershipRequest.RegistrationDate,
+			IsVoting:             request.ExclusiveOwnership,
+			RegistrationDocument: request.RegistrationDocument,
+			RegistrationDate:     request.RegistrationDate,
 		})
-
+		if isUniqueViolation(err) {
+			RespondWithError(rw, http.StatusConflict, "This owner already has an active ownership of this unit")
+			return
+		}
+		if err == nil {
+			err = tx.Commit()
+		}
 		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error creating ownership", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to create new ownership")
 			return
 		}
 
-		// Return the new ownership
-		ownershipResponse := Ownership{
-			ID:                   newOwnership.ID,
-			UnitId:               newOwnership.UnitID,
-			OwnerId:              newOwnership.OwnerID,
-			AssociationId:        newOwnership.AssociationID,
-			StartDate:            newOwnership.StartDate.Time,
-			EndDate:              endDateParam.Time,
-			IsActive:             newOwnership.IsActive,
-			RegistrationDocument: newOwnership.RegistrationDocument,
-			RegistrationDate:     newOwnership.RegistrationDate,
-			CreatedAt:            newOwnership.CreatedAt.Time,
-			UpdatedAt:            newOwnership.UpdatedAt.Time,
+		row, err := cfg.Db.GetUnitOwnership(ctx, database.GetUnitOwnershipParams{
+			UnitID:        unit.ID,
+			AssociationID: building.AssociationID,
+			ID:            created.ID,
+		})
+		if err != nil {
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to load new ownership")
+			return
 		}
-
-		RespondWithJSON(rw, http.StatusCreated, ownershipResponse)
+		RespondWithJSON(rw, http.StatusCreated, toOwnership(row))
 	}
 }
+
+// ownershipHistoryConflict explains a schema limit: ownerships are unique
+// per (unit, owner, is_active), so one owner can have at most one past
+// ownership of a given unit.
+const ownershipHistoryConflict = "This owner already has a past ownership of this unit; it can't be ended again"
+
 func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
@@ -599,8 +615,13 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 		}
 
 		// Sort the ownerReports slice by total_condo_part in descending order
+		// By share, largest first; ties by name so the order is stable.
 		sort.Slice(ownerReports, func(i, j int) bool {
-			return ownerReports[i].Statistics.TotalCondoPart > ownerReports[j].Statistics.TotalCondoPart
+			a, b := ownerReports[i], ownerReports[j]
+			if a.Statistics.TotalCondoPart != b.Statistics.TotalCondoPart {
+				return a.Statistics.TotalCondoPart > b.Statistics.TotalCondoPart
+			}
+			return a.Owner.NormalizedName < b.Owner.NormalizedName
 		})
 
 		RespondWithJSON(rw, http.StatusOK, ownerReports)

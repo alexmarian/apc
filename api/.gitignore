@@ -7,3 +7,5 @@ sql/samples/*.sql
 /.env
 /disttmp
 dist.zip
+/alex-totp.png
+/bin/

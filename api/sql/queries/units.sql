@@ -27,3 +27,61 @@ SET unit_number = ?, address = ?, entrance = ?, unit_type = ?, floor = ?, room_c
 WHERE id = ? and building_id = ?;
 
 --
+-- name: CreateUnit :one
+
+INSERT INTO units (cadastral_number, building_id, unit_number, address, entrance, area, part, unit_type, floor, room_count)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING *;
+
+--
+
+-- name: UpdateUnitAll :exec
+
+UPDATE units
+SET cadastral_number = ?,
+    unit_number      = ?,
+    address          = ?,
+    entrance         = ?,
+    area             = ?,
+    part             = ?,
+    unit_type        = ?,
+    floor            = ?,
+    room_count       = ?,
+    updated_at       = datetime('now')
+WHERE id = ?
+  AND building_id = ?;
+
+--
+
+-- name: DeleteUnit :exec
+
+DELETE FROM units WHERE id = ? AND building_id = ?;
+
+--
+
+-- name: GetUnitByCadastralNumber :one
+
+SELECT u.id, u.building_id, b.association_id
+FROM units u
+         JOIN buildings b ON b.id = u.building_id
+WHERE u.cadastral_number = ?;
+
+--
+
+-- name: CountUnitOwnerships :one
+
+SELECT COUNT(*) FROM ownerships WHERE unit_id = ?;
+
+--
+
+-- name: CountUnitSlots :one
+
+SELECT COUNT(*) FROM unit_slots WHERE unit_id = ?;
+
+--
+
+-- name: ListParticipantUnitsInfo :many
+
+SELECT units_info FROM gathering_participants;
+
+--

@@ -200,6 +200,11 @@ type RegistrationToken struct {
 	IsAdmin     bool
 }
 
+type RegistrationTokenAssociation struct {
+	Token         string
+	AssociationID int64
+}
+
 type RevokedToken struct {
 	Jti       string
 	RevokedAt time.Time
@@ -232,13 +237,16 @@ type UnitSlot struct {
 }
 
 type User struct {
-	ID           int64
-	Login        string
-	PasswordHash string
-	ToptSecret   string
-	IsAdmin      bool
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID              int64
+	Login           string
+	PasswordHash    string
+	ToptSecret      string
+	IsAdmin         bool
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	TotpConfirmedAt sql.NullTime
+	DisabledAt      sql.NullTime
+	DisabledBy      sql.NullString
 }
 
 type UsersAssociation struct {

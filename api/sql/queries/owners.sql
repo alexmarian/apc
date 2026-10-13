@@ -171,3 +171,17 @@ WHERE
     (? = 0
    OR o.id = ?) -- This filters by owner_id if provided, otherwise returns all
 ORDER BY o.id, u.id;
+-- name: GetAssociationOwnersByIdentification :many
+SELECT *
+FROM owners
+WHERE association_id = ?
+  AND identification_number = ?;
+
+--
+
+-- name: GetAssociationOwnersByNormalizedName :many
+SELECT *
+FROM owners
+WHERE association_id = ?
+  AND normalized_name = ?;
+--

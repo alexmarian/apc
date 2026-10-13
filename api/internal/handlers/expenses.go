@@ -3,12 +3,16 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"math"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+	"unicode/utf8"
+
 	"github.com/alexmarian/apc/api/internal/database"
 	"github.com/alexmarian/apc/api/internal/logging"
 	"go.uber.org/zap"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 type ExpenseItem struct {
@@ -33,6 +37,81 @@ type ExpenseItem struct {
 
 const ExpensesIdPathValue = "expenseId"
 
+const (
+	expenseDescriptionMax = 255
+	expenseDestinationMax = 255
+	expenseDocumentRefMax = 50
+)
+
+// validateExpenseText trims the free-text fields in place and checks their
+// limits; returns a message for a 400, or "".
+func validateExpenseText(description, destination, documentRef *string) string {
+	for _, f := range []*string{description, destination, documentRef} {
+		if f != nil {
+			*f = strings.TrimSpace(*f)
+		}
+	}
+	switch {
+	case description != nil && *description == "":
+		return "Description is required"
+	case description != nil && utf8.RuneCountInString(*description) > expenseDescriptionMax:
+		return "Description must be at most 255 characters"
+	case destination != nil && utf8.RuneCountInString(*destination) > expenseDestinationMax:
+		return "Destination must be at most 255 characters"
+	case documentRef != nil && utf8.RuneCountInString(*documentRef) > expenseDocumentRefMax:
+		return "Document reference must be at most 50 characters"
+	}
+	return ""
+}
+
+func validAmount(a float64) bool { return a > 0 && !math.IsInf(a, 0) && !math.IsNaN(a) }
+
+// expenseCategory checks a category belongs to the association and, for a
+// new assignment, is active. On failure it has already written the 400.
+func expenseCategory(cfg *ApiConfig, rw http.ResponseWriter, req *http.Request, associationId, categoryId int64) bool {
+	category, err := cfg.Db.GetCategory(req.Context(), categoryId)
+	if err != nil || category.AssociationID != associationId {
+		RespondWithError(rw, http.StatusBadRequest, "Invalid category")
+		return false
+	}
+	if category.IsDeleted {
+		RespondWithError(rw, http.StatusBadRequest, "The category is inactive")
+		return false
+	}
+	return true
+}
+
+// expenseAccount: as expenseCategory, for accounts (disabled ones refused).
+func expenseAccount(cfg *ApiConfig, rw http.ResponseWriter, req *http.Request, associationId, accountId int64) bool {
+	account, err := cfg.Db.GetAccount(req.Context(), accountId)
+	if err != nil || account.AssociationID != associationId {
+		RespondWithError(rw, http.StatusBadRequest, "Invalid account")
+		return false
+	}
+	if !account.IsActive {
+		RespondWithError(rw, http.StatusBadRequest, "The account is disabled")
+		return false
+	}
+	return true
+}
+
+// respondWithExpense answers with the expense joined with its category and
+// account (the shape the list returns).
+func respondWithExpense(cfg *ApiConfig, rw http.ResponseWriter, req *http.Request, status int, associationId, expenseId int64) {
+	e, err := cfg.Db.GetExpenseWithJoins(req.Context(), database.GetExpenseWithJoinsParams{ID: expenseId, AssociationID: associationId})
+	if err != nil {
+		logging.Logger.Log(zap.WarnLevel, "Error fetching expense with joins", zap.Error(err))
+		RespondWithError(rw, http.StatusInternalServerError, "Failed to fetch expense")
+		return
+	}
+	RespondWithJSON(rw, status, ExpenseItem{
+		ID: e.ID, Amount: e.Amount, Description: e.Description, Destination: e.Destination,
+		DocumentRef: e.DocumentRef.String, Date: e.Date, Month: e.Month, Year: e.Year,
+		CategoryID: e.CategoryID, CategoryType: e.CategoryType, CategoryFamily: e.CategoryFamily, CategoryName: e.CategoryName,
+		AccountID: e.AccountID, AccountNumber: e.AccountNumber, AccountName: e.AccountName,
+	})
+}
+
 func HandleCreateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationId, _ := strconv.Atoi(req.PathValue(AssociationIdPathValue))
@@ -56,26 +135,22 @@ func HandleCreateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		}
 
 		// Validate
-		if expense.Amount <= 0 {
+		if !validAmount(expense.Amount) {
 			RespondWithError(rw, http.StatusBadRequest, "Amount must be positive")
 			return
 		}
-
-		if expense.Description == "" {
-			RespondWithError(rw, http.StatusBadRequest, "Description is required")
+		if msg := validateExpenseText(&expense.Description, &expense.Destination, &expense.DocumentRef); msg != "" {
+			RespondWithError(rw, http.StatusBadRequest, msg)
+			return
+		}
+		if expense.Date.IsZero() {
+			RespondWithError(rw, http.StatusBadRequest, "Date is required")
 			return
 		}
 
-		// Verify category and account belong to the association
-		category, err := cfg.Db.GetCategory(req.Context(), expense.CategoryID)
-		if err != nil || category.AssociationID != int64(associationId) {
-			RespondWithError(rw, http.StatusBadRequest, "Invalid category")
-			return
-		}
-
-		account, err := cfg.Db.GetAccount(req.Context(), expense.AccountID)
-		if err != nil || account.AssociationID != int64(associationId) {
-			RespondWithError(rw, http.StatusBadRequest, "Invalid account")
+		// The category and account must belong to the association and be in use.
+		if !expenseCategory(cfg, rw, req, int64(associationId), expense.CategoryID) ||
+			!expenseAccount(cfg, rw, req, int64(associationId), expense.AccountID) {
 			return
 		}
 
@@ -102,34 +177,7 @@ func HandleCreateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 			return
 		}
 
-		// Re-fetch with joins so the response includes category and account names
-		fullExpense, err := cfg.Db.GetExpenseWithJoins(req.Context(), database.GetExpenseWithJoinsParams{
-			ID:            newExpense.ID,
-			AssociationID: int64(associationId),
-		})
-		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "Error fetching created expense with joins", zap.Error(err))
-			RespondWithError(rw, http.StatusInternalServerError, "Failed to fetch created expense")
-			return
-		}
-
-		RespondWithJSON(rw, http.StatusCreated, ExpenseItem{
-			ID:             fullExpense.ID,
-			Amount:         fullExpense.Amount,
-			Description:    fullExpense.Description,
-			Destination:    fullExpense.Destination,
-			DocumentRef:    fullExpense.DocumentRef.String,
-			Date:           fullExpense.Date,
-			Month:          fullExpense.Month,
-			Year:           fullExpense.Year,
-			CategoryID:     fullExpense.CategoryID,
-			CategoryType:   fullExpense.CategoryType,
-			CategoryFamily: fullExpense.CategoryFamily,
-			CategoryName:   fullExpense.CategoryName,
-			AccountID:      fullExpense.AccountID,
-			AccountNumber:  fullExpense.AccountNumber,
-			AccountName:    fullExpense.AccountName,
-		})
+		respondWithExpense(cfg, rw, req, http.StatusCreated, int64(associationId), newExpense.ID)
 	}
 }
 
@@ -188,8 +236,12 @@ func HandleUpdateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		}
 
 		// Apply updates
+		if msg := validateExpenseText(updateReq.Description, updateReq.Destination, updateReq.DocumentRef); msg != "" {
+			RespondWithError(rw, http.StatusBadRequest, msg)
+			return
+		}
 		if updateReq.Amount != nil {
-			if *updateReq.Amount <= 0 {
+			if !validAmount(*updateReq.Amount) {
 				RespondWithError(rw, http.StatusBadRequest, "Amount must be positive")
 				return
 			}
@@ -197,10 +249,6 @@ func HandleUpdateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		}
 
 		if updateReq.Description != nil {
-			if *updateReq.Description == "" {
-				RespondWithError(rw, http.StatusBadRequest, "Description cannot be empty")
-				return
-			}
 			updateParams.Description = *updateReq.Description
 		}
 
@@ -214,21 +262,17 @@ func HandleUpdateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 			updateParams.Year = int64(updateReq.Date.Year())
 		}
 
-		if updateReq.CategoryID != nil {
-			// Verify category belongs to association
-			category, err := cfg.Db.GetCategory(req.Context(), *updateReq.CategoryID)
-			if err != nil || category.AssociationID != int64(associationId) {
-				RespondWithError(rw, http.StatusBadRequest, "Invalid category")
+		// A changed category/account must be in use; keeping the current one
+		// is fine even if it has since been deactivated.
+		if updateReq.CategoryID != nil && *updateReq.CategoryID != existingExpense.CategoryID {
+			if !expenseCategory(cfg, rw, req, int64(associationId), *updateReq.CategoryID) {
 				return
 			}
 			updateParams.CategoryID = *updateReq.CategoryID
 		}
 
-		if updateReq.AccountID != nil {
-			// Verify account belongs to association
-			account, err := cfg.Db.GetAccount(req.Context(), *updateReq.AccountID)
-			if err != nil || account.AssociationID != int64(associationId) {
-				RespondWithError(rw, http.StatusBadRequest, "Invalid account")
+		if updateReq.AccountID != nil && *updateReq.AccountID != existingExpense.AccountID {
+			if !expenseAccount(cfg, rw, req, int64(associationId), *updateReq.AccountID) {
 				return
 			}
 			updateParams.AccountID = *updateReq.AccountID
@@ -240,28 +284,14 @@ func HandleUpdateExpense(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		}
 
 		// Update expense
-		updatedExpense, err := cfg.Db.UpdateExpense(req.Context(), updateParams)
-		if err != nil {
+		if _, err := cfg.Db.UpdateExpense(req.Context(), updateParams); err != nil {
 			logging.Logger.Log(zap.WarnLevel, "Error updating expense", zap.Error(err))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to update expense")
 			return
 		}
 
-		// Return updated expense
-		RespondWithJSON(rw, http.StatusOK, ExpenseItem{
-			ID:          updatedExpense.ID,
-			Amount:      updatedExpense.Amount,
-			Description: updatedExpense.Description,
-			Destination: updatedExpense.Destination,
-			DocumentRef: updatedExpense.DocumentRef.String,
-			Date:        updatedExpense.Date,
-			Month:       updatedExpense.Month,
-			Year:        updatedExpense.Year,
-			CategoryID:  updatedExpense.CategoryID,
-			AccountID:   updatedExpense.AccountID,
-			CreatedAt:   updatedExpense.CreatedAt.Time,
-			UpdatedAt:   updatedExpense.CreatedAt.Time,
-		})
+		// Same shape as the list and create: with category and account names.
+		respondWithExpense(cfg, rw, req, http.StatusOK, int64(associationId), int64(expenseId))
 	}
 }
 
@@ -370,6 +400,11 @@ func HandleGetExpenses(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) 
 			Date:          startDate,
 			Date_2:        endDate,
 		})
+		if err != nil {
+			logging.Logger.Log(zap.WarnLevel, "Error listing expenses", zap.Error(err))
+			RespondWithError(rw, http.StatusInternalServerError, "Failed to list expenses")
+			return
+		}
 
 		expensesItems := make([]ExpenseItem, len(expenses))
 

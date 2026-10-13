@@ -5,147 +5,141 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/alexmarian/apc/api/internal/auth"
-	"github.com/alexmarian/apc/api/internal/database"
+	"errors"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/alexmarian/apc/api/internal/auth"
+	"github.com/alexmarian/apc/api/internal/database"
 )
 
+// HandleRequestPasswordReset (admin-only) creates a one-hour password
+// reset token for a user and returns it, for the admin to send as a
+// /reset?token=… link. Unknown login → 404.
 func HandleRequestPasswordReset(cfg *ApiConfig) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var request struct {
 			Login string `json:"login"`
 		}
-
-		decoder := json.NewDecoder(req.Body)
-		defer req.Body.Close()
-		if err := decoder.Decode(&request); err != nil {
+		if err := json.NewDecoder(req.Body).Decode(&request); err != nil {
 			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
 			return
 		}
-
-		_, err := cfg.Db.GetUserByLogin(req.Context(), request.Login)
-		if err != nil {
-			RespondWithJSON(rw, http.StatusOK, map[string]string{
-				"message": "If this account exists, a password reset token has been generated",
-			})
+		if _, err := cfg.Db.GetUserByLogin(req.Context(), request.Login); err != nil {
+			RespondWithError(rw, http.StatusNotFound, "User not found")
 			return
 		}
 
 		token := make([]byte, 32)
-		_, err = rand.Read(token)
-		if err != nil {
+		if _, err := rand.Read(token); err != nil {
 			log.Printf("Error generating reset token: %s", err)
 			RespondWithError(rw, http.StatusInternalServerError, "Error generating reset token")
 			return
 		}
 		resetToken := hex.EncodeToString(token)
-
-		// Store the token with expiration (24 hours)
-		expiresAt := time.Now().Add(1 * time.Hour)
-		err = cfg.Db.CreatePasswordResetToken(req.Context(), database.CreatePasswordResetTokenParams{
+		expiresAt := time.Now().UTC().Add(1 * time.Hour)
+		if err := cfg.Db.CreatePasswordResetToken(req.Context(), database.CreatePasswordResetTokenParams{
 			Token:     resetToken,
 			Login:     request.Login,
 			ExpiresAt: expiresAt,
-		})
-
-		if err != nil {
+		}); err != nil {
 			log.Printf("Error storing reset token: %s", err)
 			RespondWithError(rw, http.StatusInternalServerError, "Error processing reset request")
 			return
 		}
 
-		RespondWithJSON(rw, http.StatusOK, map[string]string{
-			"message": "Password reset token has been generated",
-			"token":   resetToken, // In production, remove this and send via email instead
+		RespondWithJSON(rw, http.StatusOK, map[string]any{
+			"message":   "Password reset token has been generated",
+			"token":     resetToken,
+			"expiresAt": expiresAt,
 		})
 	}
 }
 
+// HandleResetPassword sets a new password with a reset token. With
+// reset_totp_secret it also issues a new TOTP secret and makes the user
+// pending again, so they confirm it through onboarding before logging in.
+// Admin status is never touched.
 func HandleResetPassword(cfg *ApiConfig) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var request struct {
 			Token           string `json:"token"`
 			NewPassword     string `json:"new_password"`
-			ResetTOTPSecret bool   `json:"reset_totp_secret"` // Optional: reset TOTP seed
+			ResetTOTPSecret bool   `json:"reset_totp_secret"`
 		}
-
-		decoder := json.NewDecoder(req.Body)
-		defer req.Body.Close()
-		if err := decoder.Decode(&request); err != nil {
+		if err := json.NewDecoder(req.Body).Decode(&request); err != nil {
 			RespondWithError(rw, http.StatusBadRequest, "Invalid request format")
 			return
 		}
-
-		// Validate token
-		resetToken, err := cfg.Db.GetValidPasswordResetToken(req.Context(), request.Token)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				RespondWithError(rw, http.StatusBadRequest, "Invalid or expired reset token")
-			} else {
-				log.Printf("Error validating reset token: %s", err)
-				RespondWithError(rw, http.StatusInternalServerError, "Error processing reset request")
-			}
+		if msg := validatePassword(request.NewPassword); msg != "" {
+			RespondWithError(rw, http.StatusBadRequest, msg)
 			return
 		}
-
 		passwordHash, err := auth.HashPassword(request.NewPassword)
 		if err != nil {
-			log.Printf("Error hashing password: %s", err)
 			RespondWithError(rw, http.StatusInternalServerError, "Error processing reset request")
 			return
 		}
 
-		// Generate new TOTP secret if requested
-		var totpSecret string
-		var qrCode string
-
-		if request.ResetTOTPSecret {
-			totpSecret, qrCode, err = auth.GenerateQRCode(resetToken.Login)
-			if err != nil {
-				log.Printf("Error generating TOTP: %s", err)
-				RespondWithError(rw, http.StatusInternalServerError, "Error processing reset request")
-				return
-			}
-		} else {
-			// Get the existing TOTP secret
-			user, err := cfg.Db.GetUserByLogin(req.Context(), resetToken.Login)
-			if err != nil {
-				log.Printf("Error fetching user: %s", err)
-				RespondWithError(rw, http.StatusInternalServerError, "Error processing reset request")
-				return
-			}
-			totpSecret = user.ToptSecret
-		}
-
-		// Update user password and possibly TOTP secret
-		_, err = cfg.Db.UpdateUserEmailAndPassword(req.Context(), database.UpdateUserEmailAndPasswordParams{
-			PasswordHash: passwordHash,
-			ToptSecret:   totpSecret,
-			IsAdmin:      false, // Don't change admin status during reset
-			Login:        resetToken.Login,
-		})
-
+		ctx := req.Context()
+		tx, err := cfg.DB.BeginTx(ctx, nil)
 		if err != nil {
-			log.Printf("Error updating user: %s", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Error processing reset request")
+			return
+		}
+		defer tx.Rollback()
+		q := cfg.Db.WithTx(tx)
+
+		resetToken, err := q.GetValidPasswordResetToken(ctx, request.Token)
+		if errors.Is(err, sql.ErrNoRows) {
+			RespondWithError(rw, http.StatusBadRequest, "Invalid or expired reset token")
+			return
+		}
+		if err != nil {
+			log.Printf("Error validating reset token: %s", err)
+			RespondWithError(rw, http.StatusInternalServerError, "Error processing reset request")
+			return
+		}
+		user, err := q.GetUserByLogin(ctx, resetToken.Login)
+		if err != nil {
+			RespondWithError(rw, http.StatusInternalServerError, "Error processing reset request")
+			return
+		}
+		if err := q.SetUserPassword(ctx, database.SetUserPasswordParams{PasswordHash: passwordHash, ID: user.ID}); err != nil {
 			RespondWithError(rw, http.StatusInternalServerError, "Error resetting password")
 			return
 		}
-
-		err = cfg.Db.UsePasswordResetToken(req.Context(), request.Token)
-		if err != nil {
-			log.Printf("Error marking token as used: %s", err)
-		}
-
-		response := map[string]string{
-			"message": "Password has been reset successfully",
-		}
-
+		var enrollment *auth.TOTPEnrollment
 		if request.ResetTOTPSecret {
-			response["qrCode"] = qrCode
+			e, err := auth.GenerateTOTPEnrollment(user.Login)
+			if err == nil {
+				err = q.SetUserTotpSecret(ctx, database.SetUserTotpSecretParams{ToptSecret: e.Secret, ID: user.ID})
+			}
+			if err != nil {
+				RespondWithError(rw, http.StatusInternalServerError, "Error resetting two-factor authentication")
+				return
+			}
+			enrollment = &e
+		}
+		if err := q.UsePasswordResetToken(ctx, request.Token); err != nil {
+			RespondWithError(rw, http.StatusInternalServerError, "Error processing reset request")
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			RespondWithError(rw, http.StatusInternalServerError, "Error processing reset request")
+			return
 		}
 
+		response := map[string]any{
+			"message":            "Password has been reset successfully",
+			"login":              user.Login,
+			"onboardingRequired": enrollment != nil || !user.TotpConfirmedAt.Valid,
+		}
+		if enrollment != nil {
+			response["enrollment"] = toEnrollmentResponse(*enrollment)
+			response["qrCode"] = enrollment.QRCode // legacy Vue reset page
+		}
 		RespondWithJSON(rw, http.StatusOK, response)
 	}
 }

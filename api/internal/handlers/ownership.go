@@ -67,6 +67,10 @@ func HandleDisableOwnership(cfg *ApiConfig) func(http.ResponseWriter, *http.Requ
 			// You might want to add a comments/notes field to ownerships table for storing disable_reason
 		})
 
+		if isUniqueViolation(err) {
+			RespondWithError(rw, http.StatusConflict, ownershipHistoryConflict)
+			return
+		}
 		if err != nil {
 			log.Printf("Error deactivating ownership: %s", err)
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to deactivate ownership")

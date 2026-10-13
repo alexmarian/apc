@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/alexmarian/apc/api/internal/auth"
@@ -11,92 +10,6 @@ import (
 	"net/http"
 	"time"
 )
-
-func HandleCreateUserWithToken(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
-	return func(rw http.ResponseWriter, req *http.Request) {
-		// Parse request
-		type request struct {
-			Login    string `json:"login"`
-			Password string `json:"password"`
-			Token    string `json:"token"` // Registration token
-		}
-
-		decoder := json.NewDecoder(req.Body)
-		defer req.Body.Close()
-		userData := request{}
-		err := decoder.Decode(&userData)
-		if err != nil {
-			var errors = fmt.Sprintf("Error decoding create user request: %s", err)
-			logging.Logger.Log(zap.WarnLevel, "Error decoding create user request", zap.String("error", err.Error()))
-			RespondWithError(rw, http.StatusBadRequest, errors)
-			return
-		}
-
-		// Validate the token
-		dbToken, err := cfg.Db.GetValidRegistrationToken(req.Context(), userData.Token)
-		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "Error validating token", zap.String("token", userData.Token))
-			RespondWithError(rw, http.StatusUnauthorized, "Invalid or expired registration token")
-			return
-		}
-
-		// Hash the password
-		hashedPassword, err := auth.HashPassword(userData.Password)
-		if err != nil {
-			var errors = fmt.Sprintf("Error hashing password: %s", err)
-			logging.Logger.Log(zap.WarnLevel, "Error hashing password", zap.String("error", err.Error()))
-			RespondWithError(rw, http.StatusInternalServerError, errors)
-			return
-		}
-
-		// Generate TOTP secret
-		secret, qrCode, err := auth.GenerateQRCode(userData.Login)
-		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "Error generating QR code", zap.String("error", err.Error()))
-			RespondWithError(rw, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		// Create the user
-		user, err := cfg.Db.CreateUser(req.Context(), database.CreateUserParams{
-			Login:        userData.Login,
-			PasswordHash: hashedPassword,
-			ToptSecret:   secret,
-			IsAdmin:      dbToken.IsAdmin, // Use isAdmin from token
-		})
-		if err != nil {
-			var errors = fmt.Sprintf("Error creating user: %s", err)
-			logging.Logger.Log(zap.WarnLevel, "Error creating user", zap.String("error", err.Error()))
-			RespondWithError(rw, http.StatusInternalServerError, errors)
-			return
-		}
-
-		// Mark token as used
-		err = cfg.Db.UseRegistrationToken(req.Context(), database.UseRegistrationTokenParams{
-			UsedBy: sql.NullString{String: userData.Login, Valid: true},
-			Token:  userData.Token,
-		})
-		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "Error marking token as used", zap.String("error", err.Error()))
-			// Don't fail the request if this happens
-		}
-
-		// Return response
-		type response struct {
-			Login     string    `json:"login"`
-			QrCode    string    `json:"qrCode"`
-			CreatedAt time.Time `json:"createdAt"`
-			IsAdmin   bool      `json:"isAdmin"`
-		}
-		responseData := response{
-			Login:     user.Login,
-			QrCode:    qrCode,
-			CreatedAt: user.CreatedAt,
-			IsAdmin:   user.IsAdmin,
-		}
-		RespondWithJSON(rw, http.StatusCreated, responseData)
-	}
-}
 
 func HandleUpdateUser(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	type parameters struct {
@@ -126,9 +39,25 @@ func HandleUpdateUser(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 		if err != nil {
 			logging.Logger.Log(zap.WarnLevel, "Error generating QR code", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, err.Error())
+			return
+		}
+		// Only an application admin may grant or revoke admin rights; anyone
+		// else keeps their current flag whatever the body says.
+		isAdmin := request.IsAdmin
+		if claims := GetClaimsFromContext(req); claims == nil || !claims.IsAdmin {
+			current, err := cfg.Db.GetUserByLogin(req.Context(), GetUserIdFromContext(req))
+			if err != nil {
+				RespondWithError(rw, http.StatusInternalServerError, "Error loading user")
+				return
+			}
+			isAdmin = current.IsAdmin
 		}
 		user, err := cfg.Db.UpdateUserEmailAndPassword(req.Context(), database.UpdateUserEmailAndPasswordParams{
-			password, secret, request.IsAdmin, GetUserIdFromContext(req)})
+			PasswordHash: password,
+			ToptSecret:   secret,
+			IsAdmin:      isAdmin,
+			Login:        GetUserIdFromContext(req),
+		})
 		if err != nil {
 			var errors = fmt.Sprintf("Error creating user: %s", err)
 			logging.Logger.Log(zap.WarnLevel, "Error creating user", zap.String("error", err.Error()))
@@ -149,4 +78,10 @@ func HandleUpdateUser(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 		}
 		RespondWithJSON(rw, http.StatusOK, responseData)
 	}
+}
+
+// UserRef is the public identity of a user, as shown in pickers and lists.
+type UserRef struct {
+	ID    int64  `json:"id"`
+	Login string `json:"login"`
 }

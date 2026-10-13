@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -19,11 +20,6 @@ func HandleLogin(cfg *ApiConfig) http.HandlerFunc {
 		Login            string `json:"login"`
 		TOTP             string `json:"totp"`
 		ExpiresInSeconds int    `json:"expires_in_seconds"`
-	}
-	type response struct {
-		Login        string `json:"login"`
-		Token        string `json:"token,omitempty"`
-		RefreshToken string `json:"refresh_token,omitempty"`
 	}
 	return func(rw http.ResponseWriter, req *http.Request) {
 		decoder := json.NewDecoder(req.Body)
@@ -45,6 +41,19 @@ func HandleLogin(cfg *ApiConfig) http.HandlerFunc {
 			RespondWithError(rw, http.StatusUnauthorized, "Login failure")
 			return
 		}
+		// Same generic failure as a wrong password: don't reveal that the
+		// account exists but is disabled.
+		if user.DisabledAt.Valid {
+			logging.Logger.Log(zapcore.WarnLevel, "Disabled user", zap.String("user", request.Login))
+			RespondWithError(rw, http.StatusUnauthorized, "Login failure")
+			return
+		}
+		// Only reachable with the right password, so only the account owner
+		// learns they still have to finish TOTP setup.
+		if !user.TotpConfirmedAt.Valid {
+			RespondWithError(rw, http.StatusForbidden, OnboardingRequiredMessage)
+			return
+		}
 		if ok, err := auth.VerifyTOTPCode(user.ToptSecret, request.TOTP); err != nil || !ok {
 			logging.Logger.Log(zapcore.WarnLevel, "Incorrect totp", zap.String("user", request.Login))
 			RespondWithError(rw, http.StatusUnauthorized, "Login failure")
@@ -54,29 +63,44 @@ func HandleLogin(cfg *ApiConfig) http.HandlerFunc {
 		if request.ExpiresInSeconds != 0 {
 			seconds = request.ExpiresInSeconds
 		}
-		refreshToken, err := auth.MakeRefreshToken()
+		session, err := issueSession(req.Context(), cfg, user, time.Duration(seconds)*time.Second)
 		if err != nil {
-			RespondWithError(rw, http.StatusInternalServerError, "Error creating refresh token")
+			RespondWithError(rw, http.StatusInternalServerError, "Error creating session")
 			return
 		}
-		if err := cfg.Db.CreateRefreshToken(req.Context(), database.CreateRefreshTokenParams{
-			Token: refreshToken,
-			Login: user.Login,
-		}); err != nil {
-			RespondWithError(rw, http.StatusInternalServerError, "Error creating refresh token")
-			return
-		}
-		token, _, err := auth.MakeJWT(user.Login, cfg.Secret, time.Duration(seconds)*time.Second, user.IsAdmin)
-		if err != nil {
-			RespondWithError(rw, http.StatusInternalServerError, "Error creating token")
-			return
-		}
-		RespondWithJSON(rw, http.StatusOK, response{
-			Login:        user.Login,
-			Token:        token,
-			RefreshToken: refreshToken,
-		})
+		RespondWithJSON(rw, http.StatusOK, session)
 	}
+}
+
+// OnboardingRequiredMessage is the 403 `msg` login returns for a user who
+// hasn't confirmed their TOTP yet; clients send them to onboarding.
+const OnboardingRequiredMessage = "onboarding_required"
+
+// sessionResponse is the login response shape, also returned when
+// onboarding completes.
+type sessionResponse struct {
+	Login        string `json:"login"`
+	Token        string `json:"token,omitempty"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+}
+
+// issueSession creates a refresh token and an access token for user.
+func issueSession(ctx context.Context, cfg *ApiConfig, user database.User, expiresIn time.Duration) (sessionResponse, error) {
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		return sessionResponse{}, err
+	}
+	if err := cfg.Db.CreateRefreshToken(ctx, database.CreateRefreshTokenParams{
+		Token: refreshToken,
+		Login: user.Login,
+	}); err != nil {
+		return sessionResponse{}, err
+	}
+	token, _, err := auth.MakeJWT(user.Login, cfg.Secret, expiresIn, user.IsAdmin)
+	if err != nil {
+		return sessionResponse{}, err
+	}
+	return sessionResponse{Login: user.Login, Token: token, RefreshToken: refreshToken}, nil
 }
 
 func HandleRefresh(cfg *ApiConfig) http.HandlerFunc {
@@ -99,6 +123,10 @@ func HandleRefresh(cfg *ApiConfig) http.HandlerFunc {
 		user, err := cfg.Db.GetUserByLogin(req.Context(), rt.Login)
 		if err != nil {
 			RespondWithError(rw, http.StatusInternalServerError, "Error fetching user")
+			return
+		}
+		if user.DisabledAt.Valid {
+			RespondWithError(rw, http.StatusUnauthorized, "Invalid token")
 			return
 		}
 		token, _, err := auth.MakeJWT(rt.Login, cfg.Secret, 3600*time.Second, user.IsAdmin)

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/alexmarian/apc/api/internal/auth"
@@ -18,7 +19,10 @@ const startDateQueryKey = "start_date"
 const endDateQueryKey = "end_date"
 
 type ApiConfig struct {
-	Db     *database.Queries
+	Db *database.Queries
+	// DB is the connection behind Db, for handlers that need a transaction
+	// (BeginTx + Db.WithTx).
+	DB     *sql.DB
 	Secret string
 }
 

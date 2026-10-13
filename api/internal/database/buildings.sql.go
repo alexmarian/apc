@@ -9,6 +9,72 @@ import (
 	"context"
 )
 
+const countBuildingUnits = `-- name: CountBuildingUnits :one
+
+
+SELECT COUNT(*) FROM units WHERE building_id = ?
+`
+
+func (q *Queries) CountBuildingUnits(ctx context.Context, buildingID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countBuildingUnits, buildingID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const createBuilding = `-- name: CreateBuilding :one
+
+INSERT INTO buildings (name, address, cadastral_number, total_area, association_id)
+VALUES (?, ?, ?, ?, ?)
+RETURNING id, name, address, cadastral_number, total_area, association_id, created_at, updated_at
+`
+
+type CreateBuildingParams struct {
+	Name            string
+	Address         string
+	CadastralNumber string
+	TotalArea       float64
+	AssociationID   int64
+}
+
+func (q *Queries) CreateBuilding(ctx context.Context, arg CreateBuildingParams) (Building, error) {
+	row := q.db.QueryRowContext(ctx, createBuilding,
+		arg.Name,
+		arg.Address,
+		arg.CadastralNumber,
+		arg.TotalArea,
+		arg.AssociationID,
+	)
+	var i Building
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Address,
+		&i.CadastralNumber,
+		&i.TotalArea,
+		&i.AssociationID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteBuilding = `-- name: DeleteBuilding :exec
+
+
+DELETE FROM buildings WHERE id = ? AND association_id = ?
+`
+
+type DeleteBuildingParams struct {
+	ID            int64
+	AssociationID int64
+}
+
+func (q *Queries) DeleteBuilding(ctx context.Context, arg DeleteBuildingParams) error {
+	_, err := q.db.ExecContext(ctx, deleteBuilding, arg.ID, arg.AssociationID)
+	return err
+}
+
 const getAssociationBuilding = `-- name: GetAssociationBuilding :one
 
 SELECT id, name, address, cadastral_number, total_area, association_id, created_at, updated_at from buildings where id = ? and association_id = ?
@@ -71,4 +137,51 @@ func (q *Queries) GetAssociationBuildings(ctx context.Context, associationID int
 		return nil, err
 	}
 	return items, nil
+}
+
+const getBuildingShareTotal = `-- name: GetBuildingShareTotal :one
+
+
+SELECT CAST(COALESCE(SUM(part), 0) AS REAL) AS total FROM units WHERE building_id = ?
+`
+
+func (q *Queries) GetBuildingShareTotal(ctx context.Context, buildingID int64) (float64, error) {
+	row := q.db.QueryRowContext(ctx, getBuildingShareTotal, buildingID)
+	var total float64
+	err := row.Scan(&total)
+	return total, err
+}
+
+const updateBuilding = `-- name: UpdateBuilding :exec
+
+
+UPDATE buildings
+SET name             = ?,
+    address          = ?,
+    cadastral_number = ?,
+    total_area       = ?,
+    updated_at       = datetime('now')
+WHERE id = ?
+  AND association_id = ?
+`
+
+type UpdateBuildingParams struct {
+	Name            string
+	Address         string
+	CadastralNumber string
+	TotalArea       float64
+	ID              int64
+	AssociationID   int64
+}
+
+func (q *Queries) UpdateBuilding(ctx context.Context, arg UpdateBuildingParams) error {
+	_, err := q.db.ExecContext(ctx, updateBuilding,
+		arg.Name,
+		arg.Address,
+		arg.CadastralNumber,
+		arg.TotalArea,
+		arg.ID,
+		arg.AssociationID,
+	)
+	return err
 }

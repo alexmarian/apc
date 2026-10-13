@@ -7,19 +7,48 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"strings"
 )
 
+const confirmUserTotp = `-- name: ConfirmUserTotp :exec
+UPDATE users
+SET totp_confirmed_at = datetime('now'),
+    updated_at        = datetime('now')
+WHERE id = ?
+`
+
+func (q *Queries) ConfirmUserTotp(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, confirmUserTotp, id)
+	return err
+}
+
+const countActiveAdmins = `-- name: CountActiveAdmins :one
+SELECT COUNT(*)
+FROM users
+WHERE is_admin = TRUE
+  AND disabled_at IS NULL
+`
+
+func (q *Queries) CountActiveAdmins(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countActiveAdmins)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (login, password_hash, topt_secret, is_admin)
+INSERT INTO users (login, password_hash, topt_secret, is_admin, totp_confirmed_at)
 VALUES (?,
-        ?, ?, ?) RETURNING id, login, password_hash, topt_secret, is_admin, created_at, updated_at
+        ?, ?, ?, ?) RETURNING id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by
 `
 
 type CreateUserParams struct {
-	Login        string
-	PasswordHash string
-	ToptSecret   string
-	IsAdmin      bool
+	Login           string
+	PasswordHash    string
+	ToptSecret      string
+	IsAdmin         bool
+	TotpConfirmedAt sql.NullTime
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -28,6 +57,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.PasswordHash,
 		arg.ToptSecret,
 		arg.IsAdmin,
+		arg.TotpConfirmedAt,
 	)
 	var i User
 	err := row.Scan(
@@ -38,8 +68,22 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TotpConfirmedAt,
+		&i.DisabledAt,
+		&i.DisabledBy,
 	)
 	return i, err
+}
+
+const deleteUserAssociations = `-- name: DeleteUserAssociations :exec
+DELETE
+FROM users_associations
+WHERE user_id = ?
+`
+
+func (q *Queries) DeleteUserAssociations(ctx context.Context, userID int64) error {
+	_, err := q.db.ExecContext(ctx, deleteUserAssociations, userID)
+	return err
 }
 
 const deleteUsers = `-- name: DeleteUsers :exec
@@ -82,8 +126,32 @@ func (q *Queries) GetUserAssociationsByLogin(ctx context.Context, login string) 
 	return items, nil
 }
 
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by
+FROM users
+WHERE id = ?
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Login,
+		&i.PasswordHash,
+		&i.ToptSecret,
+		&i.IsAdmin,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TotpConfirmedAt,
+		&i.DisabledAt,
+		&i.DisabledBy,
+	)
+	return i, err
+}
+
 const getUserByLogin = `-- name: GetUserByLogin :one
-SELECT id, login, password_hash, topt_secret, is_admin, created_at, updated_at
+SELECT id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by
 FROM users
 where login = ?
 `
@@ -99,8 +167,210 @@ func (q *Queries) GetUserByLogin(ctx context.Context, login string) (User, error
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TotpConfirmedAt,
+		&i.DisabledAt,
+		&i.DisabledBy,
 	)
 	return i, err
+}
+
+const getUsersByIds = `-- name: GetUsersByIds :many
+SELECT id, login, is_admin, disabled_at
+FROM users
+WHERE id IN (/*SLICE:ids*/?)
+`
+
+type GetUsersByIdsRow struct {
+	ID         int64
+	Login      string
+	IsAdmin    bool
+	DisabledAt sql.NullTime
+}
+
+func (q *Queries) GetUsersByIds(ctx context.Context, ids []int64) ([]GetUsersByIdsRow, error) {
+	query := getUsersByIds
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUsersByIdsRow
+	for rows.Next() {
+		var i GetUsersByIdsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Login,
+			&i.IsAdmin,
+			&i.DisabledAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserAssociationLinks = `-- name: ListUserAssociationLinks :many
+SELECT users_associations.user_id, associations.id, associations.name
+FROM users_associations
+         JOIN associations ON associations.id = users_associations.association_id
+ORDER BY associations.name
+`
+
+type ListUserAssociationLinksRow struct {
+	UserID int64
+	ID     int64
+	Name   string
+}
+
+func (q *Queries) ListUserAssociationLinks(ctx context.Context) ([]ListUserAssociationLinksRow, error) {
+	rows, err := q.db.QueryContext(ctx, listUserAssociationLinks)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUserAssociationLinksRow
+	for rows.Next() {
+		var i ListUserAssociationLinksRow
+		if err := rows.Scan(&i.UserID, &i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsers = `-- name: ListUsers :many
+SELECT id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by
+FROM users
+ORDER BY login
+`
+
+func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, listUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Login,
+			&i.PasswordHash,
+			&i.ToptSecret,
+			&i.IsAdmin,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TotpConfirmedAt,
+			&i.DisabledAt,
+			&i.DisabledBy,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setUserAdmin = `-- name: SetUserAdmin :exec
+UPDATE users
+SET is_admin   = ?,
+    updated_at = datetime('now')
+WHERE id = ?
+`
+
+type SetUserAdminParams struct {
+	IsAdmin bool
+	ID      int64
+}
+
+func (q *Queries) SetUserAdmin(ctx context.Context, arg SetUserAdminParams) error {
+	_, err := q.db.ExecContext(ctx, setUserAdmin, arg.IsAdmin, arg.ID)
+	return err
+}
+
+const setUserDisabled = `-- name: SetUserDisabled :exec
+UPDATE users
+SET disabled_at = ?,
+    disabled_by = ?,
+    updated_at  = datetime('now')
+WHERE id = ?
+`
+
+type SetUserDisabledParams struct {
+	DisabledAt sql.NullTime
+	DisabledBy sql.NullString
+	ID         int64
+}
+
+func (q *Queries) SetUserDisabled(ctx context.Context, arg SetUserDisabledParams) error {
+	_, err := q.db.ExecContext(ctx, setUserDisabled, arg.DisabledAt, arg.DisabledBy, arg.ID)
+	return err
+}
+
+const setUserPassword = `-- name: SetUserPassword :exec
+UPDATE users
+SET password_hash = ?,
+    updated_at    = datetime('now')
+WHERE id = ?
+`
+
+type SetUserPasswordParams struct {
+	PasswordHash string
+	ID           int64
+}
+
+func (q *Queries) SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error {
+	_, err := q.db.ExecContext(ctx, setUserPassword, arg.PasswordHash, arg.ID)
+	return err
+}
+
+const setUserTotpSecret = `-- name: SetUserTotpSecret :exec
+UPDATE users
+SET topt_secret       = ?,
+    totp_confirmed_at = NULL,
+    updated_at        = datetime('now')
+WHERE id = ?
+`
+
+type SetUserTotpSecretParams struct {
+	ToptSecret string
+	ID         int64
+}
+
+// A new secret always needs confirming again.
+func (q *Queries) SetUserTotpSecret(ctx context.Context, arg SetUserTotpSecretParams) error {
+	_, err := q.db.ExecContext(ctx, setUserTotpSecret, arg.ToptSecret, arg.ID)
+	return err
 }
 
 const updateUserEmailAndPassword = `-- name: UpdateUserEmailAndPassword :one
@@ -109,7 +379,7 @@ set password_hash = ?,
     topt_secret   = ?,
     is_admin      = ?,
     updated_at    = datetime()
-WHERE login = ? RETURNING id, login, password_hash, topt_secret, is_admin, created_at, updated_at
+WHERE login = ? RETURNING id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by
 `
 
 type UpdateUserEmailAndPasswordParams struct {
@@ -135,6 +405,9 @@ func (q *Queries) UpdateUserEmailAndPassword(ctx context.Context, arg UpdateUser
 		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TotpConfirmedAt,
+		&i.DisabledAt,
+		&i.DisabledBy,
 	)
 	return i, err
 }

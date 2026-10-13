@@ -14,13 +14,16 @@ import (
 const BuildingIdPathValue = "buildingId"
 
 type Building struct {
-	ID              int64     `json:"id"`
-	Name            string    `json:"name"`
-	Address         string    `json:"address"`
-	CadastralNumber string    `json:"cadastral_number"`
-	TotalArea       float64   `json:"total_area"`
-	CreatedAt       time.Time `json:"createdAt"`
-	UpdatedAt       time.Time `json:"updatedAt"`
+	ID              int64   `json:"id"`
+	Name            string  `json:"name"`
+	Address         string  `json:"address"`
+	CadastralNumber string  `json:"cadastral_number"`
+	TotalArea       float64 `json:"total_area"`
+	// ShareTotal is the sum of the building's unit shares (a fraction;
+	// 1 = 100%). Off 1 is a data-quality warning, not an error.
+	ShareTotal float64   `json:"share_total"`
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
 func HandleGetAssociationBuildings(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
@@ -35,17 +38,10 @@ func HandleGetAssociationBuildings(cfg *ApiConfig) func(http.ResponseWriter, *ht
 		}
 		buildings := make([]Building, len(buildingsFromList))
 		for i, building := range buildingsFromList {
-			buildings[i] = Building{
-				ID:              building.ID,
-				Name:            building.Name,
-				Address:         building.Address,
-				CadastralNumber: building.CadastralNumber,
-				TotalArea:       building.TotalArea,
-				CreatedAt:       building.CreatedAt.Time,
-				UpdatedAt:       building.UpdatedAt.Time,
-			}
+			buildings[i] = toBuilding(building)
+			buildings[i].ShareTotal, _ = cfg.Db.GetBuildingShareTotal(req.Context(), building.ID)
 		}
-		RespondWithJSON(rw, http.StatusCreated, buildings)
+		RespondWithJSON(rw, http.StatusOK, buildings)
 	}
 }
 func HandleGetAssociationBuilding(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {

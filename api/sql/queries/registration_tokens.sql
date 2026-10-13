@@ -17,7 +17,7 @@ WHERE token = ?
   AND expires_at > datetime('now')
     LIMIT 1;
 
--- name: UseRegistrationToken :exec
+-- name: UseRegistrationToken :execrows
 UPDATE registration_tokens
 SET used_at = datetime('now'),
     used_by = ?
@@ -59,3 +59,18 @@ SELECT
     is_admin
 FROM registration_tokens
 ORDER BY created_at DESC;
+
+-- name: AddRegistrationTokenAssociation :exec
+INSERT INTO registration_token_associations (token, association_id)
+VALUES (?, ?);
+
+-- name: GetRegistrationTokenAssociationIds :many
+SELECT association_id
+FROM registration_token_associations
+WHERE token = ?;
+
+-- name: ListRegistrationTokenAssociations :many
+SELECT registration_token_associations.token, associations.id, associations.name
+FROM registration_token_associations
+         JOIN associations ON associations.id = registration_token_associations.association_id
+ORDER BY associations.name;

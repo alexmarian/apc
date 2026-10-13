@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/alexmarian/apc/api/internal/auth"
@@ -27,15 +28,27 @@ func (cfg *ApiConfig) MiddlewareAuth(next http.HandlerFunc) http.HandlerFunc {
 			}
 		}
 		userLogin, _ := claims.GetSubject()
+		if cfg.Db != nil {
+			// The DB, not the token, is the source of truth for the account:
+			// disabling or a role change applies on the next request instead
+			// of when the token expires.
+			user, err := cfg.Db.GetUserByLogin(r.Context(), userLogin)
+			if err != nil || user.DisabledAt.Valid {
+				RespondWithError(w, http.StatusUnauthorized, "user is not active")
+				return
+			}
+			claims.IsAdmin = user.IsAdmin
+		}
 		r = AddUserIdToContext(r, userLogin)
 		r = AddClaimsToContext(r, claims)
 		next.ServeHTTP(w, r)
 	}
 }
 
-// MiddlewareAssociationResource validates the association ID path value.
-// With single-association deployments every authenticated user has access;
-// the check is kept so route definitions stay unchanged.
+// MiddlewareAssociationResource guards every association-scoped route:
+// application admins may access any association; everyone else only the
+// associations they're linked to in users_associations (looked up per
+// request, so assignment changes apply without a new login).
 func (cfg *ApiConfig) MiddlewareAssociationResource(next http.HandlerFunc) http.HandlerFunc {
 	return cfg.MiddlewareAuth(func(w http.ResponseWriter, r *http.Request) {
 		associationId, err := strconv.Atoi(r.PathValue(AssociationIdPathValue))
@@ -43,8 +56,25 @@ func (cfg *ApiConfig) MiddlewareAssociationResource(next http.HandlerFunc) http.
 			RespondWithError(w, http.StatusBadRequest, "invalid association id")
 			return
 		}
+		if claims := GetClaimsFromContext(r); claims == nil || !claims.IsAdmin {
+			if !cfg.userHasAssociation(r, int64(associationId)) {
+				RespondWithError(w, http.StatusForbidden, "You don't have access to this association")
+				return
+			}
+		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (cfg *ApiConfig) userHasAssociation(r *http.Request, associationId int64) bool {
+	if cfg.Db == nil {
+		return false
+	}
+	ids, err := cfg.Db.GetUserAssociationsByLogin(r.Context(), GetUserIdFromContext(r))
+	if err != nil {
+		return false
+	}
+	return slices.Contains(ids, associationId)
 }
 
 func (cfg *ApiConfig) MiddlewareAdminOnly(next http.HandlerFunc) http.HandlerFunc {

@@ -4,7 +4,7 @@ BUILD_DIR=./bin
 .PHONY: build test vet clean
 
 build:
-	go build -o $(BUILD_DIR)/$(BINARY) .
+	CGO_ENABLED=1 go build -o $(BUILD_DIR)/$(BINARY) .
 
 test:
 	go test ./...
