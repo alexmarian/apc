@@ -3,11 +3,11 @@ package handlers
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -89,6 +89,20 @@ func (h *InvitationHandler) HandleCreateInvitation() func(http.ResponseWriter, *
 			return
 		}
 		_ = gathering
+
+		// The owner must be one of this gathering's eligible voters.
+		eligible, err := h.cfg.Db.GetEligibleVotersWithUnits(req.Context(), database.GetEligibleVotersWithUnitsParams{
+			GatheringID:   int64(gatheringID),
+			AssociationID: int64(associationID),
+		})
+		if err != nil {
+			handlers.RespondWithError(rw, http.StatusInternalServerError, "failed to create invitation")
+			return
+		}
+		if !slices.ContainsFunc(eligible, func(r database.GetEligibleVotersWithUnitsRow) bool { return r.OwnerID == body.OwnerID }) {
+			handlers.RespondWithError(rw, http.StatusBadRequest, "the owner has no qualified units in this gathering")
+			return
+		}
 
 		// Check for existing non-revoked invitation (active or expired)
 		existing, err := h.cfg.Db.GetActiveMemberInvitationByOwnerAndGathering(req.Context(),
@@ -183,14 +197,19 @@ func (h *InvitationHandler) HandleRevokeInvitation() func(http.ResponseWriter, *
 			return
 		}
 
-		if err := h.cfg.Db.RevokeMemberInvitation(req.Context(), int64(invitationID)); err != nil {
+		// Only this gathering's invitations (the id alone could be another's).
+		revoked, err := h.cfg.Db.RevokeMemberInvitation(req.Context(), database.RevokeMemberInvitationParams{
+			ID:          int64(invitationID),
+			GatheringID: int64(gatheringID),
+		})
+		if err != nil {
 			logging.Logger.Log(zap.WarnLevel, "failed to revoke invitation", zap.Error(err),
 				zap.Int("invitation_id", invitationID))
-			if err == sql.ErrNoRows {
-				handlers.RespondWithError(rw, http.StatusNotFound, "invitation not found or already revoked")
-				return
-			}
 			handlers.RespondWithError(rw, http.StatusInternalServerError, "failed to revoke invitation")
+			return
+		}
+		if revoked == 0 {
+			handlers.RespondWithError(rw, http.StatusNotFound, "invitation not found or already revoked")
 			return
 		}
 

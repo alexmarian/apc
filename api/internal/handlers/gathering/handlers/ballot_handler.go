@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/alexmarian/apc/api/internal/database"
@@ -40,19 +42,26 @@ func NewBallotHandler(cfg *handlers.ApiConfig, gatheringHandler *GatheringHandle
 	}
 }
 
-// HandleSubmitBallot handles ballot submission
+// HandleSubmitBallot records a ballot cast on behalf of an owner, in person
+// (voter_type "owner") or through a delegate ("delegate": delegate_name and
+// delegate_identification name who voted; without them the owner's name and
+// the delegation document are recorded, as before). The units must be the
+// owner's, qualified and not yet voted; the content must answer every
+// voting matter. All of it is recorded atomically (see recordBallot).
 func (h *BallotHandler) HandleSubmitBallot() func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		associationID, _ := strconv.Atoi(req.PathValue(handlers.AssociationIdPathValue))
 		gatheringID, _ := strconv.Atoi(req.PathValue(domain.GatheringIDPathValue))
 
 		var ballotReq struct {
-			VoterType             string                       `json:"voter_type"`
-			OwnerID               int64                        `json:"owner_id"`
-			DelegatingOwnerID     *int64                       `json:"delegating_owner_id,omitempty"`
-			DelegationDocumentRef string                       `json:"delegation_document_ref,omitempty"`
-			UnitIDs               []int64                      `json:"unit_ids"`
-			BallotContent         map[string]domain.BallotVote `json:"ballot_content"`
+			VoterType              string                       `json:"voter_type"`
+			OwnerID                int64                        `json:"owner_id"`
+			DelegatingOwnerID      *int64                       `json:"delegating_owner_id,omitempty"`
+			DelegationDocumentRef  string                       `json:"delegation_document_ref,omitempty"`
+			DelegateName           string                       `json:"delegate_name,omitempty"`
+			DelegateIdentification string                       `json:"delegate_identification,omitempty"`
+			UnitIDs                []int64                      `json:"unit_ids"`
+			BallotContent          map[string]domain.BallotVote `json:"ballot_content"`
 		}
 		decoder := json.NewDecoder(req.Body)
 		if err := decoder.Decode(&ballotReq); err != nil {
@@ -84,10 +93,20 @@ func (h *BallotHandler) HandleSubmitBallot() func(http.ResponseWriter, *http.Req
 			return
 		}
 
-		// Get owner information
 		owner, err := h.cfg.Db.GetOwnerById(req.Context(), effectiveOwnerID)
-		if err != nil {
+		if err != nil || owner.AssociationID != int64(associationID) {
 			handlers.RespondWithError(rw, http.StatusBadRequest, "Owner not found")
+			return
+		}
+
+		matters, err := h.cfg.Db.GetVotingMatters(req.Context(), int64(gatheringID))
+		if err != nil {
+			handlers.RespondWithError(rw, http.StatusInternalServerError, "Failed to load voting matters")
+			return
+		}
+		content, err := validateBallotContent(matters, ballotReq.BallotContent)
+		if err != nil {
+			handlers.RespondWithError(rw, http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -111,9 +130,8 @@ func (h *BallotHandler) HandleSubmitBallot() func(http.ResponseWriter, *http.Req
 		}
 
 		// Validate all requested units are owned by this owner and available
-		totalArea := 0.0
-		totalWeight := 0.0
-		validUnitIDs := make([]int64, 0)
+		units := make([]database.GetEligibleVotersWithUnitsRow, 0, len(ballotReq.UnitIDs))
+		seen := map[int64]bool{}
 		for _, unitID := range ballotReq.UnitIDs {
 			unit, exists := ownerUnits[unitID]
 			if !exists {
@@ -124,84 +142,45 @@ func (h *BallotHandler) HandleSubmitBallot() func(http.ResponseWriter, *http.Req
 				handlers.RespondWithError(rw, http.StatusBadRequest, fmt.Sprintf("Unit %d is not available (already assigned)", unitID))
 				return
 			}
-			validUnitIDs = append(validUnitIDs, unitID)
-			totalArea += unit.Area
-			totalWeight += unit.VotingWeight
-		}
-
-		// Get or create participant
-		participantID := sql.NullString{String: owner.IdentificationNumber, Valid: true}
-		if ballotReq.VoterType == "delegate" {
-			participantID = sql.NullString{String: ballotReq.DelegationDocumentRef, Valid: true}
-		}
-
-		unitsJSON, _ := json.Marshal(validUnitIDs)
-
-		participant, err := h.cfg.Db.CreateGatheringParticipant(req.Context(), database.CreateGatheringParticipantParams{
-			GatheringID:               int64(gatheringID),
-			ParticipantType:           ballotReq.VoterType,
-			ParticipantName:           owner.Name,
-			ParticipantIdentification: participantID,
-			OwnerID:                   sql.NullInt64{Int64: ballotReq.OwnerID, Valid: ballotReq.VoterType == "owner"},
-			DelegatingOwnerID:         sql.NullInt64{Int64: effectiveOwnerID, Valid: ballotReq.VoterType == "delegate"},
-			DelegationDocumentRef:     sql.NullString{String: ballotReq.DelegationDocumentRef, Valid: ballotReq.VoterType == "delegate"},
-			UnitsInfo:                 string(unitsJSON),
-			UnitsArea:                 totalArea,
-			UnitsPart:                 totalWeight,
-		})
-		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "Error creating participant", zap.Error(err))
-			handlers.RespondWithError(rw, http.StatusInternalServerError, "Failed to create participant")
-			return
-		}
-
-		// Assign unit slots to this participant
-		for _, unitID := range validUnitIDs {
-			_, err := h.cfg.Db.AssignUnitSlot(req.Context(), database.AssignUnitSlotParams{
-				ParticipantID: participant.ID,
-				GatheringID:   int64(gatheringID),
-				UnitID:        unitID,
-			})
-			if err != nil {
-				logging.Logger.Log(zap.WarnLevel, "Error assigning unit slot", zap.Error(err), zap.Int64("unit_id", unitID))
+			if !seen[unitID] {
+				seen[unitID] = true
+				units = append(units, unit)
 			}
 		}
 
-		// Create ballot JSON
-		ballotJSON, err := json.Marshal(ballotReq.BallotContent)
-		if err != nil {
-			handlers.RespondWithError(rw, http.StatusBadRequest, "Invalid ballot content")
-			return
+		rec := ballotRecord{
+			GatheringID:               int64(gatheringID),
+			ParticipantType:           ballotReq.VoterType,
+			ParticipantName:           owner.Name,
+			ParticipantIdentification: owner.IdentificationNumber,
+			Units:                     units,
+			Content:                   content,
+			IP:                        req.RemoteAddr,
+			UserAgent:                 req.UserAgent(),
+		}
+		if ballotReq.VoterType == "owner" {
+			rec.OwnerID = sql.NullInt64{Int64: effectiveOwnerID, Valid: true}
+		} else {
+			rec.DelegatingOwnerID = sql.NullInt64{Int64: effectiveOwnerID, Valid: true}
+			rec.DelegationDocumentRef = sql.NullString{String: strings.TrimSpace(ballotReq.DelegationDocumentRef), Valid: true}
+			rec.ParticipantIdentification = rec.DelegationDocumentRef.String
+			if name := strings.TrimSpace(ballotReq.DelegateName); name != "" {
+				rec.ParticipantName = name
+				rec.ParticipantIdentification = strings.TrimSpace(ballotReq.DelegateIdentification)
+			}
 		}
 
-		// Calculate ballot hash
-		hash := sha256.Sum256(ballotJSON)
-		ballotHash := hex.EncodeToString(hash[:])
-
-		// Submit ballot
-		ballot, err := h.cfg.Db.CreateBallot(req.Context(), database.CreateBallotParams{
-			GatheringID:        int64(gatheringID),
-			ParticipantID:      participant.ID,
-			BallotContent:      string(ballotJSON),
-			BallotHash:         ballotHash,
-			SubmittedIp:        sql.NullString{String: req.RemoteAddr, Valid: true},
-			SubmittedUserAgent: sql.NullString{String: req.UserAgent(), Valid: true},
-		})
-
+		ballot, participant, err := recordBallot(req.Context(), h.cfg, rec)
+		if errors.Is(err, errUnitTaken) {
+			handlers.RespondWithError(rw, http.StatusConflict, err.Error())
+			return
+		}
 		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "Error creating ballot", zap.Error(err))
+			logging.Logger.Log(zap.WarnLevel, "Error recording ballot", zap.Error(err))
 			handlers.RespondWithError(rw, http.StatusInternalServerError, "Failed to submit ballot")
 			return
 		}
-
-		// Update gathering stats
-		go h.statsService.UpdateGatheringParticipationStats(int64(gatheringID), int64(associationID))
-
-		// Update vote tallies asynchronously
-		go h.tallyService.UpdateVoteTallies(int64(gatheringID), int(participant.ID))
-
-		// Invalidate cached results so next fetch recomputes from fresh tallies
-		h.votingResultsService.InvalidateResults(req.Context(), int64(gatheringID))
+		afterBallot(req.Context(), h.cfg, int64(gatheringID), int64(associationID), participant.ID)
 
 		// Log audit
 		h.cfg.Db.CreateAuditLog(req.Context(), database.CreateAuditLogParams{
@@ -209,14 +188,14 @@ func (h *BallotHandler) HandleSubmitBallot() func(http.ResponseWriter, *http.Req
 			EntityType:  "ballot",
 			EntityID:    ballot.ID,
 			Action:      "submitted",
-			PerformedBy: sql.NullString{String: fmt.Sprintf("participant_%d", participant.ID), Valid: true},
+			PerformedBy: sql.NullString{String: handlers.GetUserIdFromContext(req), Valid: true},
 			IpAddress:   sql.NullString{String: req.RemoteAddr, Valid: true},
-			Details:     sql.NullString{String: fmt.Sprintf(`{"hash":"%s","voter_type":"%s"}`, ballotHash, ballotReq.VoterType), Valid: true},
+			Details:     sql.NullString{String: fmt.Sprintf(`{"hash":"%s","voter_type":"%s","participant_id":%d}`, ballot.BallotHash, ballotReq.VoterType, participant.ID), Valid: true},
 		})
 
 		handlers.RespondWithJSON(rw, http.StatusCreated, map[string]interface{}{
 			"status":         "ballot_submitted",
-			"ballot_hash":    ballotHash,
+			"ballot_hash":    ballot.BallotHash,
 			"ballot_id":      ballot.ID,
 			"participant_id": participant.ID,
 		})
@@ -238,14 +217,17 @@ func (h *BallotHandler) HandleGetBallots() func(http.ResponseWriter, *http.Reque
 
 		// Build response with metadata only (no ballot content)
 		type BallotMetadata struct {
-			ID              int64   `json:"id"`
-			ParticipantName string  `json:"participant_name"`
-			UnitsInfo       []int64 `json:"units_info"`
-			UnitsArea       float64 `json:"units_area"`
-			UnitsPart       float64 `json:"units_part"`
-			BallotHash      string  `json:"ballot_hash"`
-			SubmittedAt     string  `json:"submitted_at"`
-			IsValid         bool    `json:"is_valid"`
+			ID              int64  `json:"id"`
+			ParticipantName string `json:"participant_name"`
+			ParticipantType string `json:"participant_type"`
+			// For a delegate: the owner they voted for.
+			DelegatingOwnerName string  `json:"delegating_owner_name,omitempty"`
+			UnitsInfo           []int64 `json:"units_info"`
+			UnitsArea           float64 `json:"units_area"`
+			UnitsPart           float64 `json:"units_part"`
+			BallotHash          string  `json:"ballot_hash"`
+			SubmittedAt         string  `json:"submitted_at"`
+			IsValid             bool    `json:"is_valid"`
 		}
 
 		response := make([]BallotMetadata, len(ballots))
@@ -259,14 +241,16 @@ func (h *BallotHandler) HandleGetBallots() func(http.ResponseWriter, *http.Reque
 			json.Unmarshal([]byte(b.UnitsInfo), &unitIDs)
 
 			response[i] = BallotMetadata{
-				ID:              b.ID,
-				ParticipantName: b.ParticipantName,
-				UnitsInfo:       unitIDs,
-				UnitsArea:       b.UnitsArea,
-				UnitsPart:       b.UnitsPart,
-				BallotHash:      b.BallotHash,
-				SubmittedAt:     submittedAt,
-				IsValid:         b.IsValid.Bool,
+				ID:                  b.ID,
+				ParticipantName:     b.ParticipantName,
+				ParticipantType:     b.ParticipantType,
+				DelegatingOwnerName: b.DelegatingOwnerName,
+				UnitsInfo:           unitIDs,
+				UnitsArea:           b.UnitsArea,
+				UnitsPart:           b.UnitsPart,
+				BallotHash:          b.BallotHash,
+				SubmittedAt:         submittedAt,
+				IsValid:             b.IsValid.Bool,
 			}
 		}
 
@@ -288,25 +272,10 @@ func (h *BallotHandler) HandleVerifyBallot() func(http.ResponseWriter, *http.Req
 			return
 		}
 
-		// Get ballot from database
-		ballots, err := h.cfg.Db.GetBallotsForGathering(req.Context(), verifyReq.BallotID)
-		if err != nil || len(ballots) == 0 {
-			handlers.RespondWithError(rw, http.StatusNotFound, "Ballot not found")
-			return
-		}
-
-		// Find the specific ballot
-		var ballot database.VotingBallot
-		found := false
-		for _, b := range ballots {
-			if b.ID == verifyReq.BallotID {
-				ballot = ballotRowToVotingBallot(b)
-				found = true
-				break
-			}
-		}
-
-		if !found {
+		// By the ballot's id (this used to pass the ballot id as a gathering
+		// id, so it only ever found ballots whose ids matched one).
+		ballot, err := h.cfg.Db.GetBallotByID(req.Context(), verifyReq.BallotID)
+		if err != nil {
 			handlers.RespondWithError(rw, http.StatusNotFound, "Ballot not found")
 			return
 		}
@@ -318,28 +287,8 @@ func (h *BallotHandler) HandleVerifyBallot() func(http.ResponseWriter, *http.Req
 		handlers.RespondWithJSON(rw, http.StatusOK, map[string]interface{}{
 			"valid":        calculatedHash == verifyReq.BallotHash && ballot.BallotHash == verifyReq.BallotHash,
 			"ballot_id":    ballot.ID,
-			"submitted_at": ballot.SubmittedAt,
-			"is_valid":     ballot.IsValid,
+			"submitted_at": domain.NullTimeToPtr(ballot.SubmittedAt),
+			"is_valid":     ballot.IsValid.Bool,
 		})
-	}
-}
-
-// Helper function to convert ballot row to voting ballot
-func ballotRowToVotingBallot(b database.GetBallotsForGatheringRow) database.VotingBallot {
-	return database.VotingBallot{
-		ID:                   b.ID,
-		GatheringID:          b.GatheringID,
-		ParticipantID:        b.ParticipantID,
-		BallotContent:        b.BallotContent,
-		BallotHash:           b.BallotHash,
-		SubmittedAt:          b.SubmittedAt,
-		SubmittedIp:          b.SubmittedIp,
-		SubmittedUserAgent:   b.SubmittedUserAgent,
-		IsValid:              b.IsValid,
-		SignatureCertificate: b.SignatureCertificate,
-		SignatureTimestamp:   b.SignatureTimestamp,
-		Signature:            b.Signature,
-		InvalidationReason:   b.InvalidationReason,
-		InvalidatedAt:        b.InvalidatedAt,
 	}
 }

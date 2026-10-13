@@ -29,9 +29,10 @@ WHERE gathering_id = ?
   AND revoked_at IS NULL
 LIMIT 1;
 
--- name: RevokeMemberInvitation :exec
+-- name: RevokeMemberInvitation :execrows
 UPDATE member_invitations
 SET revoked_at = datetime('now'),
     updated_at = datetime('now')
 WHERE id = ?
+  AND gathering_id = ?
   AND revoked_at IS NULL;

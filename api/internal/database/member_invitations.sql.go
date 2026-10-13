@@ -142,15 +142,24 @@ func (q *Queries) ListMemberInvitationsByGathering(ctx context.Context, gatherin
 	return items, nil
 }
 
-const revokeMemberInvitation = `-- name: RevokeMemberInvitation :exec
+const revokeMemberInvitation = `-- name: RevokeMemberInvitation :execrows
 UPDATE member_invitations
 SET revoked_at = datetime('now'),
     updated_at = datetime('now')
 WHERE id = ?
+  AND gathering_id = ?
   AND revoked_at IS NULL
 `
 
-func (q *Queries) RevokeMemberInvitation(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, revokeMemberInvitation, id)
-	return err
+type RevokeMemberInvitationParams struct {
+	ID          int64
+	GatheringID int64
+}
+
+func (q *Queries) RevokeMemberInvitation(ctx context.Context, arg RevokeMemberInvitationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, revokeMemberInvitation, arg.ID, arg.GatheringID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

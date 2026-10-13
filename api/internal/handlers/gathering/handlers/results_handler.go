@@ -247,31 +247,8 @@ func (h *ResultsHandler) HandleGetQualifiedUnits() func(http.ResponseWriter, *ht
 			return
 		}
 
-		// Parse qualification rules
-		var unitTypes []string
-		var floors []int64
-		var entrances []int64
-
-		if gathering.QualificationUnitTypes.Valid {
-			json.Unmarshal([]byte(gathering.QualificationUnitTypes.String), &unitTypes)
-		}
-		if gathering.QualificationFloors.Valid {
-			json.Unmarshal([]byte(gathering.QualificationFloors.String), &floors)
-		}
-		if gathering.QualificationEntrances.Valid {
-			json.Unmarshal([]byte(gathering.QualificationEntrances.String), &entrances)
-		}
-
 		// Get qualified units with owner information
-		units, err := h.cfg.Db.GetActiveOwnerUnitsForGathering(req.Context(), database.GetActiveOwnerUnitsForGatheringParams{
-			AssociationID: int64(associationID),
-			Column2:       len(unitTypes) > 0,
-			UnitTypes:     unitTypes,
-			Column4:       len(floors) > 0,
-			UnitFloors:    floors,
-			Column6:       len(entrances) > 0,
-			UnitEntrances: entrances,
-		})
+		units, err := h.cfg.Db.GetActiveOwnerUnitsForGathering(req.Context(), domain.QualificationOf(gathering).OwnerUnitsParams(int64(associationID)))
 
 		if err != nil {
 			logging.Logger.Log(zap.WarnLevel, "Error getting qualified units", zap.Error(err))
@@ -345,32 +322,7 @@ func (h *ResultsHandler) HandleGetNonParticipatingOwners() func(http.ResponseWri
 			return
 		}
 
-		// Parse qualification rules
-		var unitTypes []string
-		var floors []int64
-		var entrances []int64
-
-		if gathering.QualificationUnitTypes.Valid {
-			json.Unmarshal([]byte(gathering.QualificationUnitTypes.String), &unitTypes)
-		}
-		if gathering.QualificationFloors.Valid {
-			json.Unmarshal([]byte(gathering.QualificationFloors.String), &floors)
-		}
-		if gathering.QualificationEntrances.Valid {
-			json.Unmarshal([]byte(gathering.QualificationEntrances.String), &entrances)
-		}
-
-		owners, err := h.cfg.Db.GetNonParticipatingOwners(req.Context(), database.GetNonParticipatingOwnersParams{
-			AssociationID:   int64(associationID),
-			AssociationID_2: int64(associationID),
-			Column3:         len(unitTypes) > 0,
-			UnitTypes:       unitTypes,
-			Column5:         len(floors) > 0,
-			UnitFloors:      floors,
-			Column7:         len(entrances) > 0,
-			UnitEntrances:   entrances,
-			GatheringID:     int64(gatheringID),
-		})
+		owners, err := h.cfg.Db.GetNonParticipatingOwners(req.Context(), domain.QualificationOf(gathering).NonParticipatingParams(int64(associationID), int64(gatheringID)))
 
 		if err != nil {
 			logging.Logger.Log(zap.WarnLevel, "Error getting non-participating owners", zap.Error(err))

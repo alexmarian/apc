@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -146,31 +147,8 @@ func (h *ParticipantHandler) HandleAddParticipant() func(http.ResponseWriter, *h
 			return
 		}
 
-		// Parse qualification rules
-		var unitTypes []string
-		var floors []int64
-		var entrances []int64
-
-		if gathering.QualificationUnitTypes.Valid {
-			json.Unmarshal([]byte(gathering.QualificationUnitTypes.String), &unitTypes)
-		}
-		if gathering.QualificationFloors.Valid {
-			json.Unmarshal([]byte(gathering.QualificationFloors.String), &floors)
-		}
-		if gathering.QualificationEntrances.Valid {
-			json.Unmarshal([]byte(gathering.QualificationEntrances.String), &entrances)
-		}
-
 		// Get owner's units that meet qualification criteria
-		ownerQualifiedUnits, err := h.cfg.Db.GetActiveOwnerUnitsForGathering(req.Context(), database.GetActiveOwnerUnitsForGatheringParams{
-			AssociationID: int64(associationID),
-			Column2:       len(unitTypes) > 0,
-			UnitTypes:     unitTypes,
-			Column4:       len(floors) > 0,
-			UnitFloors:    floors,
-			Column6:       len(entrances) > 0,
-			UnitEntrances: entrances,
-		})
+		ownerQualifiedUnits, err := h.cfg.Db.GetActiveOwnerUnitsForGathering(req.Context(), domain.QualificationOf(gathering).OwnerUnitsParams(int64(associationID)))
 		if err != nil {
 			logging.Logger.Log(zap.WarnLevel, "Error getting owner qualified units", zap.Error(err))
 			handlers.RespondWithError(rw, http.StatusInternalServerError, "Failed to get owner qualified units")
@@ -185,66 +163,78 @@ func (h *ParticipantHandler) HandleAddParticipant() func(http.ResponseWriter, *h
 			}
 		}
 
-		participationUnits := make([]int64, 0)
-		totalPart := 0.0
-		totalArea := 0.0
-
-		for _, unitID := range addReq.UnitIDs {
-			if _, ok := ownersUnits[unitID]; ok {
-				slot, err := h.cfg.Db.AssignUnitSlot(req.Context(), database.AssignUnitSlotParams{
-					GatheringID:   int64(gatheringID),
-					UnitID:        unitID,
-					ParticipantID: effectiveOwnerID,
-				})
-				if err != nil {
-					logging.Logger.Log(zap.WarnLevel, "Error assigning unit slot", zap.Error(err))
-					continue
-				}
-				if slot.ParticipantID != effectiveOwnerID {
-					logging.Logger.Log(zap.WarnLevel, "Assigned unit slot to different participant",
-						zap.Any("slot_participant_id", slot.ParticipantID),
-						zap.Int64("effective_owner_id", effectiveOwnerID))
-					continue
-				}
-				totalArea += ownersUnits[unitID].Area
-				totalPart += ownersUnits[unitID].VotingWeight
-				participationUnits = append(participationUnits, unitID)
-			}
-		}
-
-		if len(participationUnits) == 0 {
-			logging.Logger.Log(zap.WarnLevel, "No valid units found for participation", zap.Int64("owner_id", effectiveOwnerID))
-			handlers.RespondWithError(rw, http.StatusBadRequest, "No valid units found for participation")
-			return
-		}
-
-		participationUnitsBStr, err := json.Marshal(participationUnits)
+		// The participant first, then its units' slots under its own id (they
+		// were claimed with the owner id as participant id before, and before
+		// the participant existed). Units already taken are skipped; with none
+		// left nothing is kept.
+		tx, err := h.cfg.DB.BeginTx(req.Context(), nil)
 		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "Error marshalling participation units", zap.Error(err))
-			handlers.RespondWithError(rw, http.StatusInternalServerError, "Failed to process participation units")
+			handlers.RespondWithError(rw, http.StatusInternalServerError, "Failed to create gathering participant")
 			return
 		}
+		defer tx.Rollback()
+		qtx := h.cfg.Db.WithTx(tx)
 
-		participant, err := h.cfg.Db.CreateGatheringParticipant(req.Context(), database.CreateGatheringParticipantParams{
+		participant, err := qtx.CreateGatheringParticipant(req.Context(), database.CreateGatheringParticipantParams{
 			GatheringID:               int64(gatheringID),
 			ParticipantType:           addReq.ParticipantType,
 			ParticipantName:           owner.Name,
 			ParticipantIdentification: sql.NullString{String: participantID, Valid: true},
-			OwnerID:                   sql.NullInt64{Int64: addReq.OwnerID, Valid: true},
+			OwnerID:                   sql.NullInt64{Int64: addReq.OwnerID, Valid: addReq.ParticipantType == "owner"},
 			DelegatingOwnerID:         sql.NullInt64{Int64: delegatingOwnerID, Valid: addReq.DelegatingOwnerID != nil},
 			DelegationDocumentRef:     sql.NullString{String: addReq.DelegationDocumentRef, Valid: addReq.DelegationDocumentRef != ""},
-			UnitsInfo:                 string(participationUnitsBStr),
-			UnitsPart:                 totalPart,
-			UnitsArea:                 totalArea,
+			UnitsInfo:                 "[]",
 		})
 		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "Error creating gathering participation units", zap.Error(err))
+			logging.Logger.Log(zap.WarnLevel, "Error creating gathering participant", zap.Error(err))
+			handlers.RespondWithError(rw, http.StatusInternalServerError, "Failed to create gathering participant")
+			return
+		}
+
+		participationUnits := make([]int64, 0)
+		totalPart := 0.0
+		totalArea := 0.0
+		for _, unitID := range addReq.UnitIDs {
+			unit, ok := ownersUnits[unitID]
+			if !ok {
+				continue
+			}
+			_, err := qtx.AssignUnitSlot(req.Context(), database.AssignUnitSlotParams{
+				GatheringID:   int64(gatheringID),
+				UnitID:        unitID,
+				ParticipantID: participant.ID,
+			})
+			if errors.Is(err, sql.ErrNoRows) {
+				continue // already taken
+			}
+			if err != nil {
+				logging.Logger.Log(zap.WarnLevel, "Error assigning unit slot", zap.Error(err))
+				handlers.RespondWithError(rw, http.StatusInternalServerError, "Failed to create gathering participant")
+				return
+			}
+			totalArea += unit.Area
+			totalPart += unit.VotingWeight
+			participationUnits = append(participationUnits, unitID)
+		}
+		if len(participationUnits) == 0 {
+			handlers.RespondWithError(rw, http.StatusBadRequest, "No valid units found for participation")
+			return
+		}
+		unitsJSON, _ := json.Marshal(participationUnits)
+		participant, err = qtx.UpdateGatheringParticipantsUnits(req.Context(), database.UpdateGatheringParticipantsUnitsParams{
+			UnitsInfo:   string(unitsJSON),
+			UnitsArea:   totalArea,
+			UnitsPart:   totalPart,
+			ID:          participant.ID,
+			GatheringID: int64(gatheringID),
+		})
+		if err != nil || tx.Commit() != nil {
 			handlers.RespondWithError(rw, http.StatusInternalServerError, "Failed to create gathering participant")
 			return
 		}
 
 		// Update gathering statistics
-		go h.statsService.UpdateGatheringStats(int64(gatheringID), int64(associationID))
+		h.statsService.UpdateGatheringParticipationStats(int64(gatheringID), int64(associationID))
 
 		handlers.RespondWithJSON(rw, http.StatusCreated, domain.DBParticipantToResponse(participant))
 	}
@@ -253,10 +243,17 @@ func (h *ParticipantHandler) HandleAddParticipant() func(http.ResponseWriter, *h
 // HandleCheckInParticipant checks in a participant
 func (h *ParticipantHandler) HandleCheckInParticipant() func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
+		associationID, _ := strconv.Atoi(req.PathValue(handlers.AssociationIdPathValue))
 		gatheringID, _ := strconv.Atoi(req.PathValue(domain.GatheringIDPathValue))
 		participantID, _ := strconv.Atoi(req.PathValue(domain.ParticipantIDPathValue))
 
-		err := h.cfg.Db.CheckInParticipant(req.Context(), database.CheckInParticipantParams{
+		// Participants can't change once the gathering is tallied.
+		if h.gatheringHandler.ValidateGatheringStateWithFetch(req, gatheringID, associationID, "tallied") {
+			handlers.RespondWithError(rw, http.StatusConflict, "The gathering is tallied")
+			return
+		}
+
+		checkedIn, err := h.cfg.Db.CheckInParticipant(req.Context(), database.CheckInParticipantParams{
 			ID:          int64(participantID),
 			GatheringID: int64(gatheringID),
 		})
@@ -266,6 +263,10 @@ func (h *ParticipantHandler) HandleCheckInParticipant() func(http.ResponseWriter
 			handlers.RespondWithError(rw, http.StatusInternalServerError, "Failed to check in participant")
 			return
 		}
+		if checkedIn == 0 {
+			handlers.RespondWithError(rw, http.StatusNotFound, "Participant not found")
+			return
+		}
 
 		// Log audit
 		h.cfg.Db.CreateAuditLog(req.Context(), database.CreateAuditLogParams{
@@ -273,7 +274,7 @@ func (h *ParticipantHandler) HandleCheckInParticipant() func(http.ResponseWriter
 			EntityType:  "participant",
 			EntityID:    int64(participantID),
 			Action:      "checked_in",
-			PerformedBy: sql.NullString{String: req.Context().Value("userID").(string), Valid: true},
+			PerformedBy: sql.NullString{String: handlers.GetUserIdFromContext(req), Valid: true},
 			IpAddress:   sql.NullString{String: req.RemoteAddr, Valid: true},
 			Details:     sql.NullString{String: fmt.Sprintf(`{"time":"%s"}`, time.Now().Format(time.RFC3339)), Valid: true},
 		})

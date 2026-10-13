@@ -13,10 +13,10 @@ WHERE id = ?
 -- name: CreateGathering :one
 INSERT INTO gatherings (association_id, title, description, intent, location, gathering_date,
                         gathering_type, voting_mode, status, qualification_unit_types,
-                        qualification_floors, qualification_entrances,
+                        qualification_floors, qualification_entrances, qualification_buildings,
                         qualification_custom_rule, qualified_units_count, qualified_units_total_part,
                         qualified_units_total_area)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *;
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *;
 
 -- name: UpdateGathering :one
 UPDATE gatherings
@@ -30,6 +30,7 @@ SET title                          = ?,
     qualification_unit_types       = ?,
     qualification_floors           = ?,
     qualification_entrances        = ?,
+    qualification_buildings        = ?,
     qualification_custom_rule      = ?,
     qualified_units_count          = ?,
     qualified_units_total_part     = ?,
@@ -189,7 +190,7 @@ FROM gathering_participants
 WHERE id = ?
   AND gathering_id = ?;
 
--- name: CheckInParticipant :exec
+-- name: CheckInParticipant :execrows
 UPDATE gathering_participants
 SET check_in_time = CURRENT_TIMESTAMP,
     updated_at    = CURRENT_TIMESTAMP
@@ -213,6 +214,7 @@ WHERE b.association_id = ?
   AND (false = ? OR u.unit_type IN (sqlc.slice('unit_types')))
   AND (false = ? OR u.floor IN (sqlc.slice('unit_floors')))
   AND (false = ? OR u.entrance IN (sqlc.slice('unit_entrances')))
+  AND (false = ? OR u.building_id IN (sqlc.slice('building_ids')))
 ORDER BY b.name, u.unit_number;
 
 -- name: GetNonParticipatingOwners :many
@@ -234,10 +236,14 @@ WHERE b.association_id = ?
                WHERE b2.association_id = ?
                  AND (false = ? OR u2.unit_type IN (sqlc.slice('unit_types')))
                  AND (false = ? OR u2.floor IN (sqlc.slice('unit_floors')))
-                 AND (false = ? OR u2.entrance IN (sqlc.slice('unit_entrances'))))
-  AND u.id NOT IN (SELECT unit_id
-                   FROM gathering_participants
-                   WHERE gathering_id = ?)
+                 AND (false = ? OR u2.entrance IN (sqlc.slice('unit_entrances')))
+                 AND (false = ? OR u2.building_id IN (sqlc.slice('building_ids'))))
+  -- Units not voted yet (gathering_participants has no unit_id column: this
+  -- silently compared own.unit_id with itself and excluded everyone).
+  AND u.id NOT IN (SELECT us.unit_id
+                   FROM unit_slots us
+                   WHERE us.gathering_id = ?
+                     AND us.participant_id IS NOT NULL)
 GROUP BY o.id, o.name, o.identification_number, o.contact_email, o.contact_phone
 ORDER BY o.name;
 
@@ -257,11 +263,19 @@ SELECT vb.*,
        gp.participant_name,
        gp.units_info,
        gp.units_area,
-       gp.units_part
+       gp.units_part,
+       gp.participant_type,
+       COALESCE(delo.name, '') AS delegating_owner_name
 FROM voting_ballots vb
          JOIN gathering_participants gp ON vb.participant_id = gp.id
+         LEFT JOIN owners delo ON gp.delegating_owner_id = delo.id
 WHERE vb.gathering_id = ?
 ORDER BY vb.submitted_at;
+
+-- name: GetBallotByID :one
+SELECT *
+FROM voting_ballots
+WHERE id = ?;
 
 -- name: InvalidateBallot :exec
 UPDATE voting_ballots
@@ -378,6 +392,7 @@ WHERE own.is_active = TRUE
   AND (false = ? OR u.unit_type IN (sqlc.slice('unit_types')))
   AND (false = ? OR u.floor IN (sqlc.slice('unit_floors')))
   AND (false = ? OR u.entrance IN (sqlc.slice('unit_entrances')))
+  AND (false = ? OR u.building_id IN (sqlc.slice('building_ids')))
 ORDER BY o.name, u.unit_number;
 
 -- name: GetEligibleVotersWithUnits :many

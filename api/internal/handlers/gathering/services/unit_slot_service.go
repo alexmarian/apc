@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/alexmarian/apc/api/internal/database"
+	"github.com/alexmarian/apc/api/internal/handlers/gathering/domain"
 	"github.com/alexmarian/apc/api/internal/logging"
 	"go.uber.org/zap"
 )
@@ -19,16 +20,8 @@ func NewUnitSlotService(db *database.Queries) *UnitSlotService {
 }
 
 // SyncUnitsSlots creates unit slots for all qualified units in a gathering
-func (s *UnitSlotService) SyncUnitsSlots(ctx context.Context, associationID int64, gatheringID int64, unitTypes []string, floors []int64, entrances []int64) error {
-	units, err := s.db.GetQualifiedUnits(ctx, database.GetQualifiedUnitsParams{
-		AssociationID: associationID,
-		Column2:       len(unitTypes) > 0,
-		UnitTypes:     unitTypes,
-		Column4:       len(floors) > 0,
-		UnitFloors:    floors,
-		Column6:       len(entrances) > 0,
-		UnitEntrances: entrances,
-	})
+func (s *UnitSlotService) SyncUnitsSlots(ctx context.Context, associationID int64, gatheringID int64, q domain.Qualification) error {
+	units, err := s.db.GetQualifiedUnits(ctx, q.QualifiedUnitsParams(associationID))
 	if err != nil {
 		logging.Logger.Log(zap.WarnLevel, "Error getting qualified units", zap.Error(err))
 		return err

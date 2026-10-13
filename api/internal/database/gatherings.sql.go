@@ -41,7 +41,7 @@ func (q *Queries) AssignUnitSlot(ctx context.Context, arg AssignUnitSlotParams) 
 	return i, err
 }
 
-const checkInParticipant = `-- name: CheckInParticipant :exec
+const checkInParticipant = `-- name: CheckInParticipant :execrows
 UPDATE gathering_participants
 SET check_in_time = CURRENT_TIMESTAMP,
     updated_at    = CURRENT_TIMESTAMP
@@ -54,9 +54,12 @@ type CheckInParticipantParams struct {
 	GatheringID int64
 }
 
-func (q *Queries) CheckInParticipant(ctx context.Context, arg CheckInParticipantParams) error {
-	_, err := q.db.ExecContext(ctx, checkInParticipant, arg.ID, arg.GatheringID)
-	return err
+func (q *Queries) CheckInParticipant(ctx context.Context, arg CheckInParticipantParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, checkInParticipant, arg.ID, arg.GatheringID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const createAuditLog = `-- name: CreateAuditLog :exec
@@ -135,10 +138,10 @@ func (q *Queries) CreateBallot(ctx context.Context, arg CreateBallotParams) (Vot
 const createGathering = `-- name: CreateGathering :one
 INSERT INTO gatherings (association_id, title, description, intent, location, gathering_date,
                         gathering_type, voting_mode, status, qualification_unit_types,
-                        qualification_floors, qualification_entrances,
+                        qualification_floors, qualification_entrances, qualification_buildings,
                         qualification_custom_rule, qualified_units_count, qualified_units_total_part,
                         qualified_units_total_area)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location, voting_mode
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location, voting_mode, qualification_buildings
 `
 
 type CreateGatheringParams struct {
@@ -154,6 +157,7 @@ type CreateGatheringParams struct {
 	QualificationUnitTypes  sql.NullString
 	QualificationFloors     sql.NullString
 	QualificationEntrances  sql.NullString
+	QualificationBuildings  sql.NullString
 	QualificationCustomRule sql.NullString
 	QualifiedUnitsCount     sql.NullInt64
 	QualifiedUnitsTotalPart sql.NullFloat64
@@ -174,6 +178,7 @@ func (q *Queries) CreateGathering(ctx context.Context, arg CreateGatheringParams
 		arg.QualificationUnitTypes,
 		arg.QualificationFloors,
 		arg.QualificationEntrances,
+		arg.QualificationBuildings,
 		arg.QualificationCustomRule,
 		arg.QualifiedUnitsCount,
 		arg.QualifiedUnitsTotalPart,
@@ -203,6 +208,7 @@ func (q *Queries) CreateGathering(ctx context.Context, arg CreateGatheringParams
 		&i.UpdatedAt,
 		&i.Location,
 		&i.VotingMode,
+		&i.QualificationBuildings,
 	)
 	return i, err
 }
@@ -432,6 +438,7 @@ WHERE own.is_active = TRUE
   AND (false = ? OR u.unit_type IN (/*SLICE:unit_types*/?))
   AND (false = ? OR u.floor IN (/*SLICE:unit_floors*/?))
   AND (false = ? OR u.entrance IN (/*SLICE:unit_entrances*/?))
+  AND (false = ? OR u.building_id IN (/*SLICE:building_ids*/?))
 ORDER BY o.name, u.unit_number
 `
 
@@ -443,6 +450,8 @@ type GetActiveOwnerUnitsForGatheringParams struct {
 	UnitFloors    []int64
 	Column6       interface{}
 	UnitEntrances []int64
+	Column8       interface{}
+	BuildingIds   []int64
 }
 
 type GetActiveOwnerUnitsForGatheringRow struct {
@@ -497,6 +506,15 @@ func (q *Queries) GetActiveOwnerUnitsForGathering(ctx context.Context, arg GetAc
 		query = strings.Replace(query, "/*SLICE:unit_entrances*/?", strings.Repeat(",?", len(arg.UnitEntrances))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:unit_entrances*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.Column8)
+	if len(arg.BuildingIds) > 0 {
+		for _, v := range arg.BuildingIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:building_ids*/?", strings.Repeat(",?", len(arg.BuildingIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:building_ids*/?", "NULL", 1)
 	}
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
@@ -639,6 +657,34 @@ func (q *Queries) GetAuditLogs(ctx context.Context, arg GetAuditLogsParams) ([]V
 	return items, nil
 }
 
+const getBallotByID = `-- name: GetBallotByID :one
+SELECT id, gathering_id, participant_id, ballot_content, ballot_hash, submitted_at, submitted_ip, submitted_user_agent, signature, signature_timestamp, signature_certificate, is_valid, invalidated_at, invalidation_reason
+FROM voting_ballots
+WHERE id = ?
+`
+
+func (q *Queries) GetBallotByID(ctx context.Context, id int64) (VotingBallot, error) {
+	row := q.db.QueryRowContext(ctx, getBallotByID, id)
+	var i VotingBallot
+	err := row.Scan(
+		&i.ID,
+		&i.GatheringID,
+		&i.ParticipantID,
+		&i.BallotContent,
+		&i.BallotHash,
+		&i.SubmittedAt,
+		&i.SubmittedIp,
+		&i.SubmittedUserAgent,
+		&i.Signature,
+		&i.SignatureTimestamp,
+		&i.SignatureCertificate,
+		&i.IsValid,
+		&i.InvalidatedAt,
+		&i.InvalidationReason,
+	)
+	return i, err
+}
+
 const getBallotByParticipant = `-- name: GetBallotByParticipant :one
 SELECT id, gathering_id, participant_id, ballot_content, ballot_hash, submitted_at, submitted_ip, submitted_user_agent, signature, signature_timestamp, signature_certificate, is_valid, invalidated_at, invalidation_reason
 FROM voting_ballots
@@ -678,9 +724,12 @@ SELECT vb.id, vb.gathering_id, vb.participant_id, vb.ballot_content, vb.ballot_h
        gp.participant_name,
        gp.units_info,
        gp.units_area,
-       gp.units_part
+       gp.units_part,
+       gp.participant_type,
+       COALESCE(delo.name, '') AS delegating_owner_name
 FROM voting_ballots vb
          JOIN gathering_participants gp ON vb.participant_id = gp.id
+         LEFT JOIN owners delo ON gp.delegating_owner_id = delo.id
 WHERE vb.gathering_id = ?
 ORDER BY vb.submitted_at
 `
@@ -704,6 +753,8 @@ type GetBallotsForGatheringRow struct {
 	UnitsInfo            string
 	UnitsArea            float64
 	UnitsPart            float64
+	ParticipantType      string
+	DelegatingOwnerName  string
 }
 
 func (q *Queries) GetBallotsForGathering(ctx context.Context, gatheringID int64) ([]GetBallotsForGatheringRow, error) {
@@ -734,6 +785,8 @@ func (q *Queries) GetBallotsForGathering(ctx context.Context, gatheringID int64)
 			&i.UnitsInfo,
 			&i.UnitsArea,
 			&i.UnitsPart,
+			&i.ParticipantType,
+			&i.DelegatingOwnerName,
 		); err != nil {
 			return nil, err
 		}
@@ -844,7 +897,7 @@ func (q *Queries) GetEligibleVotersWithUnits(ctx context.Context, arg GetEligibl
 }
 
 const getGathering = `-- name: GetGathering :one
-SELECT id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location, voting_mode
+SELECT id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location, voting_mode, qualification_buildings
 FROM gatherings
 WHERE id = ?
   AND association_id = ?
@@ -881,6 +934,7 @@ func (q *Queries) GetGathering(ctx context.Context, arg GetGatheringParams) (Gat
 		&i.UpdatedAt,
 		&i.Location,
 		&i.VotingMode,
+		&i.QualificationBuildings,
 	)
 	return i, err
 }
@@ -899,7 +953,7 @@ func (q *Queries) GetGatheringBallotCount(ctx context.Context, gatheringID int64
 }
 
 const getGatheringByID = `-- name: GetGatheringByID :one
-SELECT id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location, voting_mode
+SELECT id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location, voting_mode, qualification_buildings
 FROM gatherings
 WHERE id = ?
 `
@@ -930,6 +984,7 @@ func (q *Queries) GetGatheringByID(ctx context.Context, id int64) (Gathering, er
 		&i.UpdatedAt,
 		&i.Location,
 		&i.VotingMode,
+		&i.QualificationBuildings,
 	)
 	return i, err
 }
@@ -1090,7 +1145,7 @@ func (q *Queries) GetGatheringParticipants(ctx context.Context, gatheringID int6
 }
 
 const getGatheringStats = `-- name: GetGatheringStats :one
-SELECT id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location, voting_mode
+SELECT id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location, voting_mode, qualification_buildings
 FROM gatherings
 WHERE id = ?
   AND association_id = ?
@@ -1127,6 +1182,7 @@ func (q *Queries) GetGatheringStats(ctx context.Context, arg GetGatheringStatsPa
 		&i.UpdatedAt,
 		&i.Location,
 		&i.VotingMode,
+		&i.QualificationBuildings,
 	)
 	return i, err
 }
@@ -1191,7 +1247,7 @@ func (q *Queries) GetGatheringUnitSlots(ctx context.Context, gatheringID int64) 
 }
 
 const getGatherings = `-- name: GetGatherings :many
-SELECT id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location, voting_mode
+SELECT id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location, voting_mode, qualification_buildings
 FROM gatherings
 WHERE association_id = ?
 ORDER BY gathering_date DESC
@@ -1229,6 +1285,7 @@ func (q *Queries) GetGatherings(ctx context.Context, associationID int64) ([]Gat
 			&i.UpdatedAt,
 			&i.Location,
 			&i.VotingMode,
+			&i.QualificationBuildings,
 		); err != nil {
 			return nil, err
 		}
@@ -1262,10 +1319,14 @@ WHERE b.association_id = ?
                WHERE b2.association_id = ?
                  AND (false = ? OR u2.unit_type IN (/*SLICE:unit_types*/?))
                  AND (false = ? OR u2.floor IN (/*SLICE:unit_floors*/?))
-                 AND (false = ? OR u2.entrance IN (/*SLICE:unit_entrances*/?)))
-  AND u.id NOT IN (SELECT unit_id
-                   FROM gathering_participants
-                   WHERE gathering_id = ?)
+                 AND (false = ? OR u2.entrance IN (/*SLICE:unit_entrances*/?))
+                 AND (false = ? OR u2.building_id IN (/*SLICE:building_ids*/?)))
+  -- Units not voted yet (gathering_participants has no unit_id column: this
+  -- silently compared own.unit_id with itself and excluded everyone).
+  AND u.id NOT IN (SELECT us.unit_id
+                   FROM unit_slots us
+                   WHERE us.gathering_id = ?
+                     AND us.participant_id IS NOT NULL)
 GROUP BY o.id, o.name, o.identification_number, o.contact_email, o.contact_phone
 ORDER BY o.name
 `
@@ -1279,6 +1340,8 @@ type GetNonParticipatingOwnersParams struct {
 	UnitFloors      []int64
 	Column7         interface{}
 	UnitEntrances   []int64
+	Column9         interface{}
+	BuildingIds     []int64
 	GatheringID     int64
 }
 
@@ -1322,6 +1385,15 @@ func (q *Queries) GetNonParticipatingOwners(ctx context.Context, arg GetNonParti
 		query = strings.Replace(query, "/*SLICE:unit_entrances*/?", strings.Repeat(",?", len(arg.UnitEntrances))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:unit_entrances*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.Column9)
+	if len(arg.BuildingIds) > 0 {
+		for _, v := range arg.BuildingIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:building_ids*/?", strings.Repeat(",?", len(arg.BuildingIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:building_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.GatheringID)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
@@ -1517,6 +1589,7 @@ WHERE b.association_id = ?
   AND (false = ? OR u.unit_type IN (/*SLICE:unit_types*/?))
   AND (false = ? OR u.floor IN (/*SLICE:unit_floors*/?))
   AND (false = ? OR u.entrance IN (/*SLICE:unit_entrances*/?))
+  AND (false = ? OR u.building_id IN (/*SLICE:building_ids*/?))
 ORDER BY b.name, u.unit_number
 `
 
@@ -1528,6 +1601,8 @@ type GetQualifiedUnitsParams struct {
 	UnitFloors    []int64
 	Column6       interface{}
 	UnitEntrances []int64
+	Column8       interface{}
+	BuildingIds   []int64
 }
 
 type GetQualifiedUnitsRow struct {
@@ -1573,6 +1648,15 @@ func (q *Queries) GetQualifiedUnits(ctx context.Context, arg GetQualifiedUnitsPa
 		query = strings.Replace(query, "/*SLICE:unit_entrances*/?", strings.Repeat(",?", len(arg.UnitEntrances))[1:], 1)
 	} else {
 		query = strings.Replace(query, "/*SLICE:unit_entrances*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.Column8)
+	if len(arg.BuildingIds) > 0 {
+		for _, v := range arg.BuildingIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:building_ids*/?", strings.Repeat(",?", len(arg.BuildingIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:building_ids*/?", "NULL", 1)
 	}
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
@@ -1822,6 +1906,7 @@ SET title                          = ?,
     qualification_unit_types       = ?,
     qualification_floors           = ?,
     qualification_entrances        = ?,
+    qualification_buildings        = ?,
     qualification_custom_rule      = ?,
     qualified_units_count          = ?,
     qualified_units_total_part     = ?,
@@ -1831,7 +1916,7 @@ SET title                          = ?,
     participating_units_total_area = ?,
     updated_at                     = CURRENT_TIMESTAMP
 WHERE id = ?
-  AND association_id = ? RETURNING id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location, voting_mode
+  AND association_id = ? RETURNING id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location, voting_mode, qualification_buildings
 `
 
 type UpdateGatheringParams struct {
@@ -1845,6 +1930,7 @@ type UpdateGatheringParams struct {
 	QualificationUnitTypes      sql.NullString
 	QualificationFloors         sql.NullString
 	QualificationEntrances      sql.NullString
+	QualificationBuildings      sql.NullString
 	QualificationCustomRule     sql.NullString
 	QualifiedUnitsCount         sql.NullInt64
 	QualifiedUnitsTotalPart     sql.NullFloat64
@@ -1868,6 +1954,7 @@ func (q *Queries) UpdateGathering(ctx context.Context, arg UpdateGatheringParams
 		arg.QualificationUnitTypes,
 		arg.QualificationFloors,
 		arg.QualificationEntrances,
+		arg.QualificationBuildings,
 		arg.QualificationCustomRule,
 		arg.QualifiedUnitsCount,
 		arg.QualifiedUnitsTotalPart,
@@ -1902,6 +1989,7 @@ func (q *Queries) UpdateGathering(ctx context.Context, arg UpdateGatheringParams
 		&i.UpdatedAt,
 		&i.Location,
 		&i.VotingMode,
+		&i.QualificationBuildings,
 	)
 	return i, err
 }
@@ -1983,7 +2071,7 @@ UPDATE gatherings
 SET status     = ?,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
-  AND association_id = ? RETURNING id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location, voting_mode
+  AND association_id = ? RETURNING id, association_id, title, description, intent, gathering_date, gathering_type, status, qualification_unit_types, qualification_floors, qualification_entrances, qualification_custom_rule, qualified_units_count, qualified_units_total_part, qualified_units_total_area, participating_units_count, participating_units_total_part, participating_units_total_area, created_at, updated_at, location, voting_mode, qualification_buildings
 `
 
 type UpdateGatheringStatusParams struct {
@@ -2018,6 +2106,7 @@ func (q *Queries) UpdateGatheringStatus(ctx context.Context, arg UpdateGathering
 		&i.UpdatedAt,
 		&i.Location,
 		&i.VotingMode,
+		&i.QualificationBuildings,
 	)
 	return i, err
 }

@@ -1,10 +1,9 @@
 package handlers
 
 import (
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -109,86 +108,53 @@ func (h *MemberBallotHandler) HandleSubmitMemberBallot() http.HandlerFunc {
 			return
 		}
 
-		var unitIDs []int64
-		totalArea := 0.0
-		totalWeight := 0.0
+		var units []database.GetEligibleVotersWithUnitsRow
 		for _, row := range eligibleRows {
 			if row.OwnerID == inv.OwnerID && row.IsAvailable == 1 {
-				unitIDs = append(unitIDs, row.UnitID)
-				totalArea += row.Area
-				totalWeight += row.VotingWeight
+				units = append(units, row)
 			}
 		}
-		if len(unitIDs) == 0 {
+		if len(units) == 0 {
 			handlers.RespondWithError(w, http.StatusBadRequest, "no available units for voting")
 			return
 		}
 
-		unitsJSON, _ := json.Marshal(unitIDs)
+		matters, err := h.cfg.Db.GetVotingMatters(r.Context(), inv.GatheringID)
+		if err != nil {
+			handlers.RespondWithError(w, http.StatusInternalServerError, "failed to load voting matters")
+			return
+		}
+		content, err := validateBallotContent(matters, req.BallotContent)
+		if err != nil {
+			handlers.RespondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 
-		participant, err := h.cfg.Db.CreateGatheringParticipant(r.Context(), database.CreateGatheringParticipantParams{
+		// Participant, auto check-in (no prior check-in step), unit slots and
+		// ballot: all or nothing (see recordBallot).
+		ballot, participant, err := recordBallot(r.Context(), h.cfg, ballotRecord{
 			GatheringID:               inv.GatheringID,
 			ParticipantType:           "owner",
 			ParticipantName:           owner.Name,
-			ParticipantIdentification: sql.NullString{String: owner.IdentificationNumber, Valid: true},
+			ParticipantIdentification: owner.IdentificationNumber,
 			OwnerID:                   sql.NullInt64{Int64: inv.OwnerID, Valid: true},
-			UnitsInfo:                 string(unitsJSON),
-			UnitsArea:                 totalArea,
-			UnitsPart:                 totalWeight,
+			Units:                     units,
+			Content:                   content,
+			CheckIn:                   true,
+			IP:                        r.RemoteAddr,
+			UserAgent:                 r.UserAgent(),
 		})
-		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "failed to create participant", zap.Error(err))
-			handlers.RespondWithError(w, http.StatusInternalServerError, "failed to create participant")
+		if errors.Is(err, errUnitTaken) {
+			handlers.RespondWithError(w, http.StatusConflict, err.Error())
 			return
 		}
-
-		// Auto check-in at submission time (no prior check-in step required)
-		if err := h.cfg.Db.CheckInParticipant(r.Context(), database.CheckInParticipantParams{
-			ID:          participant.ID,
-			GatheringID: inv.GatheringID,
-		}); err != nil {
-			logging.Logger.Log(zap.WarnLevel, "failed to check in participant", zap.Error(err))
-		}
-
-		for _, unitID := range unitIDs {
-			if _, err := h.cfg.Db.AssignUnitSlot(r.Context(), database.AssignUnitSlotParams{
-				ParticipantID: participant.ID,
-				GatheringID:   inv.GatheringID,
-				UnitID:        unitID,
-			}); err != nil {
-				// Slot already claimed by another owner — unit was voted concurrently
-				logging.Logger.Log(zap.WarnLevel, "unit slot already claimed", zap.Error(err), zap.Int64("unit_id", unitID))
-				handlers.RespondWithError(w, http.StatusConflict, "voting rights for this unit have already been exercised")
-				return
-			}
-		}
-
-		ballotJSON, err := json.Marshal(req.BallotContent)
 		if err != nil {
-			handlers.RespondWithError(w, http.StatusBadRequest, "invalid ballot content")
-			return
-		}
-
-		hash := sha256.Sum256(ballotJSON)
-		ballotHash := hex.EncodeToString(hash[:])
-
-		ballot, err := h.cfg.Db.CreateBallot(r.Context(), database.CreateBallotParams{
-			GatheringID:        inv.GatheringID,
-			ParticipantID:      participant.ID,
-			BallotContent:      string(ballotJSON),
-			BallotHash:         ballotHash,
-			SubmittedIp:        sql.NullString{String: r.RemoteAddr, Valid: true},
-			SubmittedUserAgent: sql.NullString{String: r.UserAgent(), Valid: true},
-		})
-		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "failed to create ballot", zap.Error(err))
+			logging.Logger.Log(zap.WarnLevel, "failed to record ballot", zap.Error(err))
 			handlers.RespondWithError(w, http.StatusInternalServerError, "failed to submit ballot")
 			return
 		}
-
-		go h.statsService.UpdateGatheringParticipationStats(inv.GatheringID, gathering.AssociationID)
-		go h.tallyService.UpdateVoteTallies(inv.GatheringID, int(participant.ID))
-		h.votingResultsService.InvalidateResults(r.Context(), inv.GatheringID)
+		ballotHash := ballot.BallotHash
+		afterBallot(r.Context(), h.cfg, inv.GatheringID, gathering.AssociationID, participant.ID)
 
 		h.cfg.Db.CreateAuditLog(r.Context(), database.CreateAuditLogParams{
 			GatheringID: inv.GatheringID,

@@ -112,6 +112,7 @@ type Gathering struct {
 	UpdatedAt                   sql.NullTime
 	Location                    string
 	VotingMode                  string
+	QualificationBuildings      sql.NullString
 }
 
 type GatheringParticipant struct {

@@ -235,6 +235,8 @@ func main() {
 		apiCfg.MiddlewareAssociationResource(gatheringRouter.Gathering.HandleCreateGathering()))
 	mux.HandleFunc(fmt.Sprintf("GET /v1/api/associations/{%s}/gatherings/{%s}", handlers.AssociationIdPathValue, domain.GatheringIDPathValue),
 		apiCfg.MiddlewareAssociationResource(gatheringRouter.Gathering.HandleGetGathering()))
+	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/gatherings/{%s}", handlers.AssociationIdPathValue, domain.GatheringIDPathValue),
+		apiCfg.MiddlewareAssociationResource(gatheringRouter.Gathering.HandleUpdateGathering()))
 	mux.HandleFunc(fmt.Sprintf("PUT /v1/api/associations/{%s}/gatherings/{%s}/status", handlers.AssociationIdPathValue, domain.GatheringIDPathValue),
 		apiCfg.MiddlewareAssociationResource(gatheringRouter.Gathering.HandleUpdateGatheringStatus()))
 

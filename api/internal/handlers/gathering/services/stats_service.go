@@ -3,10 +3,10 @@ package services
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"math"
 
 	"github.com/alexmarian/apc/api/internal/database"
+	"github.com/alexmarian/apc/api/internal/handlers/gathering/domain"
 	"github.com/alexmarian/apc/api/internal/logging"
 	"go.uber.org/zap"
 )
@@ -39,31 +39,8 @@ func (s *StatsService) UpdateGatheringStats(gatheringID, associationID int64) (i
 		return 0, 0.0, 0.0
 	}
 
-	// Parse qualification rules
-	var unitTypes []string
-	var floors []int64
-	var entrances []int64
-
-	if gathering.QualificationUnitTypes.Valid {
-		json.Unmarshal([]byte(gathering.QualificationUnitTypes.String), &unitTypes)
-	}
-	if gathering.QualificationFloors.Valid {
-		json.Unmarshal([]byte(gathering.QualificationFloors.String), &floors)
-	}
-	if gathering.QualificationEntrances.Valid {
-		json.Unmarshal([]byte(gathering.QualificationEntrances.String), &entrances)
-	}
-
 	// Get qualified units
-	units, err := s.db.GetQualifiedUnits(ctx, database.GetQualifiedUnitsParams{
-		AssociationID: associationID,
-		Column2:       len(unitTypes) > 0,
-		UnitTypes:     unitTypes,
-		Column4:       len(floors) > 0,
-		UnitFloors:    floors,
-		Column6:       len(entrances) > 0,
-		UnitEntrances: entrances,
-	})
+	units, err := s.db.GetQualifiedUnits(ctx, domain.QualificationOf(gathering).QualifiedUnitsParams(associationID))
 
 	if err != nil {
 		return 0, 0.0, 0.0
@@ -99,9 +76,9 @@ func (s *StatsService) UpdateGatheringParticipationStats(gatheringID, associatio
 		return
 	}
 
-	// Type assert interface{} to float64
-	participatingPart, _ := stats.ParticipatingUnitsTotalPart.(float64)
-	participatingArea, _ := stats.ParticipatingUnitsTotalArea.(float64)
+	// SQLite answers an int64 when every summed value is whole.
+	participatingPart := sqliteFloat(stats.ParticipatingUnitsTotalPart)
+	participatingArea := sqliteFloat(stats.ParticipatingUnitsTotalArea)
 
 	// Update stats
 	s.db.UpdateParticipationStats(ctx, database.UpdateParticipationStatsParams{

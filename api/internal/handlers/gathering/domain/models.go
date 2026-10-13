@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/alexmarian/apc/api/internal/database"
+	"github.com/alexmarian/apc/api/internal/handlers"
 )
 
 // Path value constants
 const (
-	GatheringIDPathValue    = "gatheringId"
+	GatheringIDPathValue    = handlers.GatheringIdPathValue // checked by MiddlewareAssociationResource
 	VotingMatterIDPathValue = "matterId"
 	ParticipantIDPathValue  = "participantId"
 	InvitationIDPathValue   = "invitationId"
@@ -31,6 +32,7 @@ type Gathering struct {
 	QualificationUnitTypes      []string  `json:"qualification_unit_types"`
 	QualificationFloors         []int64   `json:"qualification_floors"`
 	QualificationEntrances      []int64   `json:"qualification_entrances"`
+	QualificationBuildings      []int64   `json:"qualification_buildings"`
 	QualificationCustomRule     string    `json:"qualification_custom_rule"`
 	QualifiedUnitsCount         int       `json:"qualified_units"`
 	QualifiedUnitsTotalPart     float64   `json:"qualified_weight"`
@@ -44,17 +46,25 @@ type Gathering struct {
 
 // CreateGatheringRequest represents the request to create a gathering
 type CreateGatheringRequest struct {
-	Title                   string    `json:"title"`
-	Description             string    `json:"description"`
-	Intent                  string    `json:"intent"`
-	Location                string    `json:"location"`
-	GatheringDate           time.Time `json:"gathering_date"`
-	GatheringType           string    `json:"gathering_type"`
-	VotingMode              string    `json:"voting_mode"` // by_weight or by_unit
-	QualificationUnitTypes  []string  `json:"qualification_unit_types"`
-	QualificationFloors     []int64   `json:"qualification_floors"`
-	QualificationEntrances  []int64   `json:"qualification_entrances"`
-	QualificationCustomRule string    `json:"qualification_custom_rule"`
+	Title                  string    `json:"title"`
+	Description            string    `json:"description"`
+	Intent                 string    `json:"intent"`
+	Location               string    `json:"location"`
+	GatheringDate          time.Time `json:"gathering_date"`
+	GatheringType          string    `json:"gathering_type"`
+	VotingMode             string    `json:"voting_mode"` // by_weight or by_unit
+	QualificationUnitTypes []string  `json:"qualification_unit_types"`
+	QualificationFloors    []int64   `json:"qualification_floors"`
+	QualificationEntrances []int64   `json:"qualification_entrances"`
+	// Buildings the gathering applies to (none: all). Several buildings are
+	// one common decision.
+	QualificationBuildings  []int64 `json:"qualification_buildings"`
+	QualificationCustomRule string  `json:"qualification_custom_rule"`
+}
+
+// Qualification is the request's voting rules.
+func (r CreateGatheringRequest) Qualification() Qualification {
+	return Qualification{UnitTypes: r.QualificationUnitTypes, Floors: r.QualificationFloors, Entrances: r.QualificationEntrances, Buildings: r.QualificationBuildings}
 }
 
 // QuorumInfo contains detailed information about quorum calculation
@@ -125,6 +135,7 @@ type GatheringParticipant struct {
 	ParticipantIdentification string     `json:"participant_identification"`
 	OwnerID                   *int64     `json:"owner_id"`
 	DelegatingOwnerID         *int64     `json:"delegating_owner_id"`
+	DelegatingOwnerName       string     `json:"delegating_owner_name,omitempty"`
 	DelegationDocumentRef     string     `json:"delegation_document_ref"`
 	UnitsInfo                 []int64    `json:"units_info"`
 	UnitsPart                 float64    `json:"units_part"`
@@ -232,19 +243,7 @@ type GatheringSummary struct {
 
 // DBGatheringToResponse converts a database Gathering to a response Gathering
 func DBGatheringToResponse(g database.Gathering) Gathering {
-	var unitTypes []string
-	var floors []int64
-	var entrances []int64
-
-	if g.QualificationUnitTypes.Valid {
-		json.Unmarshal([]byte(g.QualificationUnitTypes.String), &unitTypes)
-	}
-	if g.QualificationFloors.Valid {
-		json.Unmarshal([]byte(g.QualificationFloors.String), &floors)
-	}
-	if g.QualificationEntrances.Valid {
-		json.Unmarshal([]byte(g.QualificationEntrances.String), &entrances)
-	}
+	q := QualificationOf(g)
 
 	return Gathering{
 		ID:                          g.ID,
@@ -257,9 +256,10 @@ func DBGatheringToResponse(g database.Gathering) Gathering {
 		GatheringType:               g.GatheringType,
 		VotingMode:                  g.VotingMode,
 		Status:                      g.Status,
-		QualificationUnitTypes:      unitTypes,
-		QualificationFloors:         floors,
-		QualificationEntrances:      entrances,
+		QualificationUnitTypes:      q.UnitTypes,
+		QualificationFloors:         q.Floors,
+		QualificationEntrances:      q.Entrances,
+		QualificationBuildings:      q.Buildings,
 		QualificationCustomRule:     g.QualificationCustomRule.String,
 		QualifiedUnitsCount:         int(g.QualifiedUnitsCount.Int64),
 		QualifiedUnitsTotalPart:     g.QualifiedUnitsTotalPart.Float64,
@@ -329,6 +329,7 @@ func DBParticipantRowToResponse(p database.GetGatheringParticipantsRow) Gatherin
 		ParticipantIdentification: p.ParticipantIdentification.String,
 		OwnerID:                   NullInt64ToPtr(p.OwnerID),
 		DelegatingOwnerID:         NullInt64ToPtr(p.DelegatingOwnerID),
+		DelegatingOwnerName:       p.DelegatingOwnerName.String,
 		DelegationDocumentRef:     p.DelegationDocumentRef.String,
 		UnitsInfo:                 unitsInfo,
 		UnitsPart:                 p.UnitsPart,

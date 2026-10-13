@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 	"slices"
 	"strconv"
 
 	"github.com/alexmarian/apc/api/internal/auth"
+	"github.com/alexmarian/apc/api/internal/database"
 )
 
 func (cfg *ApiConfig) MiddlewareAuth(next http.HandlerFunc) http.HandlerFunc {
@@ -62,8 +65,37 @@ func (cfg *ApiConfig) MiddlewareAssociationResource(next http.HandlerFunc) http.
 				return
 			}
 		}
+		// Gathering sub-resources (matters, ballots, participants…) are
+		// looked up by gathering id alone: make sure that gathering is in
+		// this association, so its id can't be paired with another one's.
+		if r.PathValue(GatheringIdPathValue) != "" && !cfg.associationHasGathering(w, r, int64(associationId)) {
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// GatheringIdPathValue is the gathering routes' path value (the same name
+// as gathering/domain.GatheringIDPathValue).
+const GatheringIdPathValue = "gatheringId"
+
+// associationHasGathering answers 404 (and false) unless the path's gathering
+// belongs to the association.
+func (cfg *ApiConfig) associationHasGathering(w http.ResponseWriter, r *http.Request, associationId int64) bool {
+	gatheringId, err := strconv.ParseInt(r.PathValue(GatheringIdPathValue), 10, 64)
+	if err != nil || gatheringId <= 0 {
+		RespondWithError(w, http.StatusBadRequest, "invalid gathering id")
+		return false
+	}
+	if _, err := cfg.Db.GetGathering(r.Context(), database.GetGatheringParams{ID: gatheringId, AssociationID: associationId}); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			RespondWithError(w, http.StatusNotFound, "Gathering not found")
+		} else {
+			RespondWithError(w, http.StatusInternalServerError, "Failed to get gathering")
+		}
+		return false
+	}
+	return true
 }
 
 func (cfg *ApiConfig) userHasAssociation(r *http.Request, associationId int64) bool {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/alexmarian/apc/api/internal/database"
@@ -122,6 +123,8 @@ func (s *VotingResultsService) ComputeAndStoreResults(ctx context.Context, gathe
 			})
 		}
 
+		sortVotes(voteResults, matter.VotingConfig)
+
 		// Determine if this matter passed
 		matterResult := domain.VoteMatterResult{
 			MatterID:       matter.ID,
@@ -161,7 +164,7 @@ func (s *VotingResultsService) ComputeAndStoreResults(ctx context.Context, gathe
 			TotalParticipants: participantCount,
 			TotalVotes:        totalVotes,
 			TotalWeight:       totalVoted + totalAbstained,
-			Abstentions:       int(totalAbstained),
+			Abstentions:       tallyData["abstain"].Count, // a count (this was the abstained weight, truncated)
 			ParticipationRate: matterParticipationRate,
 		}
 
@@ -319,4 +322,28 @@ func (s *VotingResultsService) storeResults(ctx context.Context, gatheringID int
 	}
 
 	return nil
+}
+
+// sortVotes orders a matter's choices as on the ballot: yes/no or the
+// options in their order, abstain last (instead of map order).
+func sortVotes(votes []domain.VoteResult, config domain.VotingConfig) {
+	rank := map[string]int{"yes": 0, "no": 1}
+	for i, o := range config.Options {
+		rank[o.ID] = i
+	}
+	pos := func(choice string) int {
+		if choice == "abstain" {
+			return len(rank) + 1
+		}
+		if r, ok := rank[choice]; ok {
+			return r
+		}
+		return len(rank)
+	}
+	sort.SliceStable(votes, func(i, j int) bool {
+		if pos(votes[i].Choice) != pos(votes[j].Choice) {
+			return pos(votes[i].Choice) < pos(votes[j].Choice)
+		}
+		return votes[i].Choice < votes[j].Choice
+	})
 }
