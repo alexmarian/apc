@@ -5,6 +5,7 @@ import (
 	"github.com/alexmarian/apc/api/internal/logging"
 	"go.uber.org/zap"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -100,15 +101,38 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 			filteredExpenses = append(filteredExpenses, expense)
 		}
 
-		// If we filtered out all expenses, return empty response
-		if len(filteredExpenses) == 0 {
+		// Category columns are keyed by the category's name key; when several
+		// categories share a name (in different families), each gets its
+		// full type/family/name path so their amounts don't merge.
+		idsByName := map[string]map[int64]bool{}
+		for _, e := range filteredExpenses {
+			if idsByName[e.CategoryName] == nil {
+				idsByName[e.CategoryName] = map[int64]bool{}
+			}
+			idsByName[e.CategoryName][e.CategoryID] = true
+		}
+		categoryKeyOf := func(e database.GetExpensesByDateRangeWithFiltersRow) string {
+			if len(idsByName[e.CategoryName]) > 1 {
+				return e.CategoryType + "/" + e.CategoryFamily + "/" + e.CategoryName
+			}
+			return e.CategoryName
+		}
+
+		// Nothing to distribute: the same response shape, empty.
+		emptyResponse := func() {
 			RespondWithJSON(rw, http.StatusOK, map[string]interface{}{
-				"total_units":        0,
-				"total_area":         0,
-				"total_expenses":     0,
-				"category_totals":    map[string]interface{}{},
-				"unit_distributions": []interface{}{},
+				"start_date":          startDate,
+				"end_date":            endDate,
+				"distribution_method": distributionMethod,
+				"total_units":         0,
+				"total_area":          0,
+				"total_expenses":      0,
+				"category_totals":     map[string]interface{}{},
+				"unit_distributions":  []interface{}{},
 			})
+		}
+		if len(filteredExpenses) == 0 {
+			emptyResponse()
 			return
 		}
 
@@ -161,15 +185,23 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 		}
 
 		if len(units) == 0 {
-			RespondWithJSON(rw, http.StatusOK, map[string]interface{}{
-				"total_units":        0,
-				"total_area":         0,
-				"total_expenses":     0,
-				"category_totals":    map[string]interface{}{},
-				"unit_distributions": []interface{}{},
-			})
+			emptyResponse()
 			return
 		}
+
+		// By building, then unit number (numerically when both are numbers).
+		sort.SliceStable(units, func(i, j int) bool {
+			a, b := units[i], units[j]
+			if a.BuildingName != b.BuildingName {
+				return a.BuildingName < b.BuildingName
+			}
+			na, errA := strconv.Atoi(a.UnitNumber)
+			nb, errB := strconv.Atoi(b.UnitNumber)
+			if errA == nil && errB == nil && na != nb {
+				return na < nb
+			}
+			return a.UnitNumber < b.UnitNumber
+		})
 		type ExpenseShare struct {
 			ExpenseID      int64     `json:"expense_id"`
 			Description    string    `json:"description"`
@@ -191,6 +223,11 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 		}
 
 		unitDistributions := make(map[int64]*UnitDistribution)
+
+		var totalArea float64
+		for _, unit := range units {
+			totalArea += unit.Area
+		}
 
 		// Calculate total for distribution factors based on the method
 		var totalFactor float64 = 0
@@ -233,12 +270,13 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 			CategoryID     int64   `json:"category_id"`
 			CategoryType   string  `json:"category_type"`
 			CategoryFamily string  `json:"category_family"`
+			CategoryName   string  `json:"category_name"`
 		}
 
 		categoryTotals := make(map[string]*CategoryTotal)
 
 		for _, expense := range filteredExpenses {
-			categoryKey := expense.CategoryName
+			categoryKey := categoryKeyOf(expense)
 
 			// Initialize category in the map if it doesn't exist
 			if _, exists := categoryTotals[categoryKey]; !exists {
@@ -248,6 +286,7 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 					CategoryID:     expense.CategoryID,
 					CategoryType:   expense.CategoryType,
 					CategoryFamily: expense.CategoryFamily,
+					CategoryName:   expense.CategoryName,
 				}
 			}
 
@@ -284,6 +323,7 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 			ID     int64   `json:"id"`
 			Type   string  `json:"type"`
 			Family string  `json:"family"`
+			Name   string  `json:"name"`
 		}
 		// Step 6: Prepare response
 		type ExpenseDistributionResponse struct {
@@ -310,7 +350,7 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 			CategoryID:         categoryId,
 			DistributionMethod: distributionMethod,
 			TotalUnits:         len(units),
-			TotalArea:          totalFactor,
+			TotalArea:          totalArea,
 			CategoryTotals:     make(map[string]CategoryDetail),
 			TotalExpenses:      0,
 			UnitDistributions:  []*UnitDistribution{},
@@ -323,13 +363,14 @@ func HandleExpenseDistributionReport(cfg *ApiConfig) func(http.ResponseWriter, *
 				ID:     totals.CategoryID,
 				Type:   totals.CategoryType,
 				Family: totals.CategoryFamily,
+				Name:   totals.CategoryName,
 			}
 			response.TotalExpenses += totals.Total
 		}
 
-		// Convert unit distributions map to slice
-		for _, unitDist := range unitDistributions {
-			response.UnitDistributions = append(response.UnitDistributions, unitDist)
+		// Units in the sorted order above, not the map's random order.
+		for _, unit := range units {
+			response.UnitDistributions = append(response.UnitDistributions, unitDistributions[unit.ID])
 		}
 
 		// Check if we should include detailed expenses
