@@ -60,6 +60,27 @@ func toEnrollmentResponse(e auth.TOTPEnrollment) totpEnrollmentResponse {
 
 var errLoginTaken = errors.New("login taken")
 
+// InvitationTokenPathValue is GET /invitations/{token}'s path value.
+const InvitationTokenPathValue = "invitationToken"
+
+// HandleGetInvitation checks a staff invitation before registering
+// (GET /invitations/{token}), without using it: 200 with what it grants
+// while it's valid, 404 when unknown, used, revoked or expired. Lets the
+// app ask for the code first and the username and password only after.
+func HandleGetInvitation(cfg *ApiConfig) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		token, err := cfg.Db.GetValidRegistrationToken(req.Context(), req.PathValue(InvitationTokenPathValue))
+		if err != nil {
+			RespondWithError(rw, http.StatusNotFound, "This invitation is invalid or has expired")
+			return
+		}
+		RespondWithJSON(rw, http.StatusOK, struct {
+			IsAdmin   bool      `json:"is_admin"`
+			ExpiresAt time.Time `json:"expires_at"`
+		}{token.IsAdmin, token.ExpiresAt})
+	}
+}
+
 // HandleCreateUserWithToken registers a user with an invitation token
 // (POST /users). In one transaction it claims the token (so it can't be
 // used twice), creates the user as pending, and links them to the token's

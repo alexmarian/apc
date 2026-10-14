@@ -113,6 +113,7 @@ func main() {
 		return logging.LoggingMiddleware(handlers.MiddlewareRateLimit(onboardingRateLimiter)(h))
 	}
 	mux.Handle("POST /v1/api/users", onboarding(handlers.HandleCreateUserWithToken(apiCfg)))
+	mux.Handle(fmt.Sprintf("GET /v1/api/invitations/{%s}", handlers.InvitationTokenPathValue), onboarding(handlers.HandleGetInvitation(apiCfg)))
 	mux.Handle("POST /v1/api/onboarding/totp", onboarding(handlers.HandleStartOnboarding(apiCfg)))
 	mux.Handle("POST /v1/api/onboarding/totp/confirm", onboarding(handlers.HandleConfirmOnboarding(apiCfg)))
 	mux.HandleFunc("POST /v1/api/admin/tokens", apiCfg.MiddlewareAdminOnly(handlers.HandleCreateRegistrationToken(apiCfg)))

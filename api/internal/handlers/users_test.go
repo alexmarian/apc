@@ -86,6 +86,21 @@ func TestRegistrationAndOnboarding(t *testing.T) {
 		t.Fatalf("invite associations = %+v", invite.Associations)
 	}
 
+	// The code can be checked first, without using it.
+	check := func(token string) int {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.SetPathValue(InvitationTokenPathValue, token)
+		rec := httptest.NewRecorder()
+		HandleGetInvitation(cfg)(rec, req)
+		return rec.Code
+	}
+	if code := check(invite.Token); code != http.StatusOK {
+		t.Fatalf("check a valid invitation: %d", code)
+	}
+	if code := check("nope"); code != http.StatusNotFound {
+		t.Fatalf("check an unknown invitation: %d", code)
+	}
+
 	// Register: pending user, linked to the invitation's associations.
 	rec := post(HandleCreateUserWithToken(cfg), fmt.Sprintf(`{"login":"carla","password":%q,"token":%q}`, testPassword, invite.Token))
 	if rec.Code != http.StatusCreated {
@@ -103,6 +118,9 @@ func TestRegistrationAndOnboarding(t *testing.T) {
 	}
 
 	// The token is spent.
+	if code := check(invite.Token); code != http.StatusNotFound {
+		t.Fatalf("check a used invitation: %d", code)
+	}
 	if rec := post(HandleCreateUserWithToken(cfg), fmt.Sprintf(`{"login":"carla2","password":%q,"token":%q}`, testPassword, invite.Token)); rec.Code != http.StatusUnauthorized {
 		t.Fatalf("reused token: %d", rec.Code)
 	}

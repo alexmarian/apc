@@ -11,6 +11,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -111,6 +113,11 @@ func TestOwnerActivationAndLogin(t *testing.T) {
 		t.Fatalf("create: %d %v", code, link)
 	}
 	token := link["token"].(string)
+	if !regexp.MustCompile(`^[0-9A-HJKMNP-TV-Z]{12}$`).MatchString(token) {
+		t.Fatalf("activation code %q: want 12 Crockford base32 characters", token)
+	}
+	// How an owner might type the code off paper: grouped, lower case, O and L.
+	typed := strings.NewReplacer("0", "o", "1", "l").Replace(strings.ToLower(token[:4] + "-" + token[4:8] + " " + token[8:]))
 	if code, _ := f.root("POST", f.owner(f.alice, "/activation"), nil); code != http.StatusConflict {
 		t.Fatalf("second pending link: %d", code)
 	}
@@ -121,6 +128,9 @@ func TestOwnerActivationAndLogin(t *testing.T) {
 	// The owner opens the link.
 	if code, info := f.as("", false, "GET", "/activate/"+token, nil); code != 200 || info["owner_name"] != "Alice" || info["association_name"] != "A" {
 		t.Fatalf("activation info: %d %v", code, info)
+	}
+	if code, info := f.as("", false, "GET", "/activate/"+url.PathEscape(typed), nil); code != 200 || info["owner_name"] != "Alice" {
+		t.Fatalf("activation info for the typed code %q: %d %v", typed, code, info)
 	}
 	for name, tc := range map[string]struct {
 		login, password string
@@ -133,7 +143,7 @@ func TestOwnerActivationAndLogin(t *testing.T) {
 			t.Errorf("%s: %d %v", name, code, out)
 		}
 	}
-	code, session := f.as("", false, "POST", "/activate", map[string]string{"token": token, "login": "alice.pop", "password": "owner-pass-1"})
+	code, session := f.as("", false, "POST", "/activate", map[string]string{"token": typed, "login": "alice.pop", "password": "owner-pass-1"})
 	if code != http.StatusCreated || session["token"] == "" {
 		t.Fatalf("activate: %d %v", code, session)
 	}

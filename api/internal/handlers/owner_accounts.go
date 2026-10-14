@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -33,19 +32,45 @@ const ActivationTokenPathValue = "activationToken"
 // defaultActivationTTL: how long an activation link stays valid.
 const defaultActivationTTL = 30 * 24 * time.Hour
 
-// newActivationToken returns a random URL-safe token and its SHA-256 hash
-// (only the hash is stored; the token is shown once).
+// activationCodeAlphabet: Crockford's base32 — digits and capitals without
+// I, L, O and U, so a code read off paper or over the phone can't be
+// mistyped into another valid one.
+const activationCodeAlphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
+// activationCodeLength: 12 characters, 60 bits — far beyond online
+// guessing for a single-use code that expires.
+const activationCodeLength = 12
+
+// newActivationToken returns a random activation code (also the link's
+// token) and its SHA-256 hash; only the hash is stored, the code is shown
+// once.
 func newActivationToken() (string, string, error) {
-	raw := make([]byte, 32)
+	raw := make([]byte, activationCodeLength)
 	if _, err := rand.Read(raw); err != nil {
 		return "", "", err
 	}
-	token := base64.RawURLEncoding.EncodeToString(raw)
+	code := make([]byte, activationCodeLength)
+	for i, b := range raw {
+		code[i] = activationCodeAlphabet[b%32] // 256 is a multiple of 32: no bias
+	}
+	token := string(code)
 	return token, hashActivationToken(token), nil
 }
 
+// normalizeActivationCode undoes how people type a code: spaces and dashes
+// ("ABCD-EFGH-JKMN"), lower case, and O/I/L for 0/1. Longer tokens (the
+// earlier base64 links) are kept as they are.
+func normalizeActivationCode(token string) string {
+	token = strings.TrimSpace(token)
+	stripped := strings.NewReplacer(" ", "", "-", "").Replace(token)
+	if len(stripped) > activationCodeLength {
+		return token
+	}
+	return strings.NewReplacer("O", "0", "I", "1", "L", "1").Replace(strings.ToUpper(stripped))
+}
+
 func hashActivationToken(token string) string {
-	h := sha256.Sum256([]byte(token))
+	h := sha256.Sum256([]byte(normalizeActivationCode(token)))
 	return hex.EncodeToString(h[:])
 }
 
