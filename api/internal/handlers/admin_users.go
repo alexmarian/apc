@@ -27,7 +27,8 @@ func userStatus(u database.User) string {
 	switch {
 	case u.DisabledAt.Valid:
 		return UserStatusDisabled
-	case !u.TotpConfirmedAt.Valid:
+	// Owner accounts don't need TOTP: they're set up once activated.
+	case !u.TotpConfirmedAt.Valid && u.AccountType != AccountTypeOwner:
 		return UserStatusPending
 	default:
 		return UserStatusActive
@@ -50,9 +51,13 @@ type AdminUser struct {
 	CreatedAt    time.Time        `json:"createdAt"`
 	DisabledBy   string           `json:"disabledBy,omitempty"`
 	Associations []AssociationRef `json:"associations"`
+	// staff | owner (an owner's own account, created from an activation link).
+	AccountType string `json:"accountType"`
+	PhotoURL    string `json:"photoUrl,omitempty"`
 }
 
-func loadAdminUsers(req *http.Request, q *database.Queries) ([]AdminUser, error) {
+func loadAdminUsers(cfg *ApiConfig, req *http.Request) ([]AdminUser, error) {
+	q := cfg.Db
 	users, err := q.ListUsers(req.Context())
 	if err != nil {
 		return nil, err
@@ -79,6 +84,8 @@ func loadAdminUsers(req *http.Request, q *database.Queries) ([]AdminUser, error)
 			CreatedAt:    u.CreatedAt,
 			DisabledBy:   u.DisabledBy.String,
 			Associations: associations,
+			AccountType:  u.AccountType,
+			PhotoURL:     PhotoURL(cfg, u),
 		}
 	}
 	return result, nil
@@ -86,7 +93,7 @@ func loadAdminUsers(req *http.Request, q *database.Queries) ([]AdminUser, error)
 
 // respondWithAdminUser answers with the current state of one user.
 func respondWithAdminUser(cfg *ApiConfig, rw http.ResponseWriter, req *http.Request, id int64) {
-	users, err := loadAdminUsers(req, cfg.Db)
+	users, err := loadAdminUsers(cfg, req)
 	if err == nil {
 		for _, u := range users {
 			if u.ID == id {
@@ -102,7 +109,7 @@ func respondWithAdminUser(cfg *ApiConfig, rw http.ResponseWriter, req *http.Requ
 // associations. Admin-only.
 func HandleListUsers(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		users, err := loadAdminUsers(req, cfg.Db)
+		users, err := loadAdminUsers(cfg, req)
 		if err != nil {
 			logging.Logger.Log(zap.WarnLevel, "Error listing users", zap.String("error", err.Error()))
 			RespondWithError(rw, http.StatusInternalServerError, "Failed to list users")
@@ -169,6 +176,10 @@ func HandleSetUserRole(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) 
 		}
 		user, ok := targetUser(cfg, rw, req)
 		if !ok || !guardAdminChange(cfg, rw, req, user, !*request.IsAdmin) {
+			return
+		}
+		if user.AccountType == AccountTypeOwner {
+			RespondWithError(rw, http.StatusConflict, "Owner accounts can't be given staff roles")
 			return
 		}
 
@@ -247,6 +258,10 @@ func HandleSetUserAssociations(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 		}
 		user, ok := targetUser(cfg, rw, req)
 		if !ok {
+			return
+		}
+		if user.AccountType == AccountTypeOwner {
+			RespondWithError(rw, http.StatusConflict, "Owner accounts can't manage associations")
 			return
 		}
 		if user.IsAdmin {

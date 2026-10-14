@@ -59,14 +59,14 @@ func MemberInvitationFromContext(ctx context.Context) (database.MemberInvitation
 	return memberInvitationFromContext(ctx)
 }
 
-// memberGatheringResponse is the shape returned to member clients.
-type memberGatheringResponse struct {
-	Gathering memberGatheringInfo  `json:"gathering"`
-	Owner     memberOwnerInfo      `json:"owner"`
-	Units     []memberUnitInfo     `json:"units"`
-	Matters   []memberMatterInfo   `json:"matters"`
-	Ballot    *memberBallotInfo    `json:"ballot"`
-	Results   json.RawMessage      `json:"results"`
+// MemberGatheringResponse is the shape returned to member clients.
+type MemberGatheringResponse struct {
+	Gathering memberGatheringInfo `json:"gathering"`
+	Owner     memberOwnerInfo     `json:"owner"`
+	Units     []memberUnitInfo    `json:"units"`
+	Matters   []memberMatterInfo  `json:"matters"`
+	Ballot    *memberBallotInfo   `json:"ballot"`
+	Results   json.RawMessage     `json:"results"`
 }
 
 type memberMatterInfo struct {
@@ -100,12 +100,12 @@ type memberOwnerInfo struct {
 }
 
 type memberUnitInfo struct {
-	UnitID        int64   `json:"unit_id"`
-	UnitNumber    string  `json:"unit_number"`
-	BuildingName  string  `json:"building_name"`
-	Area          float64 `json:"area"`
-	VotingWeight  float64 `json:"voting_weight"`
-	IsAvailable   bool    `json:"is_available"`
+	UnitID       int64   `json:"unit_id"`
+	UnitNumber   string  `json:"unit_number"`
+	BuildingName string  `json:"building_name"`
+	Area         float64 `json:"area"`
+	VotingWeight float64 `json:"voting_weight"`
+	IsAvailable  bool    `json:"is_available"`
 }
 
 type memberBallotInfo struct {
@@ -125,120 +125,128 @@ func HandleGetMemberContext(cfg *ApiConfig) http.HandlerFunc {
 			RespondWithError(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
-
 		gathering, err := cfg.Db.GetGatheringByID(r.Context(), inv.GatheringID)
 		if err != nil {
 			logging.Logger.Log(zap.WarnLevel, "failed to get gathering", zap.Error(err))
 			RespondWithError(w, http.StatusInternalServerError, "failed to load gathering")
 			return
 		}
-
-		owner, err := cfg.Db.GetOwnerById(r.Context(), inv.OwnerID)
+		response, err := MemberContext(r.Context(), cfg, gathering, inv.OwnerID)
 		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "failed to get owner", zap.Error(err))
-			RespondWithError(w, http.StatusInternalServerError, "failed to load owner")
+			RespondWithError(w, http.StatusInternalServerError, "failed to load gathering")
 			return
 		}
+		RespondWithJSON(w, http.StatusOK, response)
+	}
+}
 
-		eligibleRows, err := cfg.Db.GetEligibleVotersWithUnits(r.Context(), database.GetEligibleVotersWithUnitsParams{
-			GatheringID:   inv.GatheringID,
-			AssociationID: gathering.AssociationID,
-		})
-		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "failed to get eligible units", zap.Error(err))
-			RespondWithError(w, http.StatusInternalServerError, "failed to load units")
-			return
+// MemberContext is what an owner sees of a gathering — from a member link or
+// their own account: their units in it (and which can still vote), the
+// agenda, their ballot if they voted, and the results once tallied.
+func MemberContext(ctx context.Context, cfg *ApiConfig, gathering database.Gathering, ownerID int64) (MemberGatheringResponse, error) {
+	owner, err := cfg.Db.GetOwnerById(ctx, ownerID)
+	if err != nil {
+		logging.Logger.Log(zap.WarnLevel, "failed to get owner", zap.Error(err))
+		return MemberGatheringResponse{}, err
+	}
+
+	eligibleRows, err := cfg.Db.GetEligibleVotersWithUnits(ctx, database.GetEligibleVotersWithUnitsParams{
+		GatheringID:   gathering.ID,
+		AssociationID: gathering.AssociationID,
+	})
+	if err != nil {
+		logging.Logger.Log(zap.WarnLevel, "failed to get eligible units", zap.Error(err))
+		return MemberGatheringResponse{}, err
+	}
+
+	units := make([]memberUnitInfo, 0)
+	for _, row := range eligibleRows {
+		if row.OwnerID == ownerID {
+			units = append(units, memberUnitInfo{
+				UnitID:       row.UnitID,
+				UnitNumber:   row.UnitNumber,
+				BuildingName: row.BuildingName,
+				Area:         row.Area,
+				VotingWeight: row.VotingWeight,
+				IsAvailable:  row.IsAvailable == 1,
+			})
 		}
+	}
 
-		units := make([]memberUnitInfo, 0)
-		for _, row := range eligibleRows {
-			if row.OwnerID == inv.OwnerID {
-				units = append(units, memberUnitInfo{
-					UnitID:       row.UnitID,
-					UnitNumber:   row.UnitNumber,
-					BuildingName: row.BuildingName,
-					Area:         row.Area,
-					VotingWeight: row.VotingWeight,
-					IsAvailable:  row.IsAvailable == 1,
-				})
-			}
-		}
-
-		var ballotInfo *memberBallotInfo
-		participant, err := cfg.Db.GetGatheringParticipantByOwner(r.Context(), database.GetGatheringParticipantByOwnerParams{
-			GatheringID: inv.GatheringID,
-			OwnerID:     sql.NullInt64{Int64: inv.OwnerID, Valid: true},
+	var ballotInfo *memberBallotInfo
+	participant, err := cfg.Db.GetGatheringParticipantByOwner(ctx, database.GetGatheringParticipantByOwnerParams{
+		GatheringID: gathering.ID,
+		OwnerID:     sql.NullInt64{Int64: ownerID, Valid: true},
+	})
+	if err == nil {
+		ballot, err := cfg.Db.GetBallotByParticipant(ctx, database.GetBallotByParticipantParams{
+			GatheringID:   gathering.ID,
+			ParticipantID: participant.ID,
 		})
 		if err == nil {
-			ballot, err := cfg.Db.GetBallotByParticipant(r.Context(), database.GetBallotByParticipantParams{
-				GatheringID:   inv.GatheringID,
-				ParticipantID: participant.ID,
-			})
-			if err == nil {
-				var submittedAt *time.Time
-				if ballot.SubmittedAt.Valid {
-					submittedAt = &ballot.SubmittedAt.Time
-				}
-				ballotInfo = &memberBallotInfo{
-					BallotID:      ballot.ID,
-					BallotHash:    ballot.BallotHash,
-					SubmittedAt:   submittedAt,
-					BallotContent: json.RawMessage(ballot.BallotContent),
-					IsValid:       ballot.IsValid.Bool,
-				}
+			var submittedAt *time.Time
+			if ballot.SubmittedAt.Valid {
+				submittedAt = &ballot.SubmittedAt.Time
+			}
+			ballotInfo = &memberBallotInfo{
+				BallotID:      ballot.ID,
+				BallotHash:    ballot.BallotHash,
+				SubmittedAt:   submittedAt,
+				BallotContent: json.RawMessage(ballot.BallotContent),
+				IsValid:       ballot.IsValid.Bool,
 			}
 		}
+	}
 
-		dbMatters, err := cfg.Db.GetVotingMatters(r.Context(), inv.GatheringID)
-		if err != nil {
-			logging.Logger.Log(zap.WarnLevel, "failed to get voting matters", zap.Error(err))
-			// Non-fatal — return empty matters rather than failing the whole request
-			dbMatters = nil
-		}
-		matterInfos := make([]memberMatterInfo, 0, len(dbMatters))
-		for _, m := range dbMatters {
-			matterInfos = append(matterInfos, memberMatterInfo{
-				ID:            m.ID,
-				Title:         m.Title,
-				TitleRu:       m.TitleRu,
-				Description:   m.Description.String,
-				DescriptionRu: m.DescriptionRu.String,
-				MatterType:    m.MatterType,
-				OrderIndex:    m.OrderIndex,
-				VotingConfig:  json.RawMessage(m.VotingConfig),
-				IsInformative: m.IsInformative != 0,
-			})
-		}
-
-		var resultsRaw json.RawMessage
-		if gathering.Status == "tallied" {
-			result, err := cfg.Db.GetVotingResults(r.Context(), inv.GatheringID)
-			if err == nil {
-				resultsRaw = json.RawMessage(result.ResultsData)
-			}
-		}
-
-		RespondWithJSON(w, http.StatusOK, memberGatheringResponse{
-			Gathering: memberGatheringInfo{
-				ID:                      gathering.ID,
-				Title:                   gathering.Title,
-				Description:             gathering.Description,
-				GatheringDate:           gathering.GatheringDate,
-				GatheringType:           gathering.GatheringType,
-				Status:                  gathering.Status,
-				VotingMode:              gathering.VotingMode,
-				QualifiedUnitsCount:     gathering.QualifiedUnitsCount.Int64,
-				QualifiedUnitsTotalPart: gathering.QualifiedUnitsTotalPart.Float64,
-			},
-			Owner: memberOwnerInfo{
-				ID:             owner.ID,
-				Name:           owner.Name,
-				Identification: owner.IdentificationNumber,
-			},
-			Units:   units,
-			Matters: matterInfos,
-			Ballot:  ballotInfo,
-			Results: resultsRaw,
+	dbMatters, err := cfg.Db.GetVotingMatters(ctx, gathering.ID)
+	if err != nil {
+		logging.Logger.Log(zap.WarnLevel, "failed to get voting matters", zap.Error(err))
+		// Non-fatal — return empty matters rather than failing the whole request
+		dbMatters = nil
+	}
+	matterInfos := make([]memberMatterInfo, 0, len(dbMatters))
+	for _, m := range dbMatters {
+		matterInfos = append(matterInfos, memberMatterInfo{
+			ID:            m.ID,
+			Title:         m.Title,
+			TitleRu:       m.TitleRu,
+			Description:   m.Description.String,
+			DescriptionRu: m.DescriptionRu.String,
+			MatterType:    m.MatterType,
+			OrderIndex:    m.OrderIndex,
+			VotingConfig:  json.RawMessage(m.VotingConfig),
+			IsInformative: m.IsInformative != 0,
 		})
 	}
+
+	var resultsRaw json.RawMessage
+	if gathering.Status == "tallied" {
+		result, err := cfg.Db.GetVotingResults(ctx, gathering.ID)
+		if err == nil {
+			resultsRaw = json.RawMessage(result.ResultsData)
+		}
+	}
+
+	return MemberGatheringResponse{
+		Gathering: memberGatheringInfo{
+			ID:                      gathering.ID,
+			Title:                   gathering.Title,
+			Description:             gathering.Description,
+			GatheringDate:           gathering.GatheringDate,
+			GatheringType:           gathering.GatheringType,
+			Status:                  gathering.Status,
+			VotingMode:              gathering.VotingMode,
+			QualifiedUnitsCount:     gathering.QualifiedUnitsCount.Int64,
+			QualifiedUnitsTotalPart: gathering.QualifiedUnitsTotalPart.Float64,
+		},
+		Owner: memberOwnerInfo{
+			ID:             owner.ID,
+			Name:           owner.Name,
+			Identification: owner.IdentificationNumber,
+		},
+		Units:   units,
+		Matters: matterInfos,
+		Ballot:  ballotInfo,
+		Results: resultsRaw,
+	}, nil
 }

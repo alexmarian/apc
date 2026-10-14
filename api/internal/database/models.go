@@ -156,6 +156,17 @@ type Owner struct {
 	UpdatedAt            sql.NullTime
 }
 
+type OwnerActivation struct {
+	ID        int64
+	OwnerID   int64
+	TokenHash string
+	ExpiresAt time.Time
+	CreatedBy string
+	CreatedAt time.Time
+	UsedAt    sql.NullTime
+	RevokedAt sql.NullTime
+}
+
 type Ownership struct {
 	ID                   int64
 	UnitID               int64
@@ -248,6 +259,15 @@ type User struct {
 	TotpConfirmedAt sql.NullTime
 	DisabledAt      sql.NullTime
 	DisabledBy      sql.NullString
+	AccountType     string
+	PhotoPath       sql.NullString
+	PhotoUpdatedAt  sql.NullTime
+}
+
+type UserOwner struct {
+	UserID    int64
+	OwnerID   int64
+	CreatedAt time.Time
 }
 
 type UsersAssociation struct {

@@ -40,7 +40,7 @@ func (q *Queries) CountActiveAdmins(ctx context.Context) (int64, error) {
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (login, password_hash, topt_secret, is_admin, totp_confirmed_at)
 VALUES (?,
-        ?, ?, ?, ?) RETURNING id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by
+        ?, ?, ?, ?) RETURNING id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by, account_type, photo_path, photo_updated_at
 `
 
 type CreateUserParams struct {
@@ -71,6 +71,9 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.TotpConfirmedAt,
 		&i.DisabledAt,
 		&i.DisabledBy,
+		&i.AccountType,
+		&i.PhotoPath,
+		&i.PhotoUpdatedAt,
 	)
 	return i, err
 }
@@ -127,7 +130,7 @@ func (q *Queries) GetUserAssociationsByLogin(ctx context.Context, login string) 
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by
+SELECT id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by, account_type, photo_path, photo_updated_at
 FROM users
 WHERE id = ?
 `
@@ -146,12 +149,15 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.TotpConfirmedAt,
 		&i.DisabledAt,
 		&i.DisabledBy,
+		&i.AccountType,
+		&i.PhotoPath,
+		&i.PhotoUpdatedAt,
 	)
 	return i, err
 }
 
 const getUserByLogin = `-- name: GetUserByLogin :one
-SELECT id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by
+SELECT id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by, account_type, photo_path, photo_updated_at
 FROM users
 where login = ?
 `
@@ -170,6 +176,9 @@ func (q *Queries) GetUserByLogin(ctx context.Context, login string) (User, error
 		&i.TotpConfirmedAt,
 		&i.DisabledAt,
 		&i.DisabledBy,
+		&i.AccountType,
+		&i.PhotoPath,
+		&i.PhotoUpdatedAt,
 	)
 	return i, err
 }
@@ -262,7 +271,7 @@ func (q *Queries) ListUserAssociationLinks(ctx context.Context) ([]ListUserAssoc
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by
+SELECT id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by, account_type, photo_path, photo_updated_at
 FROM users
 ORDER BY login
 `
@@ -287,6 +296,9 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.TotpConfirmedAt,
 			&i.DisabledAt,
 			&i.DisabledBy,
+			&i.AccountType,
+			&i.PhotoPath,
+			&i.PhotoUpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -379,7 +391,7 @@ set password_hash = ?,
     topt_secret   = ?,
     is_admin      = ?,
     updated_at    = datetime()
-WHERE login = ? RETURNING id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by
+WHERE login = ? RETURNING id, login, password_hash, topt_secret, is_admin, created_at, updated_at, totp_confirmed_at, disabled_at, disabled_by, account_type, photo_path, photo_updated_at
 `
 
 type UpdateUserEmailAndPasswordParams struct {
@@ -408,6 +420,9 @@ func (q *Queries) UpdateUserEmailAndPassword(ctx context.Context, arg UpdateUser
 		&i.TotpConfirmedAt,
 		&i.DisabledAt,
 		&i.DisabledBy,
+		&i.AccountType,
+		&i.PhotoPath,
+		&i.PhotoUpdatedAt,
 	)
 	return i, err
 }

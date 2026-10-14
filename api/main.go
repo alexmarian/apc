@@ -14,6 +14,7 @@ import (
 	"github.com/alexmarian/apc/api/internal/handlers"
 	"github.com/alexmarian/apc/api/internal/handlers/gathering"
 	"github.com/alexmarian/apc/api/internal/handlers/gathering/domain"
+	gatheringHandlers "github.com/alexmarian/apc/api/internal/handlers/gathering/handlers"
 	"github.com/alexmarian/apc/api/internal/logging"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
@@ -63,8 +64,13 @@ func main() {
 	}
 	memberOrigin := os.Getenv("MEMBER_ORIGIN")
 
+	photoDir := os.Getenv("PHOTO_DIR")
+	if photoDir == "" {
+		photoDir = "./data/photos"
+	}
 	apiCfg := &handlers.ApiConfig{
-		Secret: secret,
+		Secret:   secret,
+		PhotoDir: photoDir,
 	}
 	dbURL := os.Getenv("DB_PATH")
 	if dbURL == "" {
@@ -130,6 +136,30 @@ func main() {
 
 	mux.Handle("POST /v1/api/refresh", logging.LoggingMiddleware(handlers.HandleRefresh(apiCfg)))
 	mux.HandleFunc("POST /v1/api/logout", apiCfg.MiddlewareAuth(handlers.HandleLogout(apiCfg)))
+
+	// Owners as app users: activation links (public, rate limited like
+	// registration), the signed-in user's own profile, and photos.
+	mux.Handle(fmt.Sprintf("GET /v1/api/activate/{%s}", handlers.ActivationTokenPathValue), onboarding(handlers.HandleGetActivation(apiCfg)))
+	mux.Handle("POST /v1/api/activate", onboarding(handlers.HandleActivate(apiCfg)))
+	mux.HandleFunc("GET /v1/api/me", apiCfg.MiddlewareAuth(handlers.HandleGetMe(apiCfg)))
+	mux.HandleFunc("PUT /v1/api/me/profile", apiCfg.MiddlewareAuth(handlers.HandleUpdateMyProfile(apiCfg)))
+	mux.HandleFunc("PUT /v1/api/me/password", apiCfg.MiddlewareAuth(handlers.HandleChangePassword(apiCfg)))
+	mux.HandleFunc("POST /v1/api/me/totp", apiCfg.MiddlewareAuth(handlers.HandleStartMyTotp(apiCfg)))
+	mux.HandleFunc("POST /v1/api/me/totp/confirm", apiCfg.MiddlewareAuth(handlers.HandleConfirmMyTotp(apiCfg)))
+	mux.HandleFunc("DELETE /v1/api/me/totp", apiCfg.MiddlewareAuth(handlers.HandleDisableMyTotp(apiCfg)))
+	mux.HandleFunc("POST /v1/api/me/owners", apiCfg.MiddlewareAuth(handlers.HandleLinkMyOwner(apiCfg)))
+	mux.HandleFunc("PUT /v1/api/me/photo", apiCfg.MiddlewareAuth(handlers.HandleUploadMyPhoto(apiCfg)))
+	mux.HandleFunc("DELETE /v1/api/me/photo", apiCfg.MiddlewareAuth(handlers.HandleDeleteMyPhoto(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/photos/{%s}", handlers.PhotoIdPathValue), handlers.HandleGetPhoto(apiCfg))
+	ownerAccount := func(method, suffix string, h http.HandlerFunc) {
+		mux.HandleFunc(fmt.Sprintf("%s /v1/api/associations/{%s}/owners%s", method, handlers.AssociationIdPathValue, suffix), apiCfg.MiddlewareAssociationResource(h))
+	}
+	ownerAccount("GET", "/accounts", handlers.HandleListOwnerAccounts(apiCfg))
+	ownerAccount("POST", "/activations", handlers.HandleBulkOwnerActivations(apiCfg))
+	ownerAccount("GET", fmt.Sprintf("/{%s}/account", handlers.OwnerIdPathValue), handlers.HandleGetOwnerAccount(apiCfg))
+	ownerAccount("DELETE", fmt.Sprintf("/{%s}/account", handlers.OwnerIdPathValue), handlers.HandleUnlinkOwnerAccount(apiCfg))
+	ownerAccount("POST", fmt.Sprintf("/{%s}/activation", handlers.OwnerIdPathValue), handlers.HandleCreateOwnerActivation(apiCfg))
+	ownerAccount("DELETE", fmt.Sprintf("/{%s}/activation", handlers.OwnerIdPathValue), handlers.HandleRevokeOwnerActivation(apiCfg))
 
 	mux.HandleFunc("GET /v1/api/associations", apiCfg.MiddlewareAuth(handlers.HandleGetUserAssociations(apiCfg)))
 	mux.HandleFunc("POST /v1/api/associations", apiCfg.MiddlewareAdminOnly(handlers.HandleCreateAssociation(apiCfg)))
@@ -310,6 +340,15 @@ func main() {
 		apiCfg.MiddlewareMemberToken(handlers.HandleGetMemberContext(apiCfg)))
 	mux.HandleFunc(fmt.Sprintf("POST /v1/api/member/gatherings/{%s}/ballot", handlers.MemberTokenPathValue),
 		apiCfg.MiddlewareMemberToken(gatheringRouter.MemberBallot.HandleSubmitMemberBallot()))
+
+	// Signed-in owners: their properties, and their gatherings and votes
+	// (scoped by the account's owner records).
+	mux.HandleFunc("GET /v1/api/me/properties", apiCfg.MiddlewareAuth(handlers.HandleGetMyProperties(apiCfg)))
+	mux.HandleFunc("GET /v1/api/me/gatherings", apiCfg.MiddlewareAuth(gatheringHandlers.HandleMyGatherings(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("GET /v1/api/me/gatherings/{%s}", domain.GatheringIDPathValue),
+		apiCfg.MiddlewareAuth(gatheringHandlers.HandleMyGathering(apiCfg)))
+	mux.HandleFunc(fmt.Sprintf("POST /v1/api/me/gatherings/{%s}/ballot", domain.GatheringIDPathValue),
+		apiCfg.MiddlewareAuth(gatheringHandlers.HandleMyBallot(apiCfg)))
 
 	allowedOrigins := []string{uiOrigin}
 	if memberOrigin != "" {

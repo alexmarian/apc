@@ -131,6 +131,7 @@ func HandleGetBuildingUnitOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.
 			return
 		}
 		owners := make([]Owner, len(ownersFromDb))
+		photos := OwnerPhotoURLs(req.Context(), cfg, building.AssociationID)
 		for i, owner := range ownersFromDb {
 			owners[i] = Owner{
 				ID:                   owner.ID,
@@ -142,6 +143,7 @@ func HandleGetBuildingUnitOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.
 				FirstDetectedAt:      owner.FirstDetectedAt.Time,
 				CreatedAt:            owner.CreatedAt.Time,
 				UpdatedAt:            owner.UpdatedAt.Time,
+				PhotoURL:             photos[owner.ID],
 			}
 		}
 		RespondWithJSON(rw, http.StatusOK, owners)
@@ -164,6 +166,7 @@ func HandleGetBuildingUnitOwnerships(cfg *ApiConfig) func(http.ResponseWriter, *
 			return
 		}
 		ownerships := make([]Ownership, len(ownershipsFromDb))
+		photos := OwnerPhotoURLs(req.Context(), cfg, building.AssociationID)
 		for i, owner := range ownershipsFromDb {
 			ownerships[i] = Ownership{
 				ID:                        owner.ID,
@@ -181,6 +184,7 @@ func HandleGetBuildingUnitOwnerships(cfg *ApiConfig) func(http.ResponseWriter, *
 				RegistrationDate:          owner.RegistrationDate,
 				CreatedAt:                 owner.CreatedAt.Time,
 				UpdatedAt:                 owner.UpdatedAt.Time,
+				OwnerPhotoURL:             photos[owner.OwnerID],
 			}
 		}
 		RespondWithJSON(rw, http.StatusOK, ownerships)
@@ -319,6 +323,7 @@ func HandleGetUnitReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		ContactPhone         string `json:"contact_phone"`
 		ContactEmail         string `json:"contact_email"`
 		IsActive             bool   `json:"is_active"`
+		PhotoURL             string `json:"photo_url,omitempty"`
 	}
 	type OwnershipRecord struct {
 		ID                   int64      `json:"id"`
@@ -418,6 +423,7 @@ func HandleGetUnitReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 		// GetUnitOwners yields one row per ownership, so an owner with
 		// several (e.g. a past and a current one) appears more than once.
 		seen := make(map[int64]bool)
+		photos := OwnerPhotoURLs(req.Context(), cfg, building.AssociationID)
 		for _, owner := range owners {
 			if seen[owner.ID] {
 				continue
@@ -430,6 +436,7 @@ func HandleGetUnitReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Request
 				ContactPhone:         owner.ContactPhone,
 				ContactEmail:         owner.ContactEmail,
 				IsActive:             activeOwnerIDs[owner.ID],
+				PhotoURL:             photos[owner.ID],
 			})
 		}
 

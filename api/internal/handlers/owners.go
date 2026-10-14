@@ -28,6 +28,7 @@ type Owner struct {
 	FirstDetectedAt      time.Time `json:"first_detected_at"`
 	CreatedAt            time.Time `json:"created_at"`
 	UpdatedAt            time.Time `json:"updated_at"`
+	PhotoURL             string    `json:"photo_url,omitempty"`
 }
 
 type Ownership struct {
@@ -46,6 +47,7 @@ type Ownership struct {
 	RegistrationDate          time.Time `json:"registration_date"`
 	CreatedAt                 time.Time `json:"created_at"`
 	UpdatedAt                 time.Time `json:"updated_at"`
+	OwnerPhotoURL             string    `json:"owner_photo_url,omitempty"`
 }
 
 const UnitTypeVotersFilter = "unit_types"
@@ -76,8 +78,10 @@ func HandleGetAssociationOwners(cfg *ApiConfig) func(http.ResponseWriter, *http.
 			return
 		}
 		owners := make([]Owner, len(ownersFromDb))
+		photos := OwnerPhotoURLs(req.Context(), cfg, int64(associationId))
 		for i, owner := range ownersFromDb {
 			owners[i] = toOwner(owner)
+			owners[i].PhotoURL = photos[owner.ID]
 		}
 		RespondWithJSON(rw, http.StatusOK, owners)
 	}
@@ -182,7 +186,9 @@ func HandleGetAssociationOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.R
 		if !ok {
 			return
 		}
-		RespondWithJSON(rw, http.StatusOK, toOwner(owner))
+		o := toOwner(owner)
+		o.PhotoURL = OwnerPhotoURLs(req.Context(), cfg, owner.AssociationID)[owner.ID]
+		RespondWithJSON(rw, http.StatusOK, o)
 	}
 }
 func HandleCreateOwner(cfg *ApiConfig) func(http.ResponseWriter, *http.Request) {
@@ -604,7 +610,12 @@ func HandleGetOwnerReport(cfg *ApiConfig) func(http.ResponseWriter, *http.Reques
 		}
 
 		// Convert map to slice
+		photos := OwnerPhotoURLs(req.Context(), cfg, int64(associationId))
 		for _, ownerEntry := range ownerMap {
+			ownerEntry.Owner.PhotoURL = photos[ownerEntry.Owner.ID]
+			for i := range ownerEntry.CoOwners {
+				ownerEntry.CoOwners[i].PhotoURL = photos[ownerEntry.CoOwners[i].ID]
+			}
 			if !includeUnits {
 				ownerEntry.Units = nil
 			}

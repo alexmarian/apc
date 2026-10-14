@@ -48,16 +48,21 @@ func HandleLogin(cfg *ApiConfig) http.HandlerFunc {
 			RespondWithError(rw, http.StatusUnauthorized, "Login failure")
 			return
 		}
-		// Only reachable with the right password, so only the account owner
-		// learns they still have to finish TOTP setup.
-		if !user.TotpConfirmedAt.Valid {
-			RespondWithError(rw, http.StatusForbidden, OnboardingRequiredMessage)
-			return
-		}
-		if ok, err := auth.VerifyTOTPCode(user.ToptSecret, request.TOTP); err != nil || !ok {
-			logging.Logger.Log(zapcore.WarnLevel, "Incorrect totp", zap.String("user", request.Login))
-			RespondWithError(rw, http.StatusUnauthorized, "Login failure")
-			return
+		// Owner accounts sign in with their password until they choose to
+		// enable TOTP; staff accounts always need it.
+		passwordOnly := user.AccountType == AccountTypeOwner && !user.TotpConfirmedAt.Valid
+		if !passwordOnly {
+			// Only reachable with the right password, so only the account
+			// owner learns they still have to finish TOTP setup.
+			if !user.TotpConfirmedAt.Valid {
+				RespondWithError(rw, http.StatusForbidden, OnboardingRequiredMessage)
+				return
+			}
+			if ok, err := auth.VerifyTOTPCode(user.ToptSecret, request.TOTP); err != nil || !ok {
+				logging.Logger.Log(zapcore.WarnLevel, "Incorrect totp", zap.String("user", request.Login))
+				RespondWithError(rw, http.StatusUnauthorized, "Login failure")
+				return
+			}
 		}
 		seconds := 3600
 		if request.ExpiresInSeconds != 0 {

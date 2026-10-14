@@ -24,6 +24,9 @@ type ApiConfig struct {
 	// (BeginTx + Db.WithTx).
 	DB     *sql.DB
 	Secret string
+	// PhotoDir is where profile photos are stored (PHOTO_DIR; a mounted
+	// volume in production).
+	PhotoDir string
 }
 
 type ErrorResponse struct {

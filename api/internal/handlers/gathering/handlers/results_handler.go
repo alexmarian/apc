@@ -168,6 +168,7 @@ func (h *ResultsHandler) HandleGetEligibleVoters() func(http.ResponseWriter, *ht
 
 		type EligibleVoter struct {
 			Owner                database.Owner `json:"owner"`
+			PhotoURL             string         `json:"photo_url,omitempty"`
 			Units                []VoterUnit    `json:"units"`
 			TotalAvailableWeight float64        `json:"total_available_weight"`
 			TotalAvailableArea   float64        `json:"total_available_area"`
@@ -177,6 +178,7 @@ func (h *ResultsHandler) HandleGetEligibleVoters() func(http.ResponseWriter, *ht
 			AvailableUnitsCount  int            `json:"available_units_count"`
 		}
 
+		photos := handlers.OwnerPhotoURLs(req.Context(), h.cfg, int64(associationID))
 		votersMap := make(map[int64]*EligibleVoter)
 
 		for _, row := range rows {
@@ -190,7 +192,8 @@ func (h *ResultsHandler) HandleGetEligibleVoters() func(http.ResponseWriter, *ht
 						ContactEmail:         row.OwnerContactEmail,
 						ContactPhone:         row.OwnerContactPhone,
 					},
-					Units: make([]VoterUnit, 0),
+					PhotoURL: photos[row.OwnerID],
+					Units:    make([]VoterUnit, 0),
 				}
 				votersMap[row.OwnerID] = voter
 			}

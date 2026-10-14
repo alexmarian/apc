@@ -54,10 +54,15 @@ func (h *ParticipantHandler) HandleGetParticipants() func(http.ResponseWriter, *
 			}
 		}
 
+		associationID, _ := strconv.ParseInt(req.PathValue(handlers.AssociationIdPathValue), 10, 64)
+		photos := handlers.OwnerPhotoURLs(req.Context(), h.cfg, associationID)
 		response := make([]domain.GatheringParticipant, len(participants))
 		for i, p := range participants {
 			participant := domain.DBParticipantRowToResponse(p)
 			participant.HasVoted = votedMap[p.ID]
+			if participant.OwnerID != nil {
+				participant.PhotoURL = photos[*participant.OwnerID]
+			}
 			response[i] = participant
 		}
 

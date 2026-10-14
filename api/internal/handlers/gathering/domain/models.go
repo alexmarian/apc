@@ -144,6 +144,7 @@ type GatheringParticipant struct {
 	HasVoted                  bool       `json:"has_voted"`
 	CreatedAt                 time.Time  `json:"created_at"`
 	UpdatedAt                 time.Time  `json:"updated_at"`
+	PhotoURL                  string     `json:"photo_url,omitempty"` // owners voting themselves
 }
 
 // Ballot represents a submitted ballot
