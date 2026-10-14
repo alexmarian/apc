@@ -198,6 +198,64 @@ func (q *Queries) LinkUserOwner(ctx context.Context, arg LinkUserOwnerParams) er
 	return err
 }
 
+const listAllUserOwners = `-- name: ListAllUserOwners :many
+SELECT user_owners.user_id,
+       owners.id,
+       owners.name,
+       owners.identification_number,
+       owners.contact_phone,
+       owners.contact_email,
+       owners.association_id,
+       associations.name AS association_name
+FROM user_owners
+         JOIN owners ON owners.id = user_owners.owner_id
+         JOIN associations ON associations.id = owners.association_id
+ORDER BY associations.name, owners.name
+`
+
+type ListAllUserOwnersRow struct {
+	UserID               int64
+	ID                   int64
+	Name                 string
+	IdentificationNumber string
+	ContactPhone         string
+	ContactEmail         string
+	AssociationID        int64
+	AssociationName      string
+}
+
+func (q *Queries) ListAllUserOwners(ctx context.Context) ([]ListAllUserOwnersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listAllUserOwners)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAllUserOwnersRow
+	for rows.Next() {
+		var i ListAllUserOwnersRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.ID,
+			&i.Name,
+			&i.IdentificationNumber,
+			&i.ContactPhone,
+			&i.ContactEmail,
+			&i.AssociationID,
+			&i.AssociationName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAssociationOwnerAccounts = `-- name: ListAssociationOwnerAccounts :many
 SELECT owners.id AS owner_id,
        users.id  AS user_id,

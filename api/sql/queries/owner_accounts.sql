@@ -135,3 +135,17 @@ WHERE ownerships.owner_id != ?
   AND ownerships.is_active = TRUE
   AND ownerships.unit_id IN (sqlc.slice('unit_ids'))
 ORDER BY owners.name;
+
+-- name: ListAllUserOwners :many
+SELECT user_owners.user_id,
+       owners.id,
+       owners.name,
+       owners.identification_number,
+       owners.contact_phone,
+       owners.contact_email,
+       owners.association_id,
+       associations.name AS association_name
+FROM user_owners
+         JOIN owners ON owners.id = user_owners.owner_id
+         JOIN associations ON associations.id = owners.association_id
+ORDER BY associations.name, owners.name;

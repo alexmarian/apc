@@ -157,6 +157,24 @@ func TestOwnerActivationAndLogin(t *testing.T) {
 		t.Fatalf("link for an owner with an account: %d", code)
 	}
 
+	// The users page shows which owner records each account represents.
+	users, err := loadAdminUsers(f.cfg, httptest.NewRequest("GET", "/", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, u := range users {
+		switch u.Login {
+		case "alice.pop":
+			if u.AccountType != "owner" || len(u.Owners) != 1 || u.Owners[0].Name != "Alice" || u.Owners[0].AssociationName != "A" {
+				t.Fatalf("alice.pop in the users list: %+v", u)
+			}
+		case "root":
+			if len(u.Owners) != 0 {
+				t.Fatalf("root represents owners: %+v", u.Owners)
+			}
+		}
+	}
+
 	// Password-only sign-in for the owner account.
 	if code, out := f.as("", false, "POST", "/login", map[string]string{"login": "alice.pop", "password": "owner-pass-1"}); code != 200 || out["token"] == "" {
 		t.Fatalf("owner login: %d %v", code, out)

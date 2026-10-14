@@ -102,6 +102,7 @@ type memberOwnerInfo struct {
 type memberUnitInfo struct {
 	UnitID       int64   `json:"unit_id"`
 	UnitNumber   string  `json:"unit_number"`
+	UnitType     string  `json:"unit_type"`
 	BuildingName string  `json:"building_name"`
 	Area         float64 `json:"area"`
 	VotingWeight float64 `json:"voting_weight"`
@@ -165,6 +166,7 @@ func MemberContext(ctx context.Context, cfg *ApiConfig, gathering database.Gathe
 			units = append(units, memberUnitInfo{
 				UnitID:       row.UnitID,
 				UnitNumber:   row.UnitNumber,
+				UnitType:     row.UnitType,
 				BuildingName: row.BuildingName,
 				Area:         row.Area,
 				VotingWeight: row.VotingWeight,

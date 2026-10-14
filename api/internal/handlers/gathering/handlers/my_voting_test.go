@@ -87,7 +87,8 @@ func TestMyGatheringsAndBallot(t *testing.T) {
 	if performedBy != "user:alice" || !strings.Contains(details, `"source":"owner_account"`) {
 		t.Fatalf("audit: %q %q", performedBy, details)
 	}
-	if code, body := as("alice", "GET", fmt.Sprintf("/me/gatherings/%d", g.ID), ""); code != 200 || strings.Contains(body, `"is_available":true`) || !strings.Contains(body, `"ballot_hash"`) {
+	if code, body := as("alice", "GET", fmt.Sprintf("/me/gatherings/%d", g.ID), ""); code != 200 || strings.Contains(body, `"is_available":true`) || !strings.Contains(body, `"ballot_hash"`) ||
+		!strings.Contains(body, `"unit_type":"`) || strings.Contains(body, `"unit_type":""`) {
 		t.Fatalf("after voting: %d %s", code, body)
 	}
 	if code, _ := as("alice", "POST", fmt.Sprintf("/me/gatherings/%d/ballot", g.ID), content); code != http.StatusConflict {

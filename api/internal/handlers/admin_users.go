@@ -54,6 +54,9 @@ type AdminUser struct {
 	// staff | owner (an owner's own account, created from an activation link).
 	AccountType string `json:"accountType"`
 	PhotoURL    string `json:"photoUrl,omitempty"`
+	// The owner records the account represents (owner accounts, and staff
+	// who also own property), with their contact details.
+	Owners []meOwner `json:"owners"`
 }
 
 func loadAdminUsers(cfg *ApiConfig, req *http.Request) ([]AdminUser, error) {
@@ -70,11 +73,23 @@ func loadAdminUsers(cfg *ApiConfig, req *http.Request) ([]AdminUser, error) {
 	for _, l := range links {
 		byUser[l.UserID] = append(byUser[l.UserID], AssociationRef{ID: l.ID, Name: l.Name})
 	}
+	ownerRows, err := q.ListAllUserOwners(req.Context())
+	if err != nil {
+		return nil, err
+	}
+	ownersByUser := make(map[int64][]meOwner)
+	for _, r := range ownerRows {
+		ownersByUser[r.UserID] = append(ownersByUser[r.UserID], meOwner{r.ID, r.Name, r.IdentificationNumber, r.ContactPhone, r.ContactEmail, r.AssociationID, r.AssociationName})
+	}
 	result := make([]AdminUser, len(users))
 	for i, u := range users {
 		associations := byUser[u.ID]
 		if associations == nil {
 			associations = []AssociationRef{}
+		}
+		owners := ownersByUser[u.ID]
+		if owners == nil {
+			owners = []meOwner{}
 		}
 		result[i] = AdminUser{
 			ID:           u.ID,
@@ -86,6 +101,7 @@ func loadAdminUsers(cfg *ApiConfig, req *http.Request) ([]AdminUser, error) {
 			Associations: associations,
 			AccountType:  u.AccountType,
 			PhotoURL:     PhotoURL(cfg, u),
+			Owners:       owners,
 		}
 	}
 	return result, nil
