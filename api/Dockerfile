@@ -10,6 +10,10 @@ FROM alpine:3.21
 RUN apk add --no-cache ca-certificates wget
 WORKDIR /app
 COPY --from=builder /app/bin/apc .
+# Database and owner photos (PHOTO_DIR) live here: mount a persistent volume.
+RUN mkdir -p /app/data/photos
+ENV PHOTO_DIR=/app/data/photos
+VOLUME /app/data
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD wget -qO- http://localhost:8080/health || exit 1
