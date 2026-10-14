@@ -1,70 +1,43 @@
 #!/bin/bash
+# Loads sample data into an APC SQLite database.
+#
+# The *.sql data files are NOT in git (api/.gitignore: sql/samples/*.sql):
+# they hold real association data and are shared privately. Put them next to
+# this script; missing files are skipped. Without them, create data in the
+# app instead (Associations, then Units -> Management -> Import units).
+#
+# Usage: sql/samples/load.sh <sqlite.db>   (start the backend once first, so
+# the schema exists)
+
+set -euo pipefail
 
 if [ $# -eq 0 ]; then
-    	echo "Example: $0 <sqlite.db>"
-    	exit 1
-fi    
+	echo "Usage: $0 <sqlite.db>"
+	exit 1
+fi
 
+db=$(realpath "$1")
+cd "$(dirname "$0")"
 
-echo "==================Loading db================"
-echo "===============Loading associations========="
+if ! command -v sqlite3 >/dev/null; then
+	echo "sqlite3 is not installed"
+	exit 1
+fi
 
-sqlite3 $1 < associations.sql
-echo "ok"
+loaded=0
+# In dependency order.
+for name in associations buildings accounts categories expenses units owners ownerships users users_associations; do
+	if [ -f "$name.sql" ]; then
+		echo "Loading $name"
+		sqlite3 "$db" < "$name.sql"
+		loaded=$((loaded + 1))
+	else
+		echo "Skipping $name ($name.sql not found)"
+	fi
+done
 
-echo "===============Loading buildings============"
-
-sqlite3 $1 < buildings.sql
-
-echo "ok"
-
-echo "===============Loading accounts============="
-
-sqlite3 $1 < accounts.sql
-
-echo "ok"
-echo "===============Loading categories============"
-
-sqlite3 $1 < categories.sql
-
-echo "ok"
-
-echo "===============Loading expenses=============="
-
-sqlite3 $1 < expenses.sql
-
-echo "ok"
-
-echo "===============Loading units=============="
-
-sqlite3 $1 < units.sql
-
-echo "ok"
-
-echo "===============Loading owners=============="
-
-sqlite3 $1 < owners.sql
-
-echo "ok"
-
-echo "===============Loading ownerships=========="
-
-sqlite3 $1 < ownerships.sql
-
-echo "ok"
-
-echo "===============Loading users==============="
-
-sqlite3 $1 < users.sql
-
-echo "ok"
-
-echo "===============Loading users associations=="
-
-sqlite3 $1 < users_associations.sql
-
-echo "ok"
-
-
-
-
+if [ $loaded -eq 0 ]; then
+	echo "No sample files found: they are not in git; ask a maintainer, or create data in the app."
+	exit 1
+fi
+echo "Done: $loaded file(s) loaded."
