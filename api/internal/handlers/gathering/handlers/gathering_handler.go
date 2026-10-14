@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -264,20 +263,15 @@ func (h *GatheringHandler) HandleUpdateGatheringStatus() func(http.ResponseWrite
 			return
 		}
 
-		// If closing the gathering, calculate and cache final results. In the
-		// background, so not with the request's context (cancelled once we answer).
+		// Closing: calculate and cache the final results before answering — not
+		// in the background, where a quick reopen could invalidate first and the
+		// late write would leave stale results cached.
 		if statusReq.Status == "closed" {
-			go func() {
-				_, err := h.votingResultsService.ComputeAndStoreResults(context.Background(), int64(gatheringID), int64(associationID))
-				if err != nil {
-					logging.Logger.Log(zap.ErrorLevel, "Error computing final results",
-						zap.Int64("gathering_id", int64(gatheringID)),
-						zap.Error(err))
-				} else {
-					logging.Logger.Log(zap.InfoLevel, "Successfully computed and cached voting results",
-						zap.Int64("gathering_id", int64(gatheringID)))
-				}
-			}()
+			if _, err := h.votingResultsService.ComputeAndStoreResults(req.Context(), int64(gatheringID), int64(associationID)); err != nil {
+				logging.Logger.Log(zap.ErrorLevel, "Error computing final results",
+					zap.Int64("gathering_id", int64(gatheringID)),
+					zap.Error(err))
+			}
 		}
 
 		// Leaving "closed" (e.g. reopening): the cached final results are stale.

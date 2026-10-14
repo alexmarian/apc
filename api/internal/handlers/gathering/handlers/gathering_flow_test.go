@@ -253,15 +253,12 @@ func TestGatheringFlow(t *testing.T) {
 		t.Fatalf("verify wrong hash: %v", verified)
 	}
 
-	// Closing caches the final results (in the background); reopening drops them.
+	// Closing caches the final results; reopening drops them.
 	f.do("PUT", f.g(created.ID, "/status"), `{"status":"closed"}`, nil)
 	cached := func() int {
 		var n int
 		f.cfg.DB.QueryRow(`SELECT COUNT(*) FROM voting_results WHERE gathering_id = ?`, created.ID).Scan(&n)
 		return n
-	}
-	for i := 0; i < 50 && cached() == 0; i++ {
-		time.Sleep(10 * time.Millisecond)
 	}
 	if cached() != 1 {
 		t.Fatal("results not cached on close")
